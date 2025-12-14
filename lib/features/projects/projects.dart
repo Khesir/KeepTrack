@@ -10,7 +10,7 @@ export 'domain/repositories/project_repository.dart';
 // Data
 export 'data/models/project_model.dart';
 export 'data/datasources/project_datasource.dart';
-export 'data/datasources/mongodb/project_datasource_mongodb.dart';
+export 'data/datasources/supabase/project_datasource_supabase.dart';
 export 'data/repositories/project_repository_impl.dart';
 
 // Presentation

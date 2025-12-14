@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
 import '../../../../core/routing/app_router.dart';
+import '../../../../core/ui/app_layout_controller.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/repositories/task_repository.dart';
 
@@ -15,7 +16,8 @@ class TaskListScreen extends ScopedScreen {
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class _TaskListScreenState extends ScopedScreenState<TaskListScreen> {
+class _TaskListScreenState extends ScopedScreenState<TaskListScreen>
+    with AppLayoutControlled {
   late TaskRepository _taskRepository;
   List<Task> _tasks = [];
   bool _isLoading = false;
@@ -30,6 +32,15 @@ class _TaskListScreenState extends ScopedScreenState<TaskListScreen> {
   void onReady() {
     _taskRepository = getService<TaskRepository>();
     _loadTasks();
+
+    // Configure the main layout for this screen
+    configureLayout(
+      title: 'Tasks',
+      fab: FloatingActionButton(
+        onPressed: _createTask,
+        child: const Icon(Icons.add),
+      ),
+    );
   }
 
   Future<void> _loadTasks() async {
@@ -69,64 +80,61 @@ class _TaskListScreenState extends ScopedScreenState<TaskListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tasks'),
-        actions: [
-          PopupMenuButton<TaskStatus?>(
-            icon: const Icon(Icons.filter_list),
-            onSelected: _filterByStatus,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: null,
-                child: Text('All'),
-              ),
-              ...TaskStatus.values.map((status) => PopupMenuItem(
-                    value: status,
-                    child: Text(status.displayName),
-                  )),
-            ],
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _tasks.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No tasks yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                        ),
+    // Update actions dynamically (for filter button)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      layoutController.setActions([
+        PopupMenuButton<TaskStatus?>(
+          icon: const Icon(Icons.filter_list),
+          onSelected: _filterByStatus,
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: null,
+              child: Text('All'),
+            ),
+            ...TaskStatus.values.map((status) => PopupMenuItem(
+                  value: status,
+                  child: Text(status.displayName),
+                )),
+          ],
+        ),
+      ]);
+    });
+
+    // Return only the body content (no Scaffold!)
+    // MainScreen provides the Scaffold
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _tasks.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No tasks yet',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
                       ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadTasks,
-                  child: ListView.builder(
-                    itemCount: _tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = _tasks[index];
-                      return _TaskListItem(
-                        task: task,
-                        onTap: () => _openTask(task),
-                        onToggleComplete: () => _toggleComplete(task),
-                      );
-                    },
-                  ),
+                    ),
+                  ],
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createTask,
-        child: const Icon(Icons.add),
-      ),
-    );
+              )
+            : RefreshIndicator(
+                onRefresh: _loadTasks,
+                child: ListView.builder(
+                  itemCount: _tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = _tasks[index];
+                    return _TaskListItem(
+                      task: task,
+                      onTap: () => _openTask(task),
+                      onToggleComplete: () => _toggleComplete(task),
+                    );
+                  },
+                ),
+              );
   }
 
   Future<void> _toggleComplete(Task task) async {

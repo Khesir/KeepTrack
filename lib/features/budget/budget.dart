@@ -14,7 +14,6 @@ export 'data/models/budget_model.dart';
 export 'data/models/budget_category_model.dart';
 export 'data/models/budget_record_model.dart';
 export 'data/datasources/budget_datasource.dart';
-export 'data/datasources/mongodb/budget_datasource_mongodb.dart';
 export 'data/repositories/budget_repository_impl.dart';
 
 // Presentation
