@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
+import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/repositories/task_repository.dart';
-import 'task_detail_screen.dart';
 
 /// Task list screen - Displays all tasks
 class TaskListScreen extends ScopedScreen {
@@ -60,21 +60,11 @@ class _TaskListScreenState extends ScopedScreenState<TaskListScreen> {
   }
 
   void _createTask() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TaskDetailScreen(task: null),
-      ),
-    ).then((_) => _loadTasks());
+    context.goToTaskCreate().then((_) => _loadTasks());
   }
 
   void _openTask(Task task) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TaskDetailScreen(task: task),
-      ),
-    ).then((_) => _loadTasks());
+    context.goToTaskDetail(task).then((_) => _loadTasks());
   }
 
   @override

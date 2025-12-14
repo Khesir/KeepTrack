@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:persona_codex/features/tasks/presentation/screens/task_detail_screen.dart';
 import '../../../core/ui/scoped_screen.dart';
+import '../../../core/routing/app_router.dart';
 import '../domain/entities/project.dart';
 import '../../tasks/domain/entities/task.dart';
 import '../domain/repositories/project_repository.dart';
 import '../../tasks/domain/repositories/task_repository.dart';
-import '../../tasks/presentation/screens/task_detail_screen.dart';
 
 /// Project detail screen - Shows project info and its tasks
 class ProjectDetailScreen extends ScopedScreen {
@@ -50,20 +51,13 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
   }
 
   void _createTask() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            TaskDetailScreen(task: null, initialProjectId: widget.project.id),
-      ),
-    ).then((_) => _loadTasks());
+    context
+        .goToTaskCreate(initialProjectId: widget.project.id)
+        .then((_) => _loadTasks());
   }
 
   void _openTask(Task task) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => TaskDetailScreen(task: task)),
-    ).then((_) => _loadTasks());
+    context.goToTaskDetail(task).then((_) => _loadTasks());
   }
 
   Future<void> _editProject() async {
@@ -141,7 +135,7 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
         await _projectRepository.deleteProject(widget.project.id);
 
         if (mounted) {
-          Navigator.pop(context);
+          context.goBack();
         }
       } catch (e) {
         if (mounted) {

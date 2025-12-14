@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
+import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/repositories/budget_repository.dart';
-import 'budget_detail_screen.dart';
-import 'create_budget_screen.dart';
 
 /// Budget list screen - Shows all monthly budgets
 class BudgetListScreen extends ScopedScreen {
@@ -44,19 +43,11 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen> {
   }
 
   void _createBudget() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CreateBudgetScreen()),
-    ).then((_) => _loadBudgets());
+    context.goToBudgetCreate().then((_) => _loadBudgets());
   }
 
   void _openBudget(Budget budget) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BudgetDetailScreen(budget: budget),
-      ),
-    ).then((_) => _loadBudgets());
+    context.goToBudgetDetail(budget).then((_) => _loadBudgets());
   }
 
   @override

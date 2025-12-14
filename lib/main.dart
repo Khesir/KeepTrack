@@ -1,10 +1,18 @@
-/// Example App - Task Management
+/// Personal Codex - Main Entry Point
 ///
-/// Shows how to use the DI system with task management feature
+/// Multi-feature app with Clean Architecture:
+/// - Custom DI System
+/// - Custom State Management (StreamState)
+/// - Custom Error Handling
+/// - Feature-based organization
 library;
 
 import 'package:flutter/material.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/shared/infrastructure/mongodb/mongodb_service.dart';
 import 'core/di/di_logger.dart';
+import 'core/routing/app_router.dart';
+import 'core/theme/app_theme.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/projects/projects_di.dart';
 import 'features/budget/budget_di.dart';
@@ -17,21 +25,50 @@ void main() {
   DILogger.enable();
 
   // Setup dependencies
+  _setupDependencies();
+
+  runApp(const PersonalCodexApp());
+}
+
+/// Setup all dependencies
+void _setupDependencies() {
+  // Core MongoDB service (shared infrastructure)
+  locator.registerLazySingleton<MongoDBService>(() {
+    final service = MongoDBService(
+      connectionString: 'mongodb://localhost:27017',
+      databaseName: 'personal_codex',
+    );
+    // Connect on first access
+    service.connect();
+    return service;
+  });
+
+  // Feature dependencies
   setupTasksDependencies();
   setupProjectsDependencies();
   setupBudgetDependencies();
-
-  runApp(const TaskManagementApp());
 }
 
-class TaskManagementApp extends StatelessWidget {
-  const TaskManagementApp({super.key});
+/// Main app widget
+class PersonalCodexApp extends StatelessWidget {
+  const PersonalCodexApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // App info
       title: 'Personal Codex',
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+      debugShowCheckedModeBanner: false,
+
+      // Theme
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system, // Follow system theme
+
+      // Routing
+      onGenerateRoute: AppRouter.onGenerateRoute,
+
+      // Home screen (bottom nav with tabs)
       home: const MainScreen(),
     );
   }

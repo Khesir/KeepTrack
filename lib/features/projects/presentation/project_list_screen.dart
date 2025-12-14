@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/ui/scoped_screen.dart';
+import '../../../core/routing/app_router.dart';
 import '../domain/entities/project.dart';
 import '../domain/repositories/project_repository.dart';
-import 'project_detail_screen.dart';
 
 /// Project list screen - Displays all projects
 class ProjectListScreen extends ScopedScreen {
@@ -140,12 +140,7 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen> {
   }
 
   void _openProject(Project project) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProjectDetailScreen(project: project),
-      ),
-    ).then((_) => _loadProjects());
+    context.goToProjectDetail(project).then((_) => _loadProjects());
   }
 
   Future<void> _archiveProject(Project project) async {

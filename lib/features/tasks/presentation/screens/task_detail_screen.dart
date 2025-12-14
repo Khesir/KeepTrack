@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
+import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/task.dart';
 import '../../../projects/domain/entities/project.dart';
 import '../../domain/repositories/task_repository.dart';
@@ -111,7 +112,7 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
       }
 
       if (mounted) {
-        Navigator.pop(context);
+        context.goBack();
       }
     } catch (e) {
       if (mounted) {
@@ -149,7 +150,7 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
       await _taskRepository.deleteTask(widget.task!.id);
 
       if (mounted) {
-        Navigator.pop(context);
+        context.goBack();
       }
     } catch (e) {
       if (mounted) {

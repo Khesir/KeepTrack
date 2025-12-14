@@ -20,9 +20,14 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _budget = widget.budget;
+  }
+
+  @override
   void onReady() {
     _repository = getService<BudgetRepository>();
-    _budget = widget.budget;
   }
 
   Future<void> _refresh() async {
@@ -93,12 +98,13 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final balanceColor = _budget.balance >= 0 ? Colors.green : Colors.red;
-    final isActive = _budget.status == BudgetStatus.active;
+    final budget = _budget;
+    final balanceColor = budget.balance >= 0 ? Colors.green : Colors.red;
+    final isActive = budget.status == BudgetStatus.active;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Budget - ${_budget.month}'),
+        title: Text('Budget - ${budget.month}'),
         actions: [
           if (isActive)
             IconButton(
@@ -121,7 +127,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                 child: Column(
                   children: [
                     Text(
-                      '\$${_budget.balance.toStringAsFixed(2)}',
+                      '\$${budget.balance.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
@@ -129,7 +135,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                       ),
                     ),
                     Text(
-                      _budget.balance >= 0 ? 'Surplus' : 'Deficit',
+                      budget.balance >= 0 ? 'Surplus' : 'Deficit',
                       style: TextStyle(fontSize: 16, color: balanceColor),
                     ),
                     const SizedBox(height: 16),
@@ -138,14 +144,14 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                       children: [
                         _buildSummaryColumn(
                           'Income',
-                          _budget.totalActualIncome,
-                          _budget.totalBudgetedIncome,
+                          budget.totalActualIncome,
+                          budget.totalBudgetedIncome,
                           Colors.green,
                         ),
                         _buildSummaryColumn(
                           'Expenses',
-                          _budget.totalActualExpenses,
-                          _budget.totalBudgetedExpenses,
+                          budget.totalActualExpenses,
+                          budget.totalBudgetedExpenses,
                           Colors.red,
                         ),
                       ],
@@ -163,8 +169,8 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            ..._budget.categories.map((category) {
-              final actual = _budget.getActualAmountForCategory(category.id);
+            ...budget.categories.map((category) {
+              final actual = budget.getActualAmountForCategory(category.id);
               final percentage = category.targetAmount > 0
                   ? actual / category.targetAmount
                   : 0.0;
@@ -215,13 +221,13 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '${_budget.records.length} records',
+                  '${budget.records.length} records',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            if (_budget.records.isEmpty)
+            if (budget.records.isEmpty)
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -232,8 +238,8 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                 ),
               )
             else
-              ..._budget.records.reversed.map((record) {
-                final category = _budget.categories
+              ...budget.records.reversed.map((record) {
+                final category = budget.categories
                     .where((c) => c.id == record.categoryId)
                     .firstOrNull;
                 final isIncome = record.type == RecordType.income;
@@ -268,7 +274,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                 );
               }),
 
-            if (_budget.notes != null) ...[
+            if (budget.notes != null) ...[
               const SizedBox(height: 24),
               Card(
                 color: Colors.blue.withOpacity(0.1),
@@ -285,7 +291,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(_budget.notes!),
+                      Text(budget.notes!),
                     ],
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
+import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';
 import '../../domain/repositories/budget_repository.dart';
@@ -77,7 +78,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
       await _repository.createBudget(budget);
 
       if (mounted) {
-        Navigator.pop(context);
+        context.goBack();
       }
     } catch (e) {
       if (mounted) {
