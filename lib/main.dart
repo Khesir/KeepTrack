@@ -4,12 +4,12 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'core/di/service_locator.dart';
 import 'core/di/di_logger.dart';
 import 'features/tasks/tasks_di.dart';
+import 'features/projects/projects_di.dart';
 import 'features/budget/budget_di.dart';
 import 'features/tasks/presentation/screens/task_list_screen.dart';
-import 'features/tasks/presentation/screens/project_list_screen.dart';
+import 'features/projects/presentation/project_list_screen.dart';
 import 'features/budget/presentation/screens/budget_list_screen.dart';
 
 void main() {
@@ -18,6 +18,7 @@ void main() {
 
   // Setup dependencies
   setupTasksDependencies();
+  setupProjectsDependencies();
   setupBudgetDependencies();
 
   runApp(const TaskManagementApp());

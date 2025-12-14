@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
 import '../../domain/entities/task.dart';
-import '../../domain/entities/project.dart';
+import '../../../projects/domain/entities/project.dart';
 import '../../domain/repositories/task_repository.dart';
-import '../../domain/repositories/project_repository.dart';
+import '../../../projects/domain/repositories/project_repository.dart';
 
 /// Task detail screen - Create or edit a task
 class TaskDetailScreen extends ScopedScreen {

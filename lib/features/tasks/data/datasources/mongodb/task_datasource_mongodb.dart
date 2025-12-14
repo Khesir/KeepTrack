@@ -1,6 +1,6 @@
 import '../../models/task_model.dart';
 import '../task_datasource.dart';
-import 'mongodb_service.dart';
+import '../../../../../shared/infrastructure/mongodb/mongodb_service.dart';
 
 /// MongoDB implementation of TaskDataSource
 class TaskDataSourceMongoDB implements TaskDataSource {

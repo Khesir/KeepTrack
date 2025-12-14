@@ -1,5 +1,5 @@
 import '../../core/di/service_locator.dart';
-import '../tasks/data/datasources/mongodb/mongodb_service.dart';
+import '../../shared/infrastructure/mongodb/mongodb_service.dart';
 import 'data/datasources/budget_datasource.dart';
 import 'data/datasources/mongodb/budget_datasource_mongodb.dart';
 import 'data/repositories/budget_repository_impl.dart';

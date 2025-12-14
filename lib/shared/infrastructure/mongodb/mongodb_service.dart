@@ -1,4 +1,4 @@
-import '../../../../../core/di/disposable.dart';
+import '../../../core/di/disposable.dart';
 
 /// MongoDB service - Manages MongoDB connection and database
 ///

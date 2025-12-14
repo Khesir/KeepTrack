@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/scoped_screen.dart';
-import '../../domain/entities/project.dart';
-import '../../domain/entities/task.dart';
-import '../../domain/repositories/project_repository.dart';
-import '../../domain/repositories/task_repository.dart';
-import 'task_detail_screen.dart';
+import '../../../core/ui/scoped_screen.dart';
+import '../domain/entities/project.dart';
+import '../../tasks/domain/entities/task.dart';
+import '../domain/repositories/project_repository.dart';
+import '../../tasks/domain/repositories/task_repository.dart';
+import '../../tasks/presentation/screens/task_detail_screen.dart';
 
 /// Project detail screen - Shows project info and its tasks
 class ProjectDetailScreen extends ScopedScreen {
@@ -42,9 +42,9 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading tasks: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading tasks: $e')));
       }
     }
   }
@@ -53,10 +53,8 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TaskDetailScreen(
-          task: null,
-          initialProjectId: widget.project.id,
-        ),
+        builder: (context) =>
+            TaskDetailScreen(task: null, initialProjectId: widget.project.id),
       ),
     ).then((_) => _loadTasks());
   }
@@ -64,9 +62,7 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
   void _openTask(Task task) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => TaskDetailScreen(task: task),
-      ),
+      MaterialPageRoute(builder: (context) => TaskDetailScreen(task: task)),
     ).then((_) => _loadTasks());
   }
 
@@ -92,9 +88,9 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating project: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error updating project: $e')));
         }
       }
     }
@@ -149,9 +145,9 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting project: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting project: $e')));
         }
       }
     }
@@ -166,8 +162,7 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
     }
   }
 
-  int get _completedCount =>
-      _tasks.where((task) => task.isCompleted).length;
+  int get _completedCount => _tasks.where((task) => task.isCompleted).length;
 
   @override
   Widget build(BuildContext context) {
@@ -178,14 +173,8 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
         title: Text(widget.project.name),
         backgroundColor: projectColor,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editProject,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _deleteProject,
-          ),
+          IconButton(icon: const Icon(Icons.edit), onPressed: _editProject),
+          IconButton(icon: const Icon(Icons.delete), onPressed: _deleteProject),
         ],
       ),
       body: Column(
@@ -207,10 +196,7 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '${_tasks.length} tasks • $_completedCount completed',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[700],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                 ),
                 if (_tasks.isNotEmpty)
                   LinearProgressIndicator(
@@ -227,43 +213,42 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _tasks.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.task_alt,
-                                size: 64, color: Colors.grey[400]),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No tasks in this project',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: _createTask,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Task'),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No tasks in this project',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadTasks,
-                        child: ListView.builder(
-                          itemCount: _tasks.length,
-                          itemBuilder: (context, index) {
-                            final task = _tasks[index];
-                            return _ProjectTaskListItem(
-                              task: task,
-                              onTap: () => _openTask(task),
-                              onToggleComplete: () => _toggleComplete(task),
-                            );
-                          },
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: _createTask,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Task'),
                         ),
-                      ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadTasks,
+                    child: ListView.builder(
+                      itemCount: _tasks.length,
+                      itemBuilder: (context, index) {
+                        final task = _tasks[index];
+                        return _ProjectTaskListItem(
+                          task: task,
+                          onTap: () => _openTask(task),
+                          onToggleComplete: () => _toggleComplete(task),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -287,9 +272,9 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
       _loadTasks();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating task: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating task: $e')));
       }
     }
   }
@@ -328,10 +313,7 @@ class _ProjectTaskListItem extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               )
             : null,
-        trailing: Icon(
-          Icons.chevron_right,
-          color: Colors.grey[400],
-        ),
+        trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
         onTap: onTap,
       ),
     );
@@ -356,8 +338,9 @@ class _EditProjectDialogState extends State<_EditProjectDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.project.name);
-    _descriptionController =
-        TextEditingController(text: widget.project.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.project.description ?? '',
+    );
     _selectedColor = _parseColor(widget.project.color);
   }
 
@@ -403,31 +386,32 @@ class _EditProjectDialogState extends State<_EditProjectDialog> {
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
-            children: [
-              Colors.blue,
-              Colors.red,
-              Colors.green,
-              Colors.orange,
-              Colors.purple,
-            ].map((color) {
-              return GestureDetector(
-                onTap: () => setState(() => _selectedColor = color),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _selectedColor == color
-                          ? Colors.black
-                          : Colors.transparent,
-                      width: 2,
+            children:
+                [
+                  Colors.blue,
+                  Colors.red,
+                  Colors.green,
+                  Colors.orange,
+                  Colors.purple,
+                ].map((color) {
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedColor = color),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _selectedColor == color
+                              ? Colors.black
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
           ),
         ],
       ),

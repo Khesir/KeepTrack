@@ -7,7 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:persona_codex/core/examples/complete_app_example.dart';
+import 'package:persona_codex/core/di/examples/flutter_usage_example.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {

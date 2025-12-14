@@ -1,6 +1,6 @@
+import '../../../../../shared/infrastructure/mongodb/mongodb_service.dart';
 import '../../models/project_model.dart';
 import '../project_datasource.dart';
-import 'mongodb_service.dart';
 
 /// MongoDB implementation of ProjectDataSource
 class ProjectDataSourceMongoDB implements ProjectDataSource {

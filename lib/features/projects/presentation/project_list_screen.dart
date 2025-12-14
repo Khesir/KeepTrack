@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/scoped_screen.dart';
-import '../../domain/entities/project.dart';
-import '../../domain/repositories/project_repository.dart';
+import '../../../core/ui/scoped_screen.dart';
+import '../domain/entities/project.dart';
+import '../domain/repositories/project_repository.dart';
 import 'project_detail_screen.dart';
 
 /// Project list screen - Displays all projects
@@ -36,9 +36,9 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading projects: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading projects: $e')));
       }
     }
   }
@@ -65,9 +65,9 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen> {
         _loadProjects();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error creating project: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error creating project: $e')));
         }
       }
     }
@@ -76,68 +76,62 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Projects'),
-      ),
+      appBar: AppBar(title: const Text('Projects')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _projects.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.folder_open,
-                          size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No projects yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.folder_open, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No projects yet',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadProjects,
+              child: ListView.builder(
+                itemCount: _projects.length,
+                itemBuilder: (context, index) {
+                  final project = _projects[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: project.color != null
+                            ? _parseColor(project.color!)
+                            : Colors.blue,
+                        child: Text(
+                          project.name[0].toUpperCase(),
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadProjects,
-                  child: ListView.builder(
-                    itemCount: _projects.length,
-                    itemBuilder: (context, index) {
-                      final project = _projects[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: project.color != null
-                                ? _parseColor(project.color!)
-                                : Colors.blue,
-                            child: Text(
-                              project.name[0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          title: Text(project.name),
-                          subtitle: project.description != null
-                              ? Text(
-                                  project.description!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              : null,
-                          trailing: IconButton(
-                            icon: const Icon(Icons.archive),
-                            onPressed: () => _archiveProject(project),
-                          ),
-                          onTap: () => _openProject(project),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                      title: Text(project.name),
+                      subtitle: project.description != null
+                          ? Text(
+                              project.description!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : null,
+                      trailing: IconButton(
+                        icon: const Icon(Icons.archive),
+                        onPressed: () => _archiveProject(project),
+                      ),
+                      onTap: () => _openProject(project),
+                    ),
+                  );
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: _createProject,
         child: const Icon(Icons.add),
@@ -160,9 +154,9 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen> {
       _loadProjects();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error archiving project: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error archiving project: $e')));
       }
     }
   }
@@ -221,31 +215,32 @@ class _CreateProjectDialogState extends State<_CreateProjectDialog> {
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
-            children: [
-              Colors.blue,
-              Colors.red,
-              Colors.green,
-              Colors.orange,
-              Colors.purple,
-            ].map((color) {
-              return GestureDetector(
-                onTap: () => setState(() => _selectedColor = color),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _selectedColor == color
-                          ? Colors.black
-                          : Colors.transparent,
-                      width: 2,
+            children:
+                [
+                  Colors.blue,
+                  Colors.red,
+                  Colors.green,
+                  Colors.orange,
+                  Colors.purple,
+                ].map((color) {
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedColor = color),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _selectedColor == color
+                              ? Colors.black
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
           ),
         ],
       ),

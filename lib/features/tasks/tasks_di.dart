@@ -1,13 +1,14 @@
+import 'package:persona_codex/features/projects/data/datasources/mongodb/project_datasource_mongodb.dart';
+import 'package:persona_codex/features/projects/data/datasources/project_datasource.dart';
+import 'package:persona_codex/features/projects/data/repositories/project_repository_impl.dart';
+import 'package:persona_codex/features/projects/domain/repositories/project_repository.dart';
+import 'package:persona_codex/shared/infrastructure/mongodb/mongodb_service.dart';
+
 import '../../core/di/service_locator.dart';
-import 'data/datasources/mongodb/mongodb_service.dart';
 import 'data/datasources/mongodb/task_datasource_mongodb.dart';
-import 'data/datasources/mongodb/project_datasource_mongodb.dart';
 import 'data/datasources/task_datasource.dart';
-import 'data/datasources/project_datasource.dart';
 import 'data/repositories/task_repository_impl.dart';
-import 'data/repositories/project_repository_impl.dart';
 import 'domain/repositories/task_repository.dart';
-import 'domain/repositories/project_repository.dart';
 
 /// Setup task management dependencies
 void setupTasksDependencies() {
