@@ -2,27 +2,27 @@ import '../../domain/entities/budget.dart';
 import 'budget_category_model.dart';
 import 'budget_record_model.dart';
 
-/// Budget model - DTO for database
+/// Budget model - DTO for Supabase
 class BudgetModel {
-  final String id;
+  final String? id; // Optional - Supabase auto-generates
   final String month;
   final List<BudgetCategoryModel> categories;
   final List<BudgetRecordModel> records;
   final String status;
   final String? notes;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt; // Optional - Supabase auto-generates
+  final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? closedAt;
 
   BudgetModel({
-    required this.id,
+    this.id,
     required this.month,
-    required this.categories,
+    this.categories = const [],
     this.records = const [],
     required this.status,
     this.notes,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.closedAt,
   });
 
@@ -60,36 +60,41 @@ class BudgetModel {
 
   factory BudgetModel.fromJson(Map<String, dynamic> json) {
     return BudgetModel(
-      id: json['_id'] as String,
+      id: json['id'] as String?,
       month: json['month'] as String,
-      categories: (json['categories'] as List<dynamic>)
-          .map((cat) => BudgetCategoryModel.fromJson(cat as Map<String, dynamic>))
-          .toList(),
+      categories: (json['categories'] as List<dynamic>?)
+              ?.map((cat) => BudgetCategoryModel.fromJson(cat as Map<String, dynamic>))
+              .toList() ??
+          [],
       records: (json['records'] as List<dynamic>?)
               ?.map((record) => BudgetRecordModel.fromJson(record as Map<String, dynamic>))
               .toList() ??
           [],
       status: json['status'] as String,
       notes: json['notes'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      closedAt: json['closedAt'] != null
-          ? DateTime.parse(json['closedAt'] as String)
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+      closedAt: json['closed_at'] != null
+          ? DateTime.parse(json['closed_at'] as String)
           : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      if (id != null) 'id': id,
       'month': month,
       'categories': categories.map((cat) => cat.toJson()).toList(),
       'records': records.map((record) => record.toJson()).toList(),
       'status': status,
-      'notes': notes,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'closedAt': closedAt?.toIso8601String(),
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      if (closedAt != null) 'closed_at': closedAt!.toIso8601String(),
     };
   }
 }

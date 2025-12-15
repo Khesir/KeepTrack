@@ -1,21 +1,40 @@
-/// Task list controller using custom StreamState
-/// Pure business logic, framework-agnostic
+/// Task list controller using Use Cases (Clean Architecture)
+/// This is the CORRECT version - delegates to use cases, not repositories
 library;
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/state/stream_state.dart';
 import '../../domain/entities/task.dart';
-import '../../domain/repositories/task_repository.dart';
+import '../../domain/usecases/usecases.dart';
 
-/// Controller for task list screen
-/// Uses StreamState for reactive updates
+/// Controller for task list screen using use cases
+/// Follows Clean Architecture: Controller → Use Case → Repository
 class TaskListController extends StreamState<AsyncState<List<Task>>> {
-  final TaskRepository _repository;
-  TaskStatus? _filterStatus;
+  final GetTasksUseCase _getTasksUseCase;
+  final GetFilteredTasksUseCase _getFilteredTasksUseCase;
+  final UpdateTaskStatusUseCase _updateTaskStatusUseCase;
+  final DeleteTaskUseCase _deleteTaskUseCase;
+  final ArchiveTaskUseCase _archiveTaskUseCase;
 
-  TaskListController(this._repository) : super(const AsyncLoading()) {
+  TaskStatus? _filterStatus;
+  bool _showArchived = false;
+
+  TaskListController({
+    required GetTasksUseCase getTasksUseCase,
+    required GetFilteredTasksUseCase getFilteredTasksUseCase,
+    required UpdateTaskStatusUseCase updateTaskStatusUseCase,
+    required DeleteTaskUseCase deleteTaskUseCase,
+    required ArchiveTaskUseCase archiveTaskUseCase,
+  }) : _getTasksUseCase = getTasksUseCase,
+       _getFilteredTasksUseCase = getFilteredTasksUseCase,
+       _updateTaskStatusUseCase = updateTaskStatusUseCase,
+       _deleteTaskUseCase = deleteTaskUseCase,
+       _archiveTaskUseCase = archiveTaskUseCase,
+       super(const AsyncLoading()) {
     loadTasks();
   }
+
+  bool get showArchived => _showArchived;
 
   TaskStatus? get filterStatus => _filterStatus;
 
@@ -23,9 +42,12 @@ class TaskListController extends StreamState<AsyncState<List<Task>>> {
   Future<void> loadTasks() async {
     await execute(() async {
       if (_filterStatus != null) {
-        return await _repository.getTasksByStatus(_filterStatus!);
+        return await _getFilteredTasksUseCase.byStatus(
+          _filterStatus!,
+          includeArchived: _showArchived,
+        );
       }
-      return await _repository.getTasks();
+      return await _getTasksUseCase(includeArchived: _showArchived);
     });
   }
 
@@ -35,10 +57,28 @@ class TaskListController extends StreamState<AsyncState<List<Task>>> {
     await loadTasks();
   }
 
+  /// Get overdue tasks
+  Future<void> showOverdueTasks() async {
+    _filterStatus = null; // Clear status filter
+    await execute(() => _getFilteredTasksUseCase.overdue());
+  }
+
+  /// Get tasks due today
+  Future<void> showTasksDueToday() async {
+    _filterStatus = null;
+    await execute(() => _getFilteredTasksUseCase.dueToday());
+  }
+
+  /// Get tasks due this week
+  Future<void> showTasksDueThisWeek() async {
+    _filterStatus = null;
+    await execute(() => _getFilteredTasksUseCase.dueThisWeek());
+  }
+
   /// Delete a task
   Future<void> deleteTask(String taskId) async {
     try {
-      await _repository.deleteTask(taskId);
+      await _deleteTaskUseCase(taskId);
       await loadTasks(); // Reload list
     } catch (e) {
       emit(AsyncError('Failed to delete task: $e', e));
@@ -47,19 +87,28 @@ class TaskListController extends StreamState<AsyncState<List<Task>>> {
 
   /// Toggle task completion
   Future<void> toggleTaskCompletion(Task task) async {
+    if (task.id == null) {
+      emit(const AsyncError('Task ID is missing', null));
+      return;
+    }
+
     try {
-      final newStatus = task.isCompleted
-          ? TaskStatus.inProgress
-          : TaskStatus.completed;
-
-      final updated = task.copyWith(
-        status: newStatus,
-        completedAt: newStatus == TaskStatus.completed ? DateTime.now() : null,
-        updatedAt: DateTime.now(),
-      );
-
-      await _repository.updateTask(updated);
+      if (task.isCompleted) {
+        await _updateTaskStatusUseCase.moveToTodo(task.id!);
+      } else {
+        await _updateTaskStatusUseCase.complete(task.id!);
+      }
       await loadTasks(); // Reload list
+    } catch (e) {
+      emit(AsyncError('Failed to update task: $e', e));
+    }
+  }
+
+  /// Mark task as in progress
+  Future<void> markTaskInProgress(String taskId) async {
+    try {
+      await _updateTaskStatusUseCase.markInProgress(taskId);
+      await loadTasks();
     } catch (e) {
       emit(AsyncError('Failed to update task: $e', e));
     }
@@ -67,16 +116,77 @@ class TaskListController extends StreamState<AsyncState<List<Task>>> {
 
   /// Search tasks
   Future<void> searchTasks(String query) async {
-    if (query.isEmpty) {
+    if (query.trim().isEmpty) {
       await loadTasks();
       return;
     }
 
-    await execute(() => _repository.searchTasks(query));
+    await execute(() => _getFilteredTasksUseCase.search(query));
   }
-}
 
-/// Factory function for DI registration
-TaskListController createTaskListController(ScopedServiceLocator locator) {
-  return TaskListController(locator.get<TaskRepository>());
+  /// Delete multiple tasks
+  Future<void> deleteMultipleTasks(List<String> taskIds) async {
+    try {
+      final failures = await _deleteTaskUseCase.deleteMultiple(taskIds);
+
+      if (failures.isEmpty) {
+        await loadTasks();
+      } else {
+        await loadTasks();
+        emit(
+          AsyncError('Failed to delete ${failures.length} task(s)', failures),
+        );
+      }
+    } catch (e) {
+      emit(AsyncError('Failed to delete tasks: $e', e));
+    }
+  }
+
+  /// Archive a task (soft delete)
+  Future<void> archiveTask(String taskId) async {
+    try {
+      await _archiveTaskUseCase.archive(taskId);
+      await loadTasks(); // Reload list
+    } catch (e) {
+      emit(AsyncError('Failed to archive task: $e', e));
+    }
+  }
+
+  /// Unarchive a task (restore from archive)
+  Future<void> unarchiveTask(String taskId) async {
+    try {
+      await _archiveTaskUseCase.unarchive(taskId);
+      await loadTasks(); // Reload list
+    } catch (e) {
+      emit(AsyncError('Failed to unarchive task: $e', e));
+    }
+  }
+
+  /// Toggle archive status
+  Future<void> toggleArchive(Task task) async {
+    if (task.id == null) {
+      emit(const AsyncError('Task ID is missing', null));
+      return;
+    }
+
+    try {
+      await _archiveTaskUseCase.toggle(task.id!);
+      await loadTasks();
+    } catch (e) {
+      emit(AsyncError('Failed to toggle archive: $e', e));
+    }
+  }
+
+  /// Toggle showing archived tasks
+  Future<void> toggleShowArchived() async {
+    _showArchived = !_showArchived;
+    await loadTasks();
+  }
+
+  /// Show only archived tasks
+  Future<void> showArchivedTasks() async {
+    _filterStatus = null;
+    _showArchived = true;
+    await execute(() => _getTasksUseCase.getArchivedTasks());
+  }
 }

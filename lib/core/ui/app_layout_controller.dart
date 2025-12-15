@@ -91,8 +91,8 @@ class AppLayoutProvider extends InheritedWidget {
   });
 
   static AppLayoutController of(BuildContext context) {
-    final provider =
-        context.dependOnInheritedWidgetOfExactType<AppLayoutProvider>();
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<AppLayoutProvider>();
     if (provider == null) {
       throw Exception('No AppLayoutProvider found in context');
     }

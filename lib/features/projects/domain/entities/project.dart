@@ -1,20 +1,20 @@
 /// Project entity - Pure domain model
 class Project {
-  final String id;
+  final String? id; // Optional - Supabase auto-generates
   final String name;
   final String? description;
   final String? color;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt; // Optional - Supabase auto-generates
+  final DateTime? updatedAt; // Optional - Supabase auto-generates
   final bool isArchived;
 
   Project({
-    required this.id,
+    this.id,
     required this.name,
     this.description,
     this.color,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.isArchived = false,
   });
 
@@ -42,10 +42,13 @@ class Project {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Project && runtimeType == other.runtimeType && id == other.id;
+      other is Project &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name;
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => Object.hash(id, name);
 
   @override
   String toString() => 'Project(id: $id, name: $name)';

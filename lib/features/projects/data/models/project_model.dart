@@ -1,22 +1,22 @@
 import '../../domain/entities/project.dart';
 
-/// Project model - Data transfer object for database
+/// Project model - Data transfer object for Supabase
 class ProjectModel {
-  final String id;
+  final String? id; // Optional - Supabase auto-generates
   final String name;
   final String? description;
   final String? color;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt; // Optional - Supabase auto-generates
+  final DateTime? updatedAt; // Optional - Supabase auto-generates
   final bool isArchived;
 
   ProjectModel({
-    required this.id,
+    this.id,
     required this.name,
     this.description,
     this.color,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.isArchived = false,
   });
 
@@ -46,29 +46,33 @@ class ProjectModel {
     );
   }
 
-  /// Convert from MongoDB document
+  /// Convert from Supabase JSON
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
     return ProjectModel(
-      id: json['_id'] as String,
+      id: json['id'] as String?,
       name: json['name'] as String,
       description: json['description'] as String?,
       color: json['color'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      isArchived: json['isArchived'] as bool? ?? false,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+      isArchived: json['is_archived'] as bool? ?? false,
     );
   }
 
-  /// Convert to MongoDB document
+  /// Convert to Supabase JSON
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      if (id != null) 'id': id,
       'name': name,
-      'description': description,
-      'color': color,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'isArchived': isArchived,
+      if (description != null) 'description': description,
+      if (color != null) 'color': color,
+      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      'is_archived': isArchived,
     };
   }
 }

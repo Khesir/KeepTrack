@@ -3,25 +3,25 @@ import 'budget_record.dart';
 
 /// Monthly budget entity
 class Budget {
-  final String id;
+  final String? id; // Optional - Supabase auto-generates
   final String month; // Format: YYYY-MM (e.g., "2024-12")
   final List<BudgetCategory> categories;
   final List<BudgetRecord> records;
   final BudgetStatus status;
   final String? notes;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt; // Optional - Supabase auto-generates
+  final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? closedAt;
 
   Budget({
-    required this.id,
+    this.id,
     required this.month,
-    required this.categories,
+    this.categories = const [],
     this.records = const [],
     this.status = BudgetStatus.active,
     this.notes,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     this.closedAt,
   });
 
@@ -107,10 +107,13 @@ class Budget {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Budget && runtimeType == other.runtimeType && id == other.id;
+      other is Budget &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          month == other.month;
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => Object.hash(id, month);
 
   @override
   String toString() => 'Budget(id: $id, month: $month, status: $status)';

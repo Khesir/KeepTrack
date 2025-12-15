@@ -31,7 +31,14 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
   ];
 
   @override
-  void onReady() {
+  void registerServices() {
+    // Uses global repository
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
     _repository = getService<BudgetRepository>();
 
     // Generate current month
@@ -50,8 +57,11 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
         ),
       );
     }
+  }
 
-    setState(() {});
+  @override
+  void onReady() {
+    // Only UI configuration here (if needed)
   }
 
   Future<void> _createBudget() async {
@@ -64,15 +74,12 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
     }
 
     try {
-      final now = DateTime.now();
+      // Supabase will auto-generate id, createdAt, updatedAt
       final budget = Budget(
-        id: 'budget-${now.millisecondsSinceEpoch}',
         month: _selectedMonth,
         categories: _categories,
         records: [],
         status: BudgetStatus.active,
-        createdAt: now,
-        updatedAt: now,
       );
 
       await _repository.createBudget(budget);

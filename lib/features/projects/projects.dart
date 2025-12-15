@@ -14,8 +14,8 @@ export 'data/datasources/supabase/project_datasource_supabase.dart';
 export 'data/repositories/project_repository_impl.dart';
 
 // Presentation
-export 'presentation/project_list_screen.dart';
-export 'presentation/project_detail_screen.dart';
+export 'presentation/screens/project_list_screen.dart';
+export 'presentation/screens/project_detail_screen.dart';
 
 // DI Setup
 export 'projects_di.dart';

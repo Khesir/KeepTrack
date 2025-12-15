@@ -14,7 +14,7 @@ class ProjectDataSourceSupabase implements ProjectDataSource {
     final response = await supabaseService.client
         .from(tableName)
         .select()
-        .order('createdAt', ascending: false);
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((doc) => ProjectModel.fromJson(doc as Map<String, dynamic>))
@@ -26,8 +26,8 @@ class ProjectDataSourceSupabase implements ProjectDataSource {
     final response = await supabaseService.client
         .from(tableName)
         .select()
-        .eq('isArchived', false)
-        .order('createdAt', ascending: false);
+        .eq('is_archived', false)
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((doc) => ProjectModel.fromJson(doc as Map<String, dynamic>))
@@ -42,7 +42,9 @@ class ProjectDataSourceSupabase implements ProjectDataSource {
         .eq('id', id)
         .maybeSingle();
 
-    return response != null ? ProjectModel.fromJson(response as Map<String, dynamic>) : null;
+    return response != null
+        ? ProjectModel.fromJson(response as Map<String, dynamic>)
+        : null;
   }
 
   @override
@@ -59,11 +61,15 @@ class ProjectDataSourceSupabase implements ProjectDataSource {
 
   @override
   Future<ProjectModel> updateProject(ProjectModel project) async {
+    if (project.id == null) {
+      throw Exception('Cannot update project without an ID');
+    }
+
     final doc = project.toJson();
     final response = await supabaseService.client
         .from(tableName)
         .update(doc)
-        .eq('id', project.id)
+        .eq('id', project.id!)
         .select()
         .single();
 
@@ -72,9 +78,6 @@ class ProjectDataSourceSupabase implements ProjectDataSource {
 
   @override
   Future<void> deleteProject(String id) async {
-    await supabaseService.client
-        .from(tableName)
-        .delete()
-        .eq('id', id);
+    await supabaseService.client.from(tableName).delete().eq('id', id);
   }
 }

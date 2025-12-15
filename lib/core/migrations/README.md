@@ -19,22 +19,26 @@ Migrations are **automatic** and run when the app starts. They ensure your Supab
 
 1. **Create your Supabase project** at https://supabase.com
 
-2. **Run the initial migration SQL** in Supabase SQL Editor:
+2. **Run the bootstrap script** in Supabase SQL Editor (ONE-TIME SETUP):
    - Go to your Supabase Dashboard
    - Navigate to SQL Editor
    - Click "New Query"
-   - Copy the SQL from `migrations/001_create_initial_schema.dart`
+   - Copy and paste the contents of `supabase/bootstrap.sql`
    - Run the query
+
+   This creates:
+   - The `exec_sql` function (allows automatic migrations)
+   - The `schema_migrations` table (tracks applied migrations)
 
 3. **Update your credentials** in `lib/main.dart`:
    ```dart
-   SupabaseService(
-     supabaseUrl: 'YOUR_PROJECT_URL',
-     supabaseAnonKey: 'YOUR_ANON_KEY',
-   )
+   await Supabase.initialize(
+     url: 'YOUR_PROJECT_URL',
+     anonKey: 'YOUR_ANON_KEY',
+   );
    ```
 
-4. **Run your app** - migrations will run automatically!
+4. **Run your app** - migrations will run **fully automatically**!
 
 ## Creating a New Migration
 
@@ -57,19 +61,18 @@ class Migration002AddEstimatedHours extends Migration {
 
   @override
   Future<void> up(SupabaseClient client) async {
-    // Run this SQL in Supabase SQL Editor first!
-    print('''
-      Please run this SQL in Supabase SQL Editor:
-
+    final sql = '''
       ALTER TABLE tasks
       ADD COLUMN estimated_hours INTEGER;
 
       CREATE INDEX idx_tasks_estimated_hours
       ON tasks(estimated_hours);
-    ''');
+    ''';
 
-    // Check if column exists
-    await client.from('tasks').select('estimated_hours').limit(1);
+    // Execute automatically via exec_sql RPC
+    await client.rpc('exec_sql', params: {'sql': sql});
+
+    print('✅ Added estimated_hours column to tasks');
   }
 
   @override
@@ -109,16 +112,14 @@ class Task {
 }
 ```
 
-**Step 4: Run the SQL**
+**Step 4: Run your app**
 
-Before running the app:
-1. Go to Supabase SQL Editor
-2. Run the ALTER TABLE command
-3. Now run your app - migration will be recorded
+The migration will be **automatically executed and recorded**!
 
-**Step 5: Run your app**
-
-The migration will be detected and recorded automatically!
+No manual SQL needed - the app will:
+1. Detect the new migration
+2. Execute it via the `exec_sql` RPC function
+3. Record it in the `schema_migrations` table
 
 ## Migration Naming Convention
 
@@ -158,20 +159,20 @@ Examples:
 
 ### ✅ DO
 
-- **Run SQL manually first** in Supabase SQL Editor
-- **Test migrations** on a development database
+- **Test migrations** on a development database first
 - **Keep migrations small** - one logical change per migration
 - **Add migrations to the end** of the list
 - **Include indexes** for frequently queried fields
 - **Add descriptions** explaining what the migration does
+- **Use `exec_sql` RPC** for schema changes (automatic execution)
 
 ### ❌ DON'T
 
 - **Never modify** an applied migration
 - **Never reorder** migrations
 - **Never delete** old migrations
-- **Don't skip** the SQL Editor step
 - **Don't run** destructive migrations in production without backups
+- **Don't forget** to run the bootstrap script on new Supabase projects
 
 ## Migration Examples
 
@@ -187,7 +188,6 @@ class Migration003CreateNotifications extends Migration {
 
   @override
   Future<void> up(SupabaseClient client) async {
-    // SQL to run in Supabase SQL Editor:
     final sql = '''
       CREATE TABLE notifications (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -202,10 +202,9 @@ class Migration003CreateNotifications extends Migration {
       CREATE INDEX idx_notifications_read ON notifications(read);
     ''';
 
-    print('Run this SQL:\n$sql');
-
-    // Verify table exists
-    await client.from('notifications').select('id').limit(1);
+    // Execute automatically
+    await client.rpc('exec_sql', params: {'sql': sql});
+    print('✅ Notifications table created');
   }
 }
 ```
@@ -229,7 +228,9 @@ class Migration004AddSearchIndexes extends Migration {
       USING gin(to_tsvector('english', title || ' ' || COALESCE(description, '')));
     ''';
 
-    print('Run this SQL:\n$sql');
+    // Execute automatically
+    await client.rpc('exec_sql', params: {'sql': sql});
+    print('✅ Full-text search indexes created');
   }
 }
 ```
@@ -266,9 +267,13 @@ class Migration005MigrateOldStatuses extends Migration {
 
 ## Troubleshooting
 
-### Migration fails with "table doesn't exist"
+### Migration fails with "exec_sql function not found"
 
-**Solution:** Run the SQL in Supabase SQL Editor first, then restart the app.
+**Solution:** You need to run the bootstrap script first. See `supabase/bootstrap.sql` and run it in your Supabase SQL Editor.
+
+### Migration fails with "permission denied"
+
+**Solution:** The `exec_sql` function needs proper permissions. Re-run the bootstrap script which grants the necessary permissions.
 
 ### Migration runs but data isn't there
 

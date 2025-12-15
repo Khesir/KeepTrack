@@ -56,6 +56,7 @@ abstract class ScopedScreenState<W extends ScopedScreen> extends State<W>
 
   /// Override for post-build initialization logic
   /// Called after the first frame is rendered
+  /// Safe to configure layout
   void onReady() {}
 
   /// Override to clean up resources

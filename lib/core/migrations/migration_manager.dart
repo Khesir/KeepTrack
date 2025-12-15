@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'migration.dart';
 import 'migrations/001_create_initial_schema.dart';
+import 'migrations/002_add_archive_task.dart';
 
 /// Manages database migrations
 ///
@@ -52,7 +53,9 @@ class MigrationManager {
         results.add(result);
 
         if (!result.success) {
-          throw Exception('Migration ${migration.version} failed: ${result.error}');
+          throw Exception(
+            'Migration ${migration.version} failed: ${result.error}',
+          );
         }
       }
 
@@ -69,32 +72,56 @@ class MigrationManager {
     try {
       // Try to query the table
       await client.from('schema_migrations').select('version').limit(1);
+      print('✅ schema_migrations table exists');
     } catch (e) {
-      // Table doesn't exist, create it
+      // Table doesn't exist, try to create it
       print('📦 Creating schema_migrations table...');
 
-      await client.rpc('exec_sql', params: {
-        'sql': '''
-          CREATE TABLE IF NOT EXISTS schema_migrations (
-            version TEXT PRIMARY KEY,
-            applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            description TEXT
-          );
-        '''
-      }).catchError((_) async {
-        // If RPC doesn't exist, we need to use SQL Editor manually
-        // For now, we'll check if the error is about the table not existing
-        print('⚠️  Cannot auto-create migrations table.');
-        print('   Please run this SQL in your Supabase SQL Editor:');
+      try {
+        await client.rpc(
+          'exec_sql',
+          params: {
+            'sql': '''
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+              version TEXT PRIMARY KEY,
+              applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              description TEXT
+            );
+
+            ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY;
+
+            DROP POLICY IF EXISTS "Allow all operations on schema_migrations" ON schema_migrations;
+
+            CREATE POLICY "Allow all operations on schema_migrations"
+            ON schema_migrations
+            FOR ALL
+            USING (true)
+            WITH CHECK (true);
+          ''',
+          },
+        );
+        print('✅ schema_migrations table created successfully');
+      } catch (rpcError) {
+        // RPC function doesn't exist - provide bootstrap instructions
         print('');
-        print('   CREATE TABLE IF NOT EXISTS schema_migrations (');
-        print('     version TEXT PRIMARY KEY,');
-        print('     applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),');
-        print('     description TEXT');
-        print('   );');
+        print('❌ ERROR: exec_sql function not found in Supabase');
         print('');
-        throw Exception('schema_migrations table does not exist. Please create it manually.');
-      });
+        print('═' * 70);
+        print('SETUP REQUIRED');
+        print('═' * 70);
+        print('');
+        print('To enable automatic migrations, you need to run the bootstrap');
+        print('script in your Supabase SQL Editor:');
+        print('');
+        print('1. Open your Supabase project dashboard');
+        print('2. Go to SQL Editor → New Query');
+        print('3. Copy and paste the contents of:');
+        print('   supabase/bootstrap.sql');
+
+        throw Exception(
+          'Supabase not bootstrapped. Please run supabase/bootstrap.sql first.',
+        );
+      }
     }
   }
 
@@ -106,9 +133,7 @@ class MigrationManager {
           .select('version')
           .order('version');
 
-      return (response as List)
-          .map((row) => row['version'] as String)
-          .toSet();
+      return (response as List).map((row) => row['version'] as String).toSet();
     } catch (e) {
       print('⚠️  Could not fetch applied migrations: $e');
       return {};
@@ -157,11 +182,12 @@ class MigrationManager {
   /// ⚠️ IMPORTANT: Add new migrations to the end of this list
   /// Never reorder or remove migrations that have been applied
   List<Migration> get _allMigrations => [
-        Migration001CreateInitialSchema(),
-        // Add new migrations here:
-        // Migration002AddEstimatedHours(),
-        // Migration003CreateIndexes(),
-      ];
+    Migration001CreateInitialSchema(),
+    Migration002AddArchivedTask(),
+    // Add new migrations here:
+    // Migration002AddEstimatedHours(),
+    // Migration003CreateIndexes(),
+  ];
 
   /// Get migration status (for debugging)
   Future<Map<String, dynamic>> getStatus() async {

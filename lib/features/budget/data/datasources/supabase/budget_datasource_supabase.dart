@@ -57,11 +57,15 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
 
   @override
   Future<BudgetModel> updateBudget(BudgetModel budget) async {
+    if (budget.id == null) {
+      throw Exception('Cannot update budget without an ID');
+    }
+
     final doc = budget.toJson();
     final response = await supabaseService.client
         .from(tableName)
         .update(doc)
-        .eq('id', budget.id)
+        .eq('id', budget.id!)
         .select()
         .single();
 

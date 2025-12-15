@@ -18,8 +18,8 @@ export 'data/repositories/task_repository_impl.dart';
 // Presentation
 export 'presentation/screens/task_list_screen.dart';
 export 'presentation/screens/task_detail_screen.dart';
-export '../projects/presentation/project_list_screen.dart';
-export '../projects/presentation/project_detail_screen.dart';
+export '../projects/presentation/screens/project_list_screen.dart';
+export '../projects/presentation/screens/project_detail_screen.dart';
 
 // DI Setup
 export 'tasks_di.dart';

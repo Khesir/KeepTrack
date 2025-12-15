@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/task.dart';
-import '../../../projects/domain/entities/project.dart';
 import '../../domain/repositories/task_repository.dart';
 import '../../../projects/domain/repositories/project_repository.dart';
+import '../../domain/usecases/usecases.dart';
+import '../state/task_detail_controller.dart';
 
 /// Task detail screen - Create or edit a task
 class TaskDetailScreen extends ScopedScreen {
@@ -18,8 +19,7 @@ class TaskDetailScreen extends ScopedScreen {
 }
 
 class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
-  late TaskRepository _taskRepository;
-  late ProjectRepository _projectRepository;
+  late TaskDetailController _controller;
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _titleController;
@@ -29,7 +29,6 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
   TaskPriority _priority = TaskPriority.medium;
   DateTime? _dueDate;
   String? _selectedProjectId;
-  List<Project> _projects = [];
 
   bool get _isEditing => widget.task != null;
 
@@ -39,13 +38,24 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
   }
 
   @override
-  void onReady() {
-    _taskRepository = getService<TaskRepository>();
-    _projectRepository = getService<ProjectRepository>();
+  void initState() {
+    super.initState();
+
+    final taskRepository = getService<TaskRepository>();
+    final projectRepository = getService<ProjectRepository>();
+
+    _controller = TaskDetailController(
+      createTaskUseCase: CreateTaskUseCase(taskRepository),
+      updateTaskUseCase: UpdateTaskUseCase(taskRepository),
+      deleteTaskUseCase: DeleteTaskUseCase(taskRepository),
+      projectRepository: projectRepository,
+      initialTask: widget.task,
+    );
 
     _titleController = TextEditingController(text: widget.task?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.task?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.task?.description ?? '',
+    );
 
     if (widget.task != null) {
       _status = widget.task!.status;
@@ -55,76 +65,62 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
     } else if (widget.initialProjectId != null) {
       _selectedProjectId = widget.initialProjectId;
     }
-
-    _loadProjects();
-    setState(() {});
   }
 
-  Future<void> _loadProjects() async {
-    try {
-      final projects = await _projectRepository.getActiveProjects();
-      setState(() => _projects = projects);
-    } catch (e) {
-      // Ignore error, projects are optional
-    }
+  @override
+  void onReady() {
+    // Only UI configuration here (if needed)
   }
 
   @override
   void onDispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _controller.dispose();
   }
 
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) return;
 
-    try {
-      final now = DateTime.now();
-
-      if (_isEditing) {
-        // Update existing task
-        final updated = widget.task!.copyWith(
+    bool success;
+    if (_isEditing) {
+      // Update existing task
+      success = await _controller.updateTask(
+        UpdateTaskParams(
+          taskId: widget.task!.id!,
           title: _titleController.text,
           description: _descriptionController.text,
           status: _status,
           priority: _priority,
           dueDate: _dueDate,
           projectId: _selectedProjectId,
-          updatedAt: now,
-        );
-
-        await _taskRepository.updateTask(updated);
-      } else {
-        // Create new task
-        final newTask = Task(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+        ),
+      );
+    } else {
+      // Create new task
+      success = await _controller.createTask(
+        CreateTaskParams(
           title: _titleController.text,
           description: _descriptionController.text,
           status: _status,
           priority: _priority,
           projectId: _selectedProjectId,
-          createdAt: now,
-          updatedAt: now,
           dueDate: _dueDate,
-        );
+        ),
+      );
+    }
 
-        await _taskRepository.createTask(newTask);
-      }
-
-      if (mounted) {
-        context.goBack();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving task: $e')),
-        );
-      }
+    if (success && mounted) {
+      context.goBack();
+    } else if (!success && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Error saving task')));
     }
   }
 
   Future<void> _deleteTask() async {
-    if (!_isEditing) return;
+    if (!_isEditing || widget.task?.id == null) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -146,18 +142,14 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
 
     if (confirmed != true) return;
 
-    try {
-      await _taskRepository.deleteTask(widget.task!.id);
+    final success = await _controller.deleteTask(widget.task!.id!);
 
-      if (mounted) {
-        context.goBack();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting task: $e')),
-        );
-      }
+    if (success && mounted) {
+      context.goBack();
+    } else if (!success && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Error deleting task')));
     }
   }
 
@@ -181,10 +173,7 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
         title: Text(_isEditing ? 'Edit Task' : 'New Task'),
         actions: [
           if (_isEditing)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteTask,
-            ),
+            IconButton(icon: const Icon(Icons.delete), onPressed: _deleteTask),
         ],
       ),
       body: Form(
@@ -217,9 +206,9 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
             const SizedBox(height: 16),
 
             // Project Selector
-            if (_projects.isNotEmpty)
+            if (_controller.projects.isNotEmpty)
               DropdownButtonFormField<String?>(
-                value: _selectedProjectId,
+                initialValue: _selectedProjectId,
                 decoration: const InputDecoration(
                   labelText: 'Project (Optional)',
                   border: OutlineInputBorder(),
@@ -229,28 +218,32 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
                     value: null,
                     child: Text('No Project'),
                   ),
-                  ..._projects.map((project) => DropdownMenuItem(
-                        value: project.id,
-                        child: Text(project.name),
-                      )),
+                  ..._controller.projects.map(
+                    (project) => DropdownMenuItem(
+                      value: project.id,
+                      child: Text(project.name),
+                    ),
+                  ),
                 ],
                 onChanged: (value) {
                   setState(() => _selectedProjectId = value);
                 },
               ),
-            if (_projects.isNotEmpty) const SizedBox(height: 16),
+            if (_controller.projects.isNotEmpty) const SizedBox(height: 16),
 
             DropdownButtonFormField<TaskStatus>(
-              value: _status,
+              initialValue: _status,
               decoration: const InputDecoration(
                 labelText: 'Status',
                 border: OutlineInputBorder(),
               ),
               items: TaskStatus.values
-                  .map((status) => DropdownMenuItem(
-                        value: status,
-                        child: Text(status.displayName),
-                      ))
+                  .map(
+                    (status) => DropdownMenuItem(
+                      value: status,
+                      child: Text(status.displayName),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) {
                 if (value != null) {
@@ -260,16 +253,18 @@ class _TaskDetailScreenState extends ScopedScreenState<TaskDetailScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<TaskPriority>(
-              value: _priority,
+              initialValue: _priority,
               decoration: const InputDecoration(
                 labelText: 'Priority',
                 border: OutlineInputBorder(),
               ),
               items: TaskPriority.values
-                  .map((priority) => DropdownMenuItem(
-                        value: priority,
-                        child: Text(priority.displayName),
-                      ))
+                  .map(
+                    (priority) => DropdownMenuItem(
+                      value: priority,
+                      child: Text(priority.displayName),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) {
                 if (value != null) {

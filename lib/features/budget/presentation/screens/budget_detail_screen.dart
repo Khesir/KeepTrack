@@ -17,36 +17,45 @@ class BudgetDetailScreen extends ScopedScreen {
 class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
   late BudgetRepository _repository;
   late Budget _budget;
-  bool _isLoading = false;
+
+  @override
+  void registerServices() {
+    // Uses global repository
+  }
 
   @override
   void initState() {
     super.initState();
     _budget = widget.budget;
+    _repository = getService<BudgetRepository>();
   }
 
   @override
   void onReady() {
-    _repository = getService<BudgetRepository>();
+    // Only UI configuration here (if needed)
   }
 
   Future<void> _refresh() async {
-    setState(() => _isLoading = true);
+    if (_budget.id == null) return;
 
     try {
-      final updated = await _repository.getBudgetById(_budget.id);
+      final updated = await _repository.getBudgetById(_budget.id!);
       if (updated != null) {
-        setState(() {
-          _budget = updated;
-          _isLoading = false;
-        });
+        setState(() => _budget = updated);
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      // Silently fail
     }
   }
 
   Future<void> _addRecord() async {
+    if (_budget.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot add record: Budget ID is missing')),
+      );
+      return;
+    }
+
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _AddRecordDialog(categories: _budget.categories),
@@ -56,7 +65,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
       try {
         final record = BudgetRecord(
           id: 'record-${DateTime.now().millisecondsSinceEpoch}',
-          budgetId: _budget.id,
+          budgetId: _budget.id!,
           categoryId: result['categoryId'],
           amount: result['amount'],
           description: result['description'],
@@ -64,7 +73,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
           type: result['type'],
         );
 
-        final updated = await _repository.addRecord(_budget.id, record);
+        final updated = await _repository.addRecord(_budget.id!, record);
         setState(() => _budget = updated);
       } catch (e) {
         if (mounted) {
@@ -81,10 +90,12 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
       context: context,
       builder: (context) => _ClosebudgetDialog(),
     );
-
+    if (_budget.id == null) {
+      throw Exception('Cannot update budget without an ID');
+    }
     if (notes != null) {
       try {
-        final closed = await _repository.closeBudget(_budget.id, notes);
+        final closed = await _repository.closeBudget(_budget.id!, notes);
         setState(() => _budget = closed);
       } catch (e) {
         if (mounted) {

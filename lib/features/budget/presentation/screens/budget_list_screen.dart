@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import '../../../../core/ui/scoped_screen.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/repositories/budget_repository.dart';
+import '../../domain/usecases/usecases.dart';
+import '../state/budget_list_controller.dart';
 
 /// Budget list screen - Shows all monthly budgets
 class BudgetListScreen extends ScopedScreen {
@@ -12,110 +16,117 @@ class BudgetListScreen extends ScopedScreen {
   State<BudgetListScreen> createState() => _BudgetListScreenState();
 }
 
-class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen> {
-  late BudgetRepository _repository;
-  List<Budget> _budgets = [];
-  bool _isLoading = false;
+class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
+    with AppLayoutControlled {
+  late BudgetListController _controller;
+
+  @override
+  void registerServices() {
+    // Uses global repository
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    final budgetRepo = getService<BudgetRepository>();
+
+    // Create controller without DI (as requested)
+    _controller = BudgetListController(
+      getBudgetsUseCase: GetBudgetsUseCase(budgetRepo),
+      createBudgetUseCase: CreateBudgetUseCase(budgetRepo),
+    );
+  }
 
   @override
   void onReady() {
-    _repository = getService<BudgetRepository>();
-    _loadBudgets();
+    // Only UI configuration here (if needed)
+    configureLayout(
+      title: 'Budgets',
+      fab: FloatingActionButton(
+        onPressed: _createBudget,
+        child: const Icon(Icons.add),
+      ),
+      showBottomNav: true,
+    );
   }
 
-  Future<void> _loadBudgets() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final budgets = await _repository.getBudgets();
-      setState(() {
-        _budgets = budgets;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading budgets: $e')),
-        );
-      }
-    }
+  @override
+  void onDispose() {
+    _controller.dispose();
   }
 
   void _createBudget() {
-    context.goToBudgetCreate().then((_) => _loadBudgets());
+    context.goToBudgetCreate().then((_) => _controller.loadBudgets());
   }
 
   void _openBudget(Budget budget) {
-    context.goToBudgetDetail(budget).then((_) => _loadBudgets());
+    context.goToBudgetDetail(budget).then((_) => _controller.loadBudgets());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Budgets'),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _budgets.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.account_balance_wallet,
-                          size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No budgets yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: _createBudget,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Create Budget'),
-                      ),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    // Summary Card
-                    if (_budgets.isNotEmpty) _buildSummaryCard(),
-
-                    // Budget List
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _loadBudgets,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(8),
-                          itemCount: _budgets.length,
-                          itemBuilder: (context, index) {
-                            final budget = _budgets[index];
-                            return _BudgetCard(
-                              budget: budget,
-                              onTap: () => _openBudget(budget),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+    return AsyncStreamBuilder<List<Budget>>(
+      state: _controller,
+      builder: (context, budgets) {
+        if (budgets.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.account_balance_wallet,
+                  size: 64,
+                  color: Colors.grey[400],
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createBudget,
-        child: const Icon(Icons.add),
-      ),
+                const SizedBox(height: 16),
+                Text(
+                  'No budgets yet',
+                  style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: _createBudget,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Budget'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            // Summary Card
+            _buildSummaryCard(budgets),
+
+            // Budget List
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _controller.loadBudgets,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: budgets.length,
+                  itemBuilder: (context, index) {
+                    final budget = budgets[index];
+                    return _BudgetCard(
+                      budget: budget,
+                      onTap: () => _openBudget(budget),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildSummaryCard() {
-    final activeBudget =
-        _budgets.where((b) => b.status == BudgetStatus.active).firstOrNull;
+  Widget _buildSummaryCard(List<Budget> budgets) {
+    final activeBudget = budgets
+        .where((b) => b.status == BudgetStatus.active)
+        .firstOrNull;
 
     if (activeBudget == null) {
       return const SizedBox.shrink();
@@ -133,10 +144,7 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen> {
           children: [
             Text(
               'Current Month: ${activeBudget.month}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Row(
@@ -168,13 +176,7 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen> {
   Widget _buildSummaryItem(String label, double amount, Color color) {
     return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         const SizedBox(height: 4),
         Text(
           '\$${amount.toStringAsFixed(2)}',
@@ -193,10 +195,7 @@ class _BudgetCard extends StatelessWidget {
   final Budget budget;
   final VoidCallback onTap;
 
-  const _BudgetCard({
-    required this.budget,
-    required this.onTap,
-  });
+  const _BudgetCard({required this.budget, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -249,10 +248,7 @@ class _BudgetCard extends StatelessWidget {
                       ),
                       Text(
                         budget.balance >= 0 ? 'Surplus' : 'Deficit',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: balanceColor,
-                        ),
+                        style: TextStyle(fontSize: 12, color: balanceColor),
                       ),
                     ],
                   ),
@@ -293,10 +289,7 @@ class _BudgetCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       const Text(
                         'Over budget',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red,
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.red),
                       ),
                     ],
                   ),
@@ -323,10 +316,7 @@ class _BudgetCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12),
-            ),
+            Text(label, style: const TextStyle(fontSize: 12)),
             Text(
               '\$${actual.toStringAsFixed(0)} / \$${target.toStringAsFixed(0)}',
               style: const TextStyle(fontSize: 12),

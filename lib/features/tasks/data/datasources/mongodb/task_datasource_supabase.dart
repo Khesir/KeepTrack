@@ -14,7 +14,7 @@ class TaskDataSourceSupabase implements TaskDataSource {
     final response = await supabaseService.client
         .from(tableName)
         .select()
-        .order('createdAt', ascending: false);
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((doc) => TaskModel.fromJson(doc as Map<String, dynamic>))
@@ -26,8 +26,8 @@ class TaskDataSourceSupabase implements TaskDataSource {
     final response = await supabaseService.client
         .from(tableName)
         .select()
-        .eq('projectId', projectId)
-        .order('createdAt', ascending: false);
+        .eq('project_id', projectId)
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((doc) => TaskModel.fromJson(doc as Map<String, dynamic>))
@@ -40,7 +40,7 @@ class TaskDataSourceSupabase implements TaskDataSource {
         .from(tableName)
         .select()
         .eq('status', status)
-        .order('createdAt', ascending: false);
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((doc) => TaskModel.fromJson(doc as Map<String, dynamic>))
@@ -55,7 +55,9 @@ class TaskDataSourceSupabase implements TaskDataSource {
         .eq('id', id)
         .maybeSingle();
 
-    return response != null ? TaskModel.fromJson(response as Map<String, dynamic>) : null;
+    return response != null
+        ? TaskModel.fromJson(response as Map<String, dynamic>)
+        : null;
   }
 
   @override
@@ -72,11 +74,15 @@ class TaskDataSourceSupabase implements TaskDataSource {
 
   @override
   Future<TaskModel> updateTask(TaskModel task) async {
+    if (task.id == null) {
+      throw Exception('Cannot update task without an ID');
+    }
+
     final doc = task.toJson();
     final response = await supabaseService.client
         .from(tableName)
         .update(doc)
-        .eq('id', task.id)
+        .eq('id', task.id!)
         .select()
         .single();
 
@@ -85,10 +91,7 @@ class TaskDataSourceSupabase implements TaskDataSource {
 
   @override
   Future<void> deleteTask(String id) async {
-    await supabaseService.client
-        .from(tableName)
-        .delete()
-        .eq('id', id);
+    await supabaseService.client.from(tableName).delete().eq('id', id);
   }
 
   @override
@@ -97,7 +100,7 @@ class TaskDataSourceSupabase implements TaskDataSource {
         .from(tableName)
         .select()
         .or('title.ilike.%$query%,description.ilike.%$query%')
-        .order('createdAt', ascending: false);
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((doc) => TaskModel.fromJson(doc as Map<String, dynamic>))
@@ -117,7 +120,7 @@ class TaskDataSourceSupabase implements TaskDataSource {
     }
 
     if (filters['projectId'] != null) {
-      query = query.eq('projectId', filters['projectId']);
+      query = query.eq('project_id', filters['projectId']);
     }
 
     if (filters['tags'] != null) {
@@ -125,7 +128,7 @@ class TaskDataSourceSupabase implements TaskDataSource {
       query = query.contains('tags', tags);
     }
 
-    final response = await query.order('createdAt', ascending: false);
+    final response = await query.order('created_at', ascending: false);
 
     return (response as List)
         .map((doc) => TaskModel.fromJson(doc as Map<String, dynamic>))

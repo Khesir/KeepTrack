@@ -10,8 +10,8 @@ import '../../features/budget/presentation/screens/budget_list_screen.dart';
 import '../../features/budget/presentation/screens/budget_detail_screen.dart';
 import '../../features/budget/presentation/screens/create_budget_screen.dart';
 import '../../features/budget/domain/entities/budget.dart';
-import '../../features/projects/presentation/project_list_screen.dart';
-import '../../features/projects/presentation/project_detail_screen.dart';
+import '../../features/projects/presentation/screens/project_list_screen.dart';
+import '../../features/projects/presentation/screens/project_detail_screen.dart';
 import '../../features/projects/domain/entities/project.dart';
 
 /// App routes
@@ -66,10 +66,8 @@ class AppRouter {
         final args = settings.arguments as Map<String, dynamic>?;
         final initialProjectId = args?['initialProjectId'] as String?;
         return MaterialPageRoute(
-          builder: (_) => TaskDetailScreen(
-            task: null,
-            initialProjectId: initialProjectId,
-          ),
+          builder: (_) =>
+              TaskDetailScreen(task: null, initialProjectId: initialProjectId),
           settings: settings,
         );
 
@@ -85,9 +83,7 @@ class AppRouter {
         final budget = settings.arguments as Budget?;
         if (budget == null) {
           return MaterialPageRoute(
-            builder: (_) => UnknownRouteScreen(
-              routeName: settings.name ?? '',
-            ),
+            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
           );
         }
         return MaterialPageRoute(
@@ -114,9 +110,7 @@ class AppRouter {
         final project = settings.arguments as Project?;
         if (project == null) {
           return MaterialPageRoute(
-            builder: (_) => UnknownRouteScreen(
-              routeName: settings.name ?? '',
-            ),
+            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
           );
         }
         return MaterialPageRoute(
@@ -127,9 +121,7 @@ class AppRouter {
       // Unknown route
       default:
         return MaterialPageRoute(
-          builder: (_) => UnknownRouteScreen(
-            routeName: settings.name ?? '',
-          ),
+          builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
         );
     }
   }
