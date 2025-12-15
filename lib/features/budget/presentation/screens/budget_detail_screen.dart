@@ -107,6 +107,101 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
     }
   }
 
+  Future<void> _deleteBudget() async {
+    if (_budget.id == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Budget'),
+        content: const Text(
+          'Are you sure you want to delete this budget?\n\n'
+          'This action cannot be undone. All records and data will be permanently deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _repository.deleteBudget(_budget.id!);
+        if (mounted) {
+          Navigator.pop(context); // Go back to list
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting budget: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _reopenBudget() async {
+    if (_budget.id == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reopen Budget'),
+        content: const Text(
+          'Are you sure you want to reopen this budget?\n\n'
+          'The budget will become active again and you can add more records.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reopen'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final reopened = await _repository.reopenBudget(_budget.id!);
+        setState(() => _budget = reopened);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Budget reopened successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error reopening budget: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  bool _canReopenBudget() {
+    // Can only reopen if:
+    // 1. Budget is closed
+    // 2. Budget month matches current month
+    if (_budget.status != BudgetStatus.closed) return false;
+
+    final now = DateTime.now();
+    final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    return _budget.month == currentMonth;
+  }
+
   @override
   Widget build(BuildContext context) {
     final budget = _budget;
@@ -123,6 +218,17 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
               onPressed: _closeBudget,
               tooltip: 'Close Budget',
             ),
+          if (_canReopenBudget())
+            IconButton(
+              icon: const Icon(Icons.lock_open),
+              onPressed: _reopenBudget,
+              tooltip: 'Reopen Budget',
+            ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: _deleteBudget,
+            tooltip: 'Delete Budget',
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -138,7 +244,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                 child: Column(
                   children: [
                     Text(
-                      '\$${budget.balance.toStringAsFixed(2)}',
+                      '₱${budget.balance.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
@@ -208,11 +314,11 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '\$${actual.toStringAsFixed(0)}',
+                        '₱${actual.toStringAsFixed(0)}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        'of \$${category.targetAmount.toStringAsFixed(0)}',
+                        'of ₱${category.targetAmount.toStringAsFixed(0)}',
                         style: const TextStyle(fontSize: 12),
                       ),
                     ],
@@ -274,7 +380,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                       ],
                     ),
                     trailing: Text(
-                      '${isIncome ? '+' : '-'}\$${record.amount.toStringAsFixed(2)}',
+                      '${isIncome ? '+' : '-'}₱${record.amount.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -331,7 +437,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
         Text(label, style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 4),
         Text(
-          '\$${actual.toStringAsFixed(0)}',
+          '₱${actual.toStringAsFixed(0)}',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -339,7 +445,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
           ),
         ),
         Text(
-          'of \$${budgeted.toStringAsFixed(0)}',
+          'of ₱${budgeted.toStringAsFixed(0)}',
           style: const TextStyle(fontSize: 12),
         ),
       ],
@@ -400,7 +506,7 @@ class _AddRecordDialogState extends State<_AddRecordDialog> {
               decoration: const InputDecoration(
                 labelText: 'Amount',
                 border: OutlineInputBorder(),
-                prefixText: '\$ ',
+                prefixText: '₱ ',
               ),
               keyboardType: TextInputType.number,
             ),

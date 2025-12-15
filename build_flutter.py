@@ -22,7 +22,7 @@ def build_command(platform, env_file):
     flutter_mode = env_vars.pop("FLUTTER_MODE", None)
 
     # Construct dart-define options with quotes for safe PowerShell use
-    dart_defines = [f'--dart-define="{k}={v}"' for k, v in env_vars.items()]
+    dart_defines = [f'--dart-define={k}="{v}"' for k, v in env_vars.items()]
 
     # Base flutter command
     if platform == "android":

@@ -8,6 +8,8 @@ import '../../../../core/ui/scoped_screen.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/project.dart';
 import '../../domain/repositories/project_repository.dart';
+import '../../../tasks/domain/repositories/task_repository.dart';
+import '../../../tasks/domain/entities/task.dart';
 
 /// Project list screen - Displays all projects
 class ProjectListScreen extends ScopedScreen {
@@ -20,6 +22,10 @@ class ProjectListScreen extends ScopedScreen {
 class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen>
     with AppLayoutControlled {
   late final ProjectListController _controller;
+  late final TaskRepository _taskRepository;
+
+  // Store task counts: projectId -> {completed, total}
+  final Map<String, Map<String, int>> _taskCounts = {};
 
   @override
   void registerServices() {
@@ -32,10 +38,31 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen>
 
     // Create controller without DI (as requested)
     final projectRepo = scope.get<ProjectRepository>();
+    _taskRepository = scope.get<TaskRepository>();
+
     _controller = ProjectListController(
       getProjectUsecase: GetProjectsUsecase(projectRepo),
       createProjectUsecase: CreateProjectUsecase(projectRepo),
     );
+  }
+
+  Future<void> _loadTaskCounts(List<Project> projects) async {
+    for (final project in projects) {
+      if (project.id != null) {
+        try {
+          final tasks = await _taskRepository.getTasksByProject(project.id!);
+          final completed = tasks.where((t) => t.isCompleted).length;
+          setState(() {
+            _taskCounts[project.id!] = {
+              'completed': completed,
+              'total': tasks.length,
+            };
+          });
+        } catch (e) {
+          // Silently fail - task counts are optional
+        }
+      }
+    }
   }
 
   @override
@@ -112,6 +139,11 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen>
     return AsyncStreamBuilder<List<Project>>(
       state: _controller,
       builder: (context, projects) {
+        // Load task counts when projects are loaded
+        if (projects.isNotEmpty && _taskCounts.isEmpty) {
+          _loadTaskCounts(projects);
+        }
+
         if (projects.isEmpty) {
           return Center(
             child: Column(
@@ -128,11 +160,16 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen>
           );
         }
         return RefreshIndicator(
-          onRefresh: _controller.loadProjects,
+          onRefresh: () async {
+            _taskCounts.clear(); // Clear counts to reload
+            await _controller.loadProjects();
+          },
           child: ListView.builder(
             itemCount: projects.length,
             itemBuilder: (context, index) {
               final project = projects[index];
+              final taskCount = _taskCounts[project.id];
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: ListTile(
@@ -146,18 +183,43 @@ class _ProjectListScreenState extends ScopedScreenState<ProjectListScreen>
                     ),
                   ),
                   title: Text(project.name),
-                  subtitle: project.description != null
-                      ? Text(
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (project.description != null)
+                        Text(
                           project.description!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
+                        ),
+                      if (taskCount != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${taskCount['completed']} / ${taskCount['total']} tasks',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.archive),
                     onPressed: () => _archiveProject(project),
                   ),
                   onTap: () => _openProject(project),
+                  isThreeLine: project.description != null && taskCount != null,
                 ),
               );
             },

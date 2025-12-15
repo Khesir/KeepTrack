@@ -95,15 +95,20 @@ class TaskModel {
   /// Convert to Supabase JSON
   Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id': id,
+      // Don't include id, created_at, updated_at for new records
+      // Supabase will auto-generate these
+      if (id != null && id!.isNotEmpty) 'id': id,
       'title': title,
       if (description != null) 'description': description,
       'status': status,
       'priority': priority,
       if (projectId != null) 'project_id': projectId,
       'tags': tags,
-      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
-      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      // Only include timestamps for updates (when id exists)
+      if (id != null && id!.isNotEmpty && createdAt != null)
+        'created_at': createdAt!.toIso8601String(),
+      if (id != null && id!.isNotEmpty && updatedAt != null)
+        'updated_at': updatedAt!.toIso8601String(),
       if (dueDate != null) 'due_date': dueDate!.toIso8601String(),
       if (completedAt != null) 'completed_at': completedAt!.toIso8601String(),
       'archived': archived,

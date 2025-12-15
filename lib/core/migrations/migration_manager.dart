@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:persona_codex/core/logging/app_logger.dart';
 import 'migration.dart';
 import 'migrations/001_create_initial_schema.dart';
 import 'migrations/002_add_archive_task.dart';
@@ -27,14 +28,14 @@ class MigrationManager {
     final results = <MigrationResult>[];
 
     try {
-      print('🔄 Starting migration check...');
+      AppLogger.info('🔄 Starting migration check...');
 
       // Ensure migrations table exists
       await _ensureMigrationsTable();
 
       // Get applied migrations
       final applied = await _getAppliedMigrations();
-      print('📋 Found ${applied.length} previously applied migrations');
+      AppLogger.info('📋 Found ${applied.length} previously applied migrations');
 
       // Run pending migrations
       final pending = _allMigrations
@@ -42,11 +43,11 @@ class MigrationManager {
           .toList();
 
       if (pending.isEmpty) {
-        print('✅ All migrations are up to date');
+        AppLogger.info('✅ All migrations are up to date');
         return results;
       }
 
-      print('🚀 Running ${pending.length} pending migration(s)...');
+      AppLogger.info('🚀 Running ${pending.length} pending migration(s)...');
 
       for (var migration in pending) {
         final result = await _runMigration(migration);
@@ -59,10 +60,10 @@ class MigrationManager {
         }
       }
 
-      print('✅ All migrations completed successfully');
+      AppLogger.info('✅ All migrations completed successfully');
       return results;
-    } catch (e) {
-      print('❌ Migration failed: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error('❌ Migration failed', e, stackTrace);
       rethrow;
     }
   }
@@ -72,10 +73,16 @@ class MigrationManager {
     try {
       // Try to query the table
       await client.from('schema_migrations').select('version').limit(1);
-      print('✅ schema_migrations table exists');
+      AppLogger.info('✅ schema_migrations table exists');
     } catch (e) {
+      // Check if this is a network error first
+      if (_isNetworkError(e)) {
+        AppLogger.error('Network error while checking migrations table', e);
+        rethrow; // Let the main retry logic handle network errors
+      }
+
       // Table doesn't exist, try to create it
-      print('📦 Creating schema_migrations table...');
+      AppLogger.info('📦 Creating schema_migrations table...');
 
       try {
         await client.rpc(
@@ -100,29 +107,43 @@ class MigrationManager {
           ''',
           },
         );
-        print('✅ schema_migrations table created successfully');
+        AppLogger.info('✅ schema_migrations table created successfully');
       } catch (rpcError) {
+        // Check if RPC error is also a network error
+        if (_isNetworkError(rpcError)) {
+          AppLogger.error('Network error while creating migrations table', rpcError);
+          rethrow;
+        }
+
         // RPC function doesn't exist - provide bootstrap instructions
-        print('');
-        print('❌ ERROR: exec_sql function not found in Supabase');
-        print('');
-        print('═' * 70);
-        print('SETUP REQUIRED');
-        print('═' * 70);
-        print('');
-        print('To enable automatic migrations, you need to run the bootstrap');
-        print('script in your Supabase SQL Editor:');
-        print('');
-        print('1. Open your Supabase project dashboard');
-        print('2. Go to SQL Editor → New Query');
-        print('3. Copy and paste the contents of:');
-        print('   supabase/bootstrap.sql');
+        AppLogger.error('❌ ERROR: exec_sql function not found in Supabase', rpcError);
+        AppLogger.info('═' * 70);
+        AppLogger.info('SETUP REQUIRED');
+        AppLogger.info('═' * 70);
+        AppLogger.info('To enable automatic migrations, you need to run the bootstrap');
+        AppLogger.info('script in your Supabase SQL Editor:');
+        AppLogger.info('');
+        AppLogger.info('1. Open your Supabase project dashboard');
+        AppLogger.info('2. Go to SQL Editor → New Query');
+        AppLogger.info('3. Copy and paste the contents of:');
+        AppLogger.info('   supabase/bootstrap.sql');
 
         throw Exception(
           'Supabase not bootstrapped. Please run supabase/bootstrap.sql first.',
         );
       }
     }
+  }
+
+  /// Check if error is network-related
+  bool _isNetworkError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('network') ||
+        errorString.contains('socket') ||
+        errorString.contains('connection') ||
+        errorString.contains('timeout') ||
+        errorString.contains('failed host lookup') ||
+        errorString.contains('unreachable');
   }
 
   /// Get list of already applied migration versions
@@ -135,7 +156,7 @@ class MigrationManager {
 
       return (response as List).map((row) => row['version'] as String).toSet();
     } catch (e) {
-      print('⚠️  Could not fetch applied migrations: $e');
+      AppLogger.warning('⚠️  Could not fetch applied migrations', e);
       return {};
     }
   }
@@ -145,7 +166,7 @@ class MigrationManager {
     final startTime = DateTime.now();
 
     try {
-      print('  ⏳ Running: ${migration.version} - ${migration.description}');
+      AppLogger.info('  ⏳ Running: ${migration.version} - ${migration.description}');
 
       // Execute the migration
       await migration.up(client);
@@ -163,10 +184,10 @@ class MigrationManager {
         appliedAt: startTime,
       );
 
-      print('  ✅ Completed: ${migration.version}');
+      AppLogger.info('  ✅ Completed: ${migration.version}');
       return result;
-    } catch (e) {
-      print('  ❌ Failed: ${migration.version} - $e');
+    } catch (e, stackTrace) {
+      AppLogger.error('  ❌ Failed: ${migration.version}', e, stackTrace);
 
       return MigrationResult(
         version: migration.version,

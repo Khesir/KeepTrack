@@ -78,6 +78,37 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
+  Future<Budget> reopenBudget(String id) async {
+    final budget = await getBudgetById(id);
+    if (budget == null) {
+      throw Exception('Budget not found: $id');
+    }
+
+    if (budget.status != BudgetStatus.closed) {
+      throw Exception('Budget is not closed');
+    }
+
+    // Check if budget month matches current month
+    final now = DateTime.now();
+    final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
+    if (budget.month != currentMonth) {
+      throw Exception(
+        'Can only reopen budgets for the current month. '
+        'Budget month: ${budget.month}, Current month: $currentMonth'
+      );
+    }
+
+    final reopened = budget.copyWith(
+      status: BudgetStatus.active,
+      closedAt: null,
+      updatedAt: DateTime.now(),
+    );
+
+    return updateBudget(reopened);
+  }
+
+  @override
   Future<Budget> addRecord(String budgetId, BudgetRecord record) async {
     final budget = await getBudgetById(budgetId);
     if (budget == null) {

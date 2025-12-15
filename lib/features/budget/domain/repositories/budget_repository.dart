@@ -28,6 +28,9 @@ abstract class BudgetRepository {
   /// Close a budget with notes
   Future<Budget> closeBudget(String id, String? notes);
 
+  /// Reopen a closed budget
+  Future<Budget> reopenBudget(String id);
+
   /// Add a record to a budget
   Future<Budget> addRecord(String budgetId, BudgetRecord record);
 

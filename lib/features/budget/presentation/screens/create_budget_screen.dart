@@ -41,7 +41,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
 
     _repository = getService<BudgetRepository>();
 
-    // Generate current month
+    // Initialize with current month only
     final now = DateTime.now();
     _selectedMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
@@ -56,6 +56,56 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
           targetAmount: cat['amount'] as double,
         ),
       );
+    }
+  }
+
+  Future<void> _selectMonth() async {
+    final now = DateTime.now();
+
+    // Show month picker - only allow current month
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Month'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'You can only create a budget for the current month.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _formatMonthDisplay(_selectedMonth),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatMonthDisplay(String monthStr) {
+    try {
+      final parts = monthStr.split('-');
+      final year = parts[0];
+      final month = int.parse(parts[1]);
+      final monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      return '${monthNames[month - 1]} $year';
+    } catch (e) {
+      return monthStr;
     }
   }
 
@@ -74,6 +124,23 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
     }
 
     try {
+      // Check for duplicate month
+      final existingBudgets = await _repository.getBudgets();
+      final isDuplicate = existingBudgets.any((b) => b.month == _selectedMonth);
+
+      if (isDuplicate) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Budget for ${_formatMonthDisplay(_selectedMonth)} already exists!',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       // Supabase will auto-generate id, createdAt, updatedAt
       final budget = Budget(
         month: _selectedMonth,
@@ -118,19 +185,14 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            TextFormField(
-              initialValue: _selectedMonth,
-              decoration: const InputDecoration(
-                labelText: 'Month (YYYY-MM)',
-                border: OutlineInputBorder(),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Month'),
+                subtitle: Text(_formatMonthDisplay(_selectedMonth)),
+                trailing: const Icon(Icons.info_outline),
+                onTap: _selectMonth,
               ),
-              onChanged: (value) => _selectedMonth = value,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a month';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 24),
             Row(
@@ -156,7 +218,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
                     title: Text(category.name),
                     subtitle: Text(category.type.displayName),
                     trailing: Text(
-                      '\$${category.targetAmount.toStringAsFixed(2)}',
+                      '₱${category.targetAmount.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -242,7 +304,7 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
             decoration: const InputDecoration(
               labelText: 'Target Amount',
               border: OutlineInputBorder(),
-              prefixText: '\$ ',
+              prefixText: '₱ ',
             ),
             keyboardType: TextInputType.number,
           ),

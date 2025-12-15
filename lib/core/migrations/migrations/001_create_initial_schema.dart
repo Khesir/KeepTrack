@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:persona_codex/core/logging/app_logger.dart';
 import '../migration.dart';
 
 /// Initial database schema migration
@@ -20,17 +21,17 @@ class Migration001CreateInitialSchema extends Migration {
   Future<void> up(SupabaseClient client) async {
     final sql = _getInitialSchemaSql();
 
-    print('  📝 Executing initial schema migration...');
+    AppLogger.info('  📝 Executing initial schema migration...');
 
     try {
       // Execute the SQL using the exec_sql RPC function
       await client.rpc('exec_sql', params: {'sql': sql});
-      print('  ✅ Initial schema created successfully');
+      AppLogger.info('  ✅ Initial schema created successfully');
 
       // Optionally verify tables were created (non-fatal)
       await _checkTablesExist(client);
-    } catch (e) {
-      print('  ❌ Failed to create initial schema: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error('  ❌ Failed to create initial schema', e, stackTrace);
       rethrow;
     }
   }
@@ -44,12 +45,12 @@ class Migration001CreateInitialSchema extends Migration {
       await client.from('projects').select('id').limit(1);
       await client.from('budgets').select('id').limit(1);
 
-      print('  ✅ Verified: All tables are accessible');
+      AppLogger.info('  ✅ Verified: All tables are accessible');
     } catch (e) {
       // Tables might exist but RLS might be blocking access
       // This is OK - the exec_sql already succeeded
-      print('  ℹ️  Note: Tables created but access check failed (this is normal with RLS)');
-      print('     Error: $e');
+      AppLogger.info('  ℹ️  Note: Tables created but access check failed (this is normal with RLS)');
+      AppLogger.info('     Error: $e');
     }
   }
 
@@ -204,7 +205,7 @@ CREATE TRIGGER update_budgets_updated_at
       DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
     ''';
 
-    print('⚠️  Rolling back initial schema - this will delete all data!');
+    AppLogger.warning('⚠️  Rolling back initial schema - this will delete all data!');
     await client.rpc('exec_sql', params: {'sql': sql});
   }
 }

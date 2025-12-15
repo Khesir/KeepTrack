@@ -17,13 +17,14 @@ import 'core/di/di_logger.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/migrations/migration_manager.dart';
+import 'core/logging/app_logger.dart';
+import 'core/logging/log_viewer_screen.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/projects/projects_di.dart';
 import 'features/budget/budget_di.dart';
 import 'features/tasks/presentation/screens/task_list_screen.dart';
 import 'features/projects/presentation/screens/project_list_screen.dart';
 import 'features/budget/presentation/screens/budget_list_screen.dart';
-import 'package:flutter/services.dart' show rootBundle;
 
 void main() async {
   // Ensure Flutter is initialized
@@ -33,15 +34,33 @@ void main() async {
   DILogger.enable();
 
   const isProd = bool.fromEnvironment('PROD', defaultValue: false);
+  AppLogger.info("Production mode: $isProd");
 
   if (isProd) {
+    const url = String.fromEnvironment('SUPABASE_URL');
+    const key = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+    AppLogger.info("SUPABASE_URL length: ${url.length}");
+    AppLogger.info("SUPABASE_ANON_KEY length: ${key.length}");
+
+    // Runtime checks that work in release builds
+    if (url.isEmpty || key.isEmpty) {
+      final error = 'Missing required environment variables!\n'
+          'SUPABASE_URL: ${url.isEmpty ? "NOT SET" : "OK"}\n'
+          'SUPABASE_ANON_KEY: ${key.isEmpty ? "NOT SET" : "OK"}\n\n'
+          'Make sure to pass them via --dart-define:\n'
+          'flutter build apk --release --dart-define="PROD=true" '
+          '--dart-define="SUPABASE_URL=..." --dart-define="SUPABASE_ANON_KEY=..."';
+      AppLogger.error(error);
+      runApp(_buildErrorScreen(Exception(error), false, false));
+      return;
+    }
+
     // Production: read from --dart-define
-    await _initializeAppWithRetry(
-      supabaseUrl: const String.fromEnvironment('SUPABASE_URL'),
-      supabaseAnonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
-    );
+    await _initializeAppWithRetry(supabaseUrl: url, supabaseAnonKey: key);
   } else {
     // Dev: load from assets/.env
+    AppLogger.info("Dev mode: Loading from .env file");
     await dotenv.load(fileName: '.env');
     await _initializeAppWithRetry(
       supabaseUrl: dotenv.env['SUPABASE_URL']!,
@@ -66,19 +85,17 @@ Future<void> _initializeAppWithRetry({
     try {
       // Initialize Supabase
       if (retryCount == 0) {
-        print('🚀 Initializing Supabase...');
+        AppLogger.info('🚀 Initializing Supabase...');
       } else {
-        print('🔄 Retry attempt $retryCount/$maxRetries...');
+        AppLogger.info('🔄 Retry attempt $retryCount/$maxRetries...');
       }
 
       await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-      print('✅ Supabase initialized');
+      AppLogger.info('✅ Supabase initialized');
 
       // Run database migrations BEFORE setting up dependencies
-      print('');
       final migrationManager = MigrationManager(Supabase.instance.client);
       await migrationManager.runMigrations();
-      print('');
 
       // Setup app dependencies
       _setupDependencies();
@@ -94,12 +111,10 @@ Future<void> _initializeAppWithRetry({
         retryCount++;
         final delay =
             initialDelay * (1 << (retryCount - 1)); // Exponential backoff
-        print('');
-        print('⚠️  Network error: $e');
-        print(
+        AppLogger.warning('⚠️  Network error', e);
+        AppLogger.info(
           '⏳ Retrying in ${delay.inSeconds} seconds... ($retryCount/$maxRetries)',
         );
-        print('');
 
         // Show loading screen with retry info
         runApp(_buildRetryingScreen(retryCount, maxRetries, delay));
@@ -108,9 +123,7 @@ Future<void> _initializeAppWithRetry({
         continue; // Retry
       } else {
         // Non-network error or max retries reached
-        print('');
-        print('❌ Failed to initialize app: $e');
-        print(stackTrace);
+        AppLogger.error('❌ Failed to initialize app', e, stackTrace);
 
         // Show error screen
         runApp(_buildErrorScreen(e, isNetworkError, retryCount >= maxRetries));
@@ -134,38 +147,53 @@ bool _isNetworkError(dynamic error) {
 /// Build retry screen
 Widget _buildRetryingScreen(int retryCount, int maxRetries, Duration delay) {
   return MaterialApp(
-    home: Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 24),
-              const Text(
-                'Connecting to Server...',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Network error detected',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Retry attempt $retryCount of $maxRetries',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Retrying in ${delay.inSeconds} seconds...',
-                style: TextStyle(
-                  color: Colors.blue[600],
-                  fontWeight: FontWeight.w500,
+    home: Builder(
+      builder: (context) => Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 24),
+                const Text(
+                  'Connecting to Server...',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  'Network error detected',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Retry attempt $retryCount of $maxRetries',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Retrying in ${delay.inSeconds} seconds...',
+                  style: TextStyle(
+                    color: Colors.blue[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LogViewerScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.bug_report),
+                  label: const Text('View Logs'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -179,58 +207,146 @@ Widget _buildErrorScreen(
   bool wasNetworkError,
   bool maxRetriesReached,
 ) {
+  final isBootstrapError = error.toString().contains('bootstrap');
+
   return MaterialApp(
-    home: Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                wasNetworkError ? Icons.wifi_off : Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                wasNetworkError ? 'Connection Failed' : 'Failed to Initialize',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (maxRetriesReached) ...[
-                const Text(
-                  'Max retry attempts reached',
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w500,
+    home: Builder(
+      builder: (context) => Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    wasNetworkError
+                        ? Icons.wifi_off
+                        : (isBootstrapError ? Icons.construction : Icons.error_outline),
+                    size: 64,
+                    color: Colors.red,
                   ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              Text(
-                error.toString(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    wasNetworkError
+                        ? 'Connection Failed'
+                        : (isBootstrapError ? 'Setup Required' : 'Failed to Initialize'),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (maxRetriesReached) ...[
+                    const Text(
+                      'Max retry attempts reached',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      error.toString(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (isBootstrapError) ...[
+                    // Bootstrap-specific instructions
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.lightbulb_outline,
+                                  color: Colors.orange[700], size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Setup Required',
+                                style: TextStyle(
+                                  color: Colors.orange[700],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Your Supabase database needs to be initialized.\n\n'
+                            'Steps to fix:\n'
+                            '1. Open your Supabase dashboard\n'
+                            '2. Go to SQL Editor → New Query\n'
+                            '3. Copy & paste supabase/bootstrap.sql\n'
+                            '4. Click "Run" or press Ctrl+Enter\n'
+                            '5. Restart this app',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    // General instructions
+                    Text(
+                      wasNetworkError
+                          ? 'Please check:\n'
+                                '• Internet connection is available\n'
+                                '• WiFi/Mobile data is enabled\n'
+                                '• Server is reachable\n\n'
+                                'The app will restart when connection is restored.'
+                          : 'Please check:\n'
+                                '• Supabase credentials are correct\n'
+                                '• Database schema is set up\n'
+                                '• Bootstrap script was run',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LogViewerScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.bug_report),
+                    label: const Text('View Detailed Logs'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              Text(
-                wasNetworkError
-                    ? 'Please check:\n'
-                          '1. Internet connection is available\n'
-                          '2. WiFi/Mobile data is enabled\n'
-                          '3. Server is reachable\n\n'
-                          'The app will restart automatically when connection is restored.'
-                    : 'Please check:\n'
-                          '1. Supabase credentials are correct\n'
-                          '2. Database schema is set up\n'
-                          '3. Bootstrap script was run',
-                textAlign: TextAlign.center,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -308,7 +424,24 @@ class _MainScreenState extends State<MainScreen> {
           return Scaffold(
             appBar: AppBar(
               title: Text(_layoutController.title),
-              actions: _layoutController.actions,
+              actions: [
+                // Logging action button
+                IconButton(
+                  icon: const Icon(Icons.bug_report),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LogViewerScreen(),
+                      ),
+                    );
+                  },
+                  tooltip: 'View Logs',
+                ),
+                // Other actions from layout controller
+                if (_layoutController.actions != null)
+                  ..._layoutController.actions!,
+              ],
             ),
             body: _screens[_currentIndex],
             floatingActionButton: _layoutController.floatingActionButton,

@@ -59,15 +59,12 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
   }
 
   void _createTask() {
-    // final currentState = _controller.state;
-    // if (currentState is! AsyncData<Project?>) return;
+    final project = widget.project;
+    if (project.id == null) return;
 
-    // final project = currentState.data;
-    // if (project?.id == null) return;
-
-    // context
-    //     .goToTaskCreate(initialProjectId: project!.id!)
-    //     .then((_) => _controller.loadTasks());
+    context
+        .goToTaskCreate(initialProjectId: project.id!)
+        .then((_) => _controller.loadTasks());
   }
 
   void _openTask(Task task) {
@@ -75,92 +72,85 @@ class _ProjectDetailScreenState extends ScopedScreenState<ProjectDetailScreen> {
   }
 
   Future<void> _editProject() async {
-    // final currentState = _controller.state;
-    // if (currentState is! AsyncData<Project?>) return;
+    final project = widget.project;
 
-    // final project = currentState.data;
-    // if (project == null) return;
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => _EditProjectDialog(project: project),
+    );
 
-    // final result = await showDialog<Map<String, String>>(
-    //   context: context,
-    //   builder: (context) => _EditProjectDialog(project: project),
-    // );
+    if (result != null && project.id != null) {
+      final success = await _controller.updateProject(
+        UpdateProjectParams(
+          projectId: project.id!,
+          name: result['name'],
+          description: result['description'],
+          color: result['color'],
+        ),
+      );
 
-    // if (result != null && project.id != null) {
-    //   final success = await _controller.updateProject(
-    //     UpdateProjectParams(
-    //       projectId: project.id!,
-    //       name: result['name'],
-    //       description: result['description'],
-    //       color: result['color'],
-    //     ),
-    //   );
-
-    //   if (!success && mounted) {
-    //     ScaffoldMessenger.of(
-    //       context,
-    //     ).showSnackBar(const SnackBar(content: Text('Error updating project')));
-    //   }
-    // }
+      if (!success && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Error updating project')));
+      }
+    }
   }
 
   Future<void> _deleteProject() async {
-    // final currentState = _controller.state;
-    // if (currentState is! AsyncData<Project?>) return;
+    final project = widget.project;
+    if (project.id == null) return;
 
-    // final project = currentState.data;
-    // if (project?.id == null) return;
+    if (_controller.tasks.isNotEmpty) {
+      // Warn if project has tasks
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Cannot Delete Project'),
+          content: Text(
+            'This project has ${_controller.tasks.length} task(s). '
+            'Please delete or move all tasks before deleting the project.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
-    // if (_controller.tasks.isNotEmpty) {
-    //   // Warn if project has tasks
-    //   await showDialog<bool>(
-    //     context: context,
-    //     builder: (context) => AlertDialog(
-    //       title: const Text('Cannot Delete Project'),
-    //       content: Text(
-    //         'This project has ${_controller.tasks.length} task(s). '
-    //         'Please delete or move all tasks before deleting the project.',
-    //       ),
-    //       actions: [
-    //         TextButton(
-    //           onPressed: () => Navigator.pop(context),
-    //           child: const Text('OK'),
-    //         ),
-    //       ],
-    //     ),
-    //   );
-    //   return;
-    // }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Project'),
+        content: const Text('Are you sure you want to delete this project?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
 
-    // final confirmed = await showDialog<bool>(
-    //   context: context,
-    //   builder: (context) => AlertDialog(
-    //     title: const Text('Delete Project'),
-    //     content: const Text('Are you sure you want to delete this project?'),
-    //     actions: [
-    //       TextButton(
-    //         onPressed: () => Navigator.pop(context, false),
-    //         child: const Text('Cancel'),
-    //       ),
-    //       TextButton(
-    //         onPressed: () => Navigator.pop(context, true),
-    //         child: const Text('Delete'),
-    //       ),
-    //     ],
-    //   ),
-    // );
+    if (confirmed == true) {
+      final success = await _controller.deleteProject(project.id!);
 
-    // if (confirmed == true) {
-    //   final success = await _controller.deleteProject(project!.id!);
-
-    //   if (success && mounted) {
-    //     context.goBack();
-    //   } else if (!success && mounted) {
-    //     ScaffoldMessenger.of(
-    //       context,
-    //     ).showSnackBar(const SnackBar(content: Text('Error deleting project')));
-    //   }
-    // }
+      if (success && mounted) {
+        context.goBack();
+      } else if (!success && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Error deleting project')));
+      }
+    }
   }
 
   Color _parseColor(String? colorString) {
