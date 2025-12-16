@@ -22,4 +22,4 @@ export 'presentation/screens/budget_detail_screen.dart';
 export 'presentation/screens/create_budget_screen.dart';
 
 // DI Setup
-export 'budget_di.dart';
+export 'finance_di.dart';

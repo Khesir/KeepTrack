@@ -3,13 +3,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../features/finance/domain/entities/budget.dart';
+import '../../features/finance/presentation/screens/budget_detail_screen.dart';
+import '../../features/finance/presentation/screens/budget_list_screen.dart';
+import '../../features/finance/presentation/screens/create_budget_screen.dart';
 import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/tasks/presentation/screens/task_detail_screen.dart';
 import '../../features/tasks/domain/entities/task.dart';
-import '../../features/budget/presentation/screens/budget_list_screen.dart';
-import '../../features/budget/presentation/screens/budget_detail_screen.dart';
-import '../../features/budget/presentation/screens/create_budget_screen.dart';
-import '../../features/budget/domain/entities/budget.dart';
+
 import '../../features/projects/presentation/screens/project_list_screen.dart';
 import '../../features/projects/presentation/screens/project_detail_screen.dart';
 import '../../features/projects/domain/entities/project.dart';

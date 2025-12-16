@@ -3,9 +3,9 @@ library;
 
 import 'package:persona_codex/core/error/failure.dart';
 
-import '../entities/budget.dart';
-import '../entities/budget_category.dart';
-import '../repositories/budget_repository.dart';
+import '../../entities/budget.dart';
+import '../../entities/budget_category.dart';
+import '../../repositories/budget_repository.dart';
 
 /// Use case for creating a new budget
 class CreateBudgetUseCase {
@@ -50,9 +50,5 @@ class CreateBudgetParams {
   final String? notes;
   final List<BudgetCategory>? categories;
 
-  CreateBudgetParams({
-    required this.month,
-    this.notes,
-    this.categories,
-  });
+  CreateBudgetParams({required this.month, this.notes, this.categories});
 }

@@ -2,9 +2,9 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../../features/finance/presentation/screens/budget_list_screen.dart';
 import '../../features/tasks/presentation/screens/task_list_screen.dart';
 import '../../features/projects/presentation/screens/project_list_screen.dart';
-import '../../features/budget/presentation/screens/budget_list_screen.dart';
 
 /// Main screen with bottom navigation bar
 /// Switches between Tasks, Projects, and Budget
@@ -18,11 +18,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    TaskListScreen(),
-    ProjectListScreen(),
-    BudgetListScreen(),
-  ];
+  final List<Widget> _screens = const [TaskListScreen(), BudgetListScreen()];
 
   @override
   Widget build(BuildContext context) {

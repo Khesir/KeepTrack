@@ -2,8 +2,10 @@
 library;
 
 import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/features/budget/domain/entities/budget.dart';
-import 'package:persona_codex/features/budget/domain/usecases/usecases.dart';
+
+import '../../domain/entities/budget.dart';
+import '../../domain/usecases/budget/delete_budget_usecase.dart';
+import '../../domain/usecases/budget/update_budget_usecase.dart';
 
 /// Controller for budget detail screen
 class BudgetDetailController extends StreamState<AsyncState<Budget?>> {
@@ -14,9 +16,9 @@ class BudgetDetailController extends StreamState<AsyncState<Budget?>> {
     required UpdateBudgetUseCase updateBudgetUseCase,
     required DeleteBudgetUseCase deleteBudgetUseCase,
     required Budget initialBudget,
-  })  : _updateBudgetUseCase = updateBudgetUseCase,
-        _deleteBudgetUseCase = deleteBudgetUseCase,
-        super(AsyncData(initialBudget));
+  }) : _updateBudgetUseCase = updateBudgetUseCase,
+       _deleteBudgetUseCase = deleteBudgetUseCase,
+       super(AsyncData(initialBudget));
 
   /// Update budget details
   Future<bool> updateBudget(UpdateBudgetParams params) async {

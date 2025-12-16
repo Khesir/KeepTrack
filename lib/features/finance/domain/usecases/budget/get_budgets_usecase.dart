@@ -1,8 +1,8 @@
 /// Get budgets use case
 library;
 
-import '../entities/budget.dart';
-import '../repositories/budget_repository.dart';
+import '../../entities/budget.dart';
+import '../../repositories/budget_repository.dart';
 
 /// Use case for retrieving budgets
 class GetBudgetsUseCase {

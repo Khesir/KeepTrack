@@ -11,6 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
+import 'package:persona_codex/features/finance/finance_di.dart';
+import 'package:persona_codex/features/finance/presentation/screens/budget_list_screen.dart';
+import 'package:persona_codex/features/finance/presentation/screens/finance_home_screen.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/di/di_logger.dart';
@@ -21,10 +24,8 @@ import 'core/logging/app_logger.dart';
 import 'core/logging/log_viewer_screen.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/projects/projects_di.dart';
-import 'features/budget/budget_di.dart';
 import 'features/tasks/presentation/screens/task_list_screen.dart';
 import 'features/projects/presentation/screens/project_list_screen.dart';
-import 'features/budget/presentation/screens/budget_list_screen.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -45,7 +46,8 @@ void main() async {
 
     // Runtime checks that work in release builds
     if (url.isEmpty || key.isEmpty) {
-      final error = 'Missing required environment variables!\n'
+      final error =
+          'Missing required environment variables!\n'
           'SUPABASE_URL: ${url.isEmpty ? "NOT SET" : "OK"}\n'
           'SUPABASE_ANON_KEY: ${key.isEmpty ? "NOT SET" : "OK"}\n\n'
           'Make sure to pass them via --dart-define:\n'
@@ -222,7 +224,9 @@ Widget _buildErrorScreen(
                   Icon(
                     wasNetworkError
                         ? Icons.wifi_off
-                        : (isBootstrapError ? Icons.construction : Icons.error_outline),
+                        : (isBootstrapError
+                              ? Icons.construction
+                              : Icons.error_outline),
                     size: 64,
                     color: Colors.red,
                   ),
@@ -230,7 +234,9 @@ Widget _buildErrorScreen(
                   Text(
                     wasNetworkError
                         ? 'Connection Failed'
-                        : (isBootstrapError ? 'Setup Required' : 'Failed to Initialize'),
+                        : (isBootstrapError
+                              ? 'Setup Required'
+                              : 'Failed to Initialize'),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -272,15 +278,20 @@ Widget _buildErrorScreen(
                       decoration: BoxDecoration(
                         color: Colors.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.orange.withOpacity(0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.lightbulb_outline,
-                                  color: Colors.orange[700], size: 20),
+                              Icon(
+                                Icons.lightbulb_outline,
+                                color: Colors.orange[700],
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 'Setup Required',
@@ -406,12 +417,27 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = const [
     TaskListScreen(),
     ProjectListScreen(),
-    BudgetListScreen(),
+    FinanceHomeScreen(),
   ];
   @override
   void dispose() {
     _layoutController.dispose();
     super.dispose();
+  }
+
+  FloatingActionButtonLocation? _mapFabPosition(FabPosition? position) {
+    switch (position) {
+      case FabPosition.centerDocked:
+        return FloatingActionButtonLocation.centerDocked;
+      case FabPosition.endDocked:
+        return FloatingActionButtonLocation.endDocked;
+      case FabPosition.centerFloat:
+        return FloatingActionButtonLocation.centerFloat;
+      case FabPosition.endFloat:
+        return FloatingActionButtonLocation.endFloat;
+      default:
+        return null;
+    }
   }
 
   @override
@@ -438,6 +464,16 @@ class _MainScreenState extends State<MainScreen> {
                   },
                   tooltip: 'View Logs',
                 ),
+                if (_layoutController.showSettings)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: IconButton(
+                      icon: const Icon(Icons.settings),
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/settings');
+                      },
+                    ),
+                  ),
                 // Other actions from layout controller
                 if (_layoutController.actions != null)
                   ..._layoutController.actions!,
@@ -445,6 +481,9 @@ class _MainScreenState extends State<MainScreen> {
             ),
             body: _screens[_currentIndex],
             floatingActionButton: _layoutController.floatingActionButton,
+            floatingActionButtonLocation: _mapFabPosition(
+              _layoutController.fabPosition,
+            ),
             bottomNavigationBar: _layoutController.showBottomNav
                 ? NavigationBar(
                     selectedIndex: _currentIndex,
@@ -454,7 +493,7 @@ class _MainScreenState extends State<MainScreen> {
                     destinations: const [
                       NavigationDestination(
                         icon: Icon(Icons.task_alt),
-                        label: 'Tasks',
+                        label: 'Task',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.inventory_2_outlined),
@@ -463,7 +502,11 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet),
-                        label: 'Budget',
+                        label: 'Finance',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.account_balance_wallet),
+                        label: 'Finance',
                       ),
                     ],
                   )

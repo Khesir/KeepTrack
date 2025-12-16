@@ -3,7 +3,7 @@ library;
 
 import 'package:persona_codex/core/error/failure.dart';
 
-import '../repositories/budget_repository.dart';
+import '../../repositories/budget_repository.dart';
 
 /// Use case for deleting a budget
 class DeleteBudgetUseCase {

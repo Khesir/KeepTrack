@@ -2,8 +2,9 @@
 library;
 
 import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/features/budget/domain/entities/budget.dart';
-import 'package:persona_codex/features/budget/domain/usecases/usecases.dart';
+import '../../domain/entities/budget.dart';
+import '../../domain/usecases/budget/create_budget_usecase.dart';
+import '../../domain/usecases/budget/get_budgets_usecase.dart';
 
 /// Controller for budget list screen
 class BudgetListController extends StreamState<AsyncState<List<Budget>>> {
@@ -13,9 +14,9 @@ class BudgetListController extends StreamState<AsyncState<List<Budget>>> {
   BudgetListController({
     required GetBudgetsUseCase getBudgetsUseCase,
     required CreateBudgetUseCase createBudgetUseCase,
-  })  : _getBudgetsUseCase = getBudgetsUseCase,
-        _createBudgetUseCase = createBudgetUseCase,
-        super(const AsyncLoading()) {
+  }) : _getBudgetsUseCase = getBudgetsUseCase,
+       _createBudgetUseCase = createBudgetUseCase,
+       super(const AsyncLoading()) {
     loadBudgets();
   }
 

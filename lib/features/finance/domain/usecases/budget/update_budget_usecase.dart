@@ -3,8 +3,8 @@ library;
 
 import 'package:persona_codex/core/error/failure.dart';
 
-import '../entities/budget.dart';
-import '../repositories/budget_repository.dart';
+import '../../entities/budget.dart';
+import '../../repositories/budget_repository.dart';
 
 /// Use case for updating budget details
 class UpdateBudgetUseCase {
@@ -21,9 +21,7 @@ class UpdateBudgetUseCase {
     }
 
     // Create updated budget (only notes can be updated)
-    final updated = existing.copyWith(
-      notes: params.notes,
-    );
+    final updated = existing.copyWith(notes: params.notes);
 
     return await _repository.updateBudget(updated);
   }
@@ -34,8 +32,5 @@ class UpdateBudgetParams {
   final String budgetId;
   final String? notes;
 
-  UpdateBudgetParams({
-    required this.budgetId,
-    this.notes,
-  });
+  UpdateBudgetParams({required this.budgetId, this.notes});
 }

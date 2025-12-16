@@ -1,3 +1,4 @@
+import 'package:persona_codex/core/migrations/migrations/003_create_accounts_table.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:persona_codex/core/logging/app_logger.dart';
 import 'migration.dart';
@@ -35,7 +36,9 @@ class MigrationManager {
 
       // Get applied migrations
       final applied = await _getAppliedMigrations();
-      AppLogger.info('📋 Found ${applied.length} previously applied migrations');
+      AppLogger.info(
+        '📋 Found ${applied.length} previously applied migrations',
+      );
 
       // Run pending migrations
       final pending = _allMigrations
@@ -111,16 +114,24 @@ class MigrationManager {
       } catch (rpcError) {
         // Check if RPC error is also a network error
         if (_isNetworkError(rpcError)) {
-          AppLogger.error('Network error while creating migrations table', rpcError);
+          AppLogger.error(
+            'Network error while creating migrations table',
+            rpcError,
+          );
           rethrow;
         }
 
         // RPC function doesn't exist - provide bootstrap instructions
-        AppLogger.error('❌ ERROR: exec_sql function not found in Supabase', rpcError);
+        AppLogger.error(
+          '❌ ERROR: exec_sql function not found in Supabase',
+          rpcError,
+        );
         AppLogger.info('═' * 70);
         AppLogger.info('SETUP REQUIRED');
         AppLogger.info('═' * 70);
-        AppLogger.info('To enable automatic migrations, you need to run the bootstrap');
+        AppLogger.info(
+          'To enable automatic migrations, you need to run the bootstrap',
+        );
         AppLogger.info('script in your Supabase SQL Editor:');
         AppLogger.info('');
         AppLogger.info('1. Open your Supabase project dashboard');
@@ -166,7 +177,9 @@ class MigrationManager {
     final startTime = DateTime.now();
 
     try {
-      AppLogger.info('  ⏳ Running: ${migration.version} - ${migration.description}');
+      AppLogger.info(
+        '  ⏳ Running: ${migration.version} - ${migration.description}',
+      );
 
       // Execute the migration
       await migration.up(client);
@@ -205,6 +218,7 @@ class MigrationManager {
   List<Migration> get _allMigrations => [
     Migration001CreateInitialSchema(),
     Migration002AddArchivedTask(),
+    Migration003CreateAccountsTable(),
     // Add new migrations here:
     // Migration002AddEstimatedHours(),
     // Migration003CreateIndexes(),

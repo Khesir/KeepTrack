@@ -4,8 +4,6 @@ import '../../domain/entities/budget_record.dart';
 import '../../domain/repositories/budget_repository.dart';
 import '../datasources/budget_datasource.dart';
 import '../models/budget_model.dart';
-import '../models/budget_category_model.dart';
-import '../models/budget_record_model.dart';
 
 /// Budget repository implementation
 class BudgetRepositoryImpl implements BudgetRepository {
@@ -35,7 +33,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
   Future<Budget?> getActiveBudget() async {
     final budgets = await getBudgets();
     try {
-      return budgets.firstWhere((budget) => budget.status == BudgetStatus.active);
+      return budgets.firstWhere(
+        (budget) => budget.status == BudgetStatus.active,
+      );
     } catch (e) {
       return null;
     }
@@ -95,7 +95,7 @@ class BudgetRepositoryImpl implements BudgetRepository {
     if (budget.month != currentMonth) {
       throw Exception(
         'Can only reopen budgets for the current month. '
-        'Budget month: ${budget.month}, Current month: $currentMonth'
+        'Budget month: ${budget.month}, Current month: $currentMonth',
       );
     }
 
@@ -150,8 +150,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
       throw Exception('Budget not found: $budgetId');
     }
 
-    final updatedRecords =
-        budget.records.where((r) => r.id != recordId).toList();
+    final updatedRecords = budget.records
+        .where((r) => r.id != recordId)
+        .toList();
 
     final updated = budget.copyWith(
       records: updatedRecords,
@@ -179,7 +180,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
 
   @override
   Future<Budget> updateCategory(
-      String budgetId, BudgetCategory category) async {
+    String budgetId,
+    BudgetCategory category,
+  ) async {
     final budget = await getBudgetById(budgetId);
     if (budget == null) {
       throw Exception('Budget not found: $budgetId');
@@ -205,15 +208,18 @@ class BudgetRepositoryImpl implements BudgetRepository {
     }
 
     // Check if category has records
-    final hasRecords =
-        budget.records.any((record) => record.categoryId == categoryId);
+    final hasRecords = budget.records.any(
+      (record) => record.categoryId == categoryId,
+    );
     if (hasRecords) {
       throw Exception(
-          'Cannot delete category with existing records. Delete records first.');
+        'Cannot delete category with existing records. Delete records first.',
+      );
     }
 
-    final updatedCategories =
-        budget.categories.where((c) => c.id != categoryId).toList();
+    final updatedCategories = budget.categories
+        .where((c) => c.id != categoryId)
+        .toList();
 
     final updated = budget.copyWith(
       categories: updatedCategories,
