@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/core/ui/ui.dart';
-import 'tabs/accounts/accounts_tab.dart';
-import 'tabs/budgets/budget_list_screen.dart';
+import 'task_list_screen.dart';
+import 'package:persona_codex/features/projects/presentation/screens/project_list_screen.dart';
 import 'tabs/logs_tab.dart';
 
-class FinanceHomeScreen extends ScopedScreen {
-  const FinanceHomeScreen({super.key});
+class TasksHomeScreen extends ScopedScreen {
+  const TasksHomeScreen({super.key});
 
   @override
-  State<FinanceHomeScreen> createState() => _FinanceHomeScreenState();
+  State<TasksHomeScreen> createState() => _TasksHomeScreenState();
 }
 
-class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
+class _TasksHomeScreenState extends ScopedScreenState<TasksHomeScreen>
     with AppLayoutControlled {
   int _topIndex = 0;
 
@@ -23,10 +23,10 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
 
   @override
   void onReady() {
-    configureLayout(title: 'Finance', showBottomNav: true);
+    configureLayout(title: 'Tasks', showBottomNav: true);
   }
 
-  final List<String> topTabs = ['Accounts', 'Budgets', 'Debts', 'Records', 'Logs'];
+  final List<String> topTabs = ['Tasks', 'Projects', 'Time & Planning', 'Sessions', 'Logs'];
 
   void _onTabSelected(int index) {
     setState(() {
@@ -40,7 +40,7 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
       children: [
         // Inner top tabs
         Container(
-          color: Colors.blue[50],
+          color: Colors.green[50],
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -57,7 +57,8 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
                         fontWeight: isActive
                             ? FontWeight.bold
                             : FontWeight.normal,
-                        color: isActive ? Colors.blueAccent : Colors.grey[700],
+                        color: isActive ? Colors.green : Colors.grey[700],
+                        fontSize: 13,
                       ),
                     ),
                     if (isActive)
@@ -65,7 +66,7 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
                         margin: const EdgeInsets.only(top: 4),
                         height: 3,
                         width: 40,
-                        color: Colors.blueAccent,
+                        color: Colors.green,
                       ),
                   ],
                 ),
@@ -79,25 +80,25 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
           child: IndexedStack(
             index: _topIndex,
             children: [
-              // Accounts Tab - using new AccountListScreen
-              const AccountsTab(),
+              // Tasks Tab
+              const TaskListScreen(),
 
-              // Budgets Tab - using existing BudgetListScreen
-              const BudgetListScreen(),
+              // Projects Tab
+              const ProjectListScreen(),
 
-              // Goals Tab - TODO
+              // Time & Planning Tab - TODO: Future Google Calendar integration
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.flag_outlined,
+                      Icons.calendar_today_outlined,
                       size: 64,
                       color: Colors.grey[400],
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Goals',
+                      'Time & Planning',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -105,26 +106,26 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Coming soon - set and track financial goals',
+                      'Coming soon - Google Calendar integration',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ],
                 ),
               ),
 
-              // Debts Tab - TODO
+              // Sessions Tab - TODO: Session tracking
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.credit_card_outlined,
+                      Icons.timer_outlined,
                       size: 64,
                       color: Colors.grey[400],
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Records',
+                      'Sessions',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -132,7 +133,7 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Coming soon - track loans and debts',
+                      'Coming soon - track work sessions and time',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ],
@@ -140,7 +141,7 @@ class _FinanceHomeScreenState extends ScopedScreenState<FinanceHomeScreen>
               ),
 
               // Logs Tab
-              const FinanceLogsTab(),
+              const TaskLogsTab(),
             ],
           ),
         ),

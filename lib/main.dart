@@ -10,22 +10,21 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/theme/theme.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/features/finance/finance_di.dart';
-import 'package:persona_codex/features/finance/presentation/screens/budget_list_screen.dart';
 import 'package:persona_codex/features/finance/presentation/screens/finance_home_screen.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/di/di_logger.dart';
 import 'core/routing/app_router.dart';
-import 'core/theme/app_theme.dart';
 import 'core/migrations/migration_manager.dart';
 import 'core/logging/app_logger.dart';
 import 'core/logging/log_viewer_screen.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/projects/projects_di.dart';
-import 'features/tasks/presentation/screens/task_list_screen.dart';
-import 'features/projects/presentation/screens/project_list_screen.dart';
+import 'features/tasks/presentation/screens/tasks_home_screen.dart';
+import 'features/home/home_screen.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -414,7 +413,11 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
 
-  final List<Widget> _screens = const [TaskListScreen(), FinanceHomeScreen()];
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    TasksHomeScreen(),
+    FinanceHomeScreen(),
+  ];
   @override
   void dispose() {
     _layoutController.dispose();
@@ -488,10 +491,13 @@ class _MainScreenState extends State<MainScreen> {
                     },
                     destinations: const [
                       NavigationDestination(
-                        icon: Icon(Icons.task_alt),
-                        label: 'Task',
+                        icon: Icon(Icons.home),
+                        label: 'Home',
                       ),
-
+                      NavigationDestination(
+                        icon: Icon(Icons.task_alt),
+                        label: 'Tasks',
+                      ),
                       NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet),
                         label: 'Finance',

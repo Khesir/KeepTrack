@@ -19,9 +19,9 @@ export 'data/datasources/budget_datasource.dart';
 export 'data/repositories/budget_repository_impl.dart';
 
 // Presentation
-export 'presentation/screens/budget_list_screen.dart';
-export 'presentation/screens/budget_detail_screen.dart';
-export 'presentation/screens/create_budget_screen.dart';
+export 'presentation/screens/tabs/budgets/budget_list_screen.dart';
+export 'presentation/screens/tabs/budgets/budget_detail_screen.dart';
+export 'presentation/screens/tabs/budgets/create_budget_screen.dart';
 
 // DI Setup
 export 'finance_di.dart';

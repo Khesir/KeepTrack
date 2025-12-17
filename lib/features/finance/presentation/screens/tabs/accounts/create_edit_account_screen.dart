@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
-import '../../domain/entities/account.dart';
-import '../state/account_controller.dart';
+import '../../../../domain/entities/account.dart';
+import '../../../state/account_controller.dart';
 
 /// Screen for creating or editing an account
 class CreateEditAccountScreen extends StatefulWidget {
@@ -114,8 +114,9 @@ class _CreateEditAccountScreenState extends State<CreateEditAccountScreen> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.attach_money),
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
               ],
@@ -256,10 +257,7 @@ class _CreateEditAccountScreenState extends State<CreateEditAccountScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {

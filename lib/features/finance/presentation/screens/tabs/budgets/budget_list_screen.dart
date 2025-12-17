@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import '../../../../core/ui/scoped_screen.dart';
-import '../../../../core/routing/app_router.dart';
-import '../../domain/entities/budget.dart';
-import '../../domain/repositories/budget_repository.dart';
-import '../../domain/usecases/usecases.dart';
-import '../state/budget_list_controller.dart';
+import '../../../../../../core/ui/scoped_screen.dart';
+import '../../../../../../core/routing/app_router.dart';
+import '../../../../domain/entities/budget.dart';
+import '../../../../domain/repositories/budget_repository.dart';
+import '../../../../domain/usecases/usecases.dart';
+import '../../../state/budget_list_controller.dart';
 
 /// Budget list screen - Shows all monthly budgets
 class BudgetListScreen extends ScopedScreen {

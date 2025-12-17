@@ -38,6 +38,10 @@ class UpdateTaskUseCase {
       priority: params.priority,
       dueDate: params.dueDate,
       projectId: params.projectId,
+      isMoneyRelated: params.isMoneyRelated,
+      expectedAmount: params.expectedAmount,
+      transactionType: params.transactionType,
+      financeCategoryId: params.financeCategoryId,
       updatedAt: DateTime.now(),
     );
 
@@ -72,6 +76,10 @@ class UpdateTaskParams {
   final TaskPriority? priority;
   final DateTime? dueDate;
   final String? projectId;
+  final bool? isMoneyRelated;
+  final double? expectedAmount;
+  final TaskTransactionType? transactionType;
+  final String? financeCategoryId;
 
   UpdateTaskParams({
     required this.taskId,
@@ -81,5 +89,9 @@ class UpdateTaskParams {
     this.priority,
     this.dueDate,
     this.projectId,
+    this.isMoneyRelated,
+    this.expectedAmount,
+    this.transactionType,
+    this.financeCategoryId,
   });
 }

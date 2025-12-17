@@ -11,6 +11,7 @@ import '../../../../core/ui/scoped_screen.dart';
 import '../../../../core/routing/app_router.dart';
 import '../../domain/entities/task.dart';
 import '../state/task_list_controller.dart';
+import '../widgets/transaction_completion_dialog.dart';
 
 /// Task list screen using StreamState - Clean, reactive, no setState!
 class TaskListScreen extends ScopedScreen {
@@ -118,6 +119,43 @@ class _TaskListScreenState extends ScopedScreenState<TaskListScreen>
     context.goToTaskDetail(task).then((_) => _controller.loadTasks());
   }
 
+  void _handleTaskCompletion(Task task) {
+    // If task involves money and is being marked complete, show transaction dialog
+    if (task.hasFinancialIntent && !task.isCompleted) {
+      showDialog(
+        context: context,
+        builder: (context) => TransactionCompletionDialog(
+          task: task,
+          onConfirm: (actualAmount, createTransaction) async {
+            // TODO: Create transaction if requested
+            // For now, just mark task as complete
+            await _controller.toggleTaskCompletion(task);
+
+            if (createTransaction && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Task completed! Transaction: ₱${actualAmount.toStringAsFixed(2)}',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Task completed without transaction'),
+                ),
+              );
+            }
+          },
+        ),
+      );
+    } else {
+      // Normal completion
+      _controller.toggleTaskCompletion(task);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AsyncStreamBuilder<List<Task>>(
@@ -148,7 +186,7 @@ class _TaskListScreenState extends ScopedScreenState<TaskListScreen>
               return _TaskListItem(
                 task: task,
                 onTap: () => _openTask(task),
-                onToggleComplete: () => _controller.toggleTaskCompletion(task),
+                onToggleComplete: () => _handleTaskCompletion(task),
                 onDelete: task.id != null
                     ? () => _controller.deleteTask(task.id!)
                     : () {}, // Should never happen, but handle gracefully
@@ -245,9 +283,11 @@ class _TaskListItem extends StatelessWidget {
                 style: TextStyle(color: task.archived ? Colors.grey : null),
               ),
             const SizedBox(height: 4),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                if (task.archived) ...[
+                if (task.archived)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -269,8 +309,6 @@ class _TaskListItem extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                ],
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -285,22 +323,62 @@ class _TaskListItem extends StatelessWidget {
                     style: TextStyle(fontSize: 12, color: _getPriorityColor()),
                   ),
                 ),
-                if (task.dueDate != null) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.calendar_today,
-                    size: 12,
-                    color: task.isOverdue ? Colors.red : Colors.grey,
+                if (task.dueDate != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 12,
+                        color: task.isOverdue ? Colors.red : Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${task.dueDate!.month}/${task.dueDate!.day}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: task.isOverdue ? Colors.red : Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${task.dueDate!.month}/${task.dueDate!.day}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: task.isOverdue ? Colors.red : Colors.grey,
+                if (task.hasFinancialIntent)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (task.transactionType == TaskTransactionType.income
+                              ? Colors.green
+                              : Colors.orange)
+                          .withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet,
+                          size: 12,
+                          color: task.transactionType == TaskTransactionType.income
+                              ? Colors.green[700]
+                              : Colors.orange[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '₱${task.expectedAmount?.toStringAsFixed(0) ?? '0'}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: task.transactionType == TaskTransactionType.income
+                                ? Colors.green[700]
+                                : Colors.orange[700],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
               ],
             ),
           ],

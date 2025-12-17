@@ -13,6 +13,13 @@ class Task {
   final DateTime? completedAt;
   final bool archived; // Soft delete flag
 
+  // Financial integration fields
+  final bool isMoneyRelated; // Whether this task involves a financial transaction
+  final double? expectedAmount; // Expected transaction amount
+  final TaskTransactionType? transactionType; // Income or expense
+  final String? financeCategoryId; // Link to finance category
+  final String? actualTransactionId; // Link to created transaction after completion
+
   Task({
     this.id,
     required this.title,
@@ -26,6 +33,11 @@ class Task {
     this.dueDate,
     this.completedAt,
     this.archived = false,
+    this.isMoneyRelated = false,
+    this.expectedAmount,
+    this.transactionType,
+    this.financeCategoryId,
+    this.actualTransactionId,
   });
 
   /// Copy with method for immutability
@@ -42,6 +54,11 @@ class Task {
     DateTime? dueDate,
     DateTime? completedAt,
     bool? archived,
+    bool? isMoneyRelated,
+    double? expectedAmount,
+    TaskTransactionType? transactionType,
+    String? financeCategoryId,
+    String? actualTransactionId,
   }) {
     return Task(
       id: id ?? this.id,
@@ -56,6 +73,11 @@ class Task {
       dueDate: dueDate ?? this.dueDate,
       completedAt: completedAt ?? this.completedAt,
       archived: archived ?? this.archived,
+      isMoneyRelated: isMoneyRelated ?? this.isMoneyRelated,
+      expectedAmount: expectedAmount ?? this.expectedAmount,
+      transactionType: transactionType ?? this.transactionType,
+      financeCategoryId: financeCategoryId ?? this.financeCategoryId,
+      actualTransactionId: actualTransactionId ?? this.actualTransactionId,
     );
   }
 
@@ -63,6 +85,8 @@ class Task {
   bool get isOverdue =>
       dueDate != null && !isCompleted && DateTime.now().isAfter(dueDate!);
   bool get isArchived => archived;
+  bool get hasFinancialIntent => isMoneyRelated && expectedAmount != null;
+  bool get hasTransactionCreated => actualTransactionId != null;
 
   @override
   bool operator ==(Object other) =>
@@ -115,6 +139,20 @@ enum TaskPriority {
         return 'High';
       case TaskPriority.urgent:
         return 'Urgent';
+    }
+  }
+}
+
+enum TaskTransactionType {
+  income,
+  expense;
+
+  String get displayName {
+    switch (this) {
+      case TaskTransactionType.income:
+        return 'Income';
+      case TaskTransactionType.expense:
+        return 'Expense';
     }
   }
 }

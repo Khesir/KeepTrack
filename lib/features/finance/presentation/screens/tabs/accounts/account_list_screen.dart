@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import '../../domain/entities/account.dart';
-import '../../domain/entities/transaction.dart' as finance_transaction;
-import '../state/account_controller.dart';
-import '../state/transaction_controller.dart';
-import '../widgets/recent_transactions_card.dart';
+import '../../../../domain/entities/account.dart';
+import '../../../../domain/entities/transaction.dart' as finance_transaction;
+import '../../../state/account_controller.dart';
+import '../../../state/transaction_controller.dart';
+import '../../../widgets/recent_transactions_card.dart';
 import 'create_edit_account_screen.dart';
 
 /// Screen for displaying list of accounts

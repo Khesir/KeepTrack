@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/scoped_screen.dart';
-import '../../../../core/routing/app_router.dart';
-import '../../domain/entities/budget.dart';
-import '../../domain/entities/budget_category.dart';
-import '../../domain/repositories/budget_repository.dart';
+import '../../../../../../core/ui/scoped_screen.dart';
+import '../../../../../../core/routing/app_router.dart';
+import '../../../../domain/entities/budget.dart';
+import '../../../../domain/entities/budget_category.dart';
+import '../../../../domain/repositories/budget_repository.dart';
 
 /// Create budget screen
 class CreateBudgetScreen extends ScopedScreen {
@@ -77,10 +77,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
             const SizedBox(height: 16),
             Text(
               _formatMonthDisplay(_selectedMonth),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -100,8 +97,18 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
       final year = parts[0];
       final month = int.parse(parts[1]);
       final monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ];
       return '${monthNames[month - 1]} $year';
     } catch (e) {
@@ -155,9 +162,9 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating budget: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error creating budget: $e')));
       }
     }
   }
@@ -176,9 +183,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Budget'),
-      ),
+      appBar: AppBar(title: const Text('Create Budget')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -199,10 +204,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
               children: [
                 const Text(
                   'Categories',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 TextButton.icon(
                   onPressed: _addCategory,
@@ -212,20 +214,22 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            ..._categories.map((category) => Card(
-                  child: ListTile(
-                    title: Text(category.name),
-                    subtitle: Text(category.type.displayName),
-                    trailing: Text(
-                      '₱${category.targetAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+            ..._categories.map(
+              (category) => Card(
+                child: ListTile(
+                  title: Text(category.name),
+                  subtitle: Text(category.type.displayName),
+                  trailing: Text(
+                    '₱${category.targetAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                    onTap: () => _editCategory(category),
                   ),
-                )),
+                  onTap: () => _editCategory(category),
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _createBudget,
@@ -315,10 +319,12 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
               border: OutlineInputBorder(),
             ),
             items: CategoryType.values
-                .map((type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(type.displayName),
-                    ))
+                .map(
+                  (type) => DropdownMenuItem(
+                    value: type,
+                    child: Text(type.displayName),
+                  ),
+                )
                 .toList(),
             onChanged: (value) {
               if (value != null) {

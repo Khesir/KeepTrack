@@ -3,11 +3,19 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:persona_codex/features/settings/setting_page.dart';
 import '../../features/finance/domain/entities/budget.dart';
-import '../../features/finance/presentation/screens/budget_detail_screen.dart';
-import '../../features/finance/presentation/screens/budget_list_screen.dart';
-import '../../features/finance/presentation/screens/create_budget_screen.dart';
-import '../../features/tasks/presentation/screens/task_list_screen.dart';
+import '../../features/finance/presentation/screens/tabs/budgets/budget_detail_screen.dart';
+import '../../features/finance/presentation/screens/tabs/budgets/budget_list_screen.dart';
+import '../../features/finance/presentation/screens/tabs/budgets/create_budget_screen.dart';
+import '../../features/finance/presentation/screens/tabs/accounts/account_list_screen.dart';
+import '../../features/finance/presentation/screens/management/category_management_screen.dart';
+import '../../features/settings/subpages/app_configuration_page.dart';
+import '../../features/settings/management/task_status_management_screen.dart';
+import '../../features/settings/management/task_priority_management_screen.dart';
+import '../../features/settings/management/task_tag_management_screen.dart';
+import '../../features/settings/management/project_template_management_screen.dart';
+import '../../features/tasks/presentation/screens/tasks_home_screen.dart';
 import '../../features/tasks/presentation/screens/task_detail_screen.dart';
 import '../../features/tasks/domain/entities/task.dart';
 
@@ -36,8 +44,20 @@ class AppRoutes {
   static const String budgetDetail = '/budget/detail';
   static const String budgetCreate = '/budget/create';
 
-  // Settings (for future)
+  // Settings
   static const String settings = '/settings';
+  static const String settingsConfig = '/settings/config';
+
+  // Task Management Settings
+  static const String taskStatusManagement = '/task-status-management';
+  static const String taskPriorityManagement = '/task-priority-management';
+  static const String taskTagManagement = '/task-tag-management';
+  static const String projectTemplateManagement = '/project-template-management';
+
+  // Finance Management
+  static const String walletManagement = '/wallet-management';
+  static const String categoryManagement = '/category-management';
+  static const String budgetManagement = '/budget-management';
 }
 
 /// App router - handles all route generation
@@ -49,7 +69,7 @@ class AppRouter {
       // Task list
       case AppRoutes.taskList:
         return MaterialPageRoute(
-          builder: (_) => const TaskListScreen(),
+          builder: (_) => const TasksHomeScreen(),
           settings: settings,
         );
 
@@ -116,6 +136,56 @@ class AppRouter {
         }
         return MaterialPageRoute(
           builder: (_) => ProjectDetailScreen(project: project),
+          settings: settings,
+        );
+      // Project list
+      case AppRoutes.settings:
+        return MaterialPageRoute(
+          builder: (_) => const SettingsPage(),
+          settings: settings,
+        );
+      case AppRoutes.settingsConfig:
+        return MaterialPageRoute(
+          builder: (_) => const AppConfigurationPage(),
+          settings: settings,
+        );
+
+      // Task Management Settings
+      case AppRoutes.taskStatusManagement:
+        return MaterialPageRoute(
+          builder: (_) => const TaskStatusManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.taskPriorityManagement:
+        return MaterialPageRoute(
+          builder: (_) => const TaskPriorityManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.taskTagManagement:
+        return MaterialPageRoute(
+          builder: (_) => const TaskTagManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.projectTemplateManagement:
+        return MaterialPageRoute(
+          builder: (_) => const ProjectTemplateManagementScreen(),
+          settings: settings,
+        );
+
+      // Finance Management
+      case AppRoutes.walletManagement:
+        return MaterialPageRoute(
+          builder: (_) => const AccountListScreen(),
+          settings: settings,
+        );
+      case AppRoutes.categoryManagement:
+        return MaterialPageRoute(
+          builder: (_) => const CategoryManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.budgetManagement:
+        return MaterialPageRoute(
+          builder: (_) => const BudgetListScreen(),
           settings: settings,
         );
 

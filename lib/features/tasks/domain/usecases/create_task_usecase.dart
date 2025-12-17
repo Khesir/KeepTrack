@@ -36,6 +36,10 @@ class CreateTaskUseCase {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       completedAt: null,
+      isMoneyRelated: params.isMoneyRelated,
+      expectedAmount: params.expectedAmount,
+      transactionType: params.transactionType,
+      financeCategoryId: params.financeCategoryId,
     );
 
     return await _repository.createTask(task);
@@ -96,6 +100,10 @@ class CreateTaskParams {
   final DateTime? dueDate;
   final List<String> tags;
   final String? projectId;
+  final bool isMoneyRelated;
+  final double? expectedAmount;
+  final TaskTransactionType? transactionType;
+  final String? financeCategoryId;
 
   CreateTaskParams({
     required this.title,
@@ -105,5 +113,9 @@ class CreateTaskParams {
     this.dueDate,
     this.tags = const [],
     this.projectId,
+    this.isMoneyRelated = false,
+    this.expectedAmount,
+    this.transactionType,
+    this.financeCategoryId,
   });
 }

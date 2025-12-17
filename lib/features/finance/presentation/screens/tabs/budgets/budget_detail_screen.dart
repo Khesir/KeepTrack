@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../../core/ui/scoped_screen.dart';
-import '../../domain/entities/budget.dart';
-import '../../domain/entities/transaction.dart' as finance_transaction;
-import '../../domain/repositories/budget_repository.dart';
-import '../../domain/repositories/transaction_repository.dart';
+import '../../../../../../core/ui/scoped_screen.dart';
+import '../../../../domain/entities/budget.dart';
+import '../../../../domain/entities/transaction.dart' as finance_transaction;
+import '../../../../domain/repositories/budget_repository.dart';
+import '../../../../domain/repositories/transaction_repository.dart';
 
 /// Budget detail screen - View and manage a specific budget
 class BudgetDetailScreen extends ScopedScreen {
@@ -67,7 +67,9 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
 
     setState(() => _isLoadingTransactions = true);
     try {
-      final transactions = await _transactionRepository.getTransactionsByBudget(_budget.id!);
+      final transactions = await _transactionRepository.getTransactionsByBudget(
+        _budget.id!,
+      );
       setState(() {
         _transactions = transactions;
         _isLoadingTransactions = false;
@@ -95,7 +97,9 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
   Future<void> _addRecord() async {
     if (_budget.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot add transaction: Budget ID is missing')),
+        const SnackBar(
+          content: Text('Cannot add transaction: Budget ID is missing'),
+        ),
       );
       return;
     }
@@ -183,9 +187,9 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting budget: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting budget: $e')));
         }
       }
     }
@@ -226,9 +230,9 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error reopening budget: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error reopening budget: $e')));
         }
       }
     }
@@ -409,7 +413,9 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                 final category = budget.categories
                     .where((c) => c.id == transaction.categoryId)
                     .firstOrNull;
-                final isIncome = transaction.type == finance_transaction.TransactionType.income;
+                final isIncome =
+                    transaction.type ==
+                    finance_transaction.TransactionType.income;
 
                 return Card(
                   child: ListTile(
@@ -516,7 +522,8 @@ class _AddRecordDialogState extends State<_AddRecordDialog> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   String? _selectedCategoryId;
-  finance_transaction.TransactionType _selectedType = finance_transaction.TransactionType.expense;
+  finance_transaction.TransactionType _selectedType =
+      finance_transaction.TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -575,17 +582,21 @@ class _AddRecordDialogState extends State<_AddRecordDialog> {
                 labelText: 'Type',
                 border: OutlineInputBorder(),
               ),
-              items: [
-                finance_transaction.TransactionType.income,
-                finance_transaction.TransactionType.expense,
-              ]
-                  .map(
-                    (type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(type.name.substring(0, 1).toUpperCase() + type.name.substring(1)),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  [
+                        finance_transaction.TransactionType.income,
+                        finance_transaction.TransactionType.expense,
+                      ]
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            type.name.substring(0, 1).toUpperCase() +
+                                type.name.substring(1),
+                          ),
+                        ),
+                      )
+                      .toList(),
               onChanged: (value) {
                 if (value != null) {
                   setState(() => _selectedType = value);
