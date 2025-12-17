@@ -4,6 +4,7 @@ import 'package:persona_codex/core/logging/app_logger.dart';
 import 'migration.dart';
 import 'migrations/001_create_initial_schema.dart';
 import 'migrations/002_add_archive_task.dart';
+import 'migrations/004_create_transactions_table.dart';
 
 /// Manages database migrations
 ///
@@ -219,9 +220,8 @@ class MigrationManager {
     Migration001CreateInitialSchema(),
     Migration002AddArchivedTask(),
     Migration003CreateAccountsTable(),
+    Migration004CreateTransactionsTable(),
     // Add new migrations here:
-    // Migration002AddEstimatedHours(),
-    // Migration003CreateIndexes(),
   ];
 
   /// Get migration status (for debugging)

@@ -1,6 +1,5 @@
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';
-import '../../domain/entities/budget_record.dart';
 import '../../domain/repositories/budget_repository.dart';
 import '../datasources/budget_datasource.dart';
 import '../models/budget_model.dart';
@@ -108,58 +107,14 @@ class BudgetRepositoryImpl implements BudgetRepository {
     return updateBudget(reopened);
   }
 
+  /// @deprecated Use TransactionRepository.deleteTransaction() instead.
+  /// Records are now managed as independent transactions.
   @override
-  Future<Budget> addRecord(String budgetId, BudgetRecord record) async {
-    final budget = await getBudgetById(budgetId);
-    if (budget == null) {
-      throw Exception('Budget not found: $budgetId');
-    }
-
-    final updatedRecords = [...budget.records, record];
-    final updated = budget.copyWith(
-      records: updatedRecords,
-      updatedAt: DateTime.now(),
-    );
-
-    return updateBudget(updated);
-  }
-
-  @override
-  Future<Budget> updateRecord(String budgetId, BudgetRecord record) async {
-    final budget = await getBudgetById(budgetId);
-    if (budget == null) {
-      throw Exception('Budget not found: $budgetId');
-    }
-
-    final updatedRecords = budget.records.map((r) {
-      return r.id == record.id ? record : r;
-    }).toList();
-
-    final updated = budget.copyWith(
-      records: updatedRecords,
-      updatedAt: DateTime.now(),
-    );
-
-    return updateBudget(updated);
-  }
-
-  @override
+  @Deprecated('Use TransactionRepository.deleteTransaction() instead')
   Future<Budget> deleteRecord(String budgetId, String recordId) async {
-    final budget = await getBudgetById(budgetId);
-    if (budget == null) {
-      throw Exception('Budget not found: $budgetId');
-    }
-
-    final updatedRecords = budget.records
-        .where((r) => r.id != recordId)
-        .toList();
-
-    final updated = budget.copyWith(
-      records: updatedRecords,
-      updatedAt: DateTime.now(),
+    throw UnsupportedError(
+      'Budget records are deprecated. Use TransactionRepository to delete transactions.',
     );
-
-    return updateBudget(updated);
   }
 
   @override
@@ -207,15 +162,9 @@ class BudgetRepositoryImpl implements BudgetRepository {
       throw Exception('Budget not found: $budgetId');
     }
 
-    // Check if category has records
-    final hasRecords = budget.records.any(
-      (record) => record.categoryId == categoryId,
-    );
-    if (hasRecords) {
-      throw Exception(
-        'Cannot delete category with existing records. Delete records first.',
-      );
-    }
+    // Note: Check for existing transactions should be done in the UI or use case layer
+    // by querying TransactionRepository.getTransactionsByCategory(categoryId)
+    // We no longer have embedded records to check
 
     final updatedCategories = budget.categories
         .where((c) => c.id != categoryId)

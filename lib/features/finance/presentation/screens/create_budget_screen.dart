@@ -145,7 +145,6 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
       final budget = Budget(
         month: _selectedMonth,
         categories: _categories,
-        records: [],
         status: BudgetStatus.active,
       );
 

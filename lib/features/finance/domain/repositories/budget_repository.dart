@@ -1,6 +1,5 @@
 import '../entities/budget.dart';
 import '../entities/budget_category.dart';
-import '../entities/budget_record.dart';
 
 /// Budget repository interface
 abstract class BudgetRepository {
@@ -30,15 +29,6 @@ abstract class BudgetRepository {
 
   /// Reopen a closed budget
   Future<Budget> reopenBudget(String id);
-
-  /// Add a record to a budget
-  Future<Budget> addRecord(String budgetId, BudgetRecord record);
-
-  /// Update a record
-  Future<Budget> updateRecord(String budgetId, BudgetRecord record);
-
-  /// Delete a record
-  Future<Budget> deleteRecord(String budgetId, String recordId);
 
   /// Add a category to a budget
   Future<Budget> addCategory(String budgetId, BudgetCategory category);

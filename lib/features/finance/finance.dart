@@ -6,13 +6,15 @@ library;
 // Domain
 export 'domain/entities/budget.dart';
 export 'domain/entities/budget_category.dart';
-export 'domain/entities/budget_record.dart';
+// BudgetRecord is deprecated - use Transaction instead
+// export 'domain/entities/budget_record.dart';
 export 'domain/repositories/budget_repository.dart';
 
 // Data
 export 'data/models/budget_model.dart';
 export 'data/models/budget_category_model.dart';
-export 'data/models/budget_record_model.dart';
+// BudgetRecordModel is deprecated - use TransactionModel instead
+// export 'data/models/budget_record_model.dart';
 export 'data/datasources/budget_datasource.dart';
 export 'data/repositories/budget_repository_impl.dart';
 

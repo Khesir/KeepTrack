@@ -42,37 +42,6 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
   @override
   void onReady() {
     // Only UI configuration here (if needed)
-    configureLayout(
-      title: 'Budgets',
-      fab: FloatingActionButton(
-        onPressed: _createBudget,
-        child: const Icon(Icons.add),
-      ),
-      actions: [
-        PopupMenuButton<BudgetStatus?>(
-          icon: const Icon(Icons.filter_list),
-          tooltip: 'Filter',
-          onSelected: (status) {
-            setState(() => _filterStatus = status);
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: null,
-              child: Text('All Budgets'),
-            ),
-            const PopupMenuItem(
-              value: BudgetStatus.active,
-              child: Text('Active Only'),
-            ),
-            const PopupMenuItem(
-              value: BudgetStatus.closed,
-              child: Text('Closed Only'),
-            ),
-          ],
-        ),
-      ],
-      showBottomNav: true,
-    );
   }
 
   @override
@@ -132,7 +101,10 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
             // Filter indicator
             if (_filterStatus != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 color: Colors.blue.withOpacity(0.1),
                 child: Row(
                   children: [
@@ -166,11 +138,15 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
                           const SizedBox(height: 16),
                           Text(
                             'No ${_filterStatus?.displayName.toLowerCase() ?? ''} budgets',
-                            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
                           ),
                           const SizedBox(height: 8),
                           TextButton(
-                            onPressed: () => setState(() => _filterStatus = null),
+                            onPressed: () =>
+                                setState(() => _filterStatus = null),
                             child: const Text('Clear Filter'),
                           ),
                         ],
@@ -254,8 +230,10 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
       );
     }
 
-    // Show existing budget summary
-    final balanceColor = currentBudget.balance >= 0 ? Colors.green : Colors.red;
+    // Show existing budget summary (budgeted amounts only)
+    final balanceColor = currentBudget.budgetedBalance >= 0
+        ? Colors.green
+        : Colors.red;
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -300,21 +278,32 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildSummaryItem(
-                  'Income',
-                  currentBudget.totalActualIncome,
+                  'Budgeted',
+                  currentBudget.totalBudgetedIncome,
                   Colors.green,
                 ),
                 _buildSummaryItem(
-                  'Expenses',
-                  currentBudget.totalActualExpenses,
+                  'Planned',
+                  currentBudget.totalBudgetedExpenses,
                   Colors.red,
                 ),
                 _buildSummaryItem(
                   'Balance',
-                  currentBudget.balance,
+                  currentBudget.budgetedBalance,
                   balanceColor,
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Tap to view actual transactions',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ],
         ),
@@ -328,8 +317,18 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
       final year = parts[0];
       final month = int.parse(parts[1]);
       final monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ];
       return '${monthNames[month - 1]} $year';
     } catch (e) {
@@ -363,8 +362,10 @@ class _BudgetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOverBudget = budget.isOverBudget;
-    final balanceColor = budget.balance >= 0 ? Colors.green : Colors.red;
+    // Showing budgeted amounts - actual amounts in detail screen
+    final balanceColor = budget.budgetedBalance >= 0
+        ? Colors.green
+        : Colors.red;
 
     return Card(
       child: InkWell(
@@ -403,7 +404,7 @@ class _BudgetCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '₱${budget.balance.toStringAsFixed(2)}',
+                        '₱${budget.budgetedBalance.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -411,8 +412,8 @@ class _BudgetCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        budget.balance >= 0 ? 'Surplus' : 'Deficit',
-                        style: TextStyle(fontSize: 12, color: balanceColor),
+                        budget.budgetedBalance >= 0 ? 'Planned +' : 'Planned -',
+                        style: TextStyle(fontSize: 11, color: balanceColor),
                       ),
                     ],
                   ),
@@ -420,22 +421,24 @@ class _BudgetCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // Simple bar chart
+              // Budgeted amounts display
               _buildProgressBar(
                 'Income',
-                budget.totalActualIncome,
+                budget.totalBudgetedIncome,
                 budget.totalBudgetedIncome,
                 Colors.green,
               ),
               const SizedBox(height: 8),
               _buildProgressBar(
                 'Expenses',
-                budget.totalActualExpenses,
                 budget.totalBudgetedExpenses,
+                budget.totalBudgetedIncome > 0
+                    ? budget.totalBudgetedIncome
+                    : budget.totalBudgetedExpenses,
                 Colors.red,
               ),
 
-              if (isOverBudget) ...[
+              ...[
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(

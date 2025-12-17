@@ -1,12 +1,13 @@
 import 'budget_category.dart';
-import 'budget_record.dart';
 
 /// Monthly budget entity
+///
+/// Note: Budget now references transactions by ID instead of embedding them.
+/// Use TransactionRepository to fetch transactions for a budget.
 class Budget {
   final String? id; // Optional - Supabase auto-generates
   final String month; // Format: YYYY-MM (e.g., "2024-12")
   final List<BudgetCategory> categories;
-  final List<BudgetRecord> records;
   final BudgetStatus status;
   final String? notes;
   final DateTime? createdAt; // Optional - Supabase auto-generates
@@ -17,7 +18,6 @@ class Budget {
     this.id,
     required this.month,
     this.categories = const [],
-    this.records = const [],
     this.status = BudgetStatus.active,
     this.notes,
     this.createdAt,
@@ -32,20 +32,6 @@ class Budget {
         .fold(0.0, (sum, cat) => sum + cat.targetAmount);
   }
 
-  /// Calculate total actual amount for a category
-  double getActualAmountForCategory(String categoryId) {
-    return records
-        .where((record) => record.categoryId == categoryId)
-        .fold(0.0, (sum, record) => sum + record.amount);
-  }
-
-  /// Calculate total actual amount by record type
-  double getTotalActualByRecordType(RecordType type) {
-    return records
-        .where((record) => record.type == type)
-        .fold(0.0, (sum, record) => sum + record.amount);
-  }
-
   /// Calculate total budgeted income
   double get totalBudgetedIncome =>
       getTotalBudgetedByType(CategoryType.income);
@@ -56,35 +42,18 @@ class Budget {
       getTotalBudgetedByType(CategoryType.investment) +
       getTotalBudgetedByType(CategoryType.savings);
 
-  /// Calculate total actual income
-  double get totalActualIncome =>
-      getTotalActualByRecordType(RecordType.income);
-
-  /// Calculate total actual expenses
-  double get totalActualExpenses =>
-      getTotalActualByRecordType(RecordType.expense);
-
-  /// Calculate surplus or deficit
-  double get balance => totalActualIncome - totalActualExpenses;
-
   /// Calculate budgeted balance
   double get budgetedBalance =>
       totalBudgetedIncome - totalBudgetedExpenses;
 
-  /// Check if over budget
-  bool get isOverBudget => totalActualExpenses > totalBudgetedExpenses;
-
-  /// Check if under budget (surplus)
-  bool get hasSurplus => totalActualExpenses < totalBudgetedExpenses;
-
-  /// Get variance (actual - budgeted)
-  double get variance => balance - budgetedBalance;
+  /// Calculate actual amounts from transactions
+  /// Use TransactionRepository.getTransactionsByBudget(budget.id) to get transactions
+  /// Then calculate totals using transaction amounts
 
   Budget copyWith({
     String? id,
     String? month,
     List<BudgetCategory>? categories,
-    List<BudgetRecord>? records,
     BudgetStatus? status,
     String? notes,
     DateTime? createdAt,
@@ -95,7 +64,6 @@ class Budget {
       id: id ?? this.id,
       month: month ?? this.month,
       categories: categories ?? this.categories,
-      records: records ?? this.records,
       status: status ?? this.status,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,

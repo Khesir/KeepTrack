@@ -414,11 +414,7 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
 
-  final List<Widget> _screens = const [
-    TaskListScreen(),
-    ProjectListScreen(),
-    FinanceHomeScreen(),
-  ];
+  final List<Widget> _screens = const [TaskListScreen(), FinanceHomeScreen()];
   @override
   void dispose() {
     _layoutController.dispose();
@@ -495,15 +491,7 @@ class _MainScreenState extends State<MainScreen> {
                         icon: Icon(Icons.task_alt),
                         label: 'Task',
                       ),
-                      NavigationDestination(
-                        icon: Icon(Icons.inventory_2_outlined),
-                        selectedIcon: Icon(Icons.inventory_2),
-                        label: 'Projects',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.account_balance_wallet),
-                        label: 'Finance',
-                      ),
+
                       NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet),
                         label: 'Finance',

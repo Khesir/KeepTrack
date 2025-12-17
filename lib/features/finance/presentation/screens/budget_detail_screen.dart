@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/ui/scoped_screen.dart';
 import '../../domain/entities/budget.dart';
-import '../../domain/entities/budget_record.dart';
+import '../../domain/entities/transaction.dart' as finance_transaction;
 import '../../domain/repositories/budget_repository.dart';
+import '../../domain/repositories/transaction_repository.dart';
 
 /// Budget detail screen - View and manage a specific budget
 class BudgetDetailScreen extends ScopedScreen {
@@ -16,7 +17,31 @@ class BudgetDetailScreen extends ScopedScreen {
 
 class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
   late BudgetRepository _repository;
+  late TransactionRepository _transactionRepository;
   late Budget _budget;
+  List<finance_transaction.Transaction> _transactions = [];
+  bool _isLoadingTransactions = false;
+
+  // Calculate totals from transactions
+  double get totalActualIncome {
+    return _transactions
+        .where((t) => t.type == finance_transaction.TransactionType.income)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  double get totalActualExpenses {
+    return _transactions
+        .where((t) => t.type == finance_transaction.TransactionType.expense)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  double get balance => totalActualIncome - totalActualExpenses;
+
+  double getActualAmountForCategory(String categoryId) {
+    return _transactions
+        .where((t) => t.categoryId == categoryId)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   @override
   void registerServices() {
@@ -28,11 +53,29 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
     super.initState();
     _budget = widget.budget;
     _repository = getService<BudgetRepository>();
+    _transactionRepository = getService<TransactionRepository>();
+    _loadTransactions();
   }
 
   @override
   void onReady() {
     // Only UI configuration here (if needed)
+  }
+
+  Future<void> _loadTransactions() async {
+    if (_budget.id == null) return;
+
+    setState(() => _isLoadingTransactions = true);
+    try {
+      final transactions = await _transactionRepository.getTransactionsByBudget(_budget.id!);
+      setState(() {
+        _transactions = transactions;
+        _isLoadingTransactions = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingTransactions = false);
+      // Silently fail
+    }
   }
 
   Future<void> _refresh() async {
@@ -42,6 +85,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
       final updated = await _repository.getBudgetById(_budget.id!);
       if (updated != null) {
         setState(() => _budget = updated);
+        await _loadTransactions();
       }
     } catch (e) {
       // Silently fail
@@ -51,7 +95,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
   Future<void> _addRecord() async {
     if (_budget.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot add record: Budget ID is missing')),
+        const SnackBar(content: Text('Cannot add transaction: Budget ID is missing')),
       );
       return;
     }
@@ -63,8 +107,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
 
     if (result != null) {
       try {
-        final record = BudgetRecord(
-          id: 'record-${DateTime.now().millisecondsSinceEpoch}',
+        final transaction = finance_transaction.Transaction(
           budgetId: _budget.id!,
           categoryId: result['categoryId'],
           amount: result['amount'],
@@ -73,8 +116,8 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
           type: result['type'],
         );
 
-        final updated = await _repository.addRecord(_budget.id!, record);
-        setState(() => _budget = updated);
+        await _transactionRepository.createTransaction(transaction);
+        await _loadTransactions();
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(
@@ -205,7 +248,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final budget = _budget;
-    final balanceColor = budget.balance >= 0 ? Colors.green : Colors.red;
+    final balanceColor = balance >= 0 ? Colors.green : Colors.red;
     final isActive = budget.status == BudgetStatus.active;
 
     return Scaffold(
@@ -244,7 +287,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                 child: Column(
                   children: [
                     Text(
-                      '₱${budget.balance.toStringAsFixed(2)}',
+                      '₱${balance.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
@@ -252,7 +295,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                       ),
                     ),
                     Text(
-                      budget.balance >= 0 ? 'Surplus' : 'Deficit',
+                      balance >= 0 ? 'Surplus' : 'Deficit',
                       style: TextStyle(fontSize: 16, color: balanceColor),
                     ),
                     const SizedBox(height: 16),
@@ -261,13 +304,13 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                       children: [
                         _buildSummaryColumn(
                           'Income',
-                          budget.totalActualIncome,
+                          totalActualIncome,
                           budget.totalBudgetedIncome,
                           Colors.green,
                         ),
                         _buildSummaryColumn(
                           'Expenses',
-                          budget.totalActualExpenses,
+                          totalActualExpenses,
                           budget.totalBudgetedExpenses,
                           Colors.red,
                         ),
@@ -287,7 +330,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
             ),
             const SizedBox(height: 8),
             ...budget.categories.map((category) {
-              final actual = budget.getActualAmountForCategory(category.id);
+              final actual = getActualAmountForCategory(category.id);
               final percentage = category.targetAmount > 0
                   ? actual / category.targetAmount
                   : 0.0;
@@ -338,13 +381,20 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '${budget.records.length} records',
+                  '${_transactions.length} records',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            if (budget.records.isEmpty)
+            if (_isLoadingTransactions)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_transactions.isEmpty)
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -355,11 +405,11 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                 ),
               )
             else
-              ...budget.records.reversed.map((record) {
+              ..._transactions.reversed.map((transaction) {
                 final category = budget.categories
-                    .where((c) => c.id == record.categoryId)
+                    .where((c) => c.id == transaction.categoryId)
                     .firstOrNull;
-                final isIncome = record.type == RecordType.income;
+                final isIncome = transaction.type == finance_transaction.TransactionType.income;
 
                 return Card(
                   child: ListTile(
@@ -371,16 +421,16 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (record.description != null)
-                          Text(record.description!),
+                        if (transaction.description != null)
+                          Text(transaction.description!),
                         Text(
-                          '${record.date.month}/${record.date.day}/${record.date.year}',
+                          '${transaction.date.month}/${transaction.date.day}/${transaction.date.year}',
                           style: const TextStyle(fontSize: 12),
                         ),
                       ],
                     ),
                     trailing: Text(
-                      '${isIncome ? '+' : '-'}₱${record.amount.toStringAsFixed(2)}',
+                      '${isIncome ? '+' : '-'}₱${transaction.amount.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -466,7 +516,7 @@ class _AddRecordDialogState extends State<_AddRecordDialog> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   String? _selectedCategoryId;
-  RecordType _selectedType = RecordType.expense;
+  finance_transaction.TransactionType _selectedType = finance_transaction.TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -519,17 +569,20 @@ class _AddRecordDialogState extends State<_AddRecordDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<RecordType>(
+            DropdownButtonFormField<finance_transaction.TransactionType>(
               value: _selectedType,
               decoration: const InputDecoration(
                 labelText: 'Type',
                 border: OutlineInputBorder(),
               ),
-              items: RecordType.values
+              items: [
+                finance_transaction.TransactionType.income,
+                finance_transaction.TransactionType.expense,
+              ]
                   .map(
                     (type) => DropdownMenuItem(
                       value: type,
-                      child: Text(type.displayName),
+                      child: Text(type.name.substring(0, 1).toUpperCase() + type.name.substring(1)),
                     ),
                   )
                   .toList(),

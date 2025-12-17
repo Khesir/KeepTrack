@@ -29,7 +29,6 @@ class CreateBudgetUseCase {
       month: params.month,
       notes: params.notes,
       categories: params.categories ?? [],
-      records: const [],
     );
 
     return await _repository.createBudget(budget);
