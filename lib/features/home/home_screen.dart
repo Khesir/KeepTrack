@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/core/ui/ui.dart';
 import 'package:persona_codex/core/routing/app_router.dart';
+import 'package:persona_codex/features/home/widgets/admin_panel_widget.dart';
 
 class HomeScreen extends ScopedScreen {
   const HomeScreen({super.key});
@@ -36,6 +37,9 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Admin Panel (only visible for admin users)
+          const AdminPanelWidget(),
+
           // Welcome Section
           _buildWelcomeSection(),
           const SizedBox(height: 24),

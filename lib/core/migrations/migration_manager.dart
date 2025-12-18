@@ -5,6 +5,7 @@ import 'migration.dart';
 import 'migrations/001_create_initial_schema.dart';
 import 'migrations/002_add_archive_task.dart';
 import 'migrations/004_create_transactions_table.dart';
+import 'migrations/005_add_user_id_and_auth.dart';
 
 /// Manages database migrations
 ///
@@ -221,6 +222,7 @@ class MigrationManager {
     Migration002AddArchivedTask(),
     Migration003CreateAccountsTable(),
     Migration004CreateTransactionsTable(),
+    Migration005AddUserIdAndAuth(),
     // Add new migrations here:
   ];
 

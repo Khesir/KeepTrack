@@ -1,16 +1,35 @@
-# Budget Management Feature
+# Finance Management Feature
 
-Monthly budget tracking with categories, records, and surplus/deficit analysis.
+Comprehensive finance tracking with accounts, budgets, transactions, and analytics.
 
 ## Overview
 
-The budget feature allows users to:
-- Create monthly budgets with income and expense categories
-- Set target amounts for each category
-- Track actual transactions (records)
+The finance feature allows users to:
+- **Accounts**: Track multiple accounts (checking, savings, cash, etc.)
+- **Budgets**: Create monthly budgets with income and expense categories
+- **Transactions**: Record income, expenses, and transfers
+- **Categories**: Organize transactions into budget categories
 - View surplus or deficit in real-time
 - Close budgets with notes for historical tracking
-- View budget history with visual graphs
+- View financial history with analytics
+
+## Architecture Changes (v2.0)
+
+**Breaking Change:** Transactions are now independent entities.
+
+### Before (v1.0)
+- Budget → categories (array)
+- Budget → **records (embedded array)** ❌
+
+### After (v2.0)
+- Budget → categories (array)
+- **Transactions** (separate table with optional budget_id) ✅
+
+This allows:
+- Transactions without budgets
+- Transactions linked to accounts
+- Better performance and scalability
+- Reusable transaction data across features
 
 ## Architecture
 
@@ -269,6 +288,8 @@ View/manage a specific budget:
 
 ## Calculations
 
+**Note:** Transactions are now stored separately from budgets. Use `TransactionRepository` to fetch transactions for calculations.
+
 ### Income/Expense Totals
 
 ```dart
@@ -277,20 +298,30 @@ final budgetedIncome = budget.categories
     .where((c) => c.type == CategoryType.income)
     .fold(0.0, (sum, c) => sum + c.targetAmount);
 
-// Total actual income
-final actualIncome = budget.records
-    .where((r) => r.type == RecordType.income)
-    .fold(0.0, (sum, r) => sum + r.amount);
+// Total actual income - fetch transactions first
+final transactions = await transactionRepository.getTransactionsByBudget(budget.id);
+final actualIncome = transactions
+    .where((t) => t.type == TransactionType.income)
+    .fold(0.0, (sum, t) => sum + t.amount);
 ```
 
 ### Balance
 
 ```dart
+// Fetch transactions for this budget
+final transactions = await transactionRepository.getTransactionsByBudget(budget.id);
+
 // Current balance
+final actualIncome = transactions
+    .where((t) => t.type == TransactionType.income)
+    .fold(0.0, (sum, t) => sum + t.amount);
+final actualExpenses = transactions
+    .where((t) => t.type == TransactionType.expense)
+    .fold(0.0, (sum, t) => sum + t.amount);
 final balance = actualIncome - actualExpenses;
 
 // Budgeted balance
-final budgetedBalance = budgetedIncome - budgetedExpenses;
+final budgetedBalance = budget.budgetedBalance;
 
 // Variance
 final variance = balance - budgetedBalance;
@@ -299,10 +330,13 @@ final variance = balance - budgetedBalance;
 ### Category Progress
 
 ```dart
+// Fetch transactions for this budget
+final transactions = await transactionRepository.getTransactionsByBudget(budget.id);
+
 // For each category
-final actualAmount = budget.records
-    .where((r) => r.categoryId == category.id)
-    .fold(0.0, (sum, r) => sum + r.amount);
+final actualAmount = transactions
+    .where((t) => t.categoryId == category.id)
+    .fold(0.0, (sum, t) => sum + t.amount);
 
 final percentage = actualAmount / category.targetAmount;
 ```

@@ -21,10 +21,13 @@ import 'core/routing/app_router.dart';
 import 'core/migrations/migration_manager.dart';
 import 'core/logging/app_logger.dart';
 import 'core/logging/log_viewer_screen.dart';
+import 'features/auth/auth.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/projects/projects_di.dart';
 import 'features/tasks/presentation/screens/tasks_home_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/logs/logs_screen.dart';
+import 'features/profile/presentation/profile_screen.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -373,6 +376,7 @@ void _setupDependencies() {
   });
 
   // Feature dependencies
+  setupAuthDependencies(); // Auth must be first
   setupTasksDependencies();
   setupProjectsDependencies();
   setupBudgetDependencies();
@@ -396,8 +400,10 @@ class PersonalCodexApp extends StatelessWidget {
       // Routing
       onGenerateRoute: AppRouter.onGenerateRoute,
 
-      // Home screen (bottom nav with tabs)
-      home: const MainScreen(),
+      // Home screen (bottom nav with tabs) - protected by auth guard
+      home: const AuthGuard(
+        child: MainScreen(),
+      ),
     );
   }
 }
@@ -417,6 +423,8 @@ class _MainScreenState extends State<MainScreen> {
     HomeScreen(),
     TasksHomeScreen(),
     FinanceHomeScreen(),
+    LogsScreen(),
+    ProfileScreen(),
   ];
   @override
   void dispose() {
@@ -501,6 +509,14 @@ class _MainScreenState extends State<MainScreen> {
                       NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet),
                         label: 'Finance',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.history),
+                        label: 'Logs',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.person),
+                        label: 'Profile',
                       ),
                     ],
                   )
