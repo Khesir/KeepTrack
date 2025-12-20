@@ -10,6 +10,9 @@ import '../../features/finance/presentation/screens/tabs/budgets/budget_list_scr
 import '../../features/finance/presentation/screens/tabs/budgets/create_budget_screen.dart';
 import '../../features/finance/presentation/screens/tabs/accounts/account_list_screen.dart';
 import '../../features/finance/presentation/screens/management/category_management_screen.dart';
+import '../../features/finance/presentation/screens/management/goals_management_screen.dart';
+import '../../features/finance/presentation/screens/management/debts_management_screen.dart';
+import '../../features/finance/presentation/screens/management/planned_payments_management_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 import '../../features/settings/management/task_status_management_screen.dart';
 import '../../features/settings/management/task_priority_management_screen.dart';
@@ -58,6 +61,9 @@ class AppRoutes {
   static const String walletManagement = '/wallet-management';
   static const String categoryManagement = '/category-management';
   static const String budgetManagement = '/budget-management';
+  static const String goalsManagement = '/goals-management';
+  static const String debtsManagement = '/debts-management';
+  static const String plannedPaymentsManagement = '/planned-payments-management';
 }
 
 /// App router - handles all route generation
@@ -186,6 +192,21 @@ class AppRouter {
       case AppRoutes.budgetManagement:
         return MaterialPageRoute(
           builder: (_) => const BudgetListScreen(),
+          settings: settings,
+        );
+      case AppRoutes.goalsManagement:
+        return MaterialPageRoute(
+          builder: (_) => const GoalsManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.debtsManagement:
+        return MaterialPageRoute(
+          builder: (_) => const DebtsManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.plannedPaymentsManagement:
+        return MaterialPageRoute(
+          builder: (_) => const PlannedPaymentsManagementScreen(),
           settings: settings,
         );
 

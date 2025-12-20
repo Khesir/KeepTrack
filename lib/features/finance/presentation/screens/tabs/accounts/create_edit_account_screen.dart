@@ -48,8 +48,8 @@ class _CreateEditAccountScreenState extends State<CreateEditAccountScreen> {
       text: widget.account?.bankAccountNumber ?? '',
     );
 
-    if (widget.account?.color != null) {
-      _selectedColor = _parseColor(widget.account!.color!);
+    if (widget.account?.colorHex != null) {
+      _selectedColor = _parseColor(widget.account!.colorHex!);
     }
   }
 
@@ -231,7 +231,7 @@ class _CreateEditAccountScreenState extends State<CreateEditAccountScreen> {
         bankAccountNumber: _accountNumberController.text.trim().isNotEmpty
             ? _accountNumberController.text.trim()
             : null,
-        color: _colorToString(_selectedColor),
+        colorHex: _colorToString(_selectedColor),
         isArchived: widget.account?.isArchived ?? false,
       );
 

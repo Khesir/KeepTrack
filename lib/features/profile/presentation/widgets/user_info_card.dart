@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/theme/gcash_theme.dart';
 import 'package:persona_codex/features/auth/presentation/state/auth_controller.dart';
 
 class UserInfoCard extends StatefulWidget {
@@ -35,20 +34,28 @@ class _UserInfoCardState extends State<UserInfoCard> {
               CircleAvatar(
                 radius: 35,
                 backgroundImage: NetworkImage(user!.photoUrl!),
-                backgroundColor: GCashColors.primary.withOpacity(0.1),
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
               )
             else
               Container(
                 width: 70,
                 height: 70,
                 decoration: BoxDecoration(
-                  color: GCashColors.primary.withOpacity(0.1),
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      Theme.of(context).colorScheme.primary,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.person,
                   size: 40,
-                  color: GCashColors.primary,
+                  color: Colors.white,
                 ),
               ),
             const SizedBox(width: 16),

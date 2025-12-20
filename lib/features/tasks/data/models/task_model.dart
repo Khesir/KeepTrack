@@ -15,6 +15,13 @@ class TaskModel {
   final DateTime? completedAt;
   final bool archived;
 
+  // Financial integration fields
+  final bool isMoneyRelated;
+  final double? expectedAmount;
+  final String? transactionType; // 'income' or 'expense'
+  final String? financeCategoryId;
+  final String? actualTransactionId;
+
   TaskModel({
     this.id,
     required this.title,
@@ -28,6 +35,11 @@ class TaskModel {
     this.dueDate,
     this.completedAt,
     this.archived = false,
+    this.isMoneyRelated = false,
+    this.expectedAmount,
+    this.transactionType,
+    this.financeCategoryId,
+    this.actualTransactionId,
   });
 
   /// Convert from domain entity to model
@@ -45,6 +57,11 @@ class TaskModel {
       dueDate: task.dueDate,
       completedAt: task.completedAt,
       archived: task.archived,
+      isMoneyRelated: task.isMoneyRelated,
+      expectedAmount: task.expectedAmount,
+      transactionType: task.transactionType?.name,
+      financeCategoryId: task.financeCategoryId,
+      actualTransactionId: task.actualTransactionId,
     );
   }
 
@@ -63,6 +80,13 @@ class TaskModel {
       dueDate: dueDate,
       completedAt: completedAt,
       archived: archived,
+      isMoneyRelated: isMoneyRelated,
+      expectedAmount: expectedAmount,
+      transactionType: transactionType != null
+        ? TaskTransactionType.values.firstWhere((e) => e.name == transactionType)
+        : null,
+      financeCategoryId: financeCategoryId,
+      actualTransactionId: actualTransactionId,
     );
   }
 
@@ -89,6 +113,11 @@ class TaskModel {
           ? DateTime.parse(json['completed_at'] as String)
           : null,
       archived: json['archived'] as bool? ?? false,
+      isMoneyRelated: json['is_money_related'] as bool? ?? false,
+      expectedAmount: (json['expected_amount'] as num?)?.toDouble(),
+      transactionType: json['transaction_type'] as String?,
+      financeCategoryId: json['finance_category_id'] as String?,
+      actualTransactionId: json['actual_transaction_id'] as String?,
     );
   }
 
@@ -112,6 +141,11 @@ class TaskModel {
       if (dueDate != null) 'due_date': dueDate!.toIso8601String(),
       if (completedAt != null) 'completed_at': completedAt!.toIso8601String(),
       'archived': archived,
+      'is_money_related': isMoneyRelated,
+      if (expectedAmount != null) 'expected_amount': expectedAmount,
+      if (transactionType != null) 'transaction_type': transactionType,
+      if (financeCategoryId != null) 'finance_category_id': financeCategoryId,
+      if (actualTransactionId != null) 'actual_transaction_id': actualTransactionId,
     };
   }
 }

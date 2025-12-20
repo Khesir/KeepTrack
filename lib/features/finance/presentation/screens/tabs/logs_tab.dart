@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/theme/gcash_theme.dart';
+import 'package:intl/intl.dart';
 
 class FinanceLogsTab extends StatelessWidget {
   const FinanceLogsTab({super.key});
@@ -46,33 +46,38 @@ class FinanceLogsTab extends StatelessWidget {
       ),
     ];
 
-    return Scaffold(
-      backgroundColor: GCashColors.background,
-      body: logs.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No financial activity yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your financial activity will appear here',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: GCashSpacing.screenPadding,
+    return logs.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.history_outlined,
+                  size: 80,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No financial activity yet',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your financial activity will appear here',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6),
+                      ),
+                ),
+              ],
+            ),
+          )
+        : ListView.builder(
+              padding: const EdgeInsets.all(16),
               itemCount: logs.length,
               itemBuilder: (context, index) {
                 final log = logs[index];
@@ -102,68 +107,96 @@ class FinanceLogsTab extends StatelessWidget {
                               : isYesterday
                                   ? 'Yesterday'
                                   : _formatDate(log.timestamp),
-                          style: GCashTextStyles.h3.copyWith(
-                            color: Colors.grey[700],
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.7),
+                              ),
                         ),
                       ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Material(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(16),
-                          leading: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: log.color.withOpacity(0.1),
-                              shape: BoxShape.circle,
+                      child: Card(
+                        elevation: 0,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () {
+                            // Navigate to log detail
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: log.color.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(log.icon, color: log.color, size: 24),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              log.action,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                          if (log.amount != null)
+                                            Text(
+                                              NumberFormat.currency(
+                                                      symbol: '₱', decimalDigits: 2)
+                                                  .format(log.amount!.abs()),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: log.amount! >= 0
+                                                    ? Colors.green[700]
+                                                    : Colors.red[700],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        log.description,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.7),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _formatTime(log.timestamp),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: Icon(log.icon, color: log.color, size: 24),
-                          ),
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  log.action,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              if (log.amount != null)
-                                Text(
-                                  '₱${log.amount!.abs().toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: log.amount! >= 0
-                                        ? Colors.green[700]
-                                        : Colors.red[700],
-                                  ),
-                                ),
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                log.description,
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _formatTime(log.timestamp),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       ),
@@ -171,8 +204,7 @@ class FinanceLogsTab extends StatelessWidget {
                   ],
                 );
               },
-            ),
-    );
+            );
   }
 
   bool _isToday(DateTime date) {

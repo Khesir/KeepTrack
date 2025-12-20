@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'planned_payments_tab_new.dart';
 
-/// Budgets Tab with Progress Tracking
+/// Budgets Tab with Progress Tracking and Planned Payments Integration
 class BudgetsTabNew extends StatefulWidget {
   const BudgetsTabNew({super.key});
 
@@ -199,6 +200,15 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
     final remaining = budget.limit - budget.spent;
     final isOverBudget = budget.spent > budget.limit;
 
+    // Find related planned payments
+    final relatedPayments = dummyPlannedPayments.where((payment) {
+      return _mapPaymentCategoryToBudget(payment.category) == budget.category;
+    }).toList();
+
+    final upcomingPaymentsTotal = relatedPayments
+        .where((p) => p.status == PaymentStatus.active)
+        .fold<double>(0, (sum, p) => sum + p.amount);
+
     return Card(
       elevation: 0,
       child: InkWell(
@@ -342,6 +352,69 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                   ),
                 ],
               ),
+
+              // Planned Payments Section
+              if (relatedPayments.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.event_repeat,
+                      size: 14,
+                      color: Colors.purple[700],
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Planned Payments',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.purple[700],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${relatedPayments.length} ${relatedPayments.length == 1 ? 'payment' : 'payments'}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.purple[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Monthly recurring total',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.purple[900],
+                          ),
+                        ),
+                      ),
+                      Text(
+                        NumberFormat.currency(symbol: '₱', decimalDigits: 0)
+                            .format(upcomingPaymentsTotal),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -358,6 +431,25 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
       return Colors.blue[700]!;
     } else {
       return Colors.green[700]!;
+    }
+  }
+
+  String _mapPaymentCategoryToBudget(PaymentCategory category) {
+    switch (category) {
+      case PaymentCategory.bills:
+        return 'Utilities';
+      case PaymentCategory.subscriptions:
+        return 'Entertainment';
+      case PaymentCategory.insurance:
+        return 'Healthcare';
+      case PaymentCategory.loan:
+        return 'Transportation';
+      case PaymentCategory.rent:
+        return 'Utilities';
+      case PaymentCategory.utilities:
+        return 'Utilities';
+      case PaymentCategory.other:
+        return 'Shopping';
     }
   }
 }

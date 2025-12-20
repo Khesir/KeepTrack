@@ -6,6 +6,11 @@ import 'migrations/001_create_initial_schema.dart';
 import 'migrations/002_add_archive_task.dart';
 import 'migrations/004_create_transactions_table.dart';
 import 'migrations/005_add_user_id_and_auth.dart';
+import 'migrations/006_update_accounts_add_fields.dart';
+import 'migrations/007_create_goals_table.dart';
+import 'migrations/008_create_debts_table.dart';
+import 'migrations/009_create_planned_payments_table.dart';
+import 'migrations/010_add_task_financial_fields.dart';
 
 /// Manages database migrations
 ///
@@ -223,6 +228,11 @@ class MigrationManager {
     Migration003CreateAccountsTable(),
     Migration004CreateTransactionsTable(),
     Migration005AddUserIdAndAuth(),
+    Migration006UpdateAccountsAddFields(),
+    Migration007CreateGoalsTable(),
+    Migration008CreateDebtsTable(),
+    Migration009CreatePlannedPaymentsTable(),
+    Migration010AddTaskFinancialFields(),
     // Add new migrations here:
   ];
 

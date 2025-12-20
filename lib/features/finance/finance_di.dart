@@ -14,8 +14,23 @@ import 'data/datasources/transaction_datasource.dart';
 import 'data/datasources/supabase/transaction_datasource_supabase.dart';
 import 'data/repositories/transaction_repository_impl.dart';
 import 'domain/repositories/transaction_repository.dart';
+import 'data/datasources/goal_datasource.dart';
+import 'data/datasources/supabase/goal_datasource_supabase.dart';
+import 'data/repositories/goal_repository_impl.dart';
+import 'domain/repositories/goal_repository.dart';
+import 'data/datasources/debt_datasource.dart';
+import 'data/datasources/supabase/debt_datasource_supabase.dart';
+import 'data/repositories/debt_repository_impl.dart';
+import 'domain/repositories/debt_repository.dart';
+import 'data/datasources/planned_payment_datasource.dart';
+import 'data/datasources/supabase/planned_payment_datasource_supabase.dart';
+import 'data/repositories/planned_payment_repository_impl.dart';
+import 'domain/repositories/planned_payment_repository.dart';
 import 'presentation/state/account_controller.dart';
 import 'presentation/state/transaction_controller.dart';
+import 'presentation/state/goal_controller.dart';
+import 'presentation/state/debt_controller.dart';
+import 'presentation/state/planned_payment_controller.dart';
 
 /// Setup budget management dependencies
 void setupBudgetDependencies() {
@@ -32,6 +47,18 @@ void setupBudgetDependencies() {
     final client = Supabase.instance.client;
     return TransactionDataSourceSupabase(client);
   });
+  locator.registerFactory<GoalDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    return GoalDataSourceSupabase(supabaseService);
+  });
+  locator.registerFactory<DebtDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    return DebtDataSourceSupabase(supabaseService);
+  });
+  locator.registerFactory<PlannedPaymentDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    return PlannedPaymentDataSourceSupabase(supabaseService);
+  });
 
   // Repositories
   locator.registerFactory<BudgetRepository>(() {
@@ -47,6 +74,18 @@ void setupBudgetDependencies() {
     final accountRepository = locator.get<AccountRepository>();
     return TransactionRepositoryImpl(dataSource, accountRepository);
   });
+  locator.registerFactory<GoalRepository>(() {
+    final dataSource = locator.get<GoalDataSource>();
+    return GoalRepositoryImpl(dataSource);
+  });
+  locator.registerFactory<DebtRepository>(() {
+    final dataSource = locator.get<DebtDataSource>();
+    return DebtRepositoryImpl(dataSource);
+  });
+  locator.registerFactory<PlannedPaymentRepository>(() {
+    final dataSource = locator.get<PlannedPaymentDataSource>();
+    return PlannedPaymentRepositoryImpl(dataSource);
+  });
 
   // Controllers
   locator.registerFactory<AccountController>(() {
@@ -56,5 +95,17 @@ void setupBudgetDependencies() {
   locator.registerFactory<TransactionController>(() {
     final repository = locator.get<TransactionRepository>();
     return TransactionController(repository);
+  });
+  locator.registerFactory<GoalController>(() {
+    final repository = locator.get<GoalRepository>();
+    return GoalController(repository);
+  });
+  locator.registerFactory<DebtController>(() {
+    final repository = locator.get<DebtRepository>();
+    return DebtController(repository);
+  });
+  locator.registerFactory<PlannedPaymentController>(() {
+    final repository = locator.get<PlannedPaymentRepository>();
+    return PlannedPaymentController(repository);
   });
 }

@@ -8,10 +8,8 @@ class ContributionChart extends StatelessWidget {
     // Mock data - will be replaced with actual task activity from database
     final contributions = _generateMockContributions();
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      elevation: 2,
+    return Card(
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

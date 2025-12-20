@@ -1,45 +1,56 @@
 class Account {
   final String? id; // optional - db auto-generates
   final String name;
+  final String? accountType; // Cash, Bank Account, Credit, Investment, Savings, etc.
   final double balance;
-  final String? color;
+  final String? colorHex; // Store color as hex string
+  final String? iconCodePoint; // Store icon as code point
   final String? bankAccountNumber;
+  final bool isActive;
+  final bool isArchived;
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
-  final bool isArchived;
 
   Account({
     this.id,
     required this.name,
+    this.accountType,
     this.balance = 0,
+    this.colorHex,
+    this.iconCodePoint,
     this.bankAccountNumber,
+    this.isActive = true,
+    this.isArchived = false,
     this.createdAt,
     this.updatedAt,
-    this.color,
-    this.isArchived = false,
   });
-  Map get transactions => {};
 
   /// Create a copy of Account with optional updated fields
   Account copyWith({
     String? id,
     String? name,
+    String? accountType,
     double? balance,
-    String? color,
+    String? colorHex,
+    String? iconCodePoint,
     String? bankAccountNumber,
+    bool? isActive,
+    bool? isArchived,
     DateTime? createdAt,
     DateTime? updatedAt,
-    bool? isArchived,
   }) {
     return Account(
       id: id ?? this.id,
       name: name ?? this.name,
+      accountType: accountType ?? this.accountType,
       balance: balance ?? this.balance,
-      color: color ?? this.color,
+      colorHex: colorHex ?? this.colorHex,
+      iconCodePoint: iconCodePoint ?? this.iconCodePoint,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      isActive: isActive ?? this.isActive,
+      isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isArchived: isArchived ?? this.isArchived,
     );
   }
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/theme/gcash_theme.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/core/ui/ui.dart';
 import 'package:persona_codex/features/profile/presentation/widgets/user_info_card.dart';
@@ -28,7 +27,7 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: GCashSpacing.screenPadding,
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -39,7 +38,9 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen>
           // GitHub-like Contribution Chart for Tasks
           Text(
             'Task Activity',
-            style: GCashTextStyles.h2,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 12),
           const ContributionChart(),
@@ -48,7 +49,9 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen>
           // Balance Graph
           Text(
             'Balance Overview',
-            style: GCashTextStyles.h2,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 12),
           const BalanceGraph(),

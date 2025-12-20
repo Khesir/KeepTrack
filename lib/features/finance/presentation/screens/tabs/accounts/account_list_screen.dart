@@ -31,6 +31,10 @@ class _AccountListScreenState extends State<AccountListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Manage Accounts'),
+        elevation: 0,
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           await _accountController.loadAccounts();
@@ -135,6 +139,8 @@ class _AccountListScreenState extends State<AccountListScreen> {
             AsyncStreamBuilder<List<Account>>(
               state: _accountController,
               builder: (context, accounts) {
+                final colorScheme = Theme.of(context).colorScheme;
+
                 if (accounts.isEmpty) {
                   return SliverFillRemaining(
                     child: Center(
@@ -144,7 +150,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
                           Icon(
                             Icons.account_balance_wallet_outlined,
                             size: 64,
-                            color: Colors.grey[400],
+                            color: colorScheme.primary.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -153,8 +159,10 @@ class _AccountListScreenState extends State<AccountListScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Tap + to create your first account',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            'Create your first financial account',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -243,6 +251,11 @@ class _AccountListScreenState extends State<AccountListScreen> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _navigateToCreateAccount(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Account'),
+      ),
     );
   }
 
@@ -251,45 +264,110 @@ class _AccountListScreenState extends State<AccountListScreen> {
     Account account, {
     bool isArchived = false,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final accountColor = account.colorHex != null
+        ? _parseColor(account.colorHex!)
+        : Colors.blue;
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: account.color != null
-              ? _parseColor(account.color!)
-              : Colors.blue,
-          child: const Icon(Icons.account_balance_wallet, color: Colors.white),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outlineVariant,
+          width: 1,
         ),
-        title: Text(
-          account.name,
-          style: TextStyle(
-            color: isArchived ? Colors.grey : null,
-            decoration: isArchived ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        subtitle: account.bankAccountNumber != null
-            ? Text(account.bankAccountNumber!)
-            : null,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              '\$${account.balance.toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: account.balance >= 0 ? Colors.green : Colors.red,
-              ),
-            ),
-            if (isArchived)
-              Text(
-                'Archived',
-                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-              ),
-          ],
-        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: () => _navigateToEditAccount(context, account),
         onLongPress: () => _showAccountOptions(context, account),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: accountColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: accountColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account.name,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isArchived ? Colors.grey : null,
+                        decoration: isArchived ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    if (account.bankAccountNumber != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        account.bankAccountNumber!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                    if (isArchived) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Archived',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$${account.balance.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: account.balance >= 0 ? Colors.green : Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Balance',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

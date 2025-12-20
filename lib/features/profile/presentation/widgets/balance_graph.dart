@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/theme/gcash_theme.dart';
 
 class BalanceGraph extends StatefulWidget {
   const BalanceGraph({super.key});
@@ -17,10 +16,8 @@ class _BalanceGraphState extends State<BalanceGraph> {
     final accounts = ['All Accounts', 'Main Wallet', 'Savings', 'Cash'];
     final balanceData = _getBalanceData(_selectedAccount);
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      elevation: 2,
+    return Card(
+      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -40,7 +37,10 @@ class _BalanceGraphState extends State<BalanceGraph> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: GCashColors.background,
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButton<String>(
@@ -75,7 +75,14 @@ class _BalanceGraphState extends State<BalanceGraph> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: GCashColors.primary.withOpacity(0.05),
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -88,7 +95,10 @@ class _BalanceGraphState extends State<BalanceGraph> {
                         'Current Balance',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey[600],
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.6),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -97,7 +107,7 @@ class _BalanceGraphState extends State<BalanceGraph> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: GCashColors.primary,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ],
@@ -140,7 +150,10 @@ class _BalanceGraphState extends State<BalanceGraph> {
               height: 200,
               child: CustomPaint(
                 size: Size(MediaQuery.of(context).size.width - 80, 200),
-                painter: LineChartPainter(balanceData),
+                painter: LineChartPainter(
+                  balanceData,
+                  primaryColor: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -182,8 +195,9 @@ class _BalanceGraphState extends State<BalanceGraph> {
 
 class LineChartPainter extends CustomPainter {
   final List<double> data;
+  final Color primaryColor;
 
-  LineChartPainter(this.data);
+  LineChartPainter(this.data, {required this.primaryColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -211,8 +225,8 @@ class LineChartPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          GCashColors.primary.withOpacity(0.3),
-          GCashColors.primary.withOpacity(0.05),
+          primaryColor.withOpacity(0.3),
+          primaryColor.withOpacity(0.05),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
@@ -232,7 +246,7 @@ class LineChartPainter extends CustomPainter {
 
     // Draw line
     final linePaint = Paint()
-      ..color = GCashColors.primary
+      ..color = primaryColor
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
@@ -247,7 +261,7 @@ class LineChartPainter extends CustomPainter {
 
     // Draw points
     final pointPaint = Paint()
-      ..color = GCashColors.primary
+      ..color = primaryColor
       ..style = PaintingStyle.fill;
 
     for (final point in points) {
