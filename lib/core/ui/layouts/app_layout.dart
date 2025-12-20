@@ -7,19 +7,15 @@ import 'package:persona_codex/shared/presentation/theme_mode_indicator.dart';
 class AppLayout extends StatelessWidget {
   final String? title;
   final Widget body;
-  final VoidCallback? onFabPressed;
   final bool loading;
   final PreferredSizeWidget? appBar;
-  final IconData floatingActionButtonIcon;
 
   const AppLayout({
     super.key,
     this.title,
     required this.body,
     this.appBar,
-    this.onFabPressed,
     this.loading = false,
-    this.floatingActionButtonIcon = Icons.refresh,
   });
 
   @override
@@ -33,7 +29,7 @@ class AppLayout extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 24,
-                color: Colors.blueGrey[600],
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             actions: const [
@@ -53,12 +49,6 @@ class AppLayout extends StatelessWidget {
             ),
         ],
       ),
-      floatingActionButton: onFabPressed != null
-          ? FloatingActionButton(
-              onPressed: onFabPressed,
-              child: Icon(floatingActionButtonIcon),
-            )
-          : null,
     );
   }
 }

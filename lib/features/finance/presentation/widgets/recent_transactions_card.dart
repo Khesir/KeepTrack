@@ -62,13 +62,13 @@ class RecentTransactionsCard extends StatelessWidget {
                     Icon(
                       Icons.receipt_outlined,
                       size: 48,
-                      color: Colors.grey[400],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'No transactions yet',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                         fontSize: 14,
                       ),
                     ),
@@ -129,7 +129,7 @@ class RecentTransactionsCard extends StatelessWidget {
       ),
       subtitle: Text(
         _formatDate(transaction.date),
-        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
       ),
       trailing: Text(
         '${isExpense ? '-' : isIncome ? '+' : ''}\$${transaction.amount.toStringAsFixed(2)}',

@@ -13,7 +13,7 @@ import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/theme/theme.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/features/finance/finance_di.dart';
-import 'package:persona_codex/features/finance/presentation/screens/finance_home_screen.dart';
+import 'package:persona_codex/features/finance/presentation/screens/finance_main_screen.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/di/di_logger.dart';
@@ -24,7 +24,7 @@ import 'core/logging/log_viewer_screen.dart';
 import 'features/auth/auth.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/projects/projects_di.dart';
-import 'features/tasks/presentation/screens/tasks_home_screen.dart';
+import 'features/tasks/presentation/screens/tasks_main_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/logs/logs_screen.dart';
 import 'features/profile/presentation/profile_screen.dart';
@@ -421,8 +421,8 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    TasksHomeScreen(),
-    FinanceHomeScreen(),
+    TasksMainScreen(),
+    FinanceMainScreen(),
     LogsScreen(),
     ProfileScreen(),
   ];
@@ -430,21 +430,6 @@ class _MainScreenState extends State<MainScreen> {
   void dispose() {
     _layoutController.dispose();
     super.dispose();
-  }
-
-  FloatingActionButtonLocation? _mapFabPosition(FabPosition? position) {
-    switch (position) {
-      case FabPosition.centerDocked:
-        return FloatingActionButtonLocation.centerDocked;
-      case FabPosition.endDocked:
-        return FloatingActionButtonLocation.endDocked;
-      case FabPosition.centerFloat:
-        return FloatingActionButtonLocation.centerFloat;
-      case FabPosition.endFloat:
-        return FloatingActionButtonLocation.endFloat;
-      default:
-        return null;
-    }
   }
 
   @override
@@ -487,10 +472,6 @@ class _MainScreenState extends State<MainScreen> {
               ],
             ),
             body: _screens[_currentIndex],
-            floatingActionButton: _layoutController.floatingActionButton,
-            floatingActionButtonLocation: _mapFabPosition(
-              _layoutController.fabPosition,
-            ),
             bottomNavigationBar: _layoutController.showBottomNav
                 ? NavigationBar(
                     selectedIndex: _currentIndex,

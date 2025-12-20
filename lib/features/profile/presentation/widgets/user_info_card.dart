@@ -23,10 +23,9 @@ class _UserInfoCardState extends State<UserInfoCard> {
   Widget build(BuildContext context) {
     final user = _authController.currentUser;
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      elevation: 2,
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
@@ -71,7 +70,7 @@ class _UserInfoCardState extends State<UserInfoCard> {
                     user?.email ?? 'No email',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
