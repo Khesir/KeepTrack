@@ -1,6 +1,6 @@
 import 'package:persona_codex/core/state/stream_state.dart';
-import '../../domain/entities/planned_payment.dart';
-import '../../domain/repositories/planned_payment_repository.dart';
+import '../../modules/planned_payment/domain/entities/planned_payment.dart';
+import '../../modules/planned_payment/domain/repositories/planned_payment_repository.dart';
 
 /// Controller for managing planned payment list state
 class PlannedPaymentController
@@ -22,11 +22,16 @@ class PlannedPaymentController
 
   /// Create a new planned payment
   Future<void> createPlannedPayment(PlannedPayment payment) async {
-    final result = await _repository.createPlannedPayment(payment);
-    result.fold(
-      onSuccess: (_) => loadPlannedPayments(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      final created = await _repository.createPlannedPayment(payment);
+      final current = data ?? [];
+      return [...current, created];
+    });
+    // final result = await _repository.createPlannedPayment(payment);
+    // result.fold(
+    //   onSuccess: (_) => loadPlannedPayments(),
+    //   onError: (failure) => emit(AsyncError(failure.message, failure)),
+    // );
   }
 
   /// Update an existing planned payment

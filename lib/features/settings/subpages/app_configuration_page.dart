@@ -24,7 +24,7 @@ class AppConfigurationPage extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              onTap: () => Navigator.pushNamed(context, '/wallet-management'),
+              onTap: () => Navigator.pushNamed(context, '/account-management'),
             ),
             _buildEnhancedTile(
               context,

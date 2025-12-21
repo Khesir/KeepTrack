@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../domain/entities/transaction.dart' as finance_transaction;
+import '../../modules/transaction/domain/entities/transaction.dart' as finance_transaction;
 
 /// Card widget displaying recent transactions
 class RecentTransactionsCard extends StatelessWidget {

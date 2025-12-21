@@ -1,6 +1,6 @@
 import 'package:persona_codex/core/state/stream_state.dart';
-import '../../domain/entities/transaction.dart';
-import '../../domain/repositories/transaction_repository.dart';
+import '../../modules/transaction/domain/entities/transaction.dart';
+import '../../modules/transaction/domain/repositories/transaction_repository.dart';
 
 /// Controller for managing transaction state
 class TransactionController extends StreamState<AsyncState<List<Transaction>>> {

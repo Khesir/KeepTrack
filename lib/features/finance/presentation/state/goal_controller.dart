@@ -1,6 +1,6 @@
 import 'package:persona_codex/core/state/stream_state.dart';
-import '../../domain/entities/goal.dart';
-import '../../domain/repositories/goal_repository.dart';
+import '../../modules/goal/domain/entities/goal.dart';
+import '../../modules/goal/domain/repositories/goal_repository.dart';
 
 /// Controller for managing goal list state
 class GoalController extends StreamState<AsyncState<List<Goal>>> {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'planned_payments_tab_new.dart';
+import 'planned_payments_tab.dart';
 
 /// Budgets Tab with Progress Tracking and Planned Payments Integration
 class BudgetsTabNew extends StatefulWidget {

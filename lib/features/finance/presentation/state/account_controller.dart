@@ -1,6 +1,6 @@
 import 'package:persona_codex/core/state/stream_state.dart';
-import '../../domain/entities/account.dart';
-import '../../domain/repositories/account_repository.dart';
+import '../../modules/account/domain/entities/account.dart';
+import '../../modules/account/domain/repositories/account_repository.dart';
 
 /// Controller for managing account list state
 class AccountController extends StreamState<AsyncState<List<Account>>> {

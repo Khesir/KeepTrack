@@ -1,6 +1,6 @@
 import 'package:persona_codex/core/state/stream_state.dart';
-import '../../domain/entities/debt.dart';
-import '../../domain/repositories/debt_repository.dart';
+import '../../modules/debt/domain/entities/debt.dart';
+import '../../modules/debt/domain/repositories/debt_repository.dart';
 
 /// Controller for managing debt list state
 class DebtController extends StreamState<AsyncState<List<Debt>>> {

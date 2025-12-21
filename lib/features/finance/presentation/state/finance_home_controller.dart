@@ -1,12 +1,12 @@
 import 'package:persona_codex/core/state/state.dart';
-import 'package:persona_codex/features/finance/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/domain/usecases/account/archive_account_usecase.dart';
+import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
+import 'package:persona_codex/features/finance/modules/account/domain/usecases/archive_account_usecase.dart';
 
-import '../../domain/usecases/account/adjust_account_balance_usecase.dart';
-import '../../domain/usecases/account/create_account_usecase.dart';
-import '../../domain/usecases/account/delete_account_usecase.dart';
-import '../../domain/usecases/account/get_accounts_usecase.dart';
-import '../../domain/usecases/account/update_account_usecase.dart';
+import '../../modules/account/domain/usecases/adjust_account_balance_usecase.dart';
+import '../../modules/account/domain/usecases/create_account_usecase.dart';
+import '../../modules/account/domain/usecases/delete_account_usecase.dart';
+import '../../modules/account/domain/usecases/get_accounts_usecase.dart';
+import '../../modules/account/domain/usecases/update_account_usecase.dart';
 
 class AccountController extends StreamState<AsyncState<List<Account>>> {
   final GetAccountsUsecase _getAccountsUsecase;

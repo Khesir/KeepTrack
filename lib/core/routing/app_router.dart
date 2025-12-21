@@ -4,15 +4,16 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:persona_codex/features/settings/setting_page.dart';
-import '../../features/finance/domain/entities/budget.dart';
-import '../../features/finance/presentation/screens/tabs/budgets/budget_detail_screen.dart';
-import '../../features/finance/presentation/screens/tabs/budgets/budget_list_screen.dart';
-import '../../features/finance/presentation/screens/tabs/budgets/create_budget_screen.dart';
-import '../../features/finance/presentation/screens/tabs/accounts/account_list_screen.dart';
+import '../../features/finance/modules/budget/domain/entities/budget.dart';
+import '../../features/finance/presentation/screens/configuration/account_management.dart';
+import '../../features/finance/presentation/screens/budget_detail_screen.dart';
+import '../../features/finance/presentation/screens/budget_list_screen.dart';
+import '../../features/finance/presentation/screens/create_budget_screen.dart';
+import '../../features/finance/presentation/account_list_screen.dart';
 import '../../features/finance/presentation/screens/management/category_management_screen.dart';
-import '../../features/finance/presentation/screens/management/goals_management_screen.dart';
-import '../../features/finance/presentation/screens/management/debts_management_screen.dart';
-import '../../features/finance/presentation/screens/management/planned_payments_management_screen.dart';
+import '../../features/finance/presentation/screens/configuration/goals_management_screen.dart';
+import '../../features/finance/presentation/screens/configuration/debts_management_screen.dart';
+import '../../features/finance/presentation/screens/configuration/planned_payments_management_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 import '../../features/settings/management/task_status_management_screen.dart';
 import '../../features/settings/management/task_priority_management_screen.dart';
@@ -58,7 +59,7 @@ class AppRoutes {
   static const String projectTemplateManagement = '/project-template-management';
 
   // Finance Management
-  static const String walletManagement = '/wallet-management';
+  static const String accountManagement = '/account-management';
   static const String categoryManagement = '/category-management';
   static const String budgetManagement = '/budget-management';
   static const String goalsManagement = '/goals-management';
@@ -179,9 +180,9 @@ class AppRouter {
         );
 
       // Finance Management
-      case AppRoutes.walletManagement:
+      case AppRoutes.accountManagement:
         return MaterialPageRoute(
-          builder: (_) => const AccountListScreen(),
+          builder: (_) => const AccountManagement(),
           settings: settings,
         );
       case AppRoutes.categoryManagement:

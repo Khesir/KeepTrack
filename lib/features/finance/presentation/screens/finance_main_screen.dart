@@ -4,8 +4,8 @@ import 'package:persona_codex/core/ui/ui.dart';
 import 'tabs/accounts_tab_new.dart';
 import 'tabs/budgets_tab_new.dart';
 import 'tabs/debts_tab_new.dart';
-import 'tabs/goals_tab_new.dart';
-import 'tabs/planned_payments_tab_new.dart';
+import 'tabs/goals_tab.dart';
+import 'tabs/planned_payments_tab.dart';
 
 /// Main Finance Screen with Inner Tabs
 class FinanceMainScreen extends ScopedScreen {

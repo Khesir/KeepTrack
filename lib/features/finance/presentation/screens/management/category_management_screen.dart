@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/theme/gcash_theme.dart';
-import 'package:persona_codex/features/finance/domain/entities/budget_category.dart';
+import 'package:persona_codex/features/finance/modules/budget/domain/entities/budget_category.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
   const CategoryManagementScreen({super.key});

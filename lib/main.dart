@@ -1,10 +1,3 @@
-/// Personal Codex - Main Entry Point
-///
-/// Multi-feature app with Clean Architecture:
-/// - Custom DI System
-/// - Custom State Management (StreamState)
-/// - Custom Error Handling
-/// - Feature-based organization
 library;
 
 import 'package:flutter/material.dart';
@@ -85,6 +78,7 @@ Future<void> _initializeAppWithRetry({
   const maxRetries = 5;
   const initialDelay = Duration(seconds: 2);
   int retryCount = 0;
+
   while (true) {
     try {
       // Initialize Supabase
@@ -369,6 +363,7 @@ Widget _buildErrorScreen(
 
 /// Setup all dependencies
 void _setupDependencies() {
+
   // Core Supabase service (shared infrastructure)
   // Note: Supabase is already initialized in main(), we just wrap the client
   locator.registerLazySingleton<SupabaseService>(() {
@@ -379,7 +374,7 @@ void _setupDependencies() {
   setupAuthDependencies(); // Auth must be first
   setupTasksDependencies();
   setupProjectsDependencies();
-  setupBudgetDependencies();
+  setupFinanceDependencies();
 }
 
 /// Main app widget
