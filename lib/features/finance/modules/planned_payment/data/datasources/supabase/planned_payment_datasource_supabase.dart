@@ -58,7 +58,6 @@ class PlannedPaymentDataSourceSupabase implements PlannedPaymentDataSource {
   ) async {
     try {
       final doc = {...payment.toJson()};
-      AppLogger.info(doc['user_id']);
       final response = await supabaseService.client
           .from(tableName)
           .insert(doc)

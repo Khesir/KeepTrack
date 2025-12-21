@@ -37,7 +37,6 @@ class PlannedPaymentRepositoryImpl implements PlannedPaymentRepository {
     PlannedPayment payment,
   ) async {
     final model = PlannedPaymentModel.fromEntity(payment);
-    AppLogger.info(model.userId!);
     final created = await dataSource.createPlannedPayment(model);
     return Result.success(created);
   }
@@ -93,7 +92,7 @@ class PlannedPaymentRepositoryImpl implements PlannedPaymentRepository {
       return result;
     }
 
-    final payment = result.data!;
+    final payment = result.data;
     final updated = payment.copyWith(
       lastPaymentDate: DateTime.now(),
       nextPaymentDate: _calculateNextPaymentDate(

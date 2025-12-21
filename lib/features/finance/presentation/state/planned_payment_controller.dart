@@ -27,7 +27,6 @@ class PlannedPaymentController
   /// Create a new planned payment
   Future<void> createPlannedPayment(PlannedPayment payment) async {
     await execute(() async {
-      AppLogger.info(payment.userId!);
       final created = await _repository
           .createPlannedPayment(payment)
           .then((r) => r.unwrap());

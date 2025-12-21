@@ -1,3 +1,4 @@
+import 'package:persona_codex/core/error/result.dart';
 import 'package:persona_codex/core/state/stream_state.dart';
 import '../../modules/debt/domain/entities/debt.dart';
 import '../../modules/debt/domain/repositories/debt_repository.dart';
@@ -12,73 +13,78 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
 
   /// Load all debts
   Future<void> loadDebts() async {
-    final result = await _repository.getDebts();
-    result.fold(
-      onSuccess: (debts) => emit(AsyncData(debts)),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      return await _repository.getDebts().then((r) => r.unwrap());
+    });
   }
 
   /// Create a new debt
   Future<void> createDebt(Debt debt) async {
-    final result = await _repository.createDebt(debt);
-    result.fold(
-      onSuccess: (_) => loadDebts(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      final created = await _repository
+          .createDebt(debt)
+          .then((r) => r.unwrap());
+      final current = data ?? [];
+
+      return [...current, created];
+    });
   }
 
   /// Update an existing debt
   Future<void> updateDebt(Debt debt) async {
-    final result = await _repository.updateDebt(debt);
-    result.fold(
-      onSuccess: (_) => loadDebts(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      await _repository.updateDebt(debt).then((r) => r.unwrap());
+      loadDebts();
+      final current = data ?? [];
+      return current;
+    });
   }
 
   /// Delete a debt
   Future<void> deleteDebt(String id) async {
-    final result = await _repository.deleteDebt(id);
-    result.fold(
-      onSuccess: (_) => loadDebts(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      await _repository.deleteDebt(id).then((r) => r.unwrap());
+      loadDebts();
+      final current = data ?? [];
+      return current;
+    });
   }
 
   /// Update debt payment (record partial payment)
   Future<void> updateDebtPayment(String id, double newRemainingAmount) async {
-    final result = await _repository.updateDebtPayment(id, newRemainingAmount);
-    result.fold(
-      onSuccess: (_) => loadDebts(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      await _repository
+          .updateDebtPayment(id, newRemainingAmount)
+          .then((r) => r.unwrap());
+      loadDebts();
+
+      final current = data ?? [];
+      return current;
+    });
   }
 
   /// Mark debt as settled (fully paid)
   Future<void> settleDebt(String id) async {
-    final result = await _repository.settleDebt(id);
-    result.fold(
-      onSuccess: (_) => loadDebts(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      await _repository.settleDebt(id).then((r) => r.unwrap());
+      loadDebts();
+
+      final current = data ?? [];
+      return current;
+    });
   }
 
   /// Load debts by type
   Future<void> loadDebtsByType(DebtType type) async {
-    final result = await _repository.getDebtsByType(type);
-    result.fold(
-      onSuccess: (debts) => emit(AsyncData(debts)),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      return await _repository.getDebtsByType(type).then((r) => r.unwrap());
+    });
   }
 
   /// Load debts by status
   Future<void> loadDebtsByStatus(DebtStatus status) async {
-    final result = await _repository.getDebtsByStatus(status);
-    result.fold(
-      onSuccess: (debts) => emit(AsyncData(debts)),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      return await _repository.getDebtsByStatus(status).then((r) => r.unwrap());
+    });
   }
 }

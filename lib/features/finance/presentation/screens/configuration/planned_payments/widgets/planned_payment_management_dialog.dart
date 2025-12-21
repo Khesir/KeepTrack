@@ -3,12 +3,12 @@ import 'package:persona_codex/features/finance/modules/planned_payment/domain/en
 
 import '../../../../../modules/planned_payment/domain/entities/payment_enums.dart';
 
-class PlannedPaymentDialog extends StatefulWidget {
+class PlannedPaymentManagementDialog extends StatefulWidget {
   final PlannedPayment? payment;
   final String userId;
   final Function(PlannedPayment) onSave;
 
-  const PlannedPaymentDialog({
+  const PlannedPaymentManagementDialog({
     this.payment,
     required this.userId,
     required this.onSave,
@@ -16,10 +16,11 @@ class PlannedPaymentDialog extends StatefulWidget {
   });
 
   @override
-  State<StatefulWidget> createState() => _PlannedPaymentDialogState();
+  State<StatefulWidget> createState() => _PlannedPaymentManagementDialogState();
 }
 
-class _PlannedPaymentDialogState extends State<PlannedPaymentDialog> {
+class _PlannedPaymentManagementDialogState
+    extends State<PlannedPaymentManagementDialog> {
   late final TextEditingController nameController;
   late final TextEditingController payeeController;
   late final TextEditingController amountController;

@@ -13,6 +13,7 @@ class Debt {
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? settledAt;
+  final String? userId;
 
   Debt({
     this.id,
@@ -28,6 +29,7 @@ class Debt {
     this.createdAt,
     this.updatedAt,
     this.settledAt,
+    this.userId,
   });
 
   /// Calculate repayment progress (0.0 to 1.0)
@@ -61,6 +63,7 @@ class Debt {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? settledAt,
+    String? userId,
   }) {
     return Debt(
       id: id ?? this.id,
@@ -76,25 +79,25 @@ class Debt {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       settledAt: settledAt ?? this.settledAt,
+      userId: userId ?? this.userId,
     );
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Debt &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+      other is Debt && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'Debt(id: $id, type: ${type.name}, person: $personName, remaining: $remainingAmount)';
+  String toString() =>
+      'Debt(id: $id, type: ${type.name}, person: $personName, remaining: $remainingAmount)';
 }
 
 enum DebtType {
-  lending,  // Money you lent out
+  lending, // Money you lent out
   borrowing; // Money you owe
 
   String get displayName {
