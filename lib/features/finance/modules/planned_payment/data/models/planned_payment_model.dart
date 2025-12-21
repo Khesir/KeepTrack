@@ -1,3 +1,4 @@
+import '../../domain/entities/payment_enums.dart';
 import '../../domain/entities/planned_payment.dart';
 
 class PlannedPaymentModel extends PlannedPayment {
@@ -15,6 +16,7 @@ class PlannedPaymentModel extends PlannedPayment {
     super.notes,
     super.createdAt,
     super.updatedAt,
+    super.userId,
   });
 
   /// Convert from JSON (Supabase response)
@@ -48,6 +50,7 @@ class PlannedPaymentModel extends PlannedPayment {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
+      userId: json['user_id'] as String?,
     );
   }
 
@@ -66,6 +69,7 @@ class PlannedPaymentModel extends PlannedPayment {
       if (accountId != null) 'account_id': accountId,
       'status': status.name,
       if (notes != null) 'notes': notes,
+      if (userId != null) 'user_id': userId,
     };
   }
 
@@ -85,6 +89,7 @@ class PlannedPaymentModel extends PlannedPayment {
       notes: payment.notes,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
+      userId: payment.userId,
     );
   }
 }

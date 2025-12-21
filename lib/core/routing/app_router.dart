@@ -9,11 +9,10 @@ import '../../features/finance/presentation/screens/configuration/account_manage
 import '../../features/finance/presentation/screens/budget_detail_screen.dart';
 import '../../features/finance/presentation/screens/budget_list_screen.dart';
 import '../../features/finance/presentation/screens/create_budget_screen.dart';
-import '../../features/finance/presentation/account_list_screen.dart';
 import '../../features/finance/presentation/screens/management/category_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/goals_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/debts_management_screen.dart';
-import '../../features/finance/presentation/screens/configuration/planned_payments_management_screen.dart';
+import '../../features/finance/presentation/screens/configuration/planned_payments/planned_payments_management_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 import '../../features/settings/management/task_status_management_screen.dart';
 import '../../features/settings/management/task_priority_management_screen.dart';
@@ -56,7 +55,8 @@ class AppRoutes {
   static const String taskStatusManagement = '/task-status-management';
   static const String taskPriorityManagement = '/task-priority-management';
   static const String taskTagManagement = '/task-tag-management';
-  static const String projectTemplateManagement = '/project-template-management';
+  static const String projectTemplateManagement =
+      '/project-template-management';
 
   // Finance Management
   static const String accountManagement = '/account-management';
@@ -64,7 +64,8 @@ class AppRoutes {
   static const String budgetManagement = '/budget-management';
   static const String goalsManagement = '/goals-management';
   static const String debtsManagement = '/debts-management';
-  static const String plannedPaymentsManagement = '/planned-payments-management';
+  static const String plannedPaymentsManagement =
+      '/planned-payments-management';
 }
 
 /// App router - handles all route generation

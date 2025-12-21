@@ -1,4 +1,7 @@
+import 'package:persona_codex/core/error/result.dart';
+import 'package:persona_codex/core/logging/app_logger.dart';
 import 'package:persona_codex/core/state/stream_state.dart';
+import '../../modules/planned_payment/domain/entities/payment_enums.dart';
 import '../../modules/planned_payment/domain/entities/planned_payment.dart';
 import '../../modules/planned_payment/domain/repositories/planned_payment_repository.dart';
 
@@ -13,78 +16,78 @@ class PlannedPaymentController
 
   /// Load all planned payments
   Future<void> loadPlannedPayments() async {
-    final result = await _repository.getPlannedPayments();
-    result.fold(
-      onSuccess: (payments) => emit(AsyncData(payments)),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      final result = await _repository.getPlannedPayments().then(
+        (r) => r.unwrap(),
+      );
+      return result;
+    });
   }
 
   /// Create a new planned payment
   Future<void> createPlannedPayment(PlannedPayment payment) async {
     await execute(() async {
-      final created = await _repository.createPlannedPayment(payment);
+      AppLogger.info(payment.userId!);
+      final created = await _repository
+          .createPlannedPayment(payment)
+          .then((r) => r.unwrap());
+
       final current = data ?? [];
       return [...current, created];
     });
-    // final result = await _repository.createPlannedPayment(payment);
-    // result.fold(
-    //   onSuccess: (_) => loadPlannedPayments(),
-    //   onError: (failure) => emit(AsyncError(failure.message, failure)),
-    // );
   }
 
   /// Update an existing planned payment
   Future<void> updatePlannedPayment(PlannedPayment payment) async {
-    final result = await _repository.updatePlannedPayment(payment);
-    result.fold(
-      onSuccess: (_) => loadPlannedPayments(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      await _repository.updatePlannedPayment(payment).then((r) => r.unwrap());
+      // Refresh the list on success
+      loadPlannedPayments();
+      final current = data ?? [];
+      return current;
+    });
   }
 
   /// Delete a planned payment
   Future<void> deletePlannedPayment(String id) async {
-    final result = await _repository.deletePlannedPayment(id);
-    result.fold(
-      onSuccess: (_) => loadPlannedPayments(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      await _repository.deletePlannedPayment(id).then((r) => r.unwrap());
+
+      loadPlannedPayments();
+      final current = data ?? [];
+      return current;
+    });
   }
 
   /// Record a payment (updates last payment date and calculates next)
   Future<void> recordPayment(String id) async {
-    final result = await _repository.recordPayment(id);
-    result.fold(
-      onSuccess: (_) => loadPlannedPayments(),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      await _repository.recordPayment(id).then((r) => r.unwrap());
+
+      loadPlannedPayments();
+      final current = data ?? [];
+      return current;
+    });
   }
 
   /// Load planned payments by status
   Future<void> loadPlannedPaymentsByStatus(PaymentStatus status) async {
-    final result = await _repository.getPlannedPaymentsByStatus(status);
-    result.fold(
-      onSuccess: (payments) => emit(AsyncData(payments)),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    await execute(() async {
+      return await _repository
+          .getPlannedPaymentsByStatus(status)
+          .then((r) => r.unwrap());
+    });
   }
 
   /// Load planned payments by category
   Future<void> loadPlannedPaymentsByCategory(PaymentCategory category) async {
-    final result = await _repository.getPlannedPaymentsByCategory(category);
-    result.fold(
-      onSuccess: (payments) => emit(AsyncData(payments)),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    return await _repository
+        .getPlannedPaymentsByCategory(category)
+        .then((r) => r.unwrap());
   }
 
   /// Load upcoming payments (due within 7 days)
   Future<void> loadUpcomingPayments() async {
-    final result = await _repository.getUpcomingPayments();
-    result.fold(
-      onSuccess: (payments) => emit(AsyncData(payments)),
-      onError: (failure) => emit(AsyncError(failure.message, failure)),
-    );
+    return await _repository.getUpcomingPayments().then((r) => r.unwrap());
   }
 }

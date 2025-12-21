@@ -1,3 +1,5 @@
+import 'payment_enums.dart';
+
 /// Planned payment entity for tracking recurring and scheduled payments
 class PlannedPayment {
   final String? id; // Optional - Supabase auto-generates
@@ -13,6 +15,7 @@ class PlannedPayment {
   final String? notes;
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
+  final String? userId;
 
   PlannedPayment({
     this.id,
@@ -28,6 +31,7 @@ class PlannedPayment {
     this.notes,
     this.createdAt,
     this.updatedAt,
+    this.userId,
   });
 
   /// Check if payment is upcoming (within next 7 days)
@@ -39,7 +43,8 @@ class PlannedPayment {
 
   /// Check if payment is overdue
   bool get isOverdue {
-    return DateTime.now().isAfter(nextPaymentDate) && status == PaymentStatus.active;
+    return DateTime.now().isAfter(nextPaymentDate) &&
+        status == PaymentStatus.active;
   }
 
   /// Calculate days until next payment (negative if overdue)
@@ -59,6 +64,7 @@ class PlannedPayment {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? userId,
   }) {
     return PlannedPayment(
       id: id ?? this.id,
@@ -74,6 +80,7 @@ class PlannedPayment {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      userId: userId ?? this.userId,
     );
   }
 
@@ -88,77 +95,6 @@ class PlannedPayment {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'PlannedPayment(id: $id, name: $name, amount: $amount, frequency: ${frequency.name})';
-}
-
-enum PaymentCategory {
-  bills,
-  subscriptions,
-  insurance,
-  loan,
-  rent,
-  utilities,
-  other;
-
-  String get displayName {
-    switch (this) {
-      case PaymentCategory.bills:
-        return 'Bills';
-      case PaymentCategory.subscriptions:
-        return 'Subscriptions';
-      case PaymentCategory.insurance:
-        return 'Insurance';
-      case PaymentCategory.loan:
-        return 'Loan';
-      case PaymentCategory.rent:
-        return 'Rent';
-      case PaymentCategory.utilities:
-        return 'Utilities';
-      case PaymentCategory.other:
-        return 'Other';
-    }
-  }
-}
-
-enum PaymentFrequency {
-  daily,
-  weekly,
-  biweekly,
-  monthly,
-  quarterly,
-  yearly;
-
-  String get displayName {
-    switch (this) {
-      case PaymentFrequency.daily:
-        return 'Daily';
-      case PaymentFrequency.weekly:
-        return 'Weekly';
-      case PaymentFrequency.biweekly:
-        return 'Bi-weekly';
-      case PaymentFrequency.monthly:
-        return 'Monthly';
-      case PaymentFrequency.quarterly:
-        return 'Quarterly';
-      case PaymentFrequency.yearly:
-        return 'Yearly';
-    }
-  }
-}
-
-enum PaymentStatus {
-  active,
-  paused,
-  cancelled;
-
-  String get displayName {
-    switch (this) {
-      case PaymentStatus.active:
-        return 'Active';
-      case PaymentStatus.paused:
-        return 'Paused';
-      case PaymentStatus.cancelled:
-        return 'Cancelled';
-    }
-  }
+  String toString() =>
+      'PlannedPayment(id: $id, name: $name, amount: $amount, frequency: ${frequency.name})';
 }

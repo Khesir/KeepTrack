@@ -1,6 +1,8 @@
 import 'package:persona_codex/core/error/result.dart';
 import 'package:persona_codex/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 
+import '../entities/payment_enums.dart';
+
 /// Repository interface for managing planned/recurring payments
 abstract class PlannedPaymentRepository {
   /// Get all planned payments for the current user

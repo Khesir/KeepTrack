@@ -4,6 +4,8 @@ library;
 
 import 'dart:async';
 
+import 'package:persona_codex/core/error/failure.dart';
+
 /// Base class for state containers using streams
 /// Implements disposable pattern for cleanup
 abstract class StreamState<T> {
@@ -73,8 +75,20 @@ extension AsyncStateExtension<T> on StreamState<AsyncState<T>> {
     try {
       final result = await operation();
       emit(AsyncData(result));
-    } catch (e) {
-      emit(AsyncError('Operation failed: $e', e));
+    } on Failure catch (failure) {
+      emit(AsyncError(failure.message, failure));
+    } catch (e, stackTrace) {
+      // fallback for truly unknown errors
+      emit(
+        AsyncError(
+          'Unexpected error',
+          UnknownFailure(
+            message: e.toString(),
+            originalError: e,
+            stackTrace: stackTrace,
+          ),
+        ),
+      );
     }
   }
 }

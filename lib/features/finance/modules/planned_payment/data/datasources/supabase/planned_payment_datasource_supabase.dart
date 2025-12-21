@@ -1,3 +1,5 @@
+import 'package:persona_codex/core/error/failure.dart';
+import 'package:persona_codex/core/logging/app_logger.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../models/planned_payment_model.dart';
 import '../planned_payment_datasource.dart';
@@ -11,110 +13,185 @@ class PlannedPaymentDataSourceSupabase implements PlannedPaymentDataSource {
 
   @override
   Future<List<PlannedPaymentModel>> fetchPlannedPayments() async {
-    final response = await supabaseService.client
-        .from(tableName)
-        .select()
-        .order('next_payment_date', ascending: true);
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .eq('user_id', supabaseService.userId!)
+          .order('next_payment_date', ascending: true);
 
-    return (response as List)
-        .map((doc) => PlannedPaymentModel.fromJson(doc))
-        .toList();
+      return (response as List)
+          .map((doc) => PlannedPaymentModel.fromJson(doc))
+          .toList();
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to Fetch planned payments',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<PlannedPaymentModel?> fetchPlannedPaymentById(String id) async {
-    final response = await supabaseService.client
-        .from(tableName)
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .eq('id', id)
+          .eq('user_id', supabaseService.userId!)
+          .maybeSingle();
 
-    return response != null ? PlannedPaymentModel.fromJson(response) : null;
+      return response != null ? PlannedPaymentModel.fromJson(response) : null;
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to Fetch planned payment by ID',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<PlannedPaymentModel> createPlannedPayment(
     PlannedPaymentModel payment,
   ) async {
-    final doc = payment.toJson();
-    final response = await supabaseService.client
-        .from(tableName)
-        .insert(doc)
-        .select()
-        .single();
+    try {
+      final doc = {...payment.toJson()};
+      AppLogger.info(doc['user_id']);
+      final response = await supabaseService.client
+          .from(tableName)
+          .insert(doc)
+          .select()
+          .single();
 
-    return PlannedPaymentModel.fromJson(response);
+      return PlannedPaymentModel.fromJson(response);
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to create planned payment',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<PlannedPaymentModel> updatePlannedPayment(
     PlannedPaymentModel payment,
   ) async {
-    if (payment.id == null) {
-      throw Exception('Cannot update planned payment without an ID');
+    try {
+      if (payment.id == null) {
+        throw Exception('Cannot update planned payment without an ID');
+      }
+
+      final doc = {...payment.toJson()};
+      final response = await supabaseService.client
+          .from(tableName)
+          .update(doc)
+          .eq('id', payment.id!)
+          .eq('user_id', supabaseService.userId!)
+          .select()
+          .single();
+
+      return PlannedPaymentModel.fromJson(response);
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to Update Planned Payment',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
     }
-
-    final doc = payment.toJson();
-    final response = await supabaseService.client
-        .from(tableName)
-        .update(doc)
-        .eq('id', payment.id!)
-        .select()
-        .single();
-
-    return PlannedPaymentModel.fromJson(response);
   }
 
   @override
   Future<void> deletePlannedPayment(String id) async {
-    await supabaseService.client.from(tableName).delete().eq('id', id);
+    try {
+      await supabaseService.client
+          .from(tableName)
+          .delete()
+          .eq('id', id)
+          .eq('user_id', supabaseService.userId!);
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to Delete Planned Payment',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<List<PlannedPaymentModel>> fetchPlannedPaymentsByStatus(
     String status,
   ) async {
-    final response = await supabaseService.client
-        .from(tableName)
-        .select()
-        .eq('status', status)
-        .order('next_payment_date', ascending: true);
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .eq('user_id', supabaseService.userId!)
+          .eq('status', status)
+          .order('next_payment_date', ascending: true);
 
-    return (response as List)
-        .map((doc) => PlannedPaymentModel.fromJson(doc))
-        .toList();
+      return (response as List)
+          .map((doc) => PlannedPaymentModel.fromJson(doc))
+          .toList();
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to Fetch Planned Payment By Status',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<List<PlannedPaymentModel>> fetchPlannedPaymentsByCategory(
     String category,
   ) async {
-    final response = await supabaseService.client
-        .from(tableName)
-        .select()
-        .eq('category', category)
-        .order('next_payment_date', ascending: true);
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .eq('user_id', supabaseService.userId!)
+          .eq('category', category)
+          .order('next_payment_date', ascending: true);
 
-    return (response as List)
-        .map((doc) => PlannedPaymentModel.fromJson(doc))
-        .toList();
+      return (response as List)
+          .map((doc) => PlannedPaymentModel.fromJson(doc))
+          .toList();
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to Fetch Planned Payment By Category',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<List<PlannedPaymentModel>> fetchUpcomingPayments() async {
-    final now = DateTime.now();
-    final sevenDaysLater = now.add(const Duration(days: 7));
+    try {
+      final now = DateTime.now();
+      final sevenDaysLater = now.add(const Duration(days: 7));
 
-    final response = await supabaseService.client
-        .from(tableName)
-        .select()
-        .eq('status', 'active')
-        .gte('next_payment_date', now.toIso8601String())
-        .lte('next_payment_date', sevenDaysLater.toIso8601String())
-        .order('next_payment_date', ascending: true);
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .eq('user_id', supabaseService.userId!)
+          .eq('status', 'active')
+          .gte('next_payment_date', now.toIso8601String())
+          .lte('next_payment_date', sevenDaysLater.toIso8601String())
+          .order('next_payment_date', ascending: true);
 
-    return (response as List)
-        .map((doc) => PlannedPaymentModel.fromJson(doc))
-        .toList();
+      return (response as List)
+          .map((doc) => PlannedPaymentModel.fromJson(doc))
+          .toList();
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to Fetch Planned Payment By Category',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 }

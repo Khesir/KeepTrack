@@ -23,28 +23,29 @@ sealed class Result<T> {
 
   /// Get data if success, null otherwise
   T? get dataOrNull => switch (this) {
-        Success(data: final data) => data,
-        Error() => null,
-      };
+    Success(data: final data) => data,
+    Error() => null,
+  };
 
   /// Get failure if error, null otherwise
   Failure? get failureOrNull => switch (this) {
-        Success() => null,
-        Error(failure: final failure) => failure,
-      };
+    Success() => null,
+    Error(failure: final failure) => failure,
+  };
 
   /// Get data or throw if error
   T get data => switch (this) {
-        Success(data: final data) => data,
-        Error(failure: final failure) =>
-          throw Exception('Tried to get data from error result: $failure'),
-      };
+    Success(data: final data) => data,
+    Error(failure: final failure) => throw Exception(
+      'Tried to get data from error result: $failure',
+    ),
+  };
 
   /// Get failure or throw if success
   Failure get failure => switch (this) {
-        Success() => throw Exception('Tried to get failure from success result'),
-        Error(failure: final failure) => failure,
-      };
+    Success() => throw Exception('Tried to get failure from success result'),
+    Error(failure: final failure) => failure,
+  };
 
   /// Transform success value
   Result<R> map<R>(R Function(T data) transform) {
@@ -152,7 +153,9 @@ class Success<T> extends Result<T> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Success<T> && runtimeType == other.runtimeType && data == other.data;
+      other is Success<T> &&
+          runtimeType == other.runtimeType &&
+          data == other.data;
 
   @override
   int get hashCode => data.hashCode;
@@ -178,6 +181,19 @@ class Error<T> extends Result<T> {
 // ============================================================
 // HELPER EXTENSIONS
 // ============================================================
+// ============================================================
+// RESULT UNWRAP EXTENSION (for UI / State layers)
+// ============================================================
+
+extension ResultUnwrap<T> on Result<T> {
+  /// Returns data if success, throws Failure if error
+  T unwrap() {
+    return switch (this) {
+      Success(data: final data) => data,
+      Error(failure: final failure) => throw failure,
+    };
+  }
+}
 
 /// Extension for Future<Result<T>>
 extension FutureResultExtension<T> on Future<Result<T>> {
@@ -221,11 +237,13 @@ Result<T> resultOf<T>(T Function() fn) {
   } on Failure catch (e) {
     return Result.error(e);
   } catch (e, stackTrace) {
-    return Result.error(UnknownFailure(
-      message: e.toString(),
-      stackTrace: stackTrace,
-      originalError: e,
-    ));
+    return Result.error(
+      UnknownFailure(
+        message: e.toString(),
+        stackTrace: stackTrace,
+        originalError: e,
+      ),
+    );
   }
 }
 
@@ -236,10 +254,12 @@ Future<Result<T>> resultOfAsync<T>(Future<T> Function() fn) async {
   } on Failure catch (e) {
     return Result.error(e);
   } catch (e, stackTrace) {
-    return Result.error(UnknownFailure(
-      message: e.toString(),
-      stackTrace: stackTrace,
-      originalError: e,
-    ));
+    return Result.error(
+      UnknownFailure(
+        message: e.toString(),
+        stackTrace: stackTrace,
+        originalError: e,
+      ),
+    );
   }
 }

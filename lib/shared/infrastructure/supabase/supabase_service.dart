@@ -11,7 +11,11 @@ class SupabaseService implements Disposable {
   SupabaseService.fromClient(this._client);
 
   /// Get the Supabase client
+  ///
   SupabaseClient get client => _client;
+
+  /// Convenience getter for the currently logged-in user's ID
+  String? get userId => _client.auth.currentUser?.id;
 
   @override
   Future<void> dispose() async {
