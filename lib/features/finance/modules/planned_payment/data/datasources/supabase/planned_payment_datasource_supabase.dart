@@ -1,5 +1,4 @@
 import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/core/logging/app_logger.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../models/planned_payment_model.dart';
 import '../planned_payment_datasource.dart';

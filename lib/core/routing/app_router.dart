@@ -10,7 +10,7 @@ import '../../features/finance/presentation/screens/budget_detail_screen.dart';
 import '../../features/finance/presentation/screens/budget_list_screen.dart';
 import '../../features/finance/presentation/screens/create_budget_screen.dart';
 import '../../features/finance/presentation/screens/configuration/category_management_screen.dart';
-import '../../features/finance/presentation/screens/configuration/goals_management_screen.dart';
+import '../../features/finance/presentation/screens/configuration/goals/goals_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/debts/debts_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/planned_payments/planned_payments_management_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';

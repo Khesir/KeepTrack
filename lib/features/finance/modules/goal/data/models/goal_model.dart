@@ -15,6 +15,7 @@ class GoalModel extends Goal {
     super.createdAt,
     super.updatedAt,
     super.completedAt,
+    super.userId,
   });
 
   /// Convert from JSON (Supabase response)
@@ -34,7 +35,8 @@ class GoalModel extends Goal {
         (e) => e.name == json['status'],
         orElse: () => GoalStatus.active,
       ),
-      monthlyContribution: (json['monthly_contribution'] as num?)?.toDouble() ?? 0,
+      monthlyContribution:
+          (json['monthly_contribution'] as num?)?.toDouble() ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -44,6 +46,7 @@ class GoalModel extends Goal {
       completedAt: json['completed_at'] != null
           ? DateTime.parse(json['completed_at'] as String)
           : null,
+      userId: json['user_id'] as String?,
     );
   }
 
@@ -61,6 +64,7 @@ class GoalModel extends Goal {
       'status': status.name,
       'monthly_contribution': monthlyContribution,
       if (completedAt != null) 'completed_at': completedAt!.toIso8601String(),
+      if (userId != null) 'user_id': userId,
     };
   }
 
@@ -80,6 +84,7 @@ class GoalModel extends Goal {
       createdAt: goal.createdAt,
       updatedAt: goal.updatedAt,
       completedAt: goal.completedAt,
+      userId: goal.userId,
     );
   }
 }
