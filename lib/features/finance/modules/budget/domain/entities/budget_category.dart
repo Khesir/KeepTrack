@@ -1,3 +1,5 @@
+import '../../../finance_category/domain/entities/finance_category_enums.dart';
+
 /// Budget category entity
 class BudgetCategory {
   final String id;
@@ -38,24 +40,4 @@ class BudgetCategory {
 
   @override
   String toString() => 'BudgetCategory(id: $id, name: $name, type: $type)';
-}
-
-enum CategoryType {
-  income,
-  expense,
-  investment,
-  savings;
-
-  String get displayName {
-    switch (this) {
-      case CategoryType.income:
-        return 'Income';
-      case CategoryType.expense:
-        return 'Expense';
-      case CategoryType.investment:
-        return 'Investment';
-      case CategoryType.savings:
-        return 'Savings';
-    }
-  }
 }

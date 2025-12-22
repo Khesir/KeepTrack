@@ -1,3 +1,4 @@
+import '../../../finance_category/domain/entities/finance_category_enums.dart';
 import '../../domain/entities/budget_category.dart';
 
 /// Budget category model - DTO for database
@@ -42,11 +43,6 @@ class BudgetCategoryModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'type': type,
-      'targetAmount': targetAmount,
-    };
+    return {'id': id, 'name': name, 'type': type, 'targetAmount': targetAmount};
   }
 }

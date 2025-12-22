@@ -2,6 +2,9 @@ import 'package:persona_codex/features/finance/modules/account/data/datasources/
 import 'package:persona_codex/features/finance/modules/account/data/datasources/supabase/account_datasource_supabase.dart';
 import 'package:persona_codex/features/finance/modules/account/data/repositories/account_repository_impl.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/repositories/account_repository.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/supabase/finance_category_datasource_supabase.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/di/service_locator.dart';
@@ -10,6 +13,7 @@ import 'modules/budget/data/datasources/budget_datasource.dart';
 import 'modules/budget/data/datasources/supabase/budget_datasource_supabase.dart';
 import 'modules/budget/data/repositories/budget_repository_impl.dart';
 import 'modules/budget/domain/repositories/budget_repository.dart';
+import 'modules/finance_category/data/repositories/finance_repository_impl.dart';
 import 'modules/transaction/data/datasources/transaction_datasource.dart';
 import 'modules/transaction/data/datasources/supabase/transaction_datasource_supabase.dart';
 import 'modules/transaction/data/repositories/transaction_repository_impl.dart';
@@ -27,6 +31,7 @@ import 'modules/planned_payment/data/datasources/supabase/planned_payment_dataso
 import 'modules/planned_payment/data/repositories/planned_payment_repository_impl.dart';
 import 'modules/planned_payment/domain/repositories/planned_payment_repository.dart';
 import 'presentation/state/account_controller.dart';
+import 'presentation/state/finance_category_controller.dart';
 import 'presentation/state/transaction_controller.dart';
 import 'presentation/state/goal_controller.dart';
 import 'presentation/state/debt_controller.dart';
@@ -59,6 +64,10 @@ void setupFinanceDependencies() {
     final supabaseService = locator.get<SupabaseService>();
     return PlannedPaymentDataSourceSupabase(supabaseService);
   });
+  locator.registerFactory<FinanceCategoryDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    return FinanceCategoryDataSourceSupabase(supabaseService);
+  });
 
   // Repositories
   locator.registerFactory<BudgetRepository>(() {
@@ -86,6 +95,10 @@ void setupFinanceDependencies() {
     final dataSource = locator.get<PlannedPaymentDataSource>();
     return PlannedPaymentRepositoryImpl(dataSource);
   });
+  locator.registerFactory<FinanceCategoryRepository>(() {
+    final dataSource = locator.get<FinanceCategoryDataSource>();
+    return FinanceCategoryRepositoryImpl(dataSource);
+  });
 
   // Controllers
   locator.registerFactory<AccountController>(() {
@@ -107,5 +120,9 @@ void setupFinanceDependencies() {
   locator.registerFactory<PlannedPaymentController>(() {
     final repository = locator.get<PlannedPaymentRepository>();
     return PlannedPaymentController(repository);
+  });
+  locator.registerFactory<FinanceCategoryController>(() {
+    final repository = locator.get<FinanceCategoryRepository>();
+    return FinanceCategoryController(repository);
   });
 }

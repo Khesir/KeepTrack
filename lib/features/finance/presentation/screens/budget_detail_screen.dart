@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import '../../../../core/ui/scoped_screen.dart';
 import '../../modules/budget/domain/entities/budget.dart';
-import '../../modules/transaction/domain/entities/transaction.dart' as finance_transaction;
+import '../../modules/transaction/domain/entities/transaction.dart'
+    as finance_transaction;
 import '../../modules/budget/domain/repositories/budget_repository.dart';
 import '../../modules/transaction/domain/repositories/transaction_repository.dart';
 

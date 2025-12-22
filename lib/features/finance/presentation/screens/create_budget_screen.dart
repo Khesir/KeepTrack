@@ -4,6 +4,7 @@ import '../../../../core/routing/app_router.dart';
 import '../../modules/budget/domain/entities/budget.dart';
 import '../../modules/budget/domain/entities/budget_category.dart';
 import '../../modules/budget/domain/repositories/budget_repository.dart';
+import '../../modules/finance_category/domain/entities/finance_category_enums.dart';
 
 /// Create budget screen
 class CreateBudgetScreen extends ScopedScreen {

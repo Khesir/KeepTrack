@@ -82,7 +82,7 @@ class DebtRepositoryImpl implements DebtRepository {
       return result;
     }
 
-    final debt = result.data!;
+    final debt = result.data;
     final updated = debt.copyWith(
       remainingAmount: newRemainingAmount,
       updatedAt: DateTime.now(),

@@ -1,3 +1,4 @@
+import '../../../finance_category/domain/entities/finance_category_enums.dart';
 import 'budget_category.dart';
 
 /// Monthly budget entity
@@ -33,8 +34,7 @@ class Budget {
   }
 
   /// Calculate total budgeted income
-  double get totalBudgetedIncome =>
-      getTotalBudgetedByType(CategoryType.income);
+  double get totalBudgetedIncome => getTotalBudgetedByType(CategoryType.income);
 
   /// Calculate total budgeted expenses
   double get totalBudgetedExpenses =>
@@ -43,8 +43,7 @@ class Budget {
       getTotalBudgetedByType(CategoryType.savings);
 
   /// Calculate budgeted balance
-  double get budgetedBalance =>
-      totalBudgetedIncome - totalBudgetedExpenses;
+  double get budgetedBalance => totalBudgetedIncome - totalBudgetedExpenses;
 
   /// Calculate actual amounts from transactions
   /// Use TransactionRepository.getTransactionsByBudget(budget.id) to get transactions
