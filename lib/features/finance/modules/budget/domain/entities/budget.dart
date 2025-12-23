@@ -29,7 +29,7 @@ class Budget {
   /// Calculate total budgeted amount for a category type
   double getTotalBudgetedByType(CategoryType type) {
     return categories
-        .where((cat) => cat.type == type)
+        .where((cat) => cat.financeCategory?.type == type)
         .fold(0.0, (sum, cat) => sum + cat.targetAmount);
   }
 

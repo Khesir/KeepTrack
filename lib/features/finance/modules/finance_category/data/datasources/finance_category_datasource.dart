@@ -11,6 +11,8 @@ abstract class FinanceCategoryDataSource {
   /// Fetch a specific category by ID
   Future<FinanceCategoryModel?> fetchCategoryById(String id);
 
+  Future<List<FinanceCategoryModel>> getByIds(List<String> ids);
+
   /// Create a new category
   Future<FinanceCategoryModel> createCategory(FinanceCategoryModel category);
 

@@ -5,6 +5,7 @@ class AppConfigurationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unused_local_variable
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -14,28 +15,22 @@ class AppConfigurationPage extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
           _buildSection(context, 'Financial Management', [
-            _buildEnhancedTile(
+            _buildTile(
               context,
               icon: Icons.account_balance_wallet_rounded,
               title: 'Manage Accounts',
               subtitle: 'Add, edit, and delete financial accounts',
-              gradient: const LinearGradient(
-                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Colors.blue,
+
               onTap: () => Navigator.pushNamed(context, '/account-management'),
             ),
-            _buildEnhancedTile(
+            _buildTile(
               context,
               icon: Icons.pie_chart_rounded,
               title: 'Manage Budgets',
               subtitle: 'Create and track monthly budgets',
-              gradient: const LinearGradient(
-                colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Colors.green,
+
               onTap: () => Navigator.pushNamed(context, '/budget-management'),
             ),
             _buildTile(
@@ -43,7 +38,7 @@ class AppConfigurationPage extends StatelessWidget {
               icon: Icons.category,
               title: 'Manage Categories',
               subtitle: 'Organize income and expense categories',
-              color: Colors.blue,
+              color: Colors.orange,
               onTap: () => Navigator.pushNamed(context, '/category-management'),
             ),
             _buildTile(
@@ -59,7 +54,7 @@ class AppConfigurationPage extends StatelessWidget {
               icon: Icons.swap_horiz,
               title: 'Manage Debts',
               subtitle: 'Track lending and borrowing',
-              color: Colors.orange,
+              color: Colors.red,
               onTap: () => Navigator.pushNamed(context, '/debts-management'),
             ),
             _buildTile(
@@ -68,7 +63,8 @@ class AppConfigurationPage extends StatelessWidget {
               title: 'Manage Planned Payments',
               subtitle: 'Set up recurring and scheduled payments',
               color: Colors.teal,
-              onTap: () => Navigator.pushNamed(context, '/planned-payments-management'),
+              onTap: () =>
+                  Navigator.pushNamed(context, '/planned-payments-management'),
             ),
           ]),
           const SizedBox(height: 16),
@@ -77,9 +73,11 @@ class AppConfigurationPage extends StatelessWidget {
               context,
               icon: Icons.toggle_on,
               title: 'Manage Task Statuses',
-              subtitle: 'Define custom task statuses (e.g., To Do, In Progress)',
+              subtitle:
+                  'Define custom task statuses (e.g., To Do, In Progress)',
               color: Colors.blue,
-              onTap: () => Navigator.pushNamed(context, '/task-status-management'),
+              onTap: () =>
+                  Navigator.pushNamed(context, '/task-status-management'),
             ),
             _buildTile(
               context,
@@ -87,7 +85,8 @@ class AppConfigurationPage extends StatelessWidget {
               title: 'Manage Task Priorities',
               subtitle: 'Configure priority levels for tasks',
               color: Colors.orange,
-              onTap: () => Navigator.pushNamed(context, '/task-priority-management'),
+              onTap: () =>
+                  Navigator.pushNamed(context, '/task-priority-management'),
             ),
             _buildTile(
               context,
@@ -103,7 +102,8 @@ class AppConfigurationPage extends StatelessWidget {
               title: 'Manage Project Templates',
               subtitle: 'Define templates for recurring project types',
               color: Colors.teal,
-              onTap: () => Navigator.pushNamed(context, '/project-template-management'),
+              onTap: () =>
+                  Navigator.pushNamed(context, '/project-template-management'),
             ),
           ]),
           const SizedBox(height: 16),
@@ -130,9 +130,9 @@ class AppConfigurationPage extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         ...tiles,
@@ -140,6 +140,7 @@ class AppConfigurationPage extends StatelessWidget {
     );
   }
 
+  // ignore: unused_element
   Widget _buildEnhancedTile(
     BuildContext context, {
     required IconData icon,
@@ -246,10 +247,7 @@ class AppConfigurationPage extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: colorScheme.outlineVariant,
-            width: 1,
-          ),
+          side: BorderSide(color: colorScheme.outlineVariant, width: 1),
         ),
         child: InkWell(
           onTap: onTap,
@@ -274,23 +272,20 @@ class AppConfigurationPage extends StatelessWidget {
                       Text(
                         title,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
               ],
             ),
           ),

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
-import '../../../../core/ui/scoped_screen.dart';
-import '../../modules/budget/domain/entities/budget.dart';
-import '../../modules/transaction/domain/entities/transaction.dart'
+import '../../../../../../core/ui/scoped_screen.dart';
+import '../../../../modules/budget/domain/entities/budget.dart';
+import '../../../../modules/transaction/domain/entities/transaction.dart'
     as finance_transaction;
-import '../../modules/budget/domain/repositories/budget_repository.dart';
-import '../../modules/transaction/domain/repositories/transaction_repository.dart';
+import '../../../../modules/budget/domain/repositories/budget_repository.dart';
+import '../../../../modules/transaction/domain/repositories/transaction_repository.dart';
 
 /// Budget detail screen - View and manage a specific budget
 class BudgetDetailScreen extends ScopedScreen {
@@ -336,18 +336,18 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
             ),
             const SizedBox(height: 8),
             ...budget.categories.map((category) {
-              final actual = getActualAmountForCategory(category.id);
+              final actual = getActualAmountForCategory(category.id!);
               final percentage = category.targetAmount > 0
                   ? actual / category.targetAmount
                   : 0.0;
 
               return Card(
                 child: ListTile(
-                  title: Text(category.name),
+                  title: Text(category.financeCategory?.name ?? ''),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(category.type.displayName),
+                      Text(category.financeCategory?.type.displayName ?? ''),
                       const SizedBox(height: 4),
                       LinearProgressIndicator(
                         value: percentage.clamp(0.0, 1.0),
@@ -425,7 +425,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen> {
                       isIncome ? Icons.arrow_downward : Icons.arrow_upward,
                       color: isIncome ? Colors.green : Colors.red,
                     ),
-                    title: Text(category?.name ?? 'Unknown'),
+                    title: Text(category?.financeCategory?.name ?? 'Unknown'),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

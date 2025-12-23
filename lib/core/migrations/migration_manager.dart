@@ -1,4 +1,5 @@
 import 'package:persona_codex/core/migrations/migrations/003_create_accounts_table.dart';
+import 'package:persona_codex/core/migrations/migrations/012_create_budget_categories_table.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:persona_codex/core/logging/app_logger.dart';
 import 'migration.dart';
@@ -235,6 +236,7 @@ class MigrationManager {
     Migration009CreatePlannedPaymentsTable(),
     Migration010AddTaskFinancialFields(),
     Migration011CreateFinanceCategoriesTable(),
+    Migration012CreateBudgetCategoriesTable(),
     // Add new migrations here:
   ];
 

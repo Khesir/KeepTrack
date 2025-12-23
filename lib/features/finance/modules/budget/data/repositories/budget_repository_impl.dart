@@ -1,3 +1,6 @@
+import 'package:persona_codex/core/error/result.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
+
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';
 import '../../domain/repositories/budget_repository.dart';
@@ -7,25 +10,32 @@ import '../models/budget_model.dart';
 /// Budget repository implementation
 class BudgetRepositoryImpl implements BudgetRepository {
   final BudgetDataSource dataSource;
+  final FinanceCategoryRepository financeCategoryRepository;
 
-  BudgetRepositoryImpl(this.dataSource);
+  BudgetRepositoryImpl(this.dataSource, this.financeCategoryRepository);
 
   @override
   Future<List<Budget>> getBudgets() async {
     final models = await dataSource.getBudgets();
-    return models.map((model) => model.toEntity()).toList();
+    final budgets = models.map((m) => m.toEntity()).toList();
+
+    return Future.wait(budgets.map(_hydrateBudget));
   }
 
   @override
   Future<Budget?> getBudgetById(String id) async {
     final model = await dataSource.getBudgetById(id);
-    return model?.toEntity();
+    if (model == null) return null;
+
+    return _hydrateBudget(model.toEntity());
   }
 
   @override
   Future<Budget?> getBudgetByMonth(String month) async {
     final model = await dataSource.getBudgetByMonth(month);
-    return model?.toEntity();
+    if (model == null) return null;
+
+    return _hydrateBudget(model.toEntity());
   }
 
   @override
@@ -44,14 +54,14 @@ class BudgetRepositoryImpl implements BudgetRepository {
   Future<Budget> createBudget(Budget budget) async {
     final model = BudgetModel.fromEntity(budget);
     final created = await dataSource.createBudget(model);
-    return created.toEntity();
+    return _hydrateBudget(created.toEntity());
   }
 
   @override
   Future<Budget> updateBudget(Budget budget) async {
     final model = BudgetModel.fromEntity(budget);
     final updated = await dataSource.updateBudget(model);
-    return updated.toEntity();
+    return _hydrateBudget(updated.toEntity());
   }
 
   @override
@@ -111,6 +121,7 @@ class BudgetRepositoryImpl implements BudgetRepository {
   /// Records are now managed as independent transactions.
   @override
   @Deprecated('Use TransactionRepository.deleteTransaction() instead')
+  // ignore: override_on_non_overriding_member
   Future<Budget> deleteRecord(String budgetId, String recordId) async {
     throw UnsupportedError(
       'Budget records are deprecated. Use TransactionRepository to delete transactions.',
@@ -176,5 +187,29 @@ class BudgetRepositoryImpl implements BudgetRepository {
     );
 
     return updateBudget(updated);
+  }
+
+  Future<Budget> _hydrateBudget(Budget budget) async {
+    // Collect all financeCategoryIds
+    final categoryIds = budget.categories
+        .map((c) => c.financeCategoryId)
+        .toSet()
+        .toList();
+
+    if (categoryIds.isEmpty) return budget;
+
+    // Fetch categories in one call
+    final financeCategories = await financeCategoryRepository
+        .getByIds(categoryIds)
+        .then((r) => r.unwrap());
+
+    final categoryMap = {for (final c in financeCategories) c.id!: c};
+
+    // Hydrate categories
+    final hydratedCategories = budget.categories.map((cat) {
+      return cat.copyWith(financeCategory: categoryMap[cat.financeCategoryId]);
+    }).toList();
+
+    return budget.copyWith(categories: hydratedCategories);
   }
 }

@@ -1,30 +1,58 @@
-import '../../../finance_category/domain/entities/finance_category_enums.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 
-/// Budget category entity
+/// Budget category entity (Domain)
 class BudgetCategory {
-  final String id;
-  final String name;
-  final CategoryType type;
+  final String? id; // Supabase UUID
+  final String budgetId; // FK -> budgets.id
+  final String financeCategoryId; // FK -> finance_categories.id
+  final String? userId;
+
   final double targetAmount;
 
-  BudgetCategory({
-    required this.id,
-    required this.name,
-    required this.type,
+  /// Nullable for partial hydration
+  final FinanceCategory? financeCategory;
+
+  // Optional derived / metadata
+  final double? spentAmount;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  const BudgetCategory({
+    this.id,
+    required this.budgetId,
+    required this.financeCategoryId,
     required this.targetAmount,
+    this.userId,
+    this.financeCategory,
+    this.spentAmount,
+    this.createdAt,
+    this.updatedAt,
   });
+
+  /// Whether this category is fully hydrated
+  bool get isHydrated => financeCategory != null;
 
   BudgetCategory copyWith({
     String? id,
-    String? name,
-    CategoryType? type,
+    String? budgetId,
+    String? financeCategoryId,
+    String? userId,
     double? targetAmount,
+    FinanceCategory? financeCategory,
+    double? spentAmount,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return BudgetCategory(
       id: id ?? this.id,
-      name: name ?? this.name,
-      type: type ?? this.type,
+      budgetId: budgetId ?? this.budgetId,
+      financeCategoryId: financeCategoryId ?? this.financeCategoryId,
+      userId: userId ?? this.userId,
       targetAmount: targetAmount ?? this.targetAmount,
+      financeCategory: financeCategory ?? this.financeCategory,
+      spentAmount: spentAmount ?? this.spentAmount,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -39,5 +67,7 @@ class BudgetCategory {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'BudgetCategory(id: $id, name: $name, type: $type)';
+  String toString() =>
+      'BudgetCategory(id: $id, budgetId: $budgetId, '
+      'category: ${financeCategory?.name ?? financeCategoryId})';
 }

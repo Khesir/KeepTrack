@@ -5,6 +5,7 @@ import 'package:persona_codex/features/finance/modules/account/domain/repositori
 import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/supabase/finance_category_datasource_supabase.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
+import 'package:persona_codex/features/finance/presentation/state/budget_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/di/service_locator.dart';
@@ -70,9 +71,14 @@ void setupFinanceDependencies() {
   });
 
   // Repositories
+  locator.registerFactory<FinanceCategoryRepository>(() {
+    final dataSource = locator.get<FinanceCategoryDataSource>();
+    return FinanceCategoryRepositoryImpl(dataSource);
+  });
   locator.registerFactory<BudgetRepository>(() {
     final dataSource = locator.get<BudgetDataSource>();
-    return BudgetRepositoryImpl(dataSource);
+    final finanaceRepo = locator.get<FinanceCategoryRepository>();
+    return BudgetRepositoryImpl(dataSource, finanaceRepo);
   });
   locator.registerFactory<AccountRepository>(() {
     final dataSource = locator.get<AccountDataSource>();
@@ -94,10 +100,6 @@ void setupFinanceDependencies() {
   locator.registerFactory<PlannedPaymentRepository>(() {
     final dataSource = locator.get<PlannedPaymentDataSource>();
     return PlannedPaymentRepositoryImpl(dataSource);
-  });
-  locator.registerFactory<FinanceCategoryRepository>(() {
-    final dataSource = locator.get<FinanceCategoryDataSource>();
-    return FinanceCategoryRepositoryImpl(dataSource);
   });
 
   // Controllers
@@ -124,5 +126,9 @@ void setupFinanceDependencies() {
   locator.registerFactory<FinanceCategoryController>(() {
     final repository = locator.get<FinanceCategoryRepository>();
     return FinanceCategoryController(repository);
+  });
+  locator.registerFactory<BudgetController>(() {
+    final repository = locator.get<BudgetRepository>();
+    return BudgetController(repository);
   });
 }

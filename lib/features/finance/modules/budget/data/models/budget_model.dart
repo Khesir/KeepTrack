@@ -58,8 +58,12 @@ class BudgetModel {
     return BudgetModel(
       id: json['id'] as String?,
       month: json['month'] as String,
-      categories: (json['categories'] as List<dynamic>?)
-              ?.map((cat) => BudgetCategoryModel.fromJson(cat as Map<String, dynamic>))
+      categories:
+          (json['categories'] as List<dynamic>?)
+              ?.map(
+                (cat) =>
+                    BudgetCategoryModel.fromJson(cat as Map<String, dynamic>),
+              )
               .toList() ??
           [],
       status: json['status'] as String,

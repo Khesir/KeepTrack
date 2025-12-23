@@ -58,4 +58,16 @@ class FinanceCategoryRepositoryImpl implements FinanceCategoryRepository {
     await dataSource.deleteCategory(id);
     return Result.success(null);
   }
+
+  @override
+  Future<Result<List<FinanceCategory>>> getByIds(List<String> ids) async {
+    if (ids.isEmpty) {
+      return Result.success([]);
+    }
+    final models = await dataSource.getByIds(ids);
+
+    final entities = models.map((m) => m.toEntity()).toList();
+
+    return Result.success(entities);
+  }
 }

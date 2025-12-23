@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:persona_codex/features/settings/setting_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
-import '../../features/finance/presentation/screens/budget_detail_screen.dart';
-import '../../features/finance/presentation/screens/budget_list_screen.dart';
-import '../../features/finance/presentation/screens/create_budget_screen.dart';
+import '../../features/finance/presentation/screens/configuration/budgets/budget_detail_screen.dart';
+import '../../features/finance/presentation/screens/configuration/budgets/budget_management_screen.dart';
+import '../../features/finance/presentation/screens/configuration/budgets/create_budget_screen.dart';
 import '../../features/finance/presentation/screens/configuration/categories/category_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/goals/goals_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/debts/debts_management_screen.dart';
@@ -100,13 +100,6 @@ class AppRouter {
           settings: settings,
         );
 
-      // Budget list
-      case AppRoutes.budgetList:
-        return MaterialPageRoute(
-          builder: (_) => const BudgetListScreen(),
-          settings: settings,
-        );
-
       // Budget detail (view/edit existing budget)
       case AppRoutes.budgetDetail:
         final budget = settings.arguments as Budget?;
@@ -193,7 +186,7 @@ class AppRouter {
         );
       case AppRoutes.budgetManagement:
         return MaterialPageRoute(
-          builder: (_) => const BudgetListScreen(),
+          builder: (_) => const BudgetManagementScreen(),
           settings: settings,
         );
       case AppRoutes.goalsManagement:

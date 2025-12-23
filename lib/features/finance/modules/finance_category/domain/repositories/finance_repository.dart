@@ -15,6 +15,9 @@ abstract class FinanceCategoryRepository {
   /// Get a specific category by ID
   Future<Result<FinanceCategory>> getCategoryById(String id);
 
+  /// Get multiple categories by IDs (used for hydration)
+  Future<Result<List<FinanceCategory>>> getByIds(List<String> ids);
+
   /// Create a new user-defined category
   Future<Result<FinanceCategory>> createCategory(FinanceCategory category);
 

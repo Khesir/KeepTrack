@@ -74,6 +74,35 @@ class FinanceCategoryDataSourceSupabase implements FinanceCategoryDataSource {
   }
 
   @override
+  Future<List<FinanceCategoryModel>> getByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .filter('id', 'in', '(${ids.map((e) => "'$e'").join(',')})')
+          .eq(
+            'user_id',
+            supabaseService.userId!,
+          ); // optional, if you want user scope
+
+      return (response as List<dynamic>)
+          .map(
+            (json) =>
+                FinanceCategoryModel.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to fetch finance categories by IDs',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
   Future<FinanceCategoryModel> createCategory(
     FinanceCategoryModel category,
   ) async {

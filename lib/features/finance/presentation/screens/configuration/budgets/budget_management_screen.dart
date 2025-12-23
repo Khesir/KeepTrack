@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import '../../../../core/ui/scoped_screen.dart';
-import '../../../../core/routing/app_router.dart';
-import '../../modules/budget/domain/entities/budget.dart';
-import '../../modules/budget/domain/repositories/budget_repository.dart';
-import '../../modules/budget/domain/usecases/create_budget_usecase.dart';
-import '../../modules/budget/domain/usecases/get_budgets_usecase.dart';
-import '../state/budget_list_controller.dart';
+import '../../../../../../core/ui/scoped_screen.dart';
+import '../../../../../../core/routing/app_router.dart';
+import '../../../../modules/budget/domain/entities/budget.dart';
+import '../../../../modules/budget/domain/repositories/budget_repository.dart';
+import '../../../../modules/budget/domain/usecases/create_budget_usecase.dart';
+import '../../../../modules/budget/domain/usecases/get_budgets_usecase.dart';
+import '../../../state/budget_list_controller.dart';
 
 /// Budget list screen - Shows all monthly budgets
-class BudgetListScreen extends ScopedScreen {
-  const BudgetListScreen({super.key});
+class BudgetManagementScreen extends ScopedScreen {
+  const BudgetManagementScreen({super.key});
 
   @override
-  State<BudgetListScreen> createState() => _BudgetListScreenState();
+  State<BudgetManagementScreen> createState() => _BudgetManagementScreenState();
 }
 
-class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
+class _BudgetManagementScreenState
+    extends ScopedScreenState<BudgetManagementScreen>
     with AppLayoutControlled {
   late BudgetListController _controller;
   BudgetStatus? _filterStatus;
@@ -63,10 +64,7 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Budgets'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Manage Budgets'), elevation: 0),
       body: AsyncStreamBuilder<List<Budget>>(
         state: _controller,
         builder: (context, budgets) {
@@ -94,8 +92,8 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
                   Text(
                     'Create your first monthly budget',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -117,7 +115,11 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
                   color: Colors.blue.withValues(alpha: 0.1),
                   child: Row(
                     children: [
-                      const Icon(Icons.filter_list, size: 16, color: Colors.blue),
+                      const Icon(
+                        Icons.filter_list,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Showing ${_filterStatus!.displayName} budgets (${filteredBudgets.length})',
@@ -176,9 +178,8 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
             ],
           );
         },
-        loadingBuilder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loadingBuilder: (context) =>
+            const Center(child: CircularProgressIndicator()),
         errorBuilder: (context, message) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -236,7 +237,11 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
                       color: Colors.blue.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.calendar_today, color: Colors.blue, size: 24),
+                    child: const Icon(
+                      Icons.calendar_today,
+                      color: Colors.blue,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -261,7 +266,10 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ],
@@ -296,7 +304,11 @@ class _BudgetListScreenState extends ScopedScreenState<BudgetListScreen>
                         color: balanceColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.pie_chart_rounded, color: balanceColor, size: 24),
+                      child: Icon(
+                        Icons.pie_chart_rounded,
+                        color: balanceColor,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -428,10 +440,7 @@ class _BudgetCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: colorScheme.outlineVariant,
-          width: 1,
-        ),
+        side: BorderSide(color: colorScheme.outlineVariant, width: 1),
       ),
       child: InkWell(
         onTap: onTap,
@@ -452,7 +461,11 @@ class _BudgetCard extends StatelessWidget {
                           color: balanceColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.pie_chart, color: balanceColor, size: 20),
+                        child: Icon(
+                          Icons.pie_chart,
+                          color: balanceColor,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -472,10 +485,11 @@ class _BudgetCard extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: (budget.status == BudgetStatus.active
-                                      ? Colors.green
-                                      : Colors.grey)
-                                  .withValues(alpha: 0.2),
+                              color:
+                                  (budget.status == BudgetStatus.active
+                                          ? Colors.green
+                                          : Colors.grey)
+                                      .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -549,7 +563,11 @@ class _BudgetCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.warning_amber, size: 16, color: Colors.red),
+                      const Icon(
+                        Icons.warning_amber,
+                        size: 16,
+                        color: Colors.red,
+                      ),
                       const SizedBox(width: 6),
                       const Text(
                         'Over budget',
