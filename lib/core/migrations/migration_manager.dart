@@ -13,6 +13,7 @@ import 'migrations/008_create_debts_table.dart';
 import 'migrations/009_create_planned_payments_table.dart';
 import 'migrations/010_add_task_financial_fields.dart';
 import 'migrations/011_create_finance_categories_table.dart';
+import 'migrations/013_update_budget_schema.dart';
 
 /// Manages database migrations
 ///
@@ -237,6 +238,7 @@ class MigrationManager {
     Migration010AddTaskFinancialFields(),
     Migration011CreateFinanceCategoriesTable(),
     Migration012CreateBudgetCategoriesTable(),
+    Migration013UpdateBudgetsTable(),
     // Add new migrations here:
   ];
 

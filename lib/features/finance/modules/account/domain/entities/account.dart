@@ -1,7 +1,9 @@
+import 'account_enums.dart';
+
 class Account {
   final String? id; // optional - db auto-generates
   final String name;
-  final String? accountType; // Cash, Bank Account, Credit, Investment, Savings, etc.
+  final AccountType accountType;
   final double balance;
   final String? colorHex; // Store color as hex string
   final String? iconCodePoint; // Store icon as code point
@@ -10,11 +12,12 @@ class Account {
   final bool isArchived;
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
+  final String? userId;
 
   Account({
     this.id,
     required this.name,
-    this.accountType,
+    this.accountType = AccountType.cash,
     this.balance = 0,
     this.colorHex,
     this.iconCodePoint,
@@ -23,13 +26,14 @@ class Account {
     this.isArchived = false,
     this.createdAt,
     this.updatedAt,
+    this.userId,
   });
 
   /// Create a copy of Account with optional updated fields
   Account copyWith({
     String? id,
     String? name,
-    String? accountType,
+    AccountType? accountType,
     double? balance,
     String? colorHex,
     String? iconCodePoint,
@@ -38,6 +42,7 @@ class Account {
     bool? isArchived,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? userId,
   }) {
     return Account(
       id: id ?? this.id,
@@ -51,6 +56,7 @@ class Account {
       isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      userId: userId ?? this.userId,
     );
   }
 

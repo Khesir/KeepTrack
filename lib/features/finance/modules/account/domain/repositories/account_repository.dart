@@ -1,31 +1,33 @@
+import 'package:persona_codex/core/error/result.dart';
+
 import '../entities/account.dart';
 
 /// Account repository interface
 abstract class AccountRepository {
   /// Get all accounts
-  Future<List<Account>> getAccounts();
+  Future<Result<List<Account>>> getAccounts();
 
   /// Get account by ID
-  Future<Account?> getAccountById(String id);
+  Future<Result<Account>> getAccountById(String id);
 
   /// Create a new account
-  Future<Account> createAccount(Account account);
+  Future<Result<Account>> createAccount(Account account);
 
   /// Update an account
-  Future<Account> updateAccount(Account account);
+  Future<Result<Account>> updateAccount(Account account);
 
   /// Delete an account
-  Future<void> deleteAccount(String id);
+  Future<Result<void>> deleteAccount(String id);
 
   /// Archive an account
-  Future<Account> archiveAccount(String id);
+  Future<Result<Account>> archiveAccount(String id);
 
   /// Unarchive an account
-  Future<Account> unarchiveAccount(String id);
+  Future<Result<Account>> unarchiveAccount(String id);
 
   /// Adjust account balance (e.g., for transactions)
-  Future<Account> adjustBalance(String accountId, double amount);
+  Future<Result<Account>> adjustBalance(String accountId, double amount);
 
   /// Set account balance directly
-  Future<Account> setBalance(String accountId, double balance);
+  Future<Result<Account>> setBalance(String accountId, double balance);
 }

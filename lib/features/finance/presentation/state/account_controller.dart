@@ -1,3 +1,4 @@
+import 'package:persona_codex/core/error/result.dart';
 import 'package:persona_codex/core/state/stream_state.dart';
 import '../../modules/account/domain/entities/account.dart';
 import '../../modules/account/domain/repositories/account_repository.dart';
@@ -12,76 +13,75 @@ class AccountController extends StreamState<AsyncState<List<Account>>> {
 
   /// Load all accounts
   Future<void> loadAccounts() async {
-    await execute(() => _repository.getAccounts());
+    await execute(() async {
+      return await _repository.getAccounts().then((r) => r.unwrap());
+    });
   }
 
   /// Create a new account
   Future<void> createAccount(Account account) async {
-    try {
-      await _repository.createAccount(account);
-      await loadAccounts();
-    } catch (e) {
-      emit(AsyncError('Failed to create account: $e', e));
-    }
+    await execute(() async {
+      final created = await _repository
+          .createAccount(account)
+          .then((r) => r.unwrap());
+      final current = data ?? [];
+      return [...current, created];
+    });
   }
 
   /// Update an existing account
   Future<void> updateAccount(Account account) async {
-    try {
-      await _repository.updateAccount(account);
+    await execute(() async {
+      await _repository.updateAccount(account).then((r) => r.unwrap());
       await loadAccounts();
-    } catch (e) {
-      emit(AsyncError('Failed to update account: $e', e));
-    }
+      return data ?? [];
+    });
   }
 
   /// Delete an account
   Future<void> deleteAccount(String id) async {
-    try {
-      await _repository.deleteAccount(id);
+    await execute(() async {
+      await _repository.deleteAccount(id).then((r) => r.unwrap());
       await loadAccounts();
-    } catch (e) {
-      emit(AsyncError('Failed to delete account: $e', e));
-    }
+      return data ?? [];
+    });
   }
 
   /// Archive an account
   Future<void> archiveAccount(String id) async {
-    try {
-      await _repository.archiveAccount(id);
+    await execute(() async {
+      await _repository.archiveAccount(id).then((r) => r.unwrap());
       await loadAccounts();
-    } catch (e) {
-      emit(AsyncError('Failed to archive account: $e', e));
-    }
+      return data ?? [];
+    });
   }
 
   /// Unarchive an account
   Future<void> unarchiveAccount(String id) async {
-    try {
-      await _repository.unarchiveAccount(id);
+    await execute(() async {
+      await _repository.unarchiveAccount(id).then((r) => r.unwrap());
       await loadAccounts();
-    } catch (e) {
-      emit(AsyncError('Failed to unarchive account: $e', e));
-    }
+      return data ?? [];
+    });
   }
 
   /// Adjust account balance
   Future<void> adjustBalance(String accountId, double amount) async {
-    try {
-      await _repository.adjustBalance(accountId, amount);
+    await execute(() async {
+      await _repository
+          .adjustBalance(accountId, amount)
+          .then((r) => r.unwrap());
       await loadAccounts();
-    } catch (e) {
-      emit(AsyncError('Failed to adjust balance: $e', e));
-    }
+      return data ?? [];
+    });
   }
 
   /// Set account balance directly
   Future<void> setBalance(String accountId, double balance) async {
-    try {
-      await _repository.setBalance(accountId, balance);
+    await execute(() async {
+      await _repository.setBalance(accountId, balance).then((r) => r.unwrap());
       await loadAccounts();
-    } catch (e) {
-      emit(AsyncError('Failed to set balance: $e', e));
-    }
+      return data ?? [];
+    });
   }
 }

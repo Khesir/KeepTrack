@@ -3,29 +3,22 @@ import 'budget_category_model.dart';
 
 /// Budget model - DTO for Supabase
 ///
-/// Note: Records/transactions are now in a separate transactions table.
-/// Use TransactionRepository to manage transactions for a budget.
-class BudgetModel {
-  final String? id; // Optional - Supabase auto-generates
-  final String month;
-  final List<BudgetCategoryModel> categories;
-  final String status;
-  final String? notes;
-  final DateTime? createdAt; // Optional - Supabase auto-generates
-  final DateTime? updatedAt; // Optional - Supabase auto-generates
-  final DateTime? closedAt;
-
+/// Note: Categories are loaded separately using BudgetCategoryRepository.
+class BudgetModel extends Budget {
   BudgetModel({
-    this.id,
-    required this.month,
-    this.categories = const [],
-    required this.status,
-    this.notes,
-    this.createdAt,
-    this.updatedAt,
-    this.closedAt,
-  });
+    super.id,
+    required super.month,
+    super.categories = const [],
+    required BudgetStatus status,
+    super.notes,
+    super.userId,
+    super.accountId,
+    super.createdAt,
+    super.updatedAt,
+    super.closedAt,
+  }) : super(status: status);
 
+  /// Create model from entity
   factory BudgetModel.fromEntity(Budget budget) {
     return BudgetModel(
       id: budget.id,
@@ -33,41 +26,28 @@ class BudgetModel {
       categories: budget.categories
           .map((cat) => BudgetCategoryModel.fromEntity(cat))
           .toList(),
-      status: budget.status.name,
+      status: budget.status,
       notes: budget.notes,
+      userId: budget.userId,
+      accountId: budget.accountId,
       createdAt: budget.createdAt,
       updatedAt: budget.updatedAt,
       closedAt: budget.closedAt,
     );
   }
 
-  Budget toEntity() {
-    return Budget(
-      id: id,
-      month: month,
-      categories: categories.map((cat) => cat.toEntity()).toList(),
-      status: BudgetStatus.values.firstWhere((e) => e.name == status),
-      notes: notes,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
-      closedAt: closedAt,
-    );
-  }
-
+  /// Create model from JSON (Supabase response)
   factory BudgetModel.fromJson(Map<String, dynamic> json) {
     return BudgetModel(
       id: json['id'] as String?,
       month: json['month'] as String,
-      categories:
-          (json['categories'] as List<dynamic>?)
-              ?.map(
-                (cat) =>
-                    BudgetCategoryModel.fromJson(cat as Map<String, dynamic>),
-              )
-              .toList() ??
-          [],
-      status: json['status'] as String,
+      categories: const [], // Categories loaded separately
+      status: BudgetStatus.values.firstWhere(
+        (e) => e.name == (json['status'] as String),
+      ),
       notes: json['notes'] as String?,
+      userId: json['user_id'] as String?,
+      accountId: json['account_id'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -80,16 +60,34 @@ class BudgetModel {
     );
   }
 
+  /// Convert model to JSON for Supabase
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
       'month': month,
-      'categories': categories.map((cat) => cat.toJson()).toList(),
-      'status': status,
+      'status': status.name,
       if (notes != null) 'notes': notes,
+      if (userId != null) 'user_id': userId,
+      if (accountId != null) 'account_id': accountId,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
       if (closedAt != null) 'closed_at': closedAt!.toIso8601String(),
     };
+  }
+
+  /// Create a new model with updated categories
+  BudgetModel withCategories(List<BudgetCategoryModel> newCategories) {
+    return BudgetModel(
+      id: id,
+      month: month,
+      categories: newCategories,
+      status: status,
+      notes: notes,
+      userId: userId,
+      accountId: accountId,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      closedAt: closedAt,
+    );
   }
 }

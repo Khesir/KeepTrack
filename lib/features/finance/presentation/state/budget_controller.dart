@@ -1,3 +1,4 @@
+import 'package:persona_codex/core/error/result.dart';
 import 'package:persona_codex/core/state/stream_state.dart';
 import '../../modules/budget/domain/entities/budget.dart';
 import '../../modules/budget/domain/entities/budget_category.dart';
@@ -14,16 +15,17 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Load all budgets
   Future<void> loadBudgets() async {
     await execute(() async {
-      return await _repository.getBudgets().then((r) => r);
+      final result = await _repository.getBudgets();
+      return result.unwrap();
     });
   }
 
   /// Create a new budget
   Future<void> createBudget(Budget budget) async {
     await execute(() async {
-      final created = await _repository.createBudget(budget);
+      final result = await _repository.createBudget(budget);
+      final created = result.unwrap();
       final current = data ?? [];
-
       return [...current, created];
     });
   }
@@ -31,7 +33,8 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Update an existing budget
   Future<void> updateBudget(Budget budget) async {
     await execute(() async {
-      final updated = await _repository.updateBudget(budget);
+      final result = await _repository.updateBudget(budget);
+      final updated = result.unwrap();
       final current = data ?? [];
 
       // Replace the updated budget
@@ -45,7 +48,8 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Delete a budget
   Future<void> deleteBudget(String id) async {
     await execute(() async {
-      await _repository.deleteBudget(id);
+      final result = await _repository.deleteBudget(id);
+      result.unwrap();
       final current = data ?? [];
       return current.where((b) => b.id != id).toList();
     });
@@ -54,7 +58,8 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Close a budget
   Future<void> closeBudget(String id, {String? notes}) async {
     await execute(() async {
-      final closed = await _repository.closeBudget(id, notes);
+      final result = await _repository.closeBudget(id, notes);
+      final closed = result.unwrap();
       final current = data ?? [];
       final updatedList = current.map((b) => b.id == id ? closed : b).toList();
       return updatedList;
@@ -64,7 +69,8 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Reopen a budget
   Future<void> reopenBudget(String id) async {
     await execute(() async {
-      final reopened = await _repository.reopenBudget(id);
+      final result = await _repository.reopenBudget(id);
+      final reopened = result.unwrap();
       final current = data ?? [];
       final updatedList = current
           .map((b) => b.id == id ? reopened : b)
@@ -76,7 +82,8 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Add a category to a budget
   Future<void> addCategory(String budgetId, BudgetCategory category) async {
     await execute(() async {
-      final updatedBudget = await _repository.addCategory(budgetId, category);
+      final result = await _repository.addCategory(budgetId, category);
+      final updatedBudget = result.unwrap();
       final current = data ?? [];
       final updatedList = current
           .map((b) => b.id == budgetId ? updatedBudget : b)
@@ -88,10 +95,8 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Update a category in a budget
   Future<void> updateCategory(String budgetId, BudgetCategory category) async {
     await execute(() async {
-      final updatedBudget = await _repository.updateCategory(
-        budgetId,
-        category,
-      );
+      final result = await _repository.updateCategory(budgetId, category);
+      final updatedBudget = result.unwrap();
       final current = data ?? [];
       final updatedList = current
           .map((b) => b.id == budgetId ? updatedBudget : b)
@@ -103,10 +108,8 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   /// Delete a category from a budget
   Future<void> deleteCategory(String budgetId, String categoryId) async {
     await execute(() async {
-      final updatedBudget = await _repository.deleteCategory(
-        budgetId,
-        categoryId,
-      );
+      final result = await _repository.deleteCategory(budgetId, categoryId);
+      final updatedBudget = result.unwrap();
       final current = data ?? [];
       final updatedList = current
           .map((b) => b.id == budgetId ? updatedBudget : b)
@@ -117,6 +120,7 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
 
   /// Get the active budget
   Future<Budget?> getActiveBudget() async {
-    return await _repository.getActiveBudget();
+    final result = await _repository.getActiveBudget();
+    return result.isSuccess ? result.data : null;
   }
 }

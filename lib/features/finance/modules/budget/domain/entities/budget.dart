@@ -11,16 +11,20 @@ class Budget {
   final List<BudgetCategory> categories;
   final BudgetStatus status;
   final String? notes;
+  final String? userId; // User identifier (UUID)
+  final String? accountId; // Account identifier (UUID)
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? closedAt;
 
-  Budget({
+  const Budget({
     this.id,
     required this.month,
     this.categories = const [],
     this.status = BudgetStatus.active,
     this.notes,
+    this.userId,
+    this.accountId,
     this.createdAt,
     this.updatedAt,
     this.closedAt,
@@ -45,16 +49,14 @@ class Budget {
   /// Calculate budgeted balance
   double get budgetedBalance => totalBudgetedIncome - totalBudgetedExpenses;
 
-  /// Calculate actual amounts from transactions
-  /// Use TransactionRepository.getTransactionsByBudget(budget.id) to get transactions
-  /// Then calculate totals using transaction amounts
-
   Budget copyWith({
     String? id,
     String? month,
     List<BudgetCategory>? categories,
     BudgetStatus? status,
     String? notes,
+    String? userId,
+    String? accountId,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? closedAt,
@@ -65,6 +67,8 @@ class Budget {
       categories: categories ?? this.categories,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      userId: userId ?? this.userId,
+      accountId: accountId ?? this.accountId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       closedAt: closedAt ?? this.closedAt,
@@ -77,13 +81,16 @@ class Budget {
       other is Budget &&
           runtimeType == other.runtimeType &&
           id == other.id &&
-          month == other.month;
+          month == other.month &&
+          userId == other.userId &&
+          accountId == other.accountId;
 
   @override
-  int get hashCode => Object.hash(id, month);
+  int get hashCode => Object.hash(id, month, userId, accountId);
 
   @override
-  String toString() => 'Budget(id: $id, month: $month, status: $status)';
+  String toString() =>
+      'Budget(id: $id, month: $month, userId: $userId, accountId: $accountId, status: $status)';
 }
 
 enum BudgetStatus {

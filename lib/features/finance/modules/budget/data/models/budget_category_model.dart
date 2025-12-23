@@ -1,29 +1,20 @@
 import '../../domain/entities/budget_category.dart';
 
 /// BudgetCategory model - DTO for Supabase
-class BudgetCategoryModel {
-  final String? id;
-  final String budgetId;
-  final String financeCategoryId;
-  final String? userId;
-  final double targetAmount;
-
-  final double? spentAmount;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-
+class BudgetCategoryModel extends BudgetCategory {
   BudgetCategoryModel({
-    this.id,
-    required this.budgetId,
-    required this.financeCategoryId,
-    required this.targetAmount,
-    this.userId,
-    this.spentAmount,
-    this.createdAt,
-    this.updatedAt,
+    super.id,
+    required super.budgetId,
+    required super.financeCategoryId,
+    required super.targetAmount,
+    super.userId,
+    super.financeCategory,
+    super.spentAmount,
+    super.createdAt,
+    super.updatedAt,
   });
 
-  /// Entity → Model
+  /// Create model from entity
   factory BudgetCategoryModel.fromEntity(BudgetCategory entity) {
     return BudgetCategoryModel(
       id: entity.id,
@@ -31,28 +22,14 @@ class BudgetCategoryModel {
       financeCategoryId: entity.financeCategoryId,
       userId: entity.userId,
       targetAmount: entity.targetAmount,
+      financeCategory: entity.financeCategory,
       spentAmount: entity.spentAmount,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     );
   }
 
-  /// Model → Entity (PARTIAL)
-  BudgetCategory toEntity() {
-    return BudgetCategory(
-      id: id,
-      budgetId: budgetId,
-      financeCategoryId: financeCategoryId,
-      userId: userId,
-      targetAmount: targetAmount,
-      financeCategory: null, // hydrated later
-      spentAmount: spentAmount,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
-    );
-  }
-
-  /// Supabase → Model
+  /// Create model from JSON (Supabase response)
   factory BudgetCategoryModel.fromJson(Map<String, dynamic> json) {
     return BudgetCategoryModel(
       id: json['id'] as String?,
@@ -60,6 +37,7 @@ class BudgetCategoryModel {
       financeCategoryId: json['finance_category_id'] as String,
       userId: json['user_id'] as String?,
       targetAmount: (json['target_amount'] as num).toDouble(),
+      financeCategory: null, // Hydrated separately
       spentAmount: json['spent_amount'] != null
           ? (json['spent_amount'] as num).toDouble()
           : null,
@@ -72,7 +50,7 @@ class BudgetCategoryModel {
     );
   }
 
-  /// Model → Supabase
+  /// Convert model to JSON for Supabase
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,

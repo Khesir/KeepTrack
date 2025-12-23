@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import '../../../../../../core/ui/scoped_screen.dart';
 import '../../../../../../core/routing/app_router.dart';
 import '../../../../modules/budget/domain/entities/budget.dart';
-import '../../../../modules/budget/domain/repositories/budget_repository.dart';
-import '../../../../modules/budget/domain/usecases/create_budget_usecase.dart';
-import '../../../../modules/budget/domain/usecases/get_budgets_usecase.dart';
-import '../../../state/budget_list_controller.dart';
+import '../../../state/budget_controller.dart';
 
 /// Budget list screen - Shows all monthly budgets
 class BudgetManagementScreen extends ScopedScreen {
@@ -20,30 +18,23 @@ class BudgetManagementScreen extends ScopedScreen {
 class _BudgetManagementScreenState
     extends ScopedScreenState<BudgetManagementScreen>
     with AppLayoutControlled {
-  late BudgetListController _controller;
+  late final BudgetController _controller;
   BudgetStatus? _filterStatus;
 
   @override
   void registerServices() {
-    // Uses global repository
+    _controller = locator.get<BudgetController>();
   }
 
   @override
   void initState() {
     super.initState();
-
-    final budgetRepo = getService<BudgetRepository>();
-
-    // Create controller without DI (as requested)
-    _controller = BudgetListController(
-      getBudgetsUseCase: GetBudgetsUseCase(budgetRepo),
-      createBudgetUseCase: CreateBudgetUseCase(budgetRepo),
-    );
   }
 
   @override
   void onReady() {
-    // Only UI configuration here (if needed)
+    // Load budgets when screen is ready
+    _controller.loadBudgets();
   }
 
   @override
@@ -64,7 +55,61 @@ class _BudgetManagementScreenState
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Budgets'), elevation: 0),
+      appBar: AppBar(
+        title: const Text('Manage Budgets'),
+        elevation: 0,
+        actions: [
+          if (_filterStatus != null)
+            IconButton(
+              icon: const Icon(Icons.filter_list_off),
+              tooltip: 'Clear Filter',
+              onPressed: () => setState(() => _filterStatus = null),
+            ),
+          PopupMenuButton<BudgetStatus?>(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filter Budgets',
+            onSelected: (status) => setState(() => _filterStatus = status),
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: null, child: Text('All Budgets')),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: BudgetStatus.active,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Active'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: BudgetStatus.closed,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Closed'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: AsyncStreamBuilder<List<Budget>>(
         state: _controller,
         builder: (context, budgets) {
@@ -74,30 +119,7 @@ class _BudgetManagementScreenState
               : budgets.where((b) => b.status == _filterStatus).toList();
 
           if (budgets.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.pie_chart_outline,
-                    size: 64,
-                    color: colorScheme.primary.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No budgets yet',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Create your first monthly budget',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return _buildEmptyState(colorScheme);
           }
 
           return Column(
@@ -137,29 +159,7 @@ class _BudgetManagementScreenState
               // Budget List
               Expanded(
                 child: filteredBudgets.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.filter_list_off,
-                              size: 64,
-                              color: colorScheme.primary.withValues(alpha: 0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No ${_filterStatus?.displayName.toLowerCase() ?? ''} budgets',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            TextButton(
-                              onPressed: () =>
-                                  setState(() => _filterStatus = null),
-                              child: const Text('Clear Filter'),
-                            ),
-                          ],
-                        ),
-                      )
+                    ? _buildFilteredEmptyState(colorScheme)
                     : RefreshIndicator(
                         onRefresh: _controller.loadBudgets,
                         child: ListView.builder(
@@ -181,18 +181,41 @@ class _BudgetManagementScreenState
         loadingBuilder: (context) =>
             const Center(child: CircularProgressIndicator()),
         errorBuilder: (context, message) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(message),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => _controller.loadBudgets(),
-                child: const Text('Retry'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to Load Budgets',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => _controller.loadBudgets(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -204,26 +227,116 @@ class _BudgetManagementScreenState
     );
   }
 
+  Widget _buildEmptyState(ColorScheme colorScheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.pie_chart_outline,
+              size: 80,
+              color: colorScheme.primary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No budgets yet',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first monthly budget to start\ntracking your income and expenses',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _createBudget,
+              icon: const Icon(Icons.add),
+              label: const Text('Create Budget'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilteredEmptyState(ColorScheme colorScheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list_off,
+              size: 64,
+              color: colorScheme.primary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No ${_filterStatus?.displayName.toLowerCase() ?? ''} budgets',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try adjusting your filter',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextButton.icon(
+              onPressed: () => setState(() => _filterStatus = null),
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear Filter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSummaryCard(List<Budget> budgets) {
     // Get current month
     final now = DateTime.now();
     final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
     // Check if budget exists for current month
-    final currentBudget = budgets.firstWhere(
-      (b) => b.month == currentMonth,
-      orElse: () => Budget(month: ''),
-    );
+    Budget? currentBudget;
+    try {
+      currentBudget = budgets.firstWhere((b) => b.month == currentMonth);
+    } catch (e) {
+      currentBudget = null;
+    }
 
-    final hasCurrentBudget = currentBudget.month.isNotEmpty;
+    if (currentBudget == null) {
+      return _buildCreateBudgetPrompt(currentMonth);
+    }
 
-    if (!hasCurrentBudget) {
-      // Show create budget prompt
-      return Card(
-        margin: const EdgeInsets.all(16),
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: Colors.blue.withValues(alpha: 0.1),
+    return _buildCurrentBudgetSummary(currentMonth, currentBudget);
+  }
+
+  Widget _buildCreateBudgetPrompt(String currentMonth) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.blue.withValues(alpha: 0.1),
+      child: InkWell(
+        onTap: _createBudget,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -244,11 +357,26 @@ class _BudgetManagementScreenState
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    _formatMonthDisplay(currentMonth),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _formatMonthDisplay(currentMonth),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Current Month',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -257,6 +385,11 @@ class _BudgetManagementScreenState
               const Text(
                 'No budget found for the current month.',
                 style: TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Create a budget to start planning your finances',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -275,10 +408,11 @@ class _BudgetManagementScreenState
             ],
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    // Show existing budget summary (budgeted amounts only)
+  Widget _buildCurrentBudgetSummary(String currentMonth, Budget currentBudget) {
     final balanceColor = currentBudget.budgetedBalance >= 0
         ? Colors.green
         : Colors.red;
@@ -288,91 +422,115 @@ class _BudgetManagementScreenState
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: balanceColor.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: balanceColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () => _openBudget(currentBudget),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: balanceColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.pie_chart_rounded,
+                          color: balanceColor,
+                          size: 24,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.pie_chart_rounded,
-                        color: balanceColor,
-                        size: 24,
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatMonthDisplay(currentMonth),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Current Month',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Active',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildSummaryItem(
+                    'Budgeted',
+                    currentBudget.totalBudgetedIncome,
+                    Colors.green,
+                  ),
+                  _buildSummaryItem(
+                    'Planned',
+                    currentBudget.totalBudgetedExpenses,
+                    Colors.red,
+                  ),
+                  _buildSummaryItem(
+                    'Balance',
+                    currentBudget.budgetedBalance,
+                    balanceColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.touch_app, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
                     Text(
-                      _formatMonthDisplay(currentMonth),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                      'Tap to view details',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Current',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSummaryItem(
-                  'Budgeted',
-                  currentBudget.totalBudgetedIncome,
-                  Colors.green,
-                ),
-                _buildSummaryItem(
-                  'Planned',
-                  currentBudget.totalBudgetedExpenses,
-                  Colors.red,
-                ),
-                _buildSummaryItem(
-                  'Balance',
-                  currentBudget.budgetedBalance,
-                  balanceColor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                'Tap to view actual transactions',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -383,7 +541,7 @@ class _BudgetManagementScreenState
       final parts = monthStr.split('-');
       final year = parts[0];
       final month = int.parse(parts[1]);
-      final monthNames = [
+      const monthNames = [
         'January',
         'February',
         'March',
@@ -427,10 +585,34 @@ class _BudgetCard extends StatelessWidget {
 
   const _BudgetCard({required this.budget, required this.onTap});
 
+  String _formatMonthDisplay(String monthStr) {
+    try {
+      final parts = monthStr.split('-');
+      final year = parts[0];
+      final month = int.parse(parts[1]);
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${monthNames[month - 1]} $year';
+    } catch (e) {
+      return monthStr;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    // Showing budgeted amounts - actual amounts in detail screen
     final balanceColor = budget.budgetedBalance >= 0
         ? Colors.green
         : Colors.red;
@@ -472,13 +654,13 @@ class _BudgetCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            budget.month,
+                            _formatMonthDisplay(budget.month),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -531,8 +713,6 @@ class _BudgetCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Budgeted amounts display
               _buildProgressBar(
                 'Income',
                 budget.totalBudgetedIncome,
@@ -548,7 +728,6 @@ class _BudgetCard extends StatelessWidget {
                     : budget.totalBudgetedExpenses,
                 Colors.red,
               ),
-
               if (budget.budgetedBalance < 0) ...[
                 const SizedBox(height: 12),
                 Container(

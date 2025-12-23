@@ -2,6 +2,8 @@ import 'package:persona_codex/features/finance/modules/account/data/datasources/
 import 'package:persona_codex/features/finance/modules/account/data/datasources/supabase/account_datasource_supabase.dart';
 import 'package:persona_codex/features/finance/modules/account/data/repositories/account_repository_impl.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/repositories/account_repository.dart';
+import 'package:persona_codex/features/finance/modules/budget/data/datasources/budget_category_datasource.dart';
+import 'package:persona_codex/features/finance/modules/budget/data/datasources/supabase/budget_category_datasource_supabase.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/supabase/finance_category_datasource_supabase.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
@@ -41,10 +43,7 @@ import 'presentation/state/planned_payment_controller.dart';
 /// Setup finance management dependencies
 void setupFinanceDependencies() {
   // Data sources (uses shared Supabase service)
-  locator.registerFactory<BudgetDataSource>(() {
-    final supabaseService = locator.get<SupabaseService>();
-    return BudgetDataSourceSupabase(supabaseService);
-  });
+
   locator.registerFactory<AccountDataSource>(() {
     final supabaseService = locator.get<SupabaseService>();
     return AccountDataSourceSupabase(supabaseService);
@@ -69,17 +68,30 @@ void setupFinanceDependencies() {
     final supabaseService = locator.get<SupabaseService>();
     return FinanceCategoryDataSourceSupabase(supabaseService);
   });
+  locator.registerLazySingleton<BudgetCategoryDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    return BudgetCategoryDataSourceSupabase(supabaseService);
+  });
+  locator.registerFactory<BudgetDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    final bugetCategory = locator.get<BudgetCategoryDataSource>();
+    return BudgetDataSourceSupabase(supabaseService, bugetCategory);
+  });
 
   // Repositories
   locator.registerFactory<FinanceCategoryRepository>(() {
     final dataSource = locator.get<FinanceCategoryDataSource>();
     return FinanceCategoryRepositoryImpl(dataSource);
   });
-  locator.registerFactory<BudgetRepository>(() {
-    final dataSource = locator.get<BudgetDataSource>();
-    final finanaceRepo = locator.get<FinanceCategoryRepository>();
-    return BudgetRepositoryImpl(dataSource, finanaceRepo);
-  });
+
+  // Update repository registration
+  locator.registerLazySingleton<BudgetRepository>(
+    () => BudgetRepositoryImpl(
+      locator.get<BudgetDataSource>(),
+      locator.get<BudgetCategoryDataSource>(),
+      locator.get<FinanceCategoryRepository>(),
+    ),
+  );
   locator.registerFactory<AccountRepository>(() {
     final dataSource = locator.get<AccountDataSource>();
     return AccountRepositoryImpl(dataSource);

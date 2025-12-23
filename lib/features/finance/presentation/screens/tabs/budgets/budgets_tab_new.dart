@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'planned_payments_tab.dart';
+import '../planned_payments/planned_payments_tab.dart';
 
 /// Budgets Tab with Progress Tracking and Planned Payments Integration
 class BudgetsTabNew extends StatefulWidget {
@@ -14,8 +14,14 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
   @override
   Widget build(BuildContext context) {
     // Calculate total budget stats
-    final totalBudget = dummyBudgets.fold<double>(0, (sum, budget) => sum + budget.limit);
-    final totalSpent = dummyBudgets.fold<double>(0, (sum, budget) => sum + budget.spent);
+    final totalBudget = dummyBudgets.fold<double>(
+      0,
+      (sum, budget) => sum + budget.limit,
+    );
+    final totalSpent = dummyBudgets.fold<double>(
+      0,
+      (sum, budget) => sum + budget.spent,
+    );
     final totalRemaining = totalBudget - totalSpent;
 
     return SingleChildScrollView(
@@ -34,13 +40,15 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
               Text(
                 'Budget Categories',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 '${dummyBudgets.length} categories',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -65,7 +73,11 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
     );
   }
 
-  Widget _buildMonthlySummaryCard(double total, double spent, double remaining) {
+  Widget _buildMonthlySummaryCard(
+    double total,
+    double spent,
+    double remaining,
+  ) {
     final percentSpent = (spent / total).clamp(0.0, 1.0);
 
     return Card(
@@ -80,7 +92,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -112,7 +126,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                       'Total Spent',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                     Text(
@@ -132,7 +148,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                     value: percentSpent,
                     minHeight: 12,
                     backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(percentSpent)),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _getProgressColor(percentSpent),
+                    ),
                   ),
                 ),
               ],
@@ -145,21 +163,30 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                 Expanded(
                   child: _buildSummaryStatItem(
                     'Budget',
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(total),
+                    NumberFormat.currency(
+                      symbol: '₱',
+                      decimalDigits: 0,
+                    ).format(total),
                     Colors.blue[700]!,
                   ),
                 ),
                 Expanded(
                   child: _buildSummaryStatItem(
                     'Spent',
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(spent),
+                    NumberFormat.currency(
+                      symbol: '₱',
+                      decimalDigits: 0,
+                    ).format(spent),
                     Colors.red[700]!,
                   ),
                 ),
                 Expanded(
                   child: _buildSummaryStatItem(
                     'Remaining',
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(remaining),
+                    NumberFormat.currency(
+                      symbol: '₱',
+                      decimalDigits: 0,
+                    ).format(remaining),
                     Colors.green[700]!,
                   ),
                 ),
@@ -229,11 +256,7 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                       color: budget.color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      budget.icon,
-                      color: budget.color,
-                      size: 24,
-                    ),
+                    child: Icon(budget.icon, color: budget.color, size: 24),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -251,7 +274,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                           '${budget.transactionCount} transactions',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                       ],
@@ -259,7 +284,10 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                   ),
                   if (isOverBudget)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(12),
@@ -288,7 +316,10 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(budget.spent),
+                    NumberFormat.currency(
+                      symbol: '₱',
+                      decimalDigits: 0,
+                    ).format(budget.spent),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -299,7 +330,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                     'of ${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(budget.limit)}',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -313,7 +346,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                   value: percentSpent.clamp(0.0, 1.0),
                   minHeight: 10,
                   backgroundColor: budget.color.withOpacity(0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(percentSpent)),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _getProgressColor(percentSpent),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -327,7 +362,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                       Icon(
                         isOverBudget ? Icons.trending_up : Icons.trending_down,
                         size: 16,
-                        color: isOverBudget ? Colors.red[700] : Colors.green[700],
+                        color: isOverBudget
+                            ? Colors.red[700]
+                            : Colors.green[700],
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -337,7 +374,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isOverBudget ? Colors.red[700] : Colors.green[700],
+                          color: isOverBudget
+                              ? Colors.red[700]
+                              : Colors.green[700],
                         ),
                       ),
                     ],
@@ -379,7 +418,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                       '${relatedPayments.length} ${relatedPayments.length == 1 ? 'payment' : 'payments'}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -403,8 +444,10 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                         ),
                       ),
                       Text(
-                        NumberFormat.currency(symbol: '₱', decimalDigits: 0)
-                            .format(upcomingPaymentsTotal),
+                        NumberFormat.currency(
+                          symbol: '₱',
+                          decimalDigits: 0,
+                        ).format(upcomingPaymentsTotal),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

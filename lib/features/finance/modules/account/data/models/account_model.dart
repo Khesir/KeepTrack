@@ -1,33 +1,21 @@
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:uuid/uuid.dart';
 
-final _uuid = Uuid();
+import '../../domain/entities/account_enums.dart';
 
-class AccountModel {
-  final String? id; // optional - db auto-generates
-  final String name;
-  final String? accountType;
-  final double balance;
-  final String? colorHex;
-  final String? iconCodePoint;
-  final String? bankAccountNumber;
-  final bool isActive;
-  final bool isArchived;
-  final DateTime? createdAt; // Optional - Supabase auto-generates
-  final DateTime? updatedAt; // Optional - Supabase auto-generates
-
+class AccountModel extends Account {
   AccountModel({
-    this.id,
-    required this.name,
-    this.accountType,
-    this.balance = 0,
-    this.colorHex,
-    this.iconCodePoint,
-    this.bankAccountNumber,
-    this.isActive = true,
-    this.isArchived = false,
-    this.createdAt,
-    this.updatedAt,
+    super.id,
+    required super.name,
+    super.accountType,
+    super.balance,
+    super.colorHex,
+    super.iconCodePoint,
+    super.bankAccountNumber,
+    super.isActive,
+    super.isArchived,
+    super.createdAt,
+    super.updatedAt,
+    super.userId,
   });
 
   /// Convert from domain entity to model
@@ -44,23 +32,7 @@ class AccountModel {
       isArchived: account.isArchived,
       createdAt: account.createdAt,
       updatedAt: account.updatedAt,
-    );
-  }
-
-  /// Convert from model to domain entity
-  Account toEntity() {
-    return Account(
-      id: id,
-      name: name,
-      accountType: accountType,
-      balance: balance,
-      colorHex: colorHex,
-      iconCodePoint: iconCodePoint,
-      bankAccountNumber: bankAccountNumber,
-      isActive: isActive,
-      isArchived: isArchived,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
+      userId: account.userId,
     );
   }
 
@@ -69,7 +41,7 @@ class AccountModel {
     return AccountModel(
       id: json['id'] as String?,
       name: json['name'] as String,
-      accountType: json['account_type'] as String?,
+      accountType: AccountTypeX.fromString(json['account_type'] as String?),
       balance: (json['balance'] as num?)?.toDouble() ?? 0,
       colorHex: json['color_hex'] as String?,
       iconCodePoint: json['icon_code_point'] as String?,
@@ -82,6 +54,7 @@ class AccountModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
+      userId: json['user_id'] as String?,
     );
   }
 
@@ -90,13 +63,14 @@ class AccountModel {
     return {
       if (id != null) 'id': id,
       'name': name,
-      if (accountType != null) 'account_type': accountType,
+      'account_type': accountType.name,
       'balance': balance,
       if (colorHex != null) 'color_hex': colorHex,
       if (iconCodePoint != null) 'icon_code_point': iconCodePoint,
       if (bankAccountNumber != null) 'bank_account_number': bankAccountNumber,
       'is_active': isActive,
       'is_archived': isArchived,
+      if (userId != null) 'user_id': userId,
     };
   }
 }

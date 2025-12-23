@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/core/ui/ui.dart';
-import 'tabs/accounts_tab_new.dart';
-import 'tabs/budgets_tab_new.dart';
-import 'tabs/debts_tab_new.dart';
-import 'tabs/goals_tab.dart';
-import 'tabs/planned_payments_tab.dart';
+import 'tabs/accounts/accounts_tab_new.dart';
+import 'tabs/budgets/budgets_tab_new.dart';
+import 'tabs/debts/debts_tab_new.dart';
+import 'tabs/goals/goals_tab.dart';
+import 'tabs/planned_payments/planned_payments_tab.dart';
 
 /// Main Finance Screen with Inner Tabs
 class FinanceMainScreen extends ScopedScreen {

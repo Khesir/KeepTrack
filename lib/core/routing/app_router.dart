@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:persona_codex/features/settings/setting_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
-import '../../features/finance/presentation/screens/configuration/budgets/budget_detail_screen.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/budget_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/create_budget_screen.dart';
 import '../../features/finance/presentation/screens/configuration/categories/category_management_screen.dart';
@@ -101,17 +100,17 @@ class AppRouter {
         );
 
       // Budget detail (view/edit existing budget)
-      case AppRoutes.budgetDetail:
-        final budget = settings.arguments as Budget?;
-        if (budget == null) {
-          return MaterialPageRoute(
-            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => BudgetDetailScreen(budget: budget),
-          settings: settings,
-        );
+      // case AppRoutes.budgetDetail:
+      //   final budget = settings.arguments as Budget?;
+      //   if (budget == null) {
+      //     return MaterialPageRoute(
+      //       builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
+      //     );
+      //   }
+      //   return MaterialPageRoute(
+      //     builder: (_) => BudgetDetailScreen(budget: budget),
+      //     settings: settings,
+      //   );
 
       // Budget create (new budget)
       case AppRoutes.budgetCreate:
@@ -176,7 +175,7 @@ class AppRouter {
       // Finance Management
       case AppRoutes.accountManagement:
         return MaterialPageRoute(
-          builder: (_) => const AccountManagement(),
+          builder: (_) => const AccountManagementScreen(),
           settings: settings,
         );
       case AppRoutes.categoryManagement:

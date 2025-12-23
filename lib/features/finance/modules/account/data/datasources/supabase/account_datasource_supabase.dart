@@ -1,3 +1,4 @@
+import 'package:persona_codex/core/error/failure.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../models/account_model.dart';
 import '../account_datasource.dart';
@@ -11,35 +12,63 @@ class AccountDataSourceSupabase implements AccountDataSource {
 
   @override
   Future<List<AccountModel>> getAccounts() async {
-    final response = await supabaseService.client
-        .from(tableName)
-        .select()
-        .order('created_at', ascending: false);
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .eq('user_id', supabaseService.userId!)
+          .order('created_at', ascending: false);
 
-    return (response as List).map((doc) => AccountModel.fromJson(doc)).toList();
+      return (response as List)
+          .map((doc) => AccountModel.fromJson(doc))
+          .toList();
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to fetch accounts',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<AccountModel?> getAccountById(String id) async {
-    final response = await supabaseService.client
-        .from(tableName)
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select()
+          .eq('id', id)
+          .eq('user_id', supabaseService.userId!)
+          .maybeSingle();
 
-    return response != null ? AccountModel.fromJson(response) : null;
+      return response != null ? AccountModel.fromJson(response) : null;
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to fetch account',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<AccountModel> createAccount(AccountModel account) async {
-    final doc = account.toJson();
-    final response = await supabaseService.client
-        .from(tableName)
-        .insert(doc)
-        .select()
-        .single();
+    try {
+      final doc = account.toJson();
+      final response = await supabaseService.client
+          .from(tableName)
+          .insert(doc)
+          .select()
+          .single();
 
-    return AccountModel.fromJson(response);
+      return AccountModel.fromJson(response);
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to create account',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
@@ -48,19 +77,40 @@ class AccountDataSourceSupabase implements AccountDataSource {
       throw Exception('Cannot update account without an ID');
     }
 
-    final doc = account.toJson();
-    final response = await supabaseService.client
-        .from(tableName)
-        .update(doc)
-        .eq('id', account.id!)
-        .select()
-        .single();
+    try {
+      final doc = account.toJson();
+      final response = await supabaseService.client
+          .from(tableName)
+          .update(doc)
+          .eq('id', account.id!)
+          .eq('user_id', supabaseService.userId!)
+          .select()
+          .single();
 
-    return AccountModel.fromJson(response);
+      return AccountModel.fromJson(response);
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to update account',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   @override
   Future<void> deleteAccount(String id) async {
-    await supabaseService.client.from(tableName).delete().eq('id', id);
+    try {
+      await supabaseService.client
+          .from(tableName)
+          .delete()
+          .eq('id', id)
+          .eq('user_id', supabaseService.userId!);
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to delete account',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 }
