@@ -2,6 +2,7 @@ import 'package:persona_codex/core/error/failure.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../models/budget_model.dart';
 import '../../models/budget_category_model.dart';
+import '../../../../finance_category/data/models/finance_category_model.dart';
 import '../budget_datasource.dart';
 import '../budget_category_datasource.dart';
 
@@ -16,28 +17,64 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
   @override
   Future<List<BudgetModel>> getBudgets() async {
     try {
+      // Use Supabase nested select to JOIN budget_categories and finance_categories in one query
       final response = await supabaseService.client
           .from(tableName)
-          .select()
+          .select('''
+            *,
+            budget_categories (
+              *,
+              finance_categories (*)
+            )
+          ''')
           .eq('user_id', supabaseService.userId!)
           .order('month', ascending: false);
 
-      final budgets = (response as List)
-          .map((doc) => BudgetModel.fromJson(doc as Map<String, dynamic>))
-          .toList();
+      return (response as List).map((doc) {
+        final budgetData = Map<String, dynamic>.from(doc);
 
-      // Load categories for each budget
-      return Future.wait(
-        budgets.map((budget) async {
-          if (budget.id == null) return budget;
+        // Extract nested budget_categories
+        final categoriesData = budgetData.remove('budget_categories') as List?;
 
-          final categories = await categoryDataSource.getCategoriesByBudgetId(
-            budget.id!,
-          );
+        // Create budget model
+        final budget = BudgetModel.fromJson(budgetData);
 
-          return budget.withCategories(categories);
-        }),
-      );
+        if (categoriesData == null || categoriesData.isEmpty) {
+          return budget;
+        }
+
+        // Map budget_categories with nested finance_categories
+        final categories = categoriesData.map((catData) {
+          final categoryMap = Map<String, dynamic>.from(catData);
+
+          // Extract nested finance_category
+          final financeCategoryData = categoryMap.remove('finance_categories') as Map<String, dynamic>?;
+
+          // Create budget category model
+          final budgetCategory = BudgetCategoryModel.fromJson(categoryMap);
+
+          // Hydrate with finance category if present
+          if (financeCategoryData != null) {
+            final financeCategory = FinanceCategoryModel.fromJson(financeCategoryData);
+            // Create new BudgetCategoryModel with hydrated finance category
+            return BudgetCategoryModel(
+              id: budgetCategory.id,
+              budgetId: budgetCategory.budgetId,
+              financeCategoryId: budgetCategory.financeCategoryId,
+              userId: budgetCategory.userId,
+              targetAmount: budgetCategory.targetAmount,
+              financeCategory: financeCategory.toEntity(),
+              spentAmount: budgetCategory.spentAmount,
+              createdAt: budgetCategory.createdAt,
+              updatedAt: budgetCategory.updatedAt,
+            );
+          }
+
+          return budgetCategory;
+        }).toList();
+
+        return budget.withCategories(categories);
+      }).toList();
     } catch (e, stackTrace) {
       throw UnknownFailure(
         message: 'Failed to fetch budgets',
@@ -50,19 +87,58 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
   @override
   Future<BudgetModel?> getBudgetById(String id) async {
     try {
+      // Use Supabase nested select to JOIN in one query
       final response = await supabaseService.client
           .from(tableName)
-          .select()
+          .select('''
+            *,
+            budget_categories (
+              *,
+              finance_categories (*)
+            )
+          ''')
           .eq('id', id)
           .eq('user_id', supabaseService.userId!)
           .maybeSingle();
 
       if (response == null) return null;
 
-      final budget = BudgetModel.fromJson(response as Map<String, dynamic>);
+      final budgetData = Map<String, dynamic>.from(response);
 
-      // Load categories
-      final categories = await categoryDataSource.getCategoriesByBudgetId(id);
+      // Extract nested budget_categories
+      final categoriesData = budgetData.remove('budget_categories') as List?;
+
+      // Create budget model
+      final budget = BudgetModel.fromJson(budgetData);
+
+      if (categoriesData == null || categoriesData.isEmpty) {
+        return budget;
+      }
+
+      // Map budget_categories with nested finance_categories
+      final categories = categoriesData.map((catData) {
+        final categoryMap = Map<String, dynamic>.from(catData);
+        final financeCategoryData = categoryMap.remove('finance_categories') as Map<String, dynamic>?;
+        final budgetCategory = BudgetCategoryModel.fromJson(categoryMap);
+
+        if (financeCategoryData != null) {
+          final financeCategory = FinanceCategoryModel.fromJson(financeCategoryData);
+          // Create new BudgetCategoryModel with hydrated finance category
+          return BudgetCategoryModel(
+            id: budgetCategory.id,
+            budgetId: budgetCategory.budgetId,
+            financeCategoryId: budgetCategory.financeCategoryId,
+            userId: budgetCategory.userId,
+            targetAmount: budgetCategory.targetAmount,
+            financeCategory: financeCategory.toEntity(),
+            spentAmount: budgetCategory.spentAmount,
+            createdAt: budgetCategory.createdAt,
+            updatedAt: budgetCategory.updatedAt,
+          );
+        }
+
+        return budgetCategory;
+      }).toList();
 
       return budget.withCategories(categories);
     } catch (e, stackTrace) {
@@ -77,27 +153,60 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
   @override
   Future<BudgetModel?> getBudgetByMonth(String month) async {
     try {
+      // Use Supabase nested select to JOIN in one query
       final response = await supabaseService.client
           .from(tableName)
-          .select()
+          .select('''
+            *,
+            budget_categories (
+              *,
+              finance_categories (*)
+            )
+          ''')
           .eq('month', month)
           .eq('user_id', supabaseService.userId!)
           .maybeSingle();
 
       if (response == null) return null;
 
-      final budget = BudgetModel.fromJson(response as Map<String, dynamic>);
+      final budgetData = Map<String, dynamic>.from(response);
 
-      // Load categories if budget has id
-      if (budget.id != null) {
-        final categories = await categoryDataSource.getCategoriesByBudgetId(
-          budget.id!,
-        );
+      // Extract nested budget_categories
+      final categoriesData = budgetData.remove('budget_categories') as List?;
 
-        return budget.withCategories(categories);
+      // Create budget model
+      final budget = BudgetModel.fromJson(budgetData);
+
+      if (categoriesData == null || categoriesData.isEmpty) {
+        return budget;
       }
 
-      return budget;
+      // Map budget_categories with nested finance_categories
+      final categories = categoriesData.map((catData) {
+        final categoryMap = Map<String, dynamic>.from(catData);
+        final financeCategoryData = categoryMap.remove('finance_categories') as Map<String, dynamic>?;
+        final budgetCategory = BudgetCategoryModel.fromJson(categoryMap);
+
+        if (financeCategoryData != null) {
+          final financeCategory = FinanceCategoryModel.fromJson(financeCategoryData);
+          // Create new BudgetCategoryModel with hydrated finance category
+          return BudgetCategoryModel(
+            id: budgetCategory.id,
+            budgetId: budgetCategory.budgetId,
+            financeCategoryId: budgetCategory.financeCategoryId,
+            userId: budgetCategory.userId,
+            targetAmount: budgetCategory.targetAmount,
+            financeCategory: financeCategory.toEntity(),
+            spentAmount: budgetCategory.spentAmount,
+            createdAt: budgetCategory.createdAt,
+            updatedAt: budgetCategory.updatedAt,
+          );
+        }
+
+        return budgetCategory;
+      }).toList();
+
+      return budget.withCategories(categories);
     } catch (e, stackTrace) {
       throw UnknownFailure(
         message: 'Failed to fetch budget by month',
@@ -170,24 +279,20 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      final response = await supabaseService.client
+      await supabaseService.client
           .from(tableName)
           .update(budgetData)
           .eq('id', budget.id!)
-          .eq('user_id', supabaseService.userId!)
-          .select()
-          .single();
+          .eq('user_id', supabaseService.userId!);
 
-      final updatedBudget = BudgetModel.fromJson(
-        response as Map<String, dynamic>,
-      );
+      // Fetch updated budget with nested categories
+      final updated = await getBudgetById(budget.id!);
 
-      // Load current categories
-      final categories = await categoryDataSource.getCategoriesByBudgetId(
-        budget.id!,
-      );
+      if (updated == null) {
+        throw Exception('Budget not found after update');
+      }
 
-      return updatedBudget.withCategories(categories);
+      return updated;
     } catch (e, stackTrace) {
       throw UnknownFailure(
         message: 'Failed to update budget',

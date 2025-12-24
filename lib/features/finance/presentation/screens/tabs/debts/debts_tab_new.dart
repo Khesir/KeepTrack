@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import '../../../../modules/debt/domain/entities/debt.dart';
+import '../../../state/debt_controller.dart';
 
 /// Debts Tab - Tracks Lending (money lent out) and Borrowing (money owed)
 class DebtsTabNew extends StatefulWidget {
@@ -10,120 +14,188 @@ class DebtsTabNew extends StatefulWidget {
 }
 
 class _DebtsTabNewState extends State<DebtsTabNew> {
+  late final DebtController _controller;
   String _selectedFilter = 'All'; // All, Lending, Borrowing
 
   @override
+  void initState() {
+    super.initState();
+    _controller = locator.get<DebtController>();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Calculate totals
-    final totalLending = dummyDebts
-        .where((d) => d.type == DebtType.lending)
-        .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
+    return AsyncStreamBuilder<List<Debt>>(
+      state: _controller,
+      builder: (context, debts) {
+        // Calculate totals
+        final totalLending = debts
+            .where((d) => d.type == DebtType.lending)
+            .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
 
-    final totalBorrowing = dummyDebts
-        .where((d) => d.type == DebtType.borrowing)
-        .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
+        final totalBorrowing = debts
+            .where((d) => d.type == DebtType.borrowing)
+            .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
 
-    // Filter debts
-    final filteredDebts = _selectedFilter == 'All'
-        ? dummyDebts
-        : dummyDebts.where((d) =>
-            _selectedFilter == 'Lending'
-              ? d.type == DebtType.lending
-              : d.type == DebtType.borrowing
-          ).toList();
+        // Filter debts
+        final filteredDebts = _selectedFilter == 'All'
+            ? debts
+            : debts.where((d) {
+                switch (_selectedFilter) {
+                  case 'Lending':
+                    return d.type == DebtType.lending;
+                  case 'Borrowing':
+                    return d.type == DebtType.borrowing;
+                  default:
+                    return true;
+                }
+              }).toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Summary Cards Row
-          Row(
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildSummaryCard(
-                  'Lending',
-                  totalLending,
-                  Colors.green,
-                  Icons.arrow_upward,
-                  'Money you lent',
-                ),
+              // Summary Cards Row
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildSummaryCard(
+                      'Lending',
+                      totalLending,
+                      Colors.green,
+                      Icons.arrow_upward,
+                      'Money you lent',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildSummaryCard(
+                      'Borrowing',
+                      totalBorrowing,
+                      Colors.red,
+                      Icons.arrow_downward,
+                      'Money you owe',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryCard(
-                  'Borrowing',
-                  totalBorrowing,
-                  Colors.red,
-                  Icons.arrow_downward,
-                  'Money you owe',
-                ),
+              const SizedBox(height: 24),
+
+              // Net Balance Card
+              _buildNetBalanceCard(totalLending - totalBorrowing),
+              const SizedBox(height: 24),
+
+              // Filter Chips
+              Row(
+                children: [
+                  _buildFilterChip('All'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Lending'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Borrowing'),
+                  const Spacer(),
+                  Text(
+                    '${filteredDebts.length} ${filteredDebts.length == 1 ? 'debt' : 'debts'}',
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 16),
+
+              // Debts List
+              if (filteredDebts.isEmpty)
+                _buildEmptyState()
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredDebts.length,
+                  itemBuilder: (context, index) {
+                    final debt = filteredDebts[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildDebtCard(debt),
+                    );
+                  },
+                ),
             ],
           ),
-          const SizedBox(height: 24),
-
-          // Net Balance Card
-          _buildNetBalanceCard(totalLending - totalBorrowing),
-          const SizedBox(height: 24),
-
-          // Filter Chips
-          Row(
+        );
+      },
+      loadingBuilder: (_) => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      errorBuilder: (context, message) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildFilterChip('All'),
-              const SizedBox(width: 8),
-              _buildFilterChip('Lending'),
-              const SizedBox(width: 8),
-              _buildFilterChip('Borrowing'),
-              const Spacer(),
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+              const SizedBox(height: 16),
               Text(
-                '${filteredDebts.length} ${filteredDebts.length == 1 ? 'debt' : 'debts'}',
+                'Error loading debts',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _controller.loadDebts(),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+        ),
+      ),
+    );
+  }
 
-          // Debts List
-          if (filteredDebts.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(48),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.receipt_long_outlined,
-                      size: 64,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No debts found',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredDebts.length,
-              itemBuilder: (context, index) {
-                final debt = filteredDebts[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildDebtCard(debt),
-                );
-              },
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 64,
+              color: Colors.grey[300],
             ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'No debts found',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Track lending and borrowing activities here',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -173,7 +245,10 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
             ),
             const SizedBox(height: 12),
             Text(
-              NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(amount),
+              NumberFormat.currency(
+                symbol: '₱',
+                decimalDigits: 2,
+              ).format(amount),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 22,
@@ -183,10 +258,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
             ),
           ],
         ),
@@ -203,8 +275,8 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isPositive
-              ? [Colors.blue[700]!, Colors.blue[500]!]
-              : [Colors.orange[700]!, Colors.orange[500]!],
+                ? [Colors.blue[700]!, Colors.blue[500]!]
+                : [Colors.orange[700]!, Colors.orange[500]!],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -231,14 +303,14 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 children: [
                   const Text(
                     'Net Balance',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(netBalance.abs()),
+                    NumberFormat.currency(
+                      symbol: '₱',
+                      decimalDigits: 2,
+                    ).format(netBalance.abs()),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -247,10 +319,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                   ),
                   Text(
                     isPositive ? 'You are owed more' : 'You owe more',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -275,19 +344,17 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
       checkmarkColor: Theme.of(context).colorScheme.primary,
       labelStyle: TextStyle(
         color: isSelected
-          ? Theme.of(context).colorScheme.primary
-          : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
     );
   }
 
-  Widget _buildDebtCard(DebtItem debt) {
+  Widget _buildDebtCard(Debt debt) {
     final isLending = debt.type == DebtType.lending;
     final color = isLending ? Colors.green : Colors.red;
-    final progress = debt.originalAmount > 0
-      ? (debt.originalAmount - debt.remainingAmount) / debt.originalAmount
-      : 0.0;
+    final progress = debt.progress;
 
     return Card(
       elevation: 0,
@@ -295,15 +362,11 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
       child: InkWell(
         onTap: () {
           // Navigate to debt detail
+          // context.push('/finance/debts/${debt.id}');
         },
         child: Container(
           decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: color,
-                width: 4,
-              ),
-            ),
+            border: Border(left: BorderSide(color: color, width: 4)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -341,20 +404,27 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                             debt.description,
                             style: TextStyle(
                               fontSize: 13,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(debt.status).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _getStatusText(debt.status),
+                        debt.status.displayName,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -377,13 +447,17 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                             'Remaining',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            NumberFormat.currency(symbol: '₱', decimalDigits: 2)
-                                .format(debt.remainingAmount),
+                            NumberFormat.currency(
+                              symbol: '₱',
+                              decimalDigits: 2,
+                            ).format(debt.remainingAmount),
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -400,16 +474,22 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                           'Original',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          NumberFormat.currency(symbol: '₱', decimalDigits: 2)
-                              .format(debt.originalAmount),
+                          NumberFormat.currency(
+                            symbol: '₱',
+                            decimalDigits: 2,
+                          ).format(debt.originalAmount),
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -429,7 +509,9 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                           'Repayment Progress',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                         Text(
@@ -462,14 +544,18 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                     Icon(
                       Icons.calendar_today,
                       size: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.5),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       'Started: ${DateFormat('MMM d, yyyy').format(debt.startDate)}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                     if (debt.dueDate != null) ...[
@@ -477,15 +563,20 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                       Icon(
                         Icons.event,
                         size: 14,
-                        color: _getDueDateColor(debt.dueDate!),
+                        color: _getDueDateColor(debt.dueDate!, debt.isOverdue),
                       ),
                       const SizedBox(width: 6),
                       Text(
                         'Due: ${DateFormat('MMM d, yyyy').format(debt.dueDate!)}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: _getDueDateColor(debt.dueDate!),
-                          fontWeight: _isOverdue(debt.dueDate!) ? FontWeight.bold : FontWeight.normal,
+                          color: _getDueDateColor(
+                            debt.dueDate!,
+                            debt.isOverdue,
+                          ),
+                          fontWeight: debt.isOverdue
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -510,19 +601,8 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
     }
   }
 
-  String _getStatusText(DebtStatus status) {
-    switch (status) {
-      case DebtStatus.active:
-        return 'Active';
-      case DebtStatus.overdue:
-        return 'Overdue';
-      case DebtStatus.settled:
-        return 'Settled';
-    }
-  }
-
-  Color _getDueDateColor(DateTime dueDate) {
-    if (_isOverdue(dueDate)) {
+  Color _getDueDateColor(DateTime dueDate, bool isOverdue) {
+    if (isOverdue) {
       return Colors.red;
     }
     final daysUntilDue = dueDate.difference(DateTime.now()).inDays;
@@ -531,122 +611,4 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
     }
     return Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
   }
-
-  bool _isOverdue(DateTime dueDate) {
-    return dueDate.isBefore(DateTime.now());
-  }
 }
-
-// Debt Type Enum
-enum DebtType { lending, borrowing }
-
-// Debt Status Enum
-enum DebtStatus { active, overdue, settled }
-
-// Debt Data Class
-class DebtItem {
-  final String id;
-  final DebtType type;
-  final String personName;
-  final String description;
-  final double originalAmount;
-  final double remainingAmount;
-  final DateTime startDate;
-  final DateTime? dueDate;
-  final DebtStatus status;
-  final String? notes;
-
-  DebtItem({
-    required this.id,
-    required this.type,
-    required this.personName,
-    required this.description,
-    required this.originalAmount,
-    required this.remainingAmount,
-    required this.startDate,
-    this.dueDate,
-    this.status = DebtStatus.active,
-    this.notes,
-  });
-}
-
-// Dummy Debt Data
-final dummyDebts = [
-  DebtItem(
-    id: '1',
-    type: DebtType.lending,
-    personName: 'Juan Dela Cruz',
-    description: 'Emergency loan',
-    originalAmount: 15000.00,
-    remainingAmount: 10000.00,
-    startDate: DateTime(2024, 11, 1),
-    dueDate: DateTime(2025, 3, 1),
-    status: DebtStatus.active,
-  ),
-  DebtItem(
-    id: '2',
-    type: DebtType.borrowing,
-    personName: 'Maria Santos',
-    description: 'Business capital',
-    originalAmount: 50000.00,
-    remainingAmount: 35000.00,
-    startDate: DateTime(2024, 10, 15),
-    dueDate: DateTime(2025, 4, 15),
-    status: DebtStatus.active,
-  ),
-  DebtItem(
-    id: '3',
-    type: DebtType.lending,
-    personName: 'Pedro Garcia',
-    description: 'Personal loan',
-    originalAmount: 8000.00,
-    remainingAmount: 2000.00,
-    startDate: DateTime(2024, 9, 20),
-    dueDate: DateTime(2024, 12, 20),
-    status: DebtStatus.active,
-  ),
-  DebtItem(
-    id: '4',
-    type: DebtType.borrowing,
-    personName: 'Bank Loan',
-    description: 'Car loan installment',
-    originalAmount: 200000.00,
-    remainingAmount: 150000.00,
-    startDate: DateTime(2024, 6, 1),
-    dueDate: DateTime(2026, 6, 1),
-    status: DebtStatus.active,
-  ),
-  DebtItem(
-    id: '5',
-    type: DebtType.lending,
-    personName: 'Ana Reyes',
-    description: 'School tuition help',
-    originalAmount: 12000.00,
-    remainingAmount: 12000.00,
-    startDate: DateTime(2024, 11, 15),
-    dueDate: DateTime(2024, 12, 15),
-    status: DebtStatus.overdue,
-  ),
-  DebtItem(
-    id: '6',
-    type: DebtType.borrowing,
-    personName: 'Credit Card',
-    description: 'Outstanding balance',
-    originalAmount: 25000.00,
-    remainingAmount: 18000.00,
-    startDate: DateTime(2024, 10, 1),
-    dueDate: DateTime(2025, 1, 31),
-    status: DebtStatus.active,
-  ),
-  DebtItem(
-    id: '7',
-    type: DebtType.lending,
-    personName: 'Roberto Cruz',
-    description: 'Startup investment',
-    originalAmount: 30000.00,
-    remainingAmount: 0.00,
-    startDate: DateTime(2024, 7, 1),
-    dueDate: DateTime(2024, 11, 1),
-    status: DebtStatus.settled,
-  ),
-];

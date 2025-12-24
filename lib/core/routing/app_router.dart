@@ -8,10 +8,12 @@ import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/budget_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/create_budget_screen.dart';
+import '../../features/finance/presentation/screens/configuration/budgets/budget_detail_screen.dart';
 import '../../features/finance/presentation/screens/configuration/categories/category_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/goals/goals_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/debts/debts_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/planned_payments/planned_payments_management_screen.dart';
+import '../../features/finance/presentation/screens/transactions/create_transaction_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 import '../../features/settings/management/task_status_management_screen.dart';
 import '../../features/settings/management/task_priority_management_screen.dart';
@@ -65,6 +67,9 @@ class AppRoutes {
   static const String debtsManagement = '/debts-management';
   static const String plannedPaymentsManagement =
       '/planned-payments-management';
+
+  // Transaction
+  static const String transactionCreate = '/create';
 }
 
 /// App router - handles all route generation
@@ -100,17 +105,17 @@ class AppRouter {
         );
 
       // Budget detail (view/edit existing budget)
-      // case AppRoutes.budgetDetail:
-      //   final budget = settings.arguments as Budget?;
-      //   if (budget == null) {
-      //     return MaterialPageRoute(
-      //       builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
-      //     );
-      //   }
-      //   return MaterialPageRoute(
-      //     builder: (_) => BudgetDetailScreen(budget: budget),
-      //     settings: settings,
-      //   );
+      case AppRoutes.budgetDetail:
+        final budget = settings.arguments as Budget?;
+        if (budget == null) {
+          return MaterialPageRoute(
+            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => BudgetDetailScreen(budget: budget),
+          settings: settings,
+        );
 
       // Budget create (new budget)
       case AppRoutes.budgetCreate:
@@ -204,6 +209,13 @@ class AppRouter {
           settings: settings,
         );
 
+      // Transaction
+      case AppRoutes.transactionCreate:
+        return MaterialPageRoute(
+          builder: (_) => const CreateTransactionScreen(),
+          settings: settings,
+        );
+
       // Unknown route
       default:
         return MaterialPageRoute(
@@ -291,6 +303,11 @@ extension NavigationExtensions on BuildContext {
 
   Future<void> goToBudgetCreate() {
     return AppRouter.push(this, AppRoutes.budgetCreate);
+  }
+
+  // Transaction
+  Future<void> goToTransactionCreate() {
+    return AppRouter.push(this, AppRoutes.transactionCreate);
   }
 
   // Generic

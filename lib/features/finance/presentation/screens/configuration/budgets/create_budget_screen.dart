@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
@@ -42,6 +41,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     // Initialize with current month only
     final now = DateTime.now();
     _selectedMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
+    // Load budgets to check for duplicates
+    _controller.loadBudgets();
   }
 
   String _formatMonthDisplay(String monthStr) {
@@ -117,6 +119,21 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       return;
     }
 
+    // Check if budget already exists for this month
+    if (_controller.budgetExistsForMonth(_selectedMonth, _supabaseService.userId)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'You already have a budget for ${_formatMonthDisplay(_selectedMonth)}',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isCreating = true);
 
     try {
@@ -126,15 +143,11 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
         categories: [],
         status: BudgetStatus.active,
         userId: _supabaseService.userId,
-        accountId: _selectedAccountId, // Add accountId here
+        accountId: _selectedAccountId,
       );
 
-      await _controller.createBudget(budget);
-
-      // Get the created budget to get its ID
-      final createdBudget = (_controller.data ?? []).firstWhere(
-        (b) => b.month == _selectedMonth && b.accountId == _selectedAccountId,
-      );
+      // Create budget and get the returned budget with ID
+      final createdBudget = await _controller.createBudget(budget);
 
       if (createdBudget.id == null) {
         throw Exception('Failed to get created budget ID');

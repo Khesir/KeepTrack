@@ -60,7 +60,7 @@ class FinanceCategoryDataSourceSupabase implements FinanceCategoryDataSource {
           .from(tableName)
           .select()
           .eq('id', id)
-          .eq('user_id', supabaseService.userId!)
+          .or('user_id.eq.${supabaseService.userId},user_id.is.null')
           .maybeSingle();
 
       return response != null ? FinanceCategoryModel.fromJson(response) : null;
@@ -82,10 +82,7 @@ class FinanceCategoryDataSourceSupabase implements FinanceCategoryDataSource {
           .from(tableName)
           .select()
           .filter('id', 'in', '(${ids.map((e) => "'$e'").join(',')})')
-          .eq(
-            'user_id',
-            supabaseService.userId!,
-          ); // optional, if you want user scope
+          .or('user_id.eq.${supabaseService.userId},user_id.is.null');
 
       return (response as List<dynamic>)
           .map(

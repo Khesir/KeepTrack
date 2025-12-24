@@ -40,14 +40,70 @@ class Budget {
   /// Calculate total budgeted income
   double get totalBudgetedIncome => getTotalBudgetedByType(CategoryType.income);
 
-  /// Calculate total budgeted expenses
+  /// Calculate total budgeted expenses (expense + investment + savings + transfer)
   double get totalBudgetedExpenses =>
       getTotalBudgetedByType(CategoryType.expense) +
       getTotalBudgetedByType(CategoryType.investment) +
-      getTotalBudgetedByType(CategoryType.savings);
+      getTotalBudgetedByType(CategoryType.savings) +
+      getTotalBudgetedByType(CategoryType.transfer);
 
-  /// Calculate budgeted balance
-  double get budgetedBalance => totalBudgetedIncome - totalBudgetedExpenses;
+  /// Budget Target = Sum of ALL category targets
+  double get budgetTarget {
+    return categories.fold(0.0, (sum, cat) => sum + cat.targetAmount);
+  }
+
+  /// Calculate total spent amount across all categories
+  double get totalSpent {
+    return categories.fold(
+      0.0,
+      (sum, cat) => sum + (cat.spentAmount ?? 0.0),
+    );
+  }
+
+  /// Calculate total spent on income categories
+  double get totalIncomeReceived {
+    return categories
+        .where((cat) => cat.financeCategory?.type == CategoryType.income)
+        .fold(0.0, (sum, cat) => sum + (cat.spentAmount ?? 0.0));
+  }
+
+  /// Calculate total spent on expense categories (expense + investment + savings + transfer)
+  double get totalExpensesSpent {
+    return categories
+        .where((cat) =>
+            cat.financeCategory?.type == CategoryType.expense ||
+            cat.financeCategory?.type == CategoryType.investment ||
+            cat.financeCategory?.type == CategoryType.savings ||
+            cat.financeCategory?.type == CategoryType.transfer)
+        .fold(0.0, (sum, cat) => sum + (cat.spentAmount ?? 0.0));
+  }
+
+  /// Remaining budget = budgetTarget - totalSpent
+  double get remainingBudget {
+    return budgetTarget - totalSpent;
+  }
+
+  /// Over-budget check: spent more than planned target
+  bool get isOverBudget {
+    return totalSpent > budgetTarget;
+  }
+
+  /// Surplus/Deficit (only meaningful when budget is closed)
+  /// Surplus = Income received > Expenses spent (you have money left)
+  /// Deficit = Expenses spent > Income received (you overspent your income)
+  double get surplusOrDeficit {
+    return totalIncomeReceived - totalExpensesSpent;
+  }
+
+  /// Check if budget has surplus (only when closed)
+  bool get hasSurplus {
+    return status == BudgetStatus.closed && surplusOrDeficit > 0;
+  }
+
+  /// Check if budget has deficit (only when closed)
+  bool get hasDeficit {
+    return status == BudgetStatus.closed && surplusOrDeficit < 0;
+  }
 
   Budget copyWith({
     String? id,

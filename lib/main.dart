@@ -363,7 +363,6 @@ Widget _buildErrorScreen(
 
 /// Setup all dependencies
 void _setupDependencies() {
-
   // Core Supabase service (shared infrastructure)
   // Note: Supabase is already initialized in main(), we just wrap the client
   locator.registerLazySingleton<SupabaseService>(() {
@@ -396,9 +395,7 @@ class PersonalCodexApp extends StatelessWidget {
       onGenerateRoute: AppRouter.onGenerateRoute,
 
       // Home screen (bottom nav with tabs) - protected by auth guard
-      home: const AuthGuard(
-        child: MainScreen(),
-      ),
+      home: const AuthGuard(child: MainScreen()),
     );
   }
 }

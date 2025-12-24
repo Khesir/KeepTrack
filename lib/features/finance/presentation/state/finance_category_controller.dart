@@ -60,4 +60,20 @@ class FinanceCategoryController
       return current;
     });
   }
+
+  /// Get categories by IDs from cached data
+  List<FinanceCategory> getCategoriesByIds(List<String> ids) {
+    final categories = data ?? [];
+    return categories.where((cat) => ids.contains(cat.id)).toList();
+  }
+
+  /// Get a single category by ID from cached data
+  FinanceCategory? getCategoryById(String id) {
+    final categories = data ?? [];
+    try {
+      return categories.firstWhere((cat) => cat.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
 }

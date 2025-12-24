@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/features/finance/modules/goal/domain/entities/goal.dart';
+import '../../../state/goal_controller.dart';
 
 /// Goals Tab - Track financial goals and savings targets
 class GoalsTabNew extends StatefulWidget {
@@ -10,95 +14,174 @@ class GoalsTabNew extends StatefulWidget {
 }
 
 class _GoalsTabNewState extends State<GoalsTabNew> {
+  late final GoalController _controller;
   String _selectedFilter = 'All'; // All, Active, Completed, Paused
 
   @override
+  void initState() {
+    super.initState();
+    _controller = locator.get<GoalController>();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Calculate summary stats
-    final activeGoals = dummyGoals.where((g) => g.status == GoalStatus.active).toList();
-    final totalTargetAmount = activeGoals.fold<double>(0, (sum, goal) => sum + goal.targetAmount);
-    final totalSavedAmount = activeGoals.fold<double>(0, (sum, goal) => sum + goal.currentAmount);
-    final overallProgress = totalTargetAmount > 0 ? totalSavedAmount / totalTargetAmount : 0.0;
+    return AsyncStreamBuilder<List<Goal>>(
+      state: _controller,
+      builder: (context, goals) {
+        // Calculate summary stats
+        final activeGoals = goals
+            .where((g) => g.status == GoalStatus.active)
+            .toList();
+        final totalTargetAmount = activeGoals.fold<double>(
+          0,
+          (sum, goal) => sum + goal.targetAmount,
+        );
+        final totalSavedAmount = activeGoals.fold<double>(
+          0,
+          (sum, goal) => sum + goal.currentAmount,
+        );
+        final overallProgress = totalTargetAmount > 0
+            ? totalSavedAmount / totalTargetAmount
+            : 0.0;
 
-    // Filter goals
-    final filteredGoals = _selectedFilter == 'All'
-        ? dummyGoals
-        : dummyGoals.where((g) =>
-            _selectedFilter == 'Active'
-              ? g.status == GoalStatus.active
-              : _selectedFilter == 'Completed'
-                ? g.status == GoalStatus.completed
-                : g.status == GoalStatus.paused
-          ).toList();
+        // Filter goals
+        final filteredGoals = _selectedFilter == 'All'
+            ? goals
+            : goals.where((g) {
+                switch (_selectedFilter) {
+                  case 'Active':
+                    return g.status == GoalStatus.active;
+                  case 'Completed':
+                    return g.status == GoalStatus.completed;
+                  case 'Paused':
+                    return g.status == GoalStatus.paused;
+                  default:
+                    return true;
+                }
+              }).toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Overall Progress Card
-          _buildOverallProgressCard(totalTargetAmount, totalSavedAmount, overallProgress, activeGoals.length),
-          const SizedBox(height: 24),
-
-          // Filter Chips
-          Row(
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildFilterChip('All'),
-              const SizedBox(width: 8),
-              _buildFilterChip('Active'),
-              const SizedBox(width: 8),
-              _buildFilterChip('Completed'),
-              const SizedBox(width: 8),
-              _buildFilterChip('Paused'),
-              const Spacer(),
-              Text(
-                '${filteredGoals.length} ${filteredGoals.length == 1 ? 'goal' : 'goals'}',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              // Overall Progress Card
+              _buildOverallProgressCard(
+                totalTargetAmount,
+                totalSavedAmount,
+                overallProgress,
+                activeGoals.length,
+              ),
+              const SizedBox(height: 24),
+
+              // Filter Chips
+              Row(
+                children: [
+                  _buildFilterChip('All'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Active'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Completed'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Paused'),
+                  const Spacer(),
+                  Text(
+                    '${filteredGoals.length} ${filteredGoals.length == 1 ? 'goal' : 'goals'}',
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Goals List
+              if (filteredGoals.isEmpty)
+                _buildEmptyState()
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredGoals.length,
+                  itemBuilder: (context, index) {
+                    final goal = filteredGoals[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildGoalCard(goal),
+                    );
+                  },
                 ),
+            ],
+          ),
+        );
+      },
+      loadingBuilder: (_) => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      errorBuilder: (context, message) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading goals',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _controller.loadGoals(),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+        ),
+      ),
+    );
+  }
 
-          // Goals List
-          if (filteredGoals.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(48),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.flag_outlined,
-                      size: 64,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No goals found',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          children: [
+            Icon(Icons.flag_outlined, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              'No goals found',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
               ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredGoals.length,
-              itemBuilder: (context, index) {
-                final goal = filteredGoals[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildGoalCard(goal),
-                );
-              },
             ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Create your first financial goal to start tracking',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -141,10 +224,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                 const SizedBox(width: 12),
                 const Text(
                   'Overall Progress',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
               ],
             ),
@@ -158,14 +238,14 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                     children: [
                       const Text(
                         'Total Saved',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(totalSaved),
+                        NumberFormat.currency(
+                          symbol: '₱',
+                          decimalDigits: 0,
+                        ).format(totalSaved),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -183,7 +263,10 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -240,17 +323,27 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
       checkmarkColor: Theme.of(context).colorScheme.primary,
       labelStyle: TextStyle(
         color: isSelected
-          ? Theme.of(context).colorScheme.primary
-          : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
     );
   }
 
-  Widget _buildGoalCard(GoalItem goal) {
-    final progress = goal.targetAmount > 0 ? goal.currentAmount / goal.targetAmount : 0.0;
-    final remaining = goal.targetAmount - goal.currentAmount;
-    final daysRemaining = goal.targetDate?.difference(DateTime.now()).inDays ?? 0;
+  Widget _buildGoalCard(Goal goal) {
+    final progress = goal.progress;
+    final remaining = goal.remainingAmount;
+    final daysRemaining = goal.daysRemaining ?? 0;
+
+    // Parse color from hex string
+    final color = goal.colorHex != null
+        ? Color(int.parse(goal.colorHex!.replaceFirst('#', '0xFF')))
+        : Colors.purple;
+
+    // Parse icon from code point
+    final icon = goal.iconCodePoint != null
+        ? IconData(int.parse(goal.iconCodePoint!), fontFamily: 'MaterialIcons')
+        : Icons.flag;
 
     return Card(
       elevation: 0,
@@ -258,15 +351,11 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
       child: InkWell(
         onTap: () {
           // Navigate to goal detail
+          // context.push('/finance/goals/${goal.id}');
         },
         child: Container(
           decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: goal.color,
-                width: 4,
-              ),
-            ),
+            border: Border(left: BorderSide(color: color, width: 4)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -279,14 +368,10 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: goal.color.withOpacity(0.1),
+                        color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        goal.icon,
-                        color: goal.color,
-                        size: 24,
-                      ),
+                      child: Icon(icon, color: color, size: 24),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -304,20 +389,27 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                             goal.description,
                             style: TextStyle(
                               fontSize: 13,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(goal.status).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _getStatusText(goal.status),
+                        goal.status.displayName,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -340,17 +432,21 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                             'Current',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            NumberFormat.currency(symbol: '₱', decimalDigits: 0)
-                                .format(goal.currentAmount),
+                            NumberFormat.currency(
+                              symbol: '₱',
+                              decimalDigits: 0,
+                            ).format(goal.currentAmount),
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: goal.color,
+                              color: color,
                             ),
                           ),
                         ],
@@ -363,16 +459,22 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                           'Target',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          NumberFormat.currency(symbol: '₱', decimalDigits: 0)
-                              .format(goal.targetAmount),
+                          NumberFormat.currency(
+                            symbol: '₱',
+                            decimalDigits: 0,
+                          ).format(goal.targetAmount),
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -390,14 +492,16 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                       children: [
                         Text(
                           remaining > 0
-                            ? '${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(remaining)} to go'
-                            : 'Goal Achieved!',
+                              ? '${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(remaining)} to go'
+                              : 'Goal Achieved!',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: remaining > 0
-                              ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                              : Colors.green[700],
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6)
+                                : Colors.green[700],
                           ),
                         ),
                         Text(
@@ -405,7 +509,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: goal.color,
+                            color: color,
                           ),
                         ),
                       ],
@@ -415,8 +519,8 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: progress.clamp(0.0, 1.0),
-                        backgroundColor: goal.color.withOpacity(0.1),
-                        valueColor: AlwaysStoppedAnimation<Color>(goal.color),
+                        backgroundColor: color.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
                         minHeight: 8,
                       ),
                     ),
@@ -425,15 +529,17 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                 const SizedBox(height: 16),
 
                 // Target Date and Days Remaining
-                Row(
-                  children: [
-                    if (goal.targetDate != null) ...[
+                if (goal.targetDate != null)
+                  Row(
+                    children: [
                       Icon(
                         Icons.event,
                         size: 14,
                         color: daysRemaining < 30
-                          ? Colors.orange[700]
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            ? Colors.orange[700]
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.5),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -441,19 +547,26 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                         style: TextStyle(
                           fontSize: 12,
                           color: daysRemaining < 30
-                            ? Colors.orange[700]
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                          fontWeight: daysRemaining < 30 ? FontWeight.w600 : FontWeight.normal,
+                              ? Colors.orange[700]
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.5),
+                          fontWeight: daysRemaining < 30
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
                       if (daysRemaining > 0) ...[
                         const SizedBox(width: 12),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: daysRemaining < 30
-                              ? Colors.orange[50]
-                              : Colors.blue[50],
+                                ? Colors.orange[50]
+                                : Colors.blue[50],
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -462,15 +575,14 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: daysRemaining < 30
-                                ? Colors.orange[700]
-                                : Colors.blue[700],
+                                  ? Colors.orange[700]
+                                  : Colors.blue[700],
                             ),
                           ),
                         ),
                       ],
                     ],
-                  ],
-                ),
+                  ),
 
                 // Monthly contribution
                 if (goal.monthlyContribution > 0) ...[
@@ -497,8 +609,10 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                           ),
                         ),
                         Text(
-                          NumberFormat.currency(symbol: '₱', decimalDigits: 0)
-                              .format(goal.monthlyContribution),
+                          NumberFormat.currency(
+                            symbol: '₱',
+                            decimalDigits: 0,
+                          ).format(goal.monthlyContribution),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -527,144 +641,4 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
         return Colors.orange;
     }
   }
-
-  String _getStatusText(GoalStatus status) {
-    switch (status) {
-      case GoalStatus.active:
-        return 'Active';
-      case GoalStatus.completed:
-        return 'Completed';
-      case GoalStatus.paused:
-        return 'Paused';
-    }
-  }
 }
-
-// Goal Status Enum
-enum GoalStatus { active, completed, paused }
-
-// Goal Data Class
-class GoalItem {
-  final String id;
-  final String name;
-  final String description;
-  final double targetAmount;
-  final double currentAmount;
-  final DateTime? targetDate;
-  final Color color;
-  final IconData icon;
-  final GoalStatus status;
-  final double monthlyContribution;
-
-  GoalItem({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.targetAmount,
-    required this.currentAmount,
-    this.targetDate,
-    required this.color,
-    required this.icon,
-    this.status = GoalStatus.active,
-    this.monthlyContribution = 0,
-  });
-}
-
-// Dummy Goals Data
-final dummyGoals = [
-  GoalItem(
-    id: '1',
-    name: 'Emergency Fund',
-    description: '6 months of expenses',
-    targetAmount: 150000,
-    currentAmount: 95000,
-    targetDate: DateTime(2025, 6, 30),
-    color: Colors.red[700]!,
-    icon: Icons.emergency,
-    status: GoalStatus.active,
-    monthlyContribution: 10000,
-  ),
-  GoalItem(
-    id: '2',
-    name: 'New Car',
-    description: 'Down payment for new vehicle',
-    targetAmount: 200000,
-    currentAmount: 75000,
-    targetDate: DateTime(2025, 12, 31),
-    color: Colors.blue[700]!,
-    icon: Icons.directions_car,
-    status: GoalStatus.active,
-    monthlyContribution: 15000,
-  ),
-  GoalItem(
-    id: '3',
-    name: 'Vacation Fund',
-    description: 'Japan trip 2025',
-    targetAmount: 80000,
-    currentAmount: 45000,
-    targetDate: DateTime(2025, 10, 15),
-    color: Colors.orange[700]!,
-    icon: Icons.flight_takeoff,
-    status: GoalStatus.active,
-    monthlyContribution: 5000,
-  ),
-  GoalItem(
-    id: '4',
-    name: 'House Down Payment',
-    description: 'Save for new home',
-    targetAmount: 500000,
-    currentAmount: 180000,
-    targetDate: DateTime(2026, 12, 31),
-    color: Colors.green[700]!,
-    icon: Icons.home,
-    status: GoalStatus.active,
-    monthlyContribution: 20000,
-  ),
-  GoalItem(
-    id: '5',
-    name: 'Laptop Upgrade',
-    description: 'MacBook Pro M3',
-    targetAmount: 120000,
-    currentAmount: 120000,
-    targetDate: DateTime(2024, 11, 30),
-    color: Colors.purple[700]!,
-    icon: Icons.laptop_mac,
-    status: GoalStatus.completed,
-    monthlyContribution: 0,
-  ),
-  GoalItem(
-    id: '6',
-    name: 'Education Fund',
-    description: 'Masters degree tuition',
-    targetAmount: 300000,
-    currentAmount: 85000,
-    targetDate: DateTime(2026, 6, 1),
-    color: Colors.indigo[700]!,
-    icon: Icons.school,
-    status: GoalStatus.active,
-    monthlyContribution: 12000,
-  ),
-  GoalItem(
-    id: '7',
-    name: 'Investment Portfolio',
-    description: 'Build diversified portfolio',
-    targetAmount: 250000,
-    currentAmount: 60000,
-    targetDate: DateTime(2027, 1, 1),
-    color: Colors.teal[700]!,
-    icon: Icons.trending_up,
-    status: GoalStatus.active,
-    monthlyContribution: 8000,
-  ),
-  GoalItem(
-    id: '8',
-    name: 'Fitness Equipment',
-    description: 'Home gym setup',
-    targetAmount: 50000,
-    currentAmount: 22000,
-    color: Colors.pink[700]!,
-    icon: Icons.fitness_center,
-    status: GoalStatus.paused,
-    monthlyContribution: 0,
-  ),
-];

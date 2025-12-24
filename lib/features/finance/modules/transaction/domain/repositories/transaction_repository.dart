@@ -1,43 +1,46 @@
+import 'package:persona_codex/core/error/result.dart';
 import '../entities/transaction.dart';
 
 /// Transaction repository interface
 abstract class TransactionRepository {
   /// Get all transactions
-  Future<List<Transaction>> getTransactions();
+  Future<Result<List<Transaction>>> getTransactions();
 
   /// Get transactions for a specific account
-  Future<List<Transaction>> getTransactionsByAccount(String accountId);
+  Future<Result<List<Transaction>>> getTransactionsByAccount(String accountId);
 
   /// Get transactions for a specific budget
-  Future<List<Transaction>> getTransactionsByBudget(String budgetId);
+  Future<Result<List<Transaction>>> getTransactionsByBudget(String budgetId);
 
   /// Get transactions for a specific category
-  Future<List<Transaction>> getTransactionsByCategory(String categoryId);
+  Future<Result<List<Transaction>>> getTransactionsByCategory(
+    String categoryId,
+  );
 
   /// Get transactions within a date range
-  Future<List<Transaction>> getTransactionsByDateRange(
+  Future<Result<List<Transaction>>> getTransactionsByDateRange(
     DateTime startDate,
     DateTime endDate,
   );
 
   /// Get recent transactions (limited)
-  Future<List<Transaction>> getRecentTransactions({int limit = 10});
+  Future<Result<List<Transaction>>> getRecentTransactions({int limit = 10});
 
   /// Get transaction by ID
-  Future<Transaction?> getTransactionById(String id);
+  Future<Result<Transaction?>> getTransactionById(String id);
 
   /// Create a new transaction
-  Future<Transaction> createTransaction(Transaction transaction);
+  Future<Result<Transaction>> createTransaction(Transaction transaction);
 
   /// Update a transaction
-  Future<Transaction> updateTransaction(Transaction transaction);
+  Future<Result<Transaction>> updateTransaction(Transaction transaction);
 
   /// Delete a transaction
-  Future<void> deleteTransaction(String id);
+  Future<Result<void>> deleteTransaction(String id);
 
   /// Get total income for a period
-  Future<double> getTotalIncome(DateTime startDate, DateTime endDate);
+  Future<Result<double>> getTotalIncome(DateTime startDate, DateTime endDate);
 
   /// Get total expenses for a period
-  Future<double> getTotalExpenses(DateTime startDate, DateTime endDate);
+  Future<Result<double>> getTotalExpenses(DateTime startDate, DateTime endDate);
 }

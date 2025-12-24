@@ -1,5 +1,6 @@
 import 'package:persona_codex/core/migrations/migrations/003_create_accounts_table.dart';
 import 'package:persona_codex/core/migrations/migrations/012_create_budget_categories_table.dart';
+import 'package:persona_codex/core/migrations/migrations/016_update_accounts_to_uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:persona_codex/core/logging/app_logger.dart';
 import 'migration.dart';
@@ -14,6 +15,10 @@ import 'migrations/009_create_planned_payments_table.dart';
 import 'migrations/010_add_task_financial_fields.dart';
 import 'migrations/011_create_finance_categories_table.dart';
 import 'migrations/013_update_budget_schema.dart';
+import 'migrations/014_remove_budget_month_unique.dart';
+import 'migrations/015_add_budget_spent_calculation.dart';
+import 'migrations/017_update_transactions_structure.dart';
+import 'migrations/018_add_transaction_type.dart';
 
 /// Manages database migrations
 ///
@@ -239,6 +244,11 @@ class MigrationManager {
     Migration011CreateFinanceCategoriesTable(),
     Migration012CreateBudgetCategoriesTable(),
     Migration013UpdateBudgetsTable(),
+    Migration014RemoveBudgetMonthUnique(),
+    Migration015AddBudgetSpentCalculation(),
+    Migration016UpdateAccountsToUUID(),
+    Migration017UpdateTransactionsStructure(),
+    Migration018AddTransactionType(),
     // Add new migrations here:
   ];
 

@@ -21,13 +21,22 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   }
 
   /// Create a new budget
-  Future<void> createBudget(Budget budget) async {
+  Future<Budget> createBudget(Budget budget) async {
+    Budget? createdBudget;
     await execute(() async {
       final result = await _repository.createBudget(budget);
       final created = result.unwrap();
+      createdBudget = created;
       final current = data ?? [];
       return [...current, created];
     });
+    return createdBudget!;
+  }
+
+  /// Check if a budget exists for a specific month and user
+  bool budgetExistsForMonth(String month, String? userId) {
+    final budgets = data ?? [];
+    return budgets.any((b) => b.month == month && b.userId == userId);
   }
 
   /// Update an existing budget

@@ -1,6 +1,5 @@
 import 'package:persona_codex/core/error/result.dart';
 import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
 
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';
@@ -14,19 +13,17 @@ import '../models/budget_category_model.dart';
 class BudgetRepositoryImpl implements BudgetRepository {
   final BudgetDataSource dataSource;
   final BudgetCategoryDataSource categoryDataSource;
-  final FinanceCategoryRepository financeCategoryRepository;
 
   BudgetRepositoryImpl(
     this.dataSource,
     this.categoryDataSource,
-    this.financeCategoryRepository,
   );
 
   @override
   Future<Result<List<Budget>>> getBudgets() async {
     final models = await dataSource.getBudgets();
-    final hydrated = await Future.wait(models.map(_hydrateBudget));
-    return Result.success(hydrated);
+    // Models are already hydrated with finance categories from datasource
+    return Result.success(models);
   }
 
   @override
@@ -35,8 +32,8 @@ class BudgetRepositoryImpl implements BudgetRepository {
     if (model == null) {
       return Result.error(NotFoundFailure(message: 'Budget not found: $id'));
     }
-    final hydrated = await _hydrateBudget(model);
-    return Result.success(hydrated);
+    // Model is already hydrated with finance categories from datasource
+    return Result.success(model);
   }
 
   @override
@@ -47,8 +44,8 @@ class BudgetRepositoryImpl implements BudgetRepository {
         NotFoundFailure(message: 'Budget not found for month: $month'),
       );
     }
-    final hydrated = await _hydrateBudget(model);
-    return Result.success(hydrated);
+    // Model is already hydrated with finance categories from datasource
+    return Result.success(model);
   }
 
   @override
@@ -73,16 +70,16 @@ class BudgetRepositoryImpl implements BudgetRepository {
   Future<Result<Budget>> createBudget(Budget budget) async {
     final model = BudgetModel.fromEntity(budget);
     final created = await dataSource.createBudget(model);
-    final hydrated = await _hydrateBudget(created);
-    return Result.success(hydrated);
+    // Created budget is already hydrated with finance categories from datasource
+    return Result.success(created);
   }
 
   @override
   Future<Result<Budget>> updateBudget(Budget budget) async {
     final model = BudgetModel.fromEntity(budget);
     final updated = await dataSource.updateBudget(model);
-    final hydrated = await _hydrateBudget(updated);
-    return Result.success(hydrated);
+    // Updated budget is already hydrated with finance categories from datasource
+    return Result.success(updated);
   }
 
   @override
@@ -191,27 +188,4 @@ class BudgetRepositoryImpl implements BudgetRepository {
     return getBudgetById(budgetId);
   }
 
-  Future<Budget> _hydrateBudget(Budget budget) async {
-    // Collect all financeCategoryIds
-    final categoryIds = budget.categories
-        .map((c) => c.financeCategoryId)
-        .toSet()
-        .toList();
-
-    if (categoryIds.isEmpty) return budget;
-
-    // Fetch categories in one call
-    final financeCategories = await financeCategoryRepository
-        .getByIds(categoryIds)
-        .then((r) => r.unwrap());
-
-    final categoryMap = {for (final c in financeCategories) c.id!: c};
-
-    // Hydrate categories
-    final hydratedCategories = budget.categories.map((cat) {
-      return cat.copyWith(financeCategory: categoryMap[cat.financeCategoryId]);
-    }).toList();
-
-    return budget.copyWith(categories: hydratedCategories);
-  }
 }

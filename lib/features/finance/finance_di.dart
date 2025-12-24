@@ -49,8 +49,8 @@ void setupFinanceDependencies() {
     return AccountDataSourceSupabase(supabaseService);
   });
   locator.registerFactory<TransactionDataSource>(() {
-    final client = Supabase.instance.client;
-    return TransactionDataSourceSupabase(client);
+    final supabaseService = locator.get<SupabaseService>();
+    return TransactionDataSourceSupabase(supabaseService);
   });
   locator.registerFactory<GoalDataSource>(() {
     final supabaseService = locator.get<SupabaseService>();
@@ -89,7 +89,6 @@ void setupFinanceDependencies() {
     () => BudgetRepositoryImpl(
       locator.get<BudgetDataSource>(),
       locator.get<BudgetCategoryDataSource>(),
-      locator.get<FinanceCategoryRepository>(),
     ),
   );
   locator.registerFactory<AccountRepository>(() {

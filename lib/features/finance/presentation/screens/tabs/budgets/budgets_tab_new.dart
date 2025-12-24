@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../modules/planned_payment/domain/entities/payment_enums.dart';
 import '../planned_payments/planned_payments_tab.dart';
 
 /// Budgets Tab with Progress Tracking and Planned Payments Integration
@@ -228,10 +229,10 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
     final isOverBudget = budget.spent > budget.limit;
 
     // Find related planned payments
-    final relatedPayments = dummyPlannedPayments.where((payment) {
-      return _mapPaymentCategoryToBudget(payment.category) == budget.category;
-    }).toList();
-
+    // final relatedPayments = dummyPlannedPayments.where((payment) {
+    //   return _mapPaymentCategoryToBudget(payment.category) == budget.category;
+    // }).toList();
+    final relatedPayments = [];
     final upcomingPaymentsTotal = relatedPayments
         .where((p) => p.status == PaymentStatus.active)
         .fold<double>(0, (sum, p) => sum + p.amount);

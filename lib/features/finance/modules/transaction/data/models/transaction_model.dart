@@ -5,8 +5,7 @@ class TransactionModel extends Transaction {
   TransactionModel({
     super.id,
     super.accountId,
-    super.categoryId,
-    super.budgetId,
+    super.financeCategoryId,
     required super.amount,
     required super.type,
     super.description,
@@ -14,6 +13,7 @@ class TransactionModel extends Transaction {
     super.notes,
     super.createdAt,
     super.updatedAt,
+    super.userId,
   });
 
   /// Convert from entity
@@ -21,8 +21,7 @@ class TransactionModel extends Transaction {
     return TransactionModel(
       id: transaction.id,
       accountId: transaction.accountId,
-      categoryId: transaction.categoryId,
-      budgetId: transaction.budgetId,
+      financeCategoryId: transaction.financeCategoryId,
       amount: transaction.amount,
       type: transaction.type,
       description: transaction.description,
@@ -30,6 +29,7 @@ class TransactionModel extends Transaction {
       notes: transaction.notes,
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
+      userId: transaction.userId,
     );
   }
 
@@ -38,8 +38,7 @@ class TransactionModel extends Transaction {
     return TransactionModel(
       id: json['id'] as String?,
       accountId: json['account_id'] as String?,
-      categoryId: json['category_id'] as String?,
-      budgetId: json['budget_id'] as String?,
+      financeCategoryId: json['finance_category_id'] as String?,
       amount: (json['amount'] as num).toDouble(),
       type: TransactionType.values.firstWhere(
         (e) => e.name == json['type'],
@@ -54,6 +53,7 @@ class TransactionModel extends Transaction {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
+      userId: json['user_id'] as String?,
     );
   }
 
@@ -62,8 +62,7 @@ class TransactionModel extends Transaction {
     return {
       if (id != null) 'id': id,
       'account_id': accountId,
-      'category_id': categoryId,
-      'budget_id': budgetId,
+      'finance_category_id': financeCategoryId,
       'amount': amount,
       'type': type.name,
       'description': description,
@@ -71,6 +70,7 @@ class TransactionModel extends Transaction {
       'notes': notes,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      if (userId != null) 'user_id': userId,
     };
   }
 
@@ -79,8 +79,7 @@ class TransactionModel extends Transaction {
     return Transaction(
       id: id,
       accountId: accountId,
-      categoryId: categoryId,
-      budgetId: budgetId,
+      financeCategoryId: financeCategoryId,
       amount: amount,
       type: type,
       description: description,
@@ -88,6 +87,7 @@ class TransactionModel extends Transaction {
       notes: notes,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      userId: userId,
     );
   }
 }
