@@ -1,6 +1,5 @@
 import 'package:persona_codex/core/error/result.dart';
 import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/core/logging/app_logger.dart';
 import 'package:persona_codex/features/finance/modules/planned_payment/data/datasources/planned_payment_datasource.dart';
 import 'package:persona_codex/features/finance/modules/planned_payment/data/models/planned_payment_model.dart';
 import 'package:persona_codex/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
@@ -93,6 +92,18 @@ class PlannedPaymentRepositoryImpl implements PlannedPaymentRepository {
     }
 
     final payment = result.data;
+
+    // For one-time payments, close them after recording payment
+    if (payment.frequency == PaymentFrequency.oneTime) {
+      final updated = payment.copyWith(
+        lastPaymentDate: DateTime.now(),
+        status: PaymentStatus.closed,
+        updatedAt: DateTime.now(),
+      );
+      return updatePlannedPayment(updated);
+    }
+
+    // For recurring payments, calculate next payment date
     final updated = payment.copyWith(
       lastPaymentDate: DateTime.now(),
       nextPaymentDate: _calculateNextPaymentDate(
@@ -111,24 +122,36 @@ class PlannedPaymentRepositoryImpl implements PlannedPaymentRepository {
     PaymentFrequency frequency,
   ) {
     return switch (frequency) {
+      PaymentFrequency.oneTime =>
+        currentDate, // Won't be used, but return current
       PaymentFrequency.daily => currentDate.add(const Duration(days: 1)),
       PaymentFrequency.weekly => currentDate.add(const Duration(days: 7)),
       PaymentFrequency.biweekly => currentDate.add(const Duration(days: 14)),
-      PaymentFrequency.monthly => DateTime(
-        currentDate.year,
-        currentDate.month + 1,
-        currentDate.day,
-      ),
-      PaymentFrequency.quarterly => DateTime(
-        currentDate.year,
-        currentDate.month + 3,
-        currentDate.day,
-      ),
+      PaymentFrequency.monthly => _addMonths(currentDate, 1),
+      PaymentFrequency.quarterly => _addMonths(currentDate, 3),
       PaymentFrequency.yearly => DateTime(
         currentDate.year + 1,
         currentDate.month,
         currentDate.day,
       ),
     };
+  }
+
+  /// Add months to a date, handling edge cases like month-end dates
+  DateTime _addMonths(DateTime date, int months) {
+    var year = date.year;
+    var month = date.month + months;
+
+    // Handle year rollover
+    while (month > 12) {
+      year++;
+      month -= 12;
+    }
+
+    // Handle edge case: if day doesn't exist in target month (e.g., Jan 31 -> Feb 28)
+    final daysInTargetMonth = DateTime(year, month + 1, 0).day;
+    final day = date.day > daysInTargetMonth ? daysInTargetMonth : date.day;
+
+    return DateTime(year, month, day);
   }
 }

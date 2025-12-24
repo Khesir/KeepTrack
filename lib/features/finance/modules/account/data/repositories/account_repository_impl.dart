@@ -13,7 +13,9 @@ class AccountRepositoryImpl implements AccountRepository {
 
   @override
   Future<Result<List<Account>>> getAccounts() async {
-    final accounts = await dataSource.getAccounts();
+    final accountModels = await dataSource.getAccounts();
+    // Convert List<AccountModel> to List<Account>
+    final accounts = accountModels.cast<Account>();
     return Result.success(accounts);
   }
 

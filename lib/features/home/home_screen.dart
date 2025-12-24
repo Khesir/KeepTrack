@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/core/ui/ui.dart';
 import 'package:persona_codex/core/routing/app_router.dart';
+import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
+import 'package:persona_codex/features/finance/modules/budget/domain/entities/budget.dart';
+import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
+import 'package:persona_codex/features/finance/presentation/state/budget_controller.dart';
 import 'package:persona_codex/features/home/widgets/admin_panel_widget.dart';
 
 class HomeScreen extends ScopedScreen {
@@ -13,14 +20,20 @@ class HomeScreen extends ScopedScreen {
 
 class _HomeScreenState extends ScopedScreenState<HomeScreen>
     with AppLayoutControlled {
+  late final AccountController _accountController;
+  late final BudgetController _budgetController;
+
   @override
   void registerServices() {
-    // No services needed for now
+    _accountController = locator.get<AccountController>();
+    _budgetController = locator.get<BudgetController>();
   }
 
   @override
   void onReady() {
     configureLayout(title: 'Home', showBottomNav: true);
+    _accountController.loadAccounts();
+    _budgetController.loadBudgets();
   }
 
   String _getGreeting() {
@@ -151,14 +164,74 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
   }
 
   Widget _buildFinanceSnapshot() {
-    // Mock data
-    const mainAccountBalance = 45000.0;
-    const budgetAmount = 60000.0;
-    const plannedExpenses = 35000.0;
-    const actualSpent = 15000.0;
+    return AsyncStreamBuilder<List<Account>>(
+      state: _accountController,
+      loadingBuilder: (_) => Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        child: Container(
+          height: 250,
+          alignment: Alignment.center,
+          child: const CircularProgressIndicator(),
+        ),
+      ),
+      errorBuilder: (context, message) => Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text('Error loading finance data: $message'),
+        ),
+      ),
+      builder: (context, accounts) {
+        // Calculate total balance across all accounts
+        final totalBalance = accounts.fold<double>(
+          0.0,
+          (sum, account) => sum + account.balance,
+        );
 
-    final plannedPercentage = (plannedExpenses / budgetAmount).clamp(0.0, 1.0);
-    final actualPercentage = (actualSpent / budgetAmount).clamp(0.0, 1.0);
+        return AsyncStreamBuilder<List<Budget>>(
+          state: _budgetController,
+          loadingBuilder: (_) => Card(
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            child: Container(
+              height: 250,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+          ),
+          errorBuilder: (context, message) => _buildFinanceCard(
+            totalBalance,
+            accounts.length,
+            null,
+          ),
+          builder: (context, budgets) {
+            // Get current month budget
+            final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
+            Budget? currentBudget;
+            try {
+              currentBudget = budgets.firstWhere(
+                (b) => b.month == currentMonth && b.status == BudgetStatus.active,
+              );
+            } catch (e) {
+              currentBudget = null;
+            }
+
+            return _buildFinanceCard(totalBalance, accounts.length, currentBudget);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFinanceCard(double totalBalance, int accountCount, Budget? budget) {
+    final budgetTarget = budget?.budgetTarget ?? 0.0;
+    final actualSpent = budget?.totalSpent ?? 0.0;
+
+    final actualPercentage = budgetTarget > 0
+        ? (actualSpent / budgetTarget).clamp(0.0, 1.0)
+        : 0.0;
 
     return Card(
       elevation: 0,
@@ -166,147 +239,167 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Finance Overview',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.account_balance_wallet,
-                         size: 16, color: Colors.green[700]),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Main Wallet',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.green[700],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Account Balance
-          Text(
-            '₱${mainAccountBalance.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
-          ),
-          const Text(
-            'Current Balance',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Budget HP Bar
-          const Text(
-            'Monthly Budget',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // HP-style bar
-          Container(
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[300]!, width: 2),
-            ),
-            child: Stack(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Planned background (yellow/orange)
-                if (plannedPercentage > 0)
-                  FractionallySizedBox(
-                    widthFactor: plannedPercentage,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.orange[300],
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
+                const Text(
+                  'Finance Overview',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                // Actual spent (red)
-                if (actualPercentage > 0)
-                  FractionallySizedBox(
-                    widthFactor: actualPercentage,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.red[400]!, Colors.red[600]!],
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withOpacity(0.3),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                    ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                // Amount text overlay
-                Center(
-                  child: Text(
-                    '₱${actualSpent.toStringAsFixed(0)} / ₱${budgetAmount.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black54,
-                          blurRadius: 2,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.account_balance_wallet,
+                          size: 16, color: Colors.green[700]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'All Accounts',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green[700],
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-          // Legend
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegendItem(Colors.red[500]!, 'Spent'),
-              const SizedBox(width: 16),
-              _buildLegendItem(Colors.orange[300]!, 'Planned'),
-              const SizedBox(width: 16),
-              _buildLegendItem(Colors.grey[300]!, 'Remaining'),
-            ],
-          ),
-        ],
+            // Account Balance
+            Text(
+              '₱${NumberFormat('#,##0.00').format(totalBalance)}',
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            const Text(
+              'Current Balance',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Budget HP Bar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Monthly Budget',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                if (budget == null)
+                  Text(
+                    'No active budget',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // HP-style bar
+            Container(
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey[300]!, width: 2),
+              ),
+              child: budget != null
+                  ? Stack(
+                      children: [
+                        // Actual spent
+                        if (actualPercentage > 0)
+                          FractionallySizedBox(
+                            widthFactor: actualPercentage,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: budget.isOverBudget
+                                      ? [Colors.red[400]!, Colors.red[600]!]
+                                      : [Colors.blue[400]!, Colors.blue[600]!],
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (budget.isOverBudget
+                                            ? Colors.red
+                                            : Colors.blue)
+                                        .withOpacity(0.3),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        // Amount text overlay
+                        Center(
+                          child: Text(
+                            '₱${actualSpent.toStringAsFixed(0)} / ₱${budgetTarget.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black54,
+                                  blurRadius: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Center(
+                      child: Text(
+                        'Create a budget to track spending',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 12),
+
+            // Legend
+            if (budget != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildLegendItem(
+                    budget.isOverBudget ? Colors.red[500]! : Colors.blue[500]!,
+                    'Spent',
+                  ),
+                  const SizedBox(width: 16),
+                  _buildLegendItem(Colors.grey[300]!, 'Remaining'),
+                ],
+              ),
+          ],
         ),
       ),
     );
@@ -353,16 +446,98 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildStatusCard(
-            title: 'Money',
-            icon: Icons.account_balance_wallet,
-            color: Colors.green,
-            mainStat: '₱45K',
-            mainLabel: 'Available',
-            subStats: [
-              ('3', 'Accounts'),
-              ('₱15K', 'Spent'),
-            ],
+          child: AsyncStreamBuilder<List<Account>>(
+            state: _accountController,
+            loadingBuilder: (_) => Card(
+              elevation: 0,
+              margin: EdgeInsets.zero,
+              child: Container(
+                height: 150,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(),
+              ),
+            ),
+            errorBuilder: (context, message) => _buildStatusCard(
+              title: 'Money',
+              icon: Icons.account_balance_wallet,
+              color: Colors.green,
+              mainStat: 'Error',
+              mainLabel: 'Loading failed',
+              subStats: [],
+            ),
+            builder: (context, accounts) {
+              final totalBalance = accounts.fold<double>(
+                0.0,
+                (sum, account) => sum + account.balance,
+              );
+
+              // Format balance for loading/error states
+              final balanceKFormatted = totalBalance >= 1000
+                  ? '₱${(totalBalance / 1000).toStringAsFixed(1)}K'
+                  : '₱${totalBalance.toStringAsFixed(0)}';
+
+              return AsyncStreamBuilder<List<Budget>>(
+                state: _budgetController,
+                loadingBuilder: (_) => _buildStatusCard(
+                  title: 'Money',
+                  icon: Icons.account_balance_wallet,
+                  color: Colors.green,
+                  mainStat: balanceKFormatted,
+                  mainLabel: 'Available',
+                  subStats: [
+                    ('${accounts.length}', accounts.length == 1 ? 'Account' : 'Accounts'),
+                    ('--', 'Spent'),
+                  ],
+                ),
+                errorBuilder: (context, message) => _buildStatusCard(
+                  title: 'Money',
+                  icon: Icons.account_balance_wallet,
+                  color: Colors.green,
+                  mainStat: balanceKFormatted,
+                  mainLabel: 'Available',
+                  subStats: [
+                    ('${accounts.length}', accounts.length == 1 ? 'Account' : 'Accounts'),
+                    ('--', 'Spent'),
+                  ],
+                ),
+                builder: (context, budgets) {
+                  // Get current month budget
+                  final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
+                  Budget? currentBudget;
+                  try {
+                    currentBudget = budgets.firstWhere(
+                      (b) => b.month == currentMonth && b.status == BudgetStatus.active,
+                    );
+                  } catch (e) {
+                    currentBudget = null;
+                  }
+
+                  final spent = currentBudget?.totalSpent ?? 0.0;
+
+                  // Format balance in K format
+                  final balanceK = totalBalance >= 1000
+                      ? '₱${(totalBalance / 1000).toStringAsFixed(1)}K'
+                      : '₱${totalBalance.toStringAsFixed(0)}';
+
+                  // Format spent in K format
+                  final spentK = spent >= 1000
+                      ? '₱${(spent / 1000).toStringAsFixed(1)}K'
+                      : '₱${spent.toStringAsFixed(0)}';
+
+                  return _buildStatusCard(
+                    title: 'Money',
+                    icon: Icons.account_balance_wallet,
+                    color: Colors.green,
+                    mainStat: balanceK,
+                    mainLabel: 'Available',
+                    subStats: [
+                      ('${accounts.length}', accounts.length == 1 ? 'Account' : 'Accounts'),
+                      (spentK, 'Spent'),
+                    ],
+                  );
+                },
+              );
+            },
           ),
         ),
       ],
@@ -546,7 +721,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
         Navigator.pushNamed(context, AppRoutes.taskCreate);
       }),
       ('Add Transaction', Icons.add_circle, Colors.green, () {
-        // Navigate to create transaction
+        Navigator.pushNamed(context, AppRoutes.transactionCreate);
       }),
       ('View Budget', Icons.account_balance, Colors.purple, () {
         Navigator.pushNamed(context, AppRoutes.budgetList);

@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:persona_codex/features/settings/setting_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
+import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/budget_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/create_budget_screen.dart';
@@ -211,8 +212,16 @@ class AppRouter {
 
       // Transaction
       case AppRoutes.transactionCreate:
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (_) => const CreateTransactionScreen(),
+          builder: (_) => CreateTransactionScreen(
+            initialDescription: args?['initialDescription'] as String?,
+            initialAmount: args?['initialAmount'] as double?,
+            initialCategoryId: args?['initialCategoryId'] as String?,
+            initialAccountId: args?['initialAccountId'] as String?,
+            initialType: args?['initialType'] as TransactionType?,
+            callback: args?['callback'] as Future<void> Function()?,
+          ),
           settings: settings,
         );
 
@@ -306,8 +315,27 @@ extension NavigationExtensions on BuildContext {
   }
 
   // Transaction
-  Future<void> goToTransactionCreate() {
-    return AppRouter.push(this, AppRoutes.transactionCreate);
+  Future<void> goToTransactionCreate({
+    String? initialDescription,
+    double? initialAmount,
+    String? initialCategoryId,
+    String? initialAccountId,
+    TransactionType? initialType,
+    Function? callback,
+  }) {
+    return AppRouter.push(
+      this,
+      AppRoutes.transactionCreate,
+      arguments: {
+        if (initialDescription != null)
+          'initialDescription': initialDescription,
+        if (initialAmount != null) 'initialAmount': initialAmount,
+        if (initialCategoryId != null) 'initialCategoryId': initialCategoryId,
+        if (initialAccountId != null) 'initialAccountId': initialAccountId,
+        if (initialType != null) 'initialType': initialType,
+        if (callback != null) 'callback': callback,
+      },
+    );
   }
 
   // Generic

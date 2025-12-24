@@ -59,10 +59,13 @@ enum PaymentFrequency {
   biweekly,
   monthly,
   quarterly,
-  yearly;
+  yearly,
+  oneTime;
 
   String get displayName {
     switch (this) {
+      case PaymentFrequency.oneTime:
+        return 'One-time';
       case PaymentFrequency.daily:
         return 'Daily';
       case PaymentFrequency.weekly:
@@ -82,7 +85,8 @@ enum PaymentFrequency {
 enum PaymentStatus {
   active,
   paused,
-  cancelled;
+  cancelled,
+  closed;
 
   String get displayName {
     switch (this) {
@@ -92,6 +96,8 @@ enum PaymentStatus {
         return 'Paused';
       case PaymentStatus.cancelled:
         return 'Cancelled';
+      case PaymentStatus.closed:
+        return 'Closed';
     }
   }
 }

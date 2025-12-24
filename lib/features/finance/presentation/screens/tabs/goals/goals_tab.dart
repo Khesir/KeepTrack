@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/routing/app_router.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import 'package:persona_codex/features/finance/modules/goal/domain/entities/goal.dart';
+import 'package:persona_codex/features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../../state/goal_controller.dart';
 
 /// Goals Tab - Track financial goals and savings targets
@@ -623,6 +625,35 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                     ),
                   ),
                 ],
+
+                // Add Transaction Button
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.goToTransactionCreate(
+                      initialDescription: 'Goal: ${goal.name}',
+                      initialAmount: goal.monthlyContribution > 0
+                          ? goal.monthlyContribution
+                          : null,
+                      initialType: TransactionType.expense,
+                    );
+                  },
+                  icon: Icon(Icons.add, size: 18, color: Colors.blue),
+                  label: Text(
+                    'Create Transaction',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.blue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

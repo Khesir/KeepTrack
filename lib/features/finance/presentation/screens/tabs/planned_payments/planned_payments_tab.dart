@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/routing/app_router.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../../../modules/planned_payment/domain/entities/payment_enums.dart';
 import '../../../../modules/planned_payment/domain/entities/planned_payment.dart';
 import '../../../state/planned_payment_controller.dart';
@@ -604,6 +606,50 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                     ],
                   ),
                 ],
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: payment.status == PaymentStatus.active
+                      ? () {
+                          context.goToTransactionCreate(
+                            initialDescription:
+                                "Paid Recurring Payment ${payment.name}",
+                            initialType: TransactionType.expense,
+                            initialAmount: payment.amount,
+                            callback: () =>
+                                _controller.recordPayment(payment.id!),
+                          );
+                        }
+                      : null, // Disabled when not active
+                  icon: Icon(
+                    Icons.add,
+                    size: 18,
+                    color: payment.status == PaymentStatus.active
+                        ? Colors.blue
+                        : Colors.grey,
+                  ),
+                  label: Text(
+                    'Create Transaction',
+                    style: TextStyle(
+                      color: payment.status == PaymentStatus.active
+                          ? Colors.blue
+                          : Colors.grey,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: payment.status == PaymentStatus.active
+                          ? Colors.blue
+                          : Colors.grey,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -620,6 +666,8 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
         return Colors.orange;
       case PaymentStatus.cancelled:
         return Colors.red;
+      case PaymentStatus.closed:
+        return Colors.grey;
     }
   }
 }

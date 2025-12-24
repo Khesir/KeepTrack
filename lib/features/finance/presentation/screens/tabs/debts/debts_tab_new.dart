@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/routing/app_router.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import '../../../../modules/debt/domain/entities/debt.dart';
+import '../../../../modules/transaction/domain/entities/transaction.dart';
 import '../../../state/debt_controller.dart';
 
 /// Debts Tab - Tracks Lending (money lent out) and Borrowing (money owed)
@@ -581,6 +583,34 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                       ),
                     ],
                   ],
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    context.goToTransactionCreate(
+                      initialDescription: debt.type == DebtType.lending
+                          ? "Received payment from ${debt.personName}"
+                          : "Paid Debt from ${debt.personName}",
+                      initialType: debt.type == DebtType.lending
+                          ? TransactionType.income
+                          : TransactionType.expense,
+                    );
+                  },
+                  icon: Icon(Icons.add, size: 18, color: color),
+                  label: Text(
+                    'Create Transaction',
+                    style: TextStyle(color: color),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: color),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
                 ),
               ],
             ),

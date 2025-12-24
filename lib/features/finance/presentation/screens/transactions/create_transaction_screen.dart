@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../modules/account/domain/entities/account.dart';
 import '../../../modules/finance_category/domain/entities/finance_category.dart';
 import '../../../modules/finance_category/domain/entities/finance_category_enums.dart';
@@ -14,7 +13,22 @@ import '../../state/transaction_controller.dart';
 
 /// Screen for creating a new transaction
 class CreateTransactionScreen extends StatefulWidget {
-  const CreateTransactionScreen({super.key});
+  final String? initialDescription;
+  final double? initialAmount;
+  final String? initialCategoryId;
+  final String? initialAccountId;
+  final TransactionType? initialType;
+  final Function? callback;
+
+  const CreateTransactionScreen({
+    super.key,
+    this.initialDescription,
+    this.initialAmount,
+    this.initialCategoryId,
+    this.initialAccountId,
+    this.initialType,
+    this.callback,
+  });
 
   @override
   State<CreateTransactionScreen> createState() =>
@@ -44,6 +58,23 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     _accountController = locator.get<AccountController>();
     _categoryController = locator.get<FinanceCategoryController>();
     supabaseService = locator.get<SupabaseService>();
+
+    // Initialize with provided values
+    if (widget.initialDescription != null) {
+      _descriptionController.text = widget.initialDescription!;
+    }
+    if (widget.initialAmount != null) {
+      _amountController.text = widget.initialAmount!.toStringAsFixed(2);
+    }
+    if (widget.initialAccountId != null) {
+      _selectedAccountId = widget.initialAccountId;
+    }
+    if (widget.initialCategoryId != null) {
+      _selectedCategoryId = widget.initialCategoryId;
+    }
+    if (widget.initialType != null) {
+      _selectedType = widget.initialType!;
+    }
 
     // Load accounts and categories
     _accountController.loadAccounts();
@@ -115,6 +146,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
       await _transactionController.createTransaction(transaction);
 
+      if (widget.callback != null) {
+        await widget.callback!();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transaction created successfully')),

@@ -8,7 +8,6 @@ import 'package:persona_codex/features/finance/modules/finance_category/data/dat
 import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/supabase/finance_category_datasource_supabase.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
 import 'package:persona_codex/features/finance/presentation/state/budget_controller.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/di/service_locator.dart';
 import '../../shared/infrastructure/supabase/supabase_service.dart';
