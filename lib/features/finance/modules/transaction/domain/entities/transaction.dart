@@ -11,6 +11,13 @@ class Transaction {
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final String? userId;
+
+  // Context metadata - links to related entities
+  final String? debtId; // Link to debt if this transaction is a debt payment
+  final String? goalId; // Link to goal if this transaction is a goal contribution
+  final String? plannedPaymentId; // Link to planned payment if this transaction fulfills one
+  final String? refundedTransactionId; // Link to original transaction if this is a refund
+
   Transaction({
     this.id,
     this.accountId,
@@ -23,6 +30,10 @@ class Transaction {
     this.createdAt,
     this.updatedAt,
     this.userId,
+    this.debtId,
+    this.goalId,
+    this.plannedPaymentId,
+    this.refundedTransactionId,
   });
 
   Transaction copyWith({
@@ -37,6 +48,10 @@ class Transaction {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? userId,
+    String? debtId,
+    String? goalId,
+    String? plannedPaymentId,
+    String? refundedTransactionId,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -50,6 +65,10 @@ class Transaction {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       userId: userId ?? this.userId,
+      debtId: debtId ?? this.debtId,
+      goalId: goalId ?? this.goalId,
+      plannedPaymentId: plannedPaymentId ?? this.plannedPaymentId,
+      refundedTransactionId: refundedTransactionId ?? this.refundedTransactionId,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
@@ -18,7 +19,6 @@ class CreateTransactionScreen extends StatefulWidget {
   final String? initialCategoryId;
   final String? initialAccountId;
   final TransactionType? initialType;
-  final Function? callback;
 
   const CreateTransactionScreen({
     super.key,
@@ -27,7 +27,6 @@ class CreateTransactionScreen extends StatefulWidget {
     this.initialCategoryId,
     this.initialAccountId,
     this.initialType,
-    this.callback,
   });
 
   @override
@@ -90,16 +89,42 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   }
 
   Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
+
+    if (pickedDate != null && mounted) {
+      // Now select time
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_selectedDate),
+      );
+
+      if (pickedTime != null && mounted) {
+        setState(() {
+          _selectedDate = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      } else {
+        // User cancelled time picker, use picked date with current time
+        setState(() {
+          _selectedDate = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            _selectedDate.hour,
+            _selectedDate.minute,
+          );
+        });
+      }
     }
   }
 
@@ -146,9 +171,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
       await _transactionController.createTransaction(transaction);
 
-      if (widget.callback != null) {
-        await widget.callback!();
-      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transaction created successfully')),
@@ -373,13 +395,13 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Date Selector
+            // Date & Time Selector
             InkWell(
               onTap: _selectDate,
               borderRadius: BorderRadius.circular(12),
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: 'Date',
+                  labelText: 'Date & Time',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -390,7 +412,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                      DateFormat('MMM d, y • h:mm a').format(_selectedDate),
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const Icon(Icons.calendar_today),

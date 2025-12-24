@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/routing/app_router.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:persona_codex/features/finance/modules/goal/domain/entities/goal.dart';
-import 'package:persona_codex/features/finance/modules/transaction/domain/entities/transaction.dart';
+import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
+import 'package:persona_codex/features/finance/presentation/state/finance_category_controller.dart';
+import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../state/goal_controller.dart';
 
 /// Goals Tab - Track financial goals and savings targets
@@ -17,12 +21,169 @@ class GoalsTabNew extends StatefulWidget {
 
 class _GoalsTabNewState extends State<GoalsTabNew> {
   late final GoalController _controller;
+  late final AccountController _accountController;
+  late final FinanceCategoryController _categoryController;
+  late final SupabaseService _supabaseService;
   String _selectedFilter = 'All'; // All, Active, Completed, Paused
 
   @override
   void initState() {
     super.initState();
     _controller = locator.get<GoalController>();
+    _accountController = locator.get<AccountController>();
+    _categoryController = locator.get<FinanceCategoryController>();
+    _supabaseService = locator.get<SupabaseService>();
+
+    // Load accounts and categories
+    _accountController.loadAccounts();
+    _categoryController.loadCategories();
+  }
+
+  Future<void> _showRecordPaymentDialog(Goal goal) async {
+    final amountController = TextEditingController(
+      text: goal.monthlyContribution > 0 ? goal.monthlyContribution.toStringAsFixed(2) : '',
+    );
+    String? selectedAccountId;
+    String? selectedCategoryId;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Record Payment for ${goal.name}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Amount Field
+              TextField(
+                controller: amountController,
+                decoration: InputDecoration(
+                  labelText: 'Amount',
+                  prefixText: '₱',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+
+              // Account Selector
+              AsyncStreamBuilder<List<Account>>(
+                state: _accountController,
+                builder: (context, accounts) {
+                  return DropdownButtonFormField<String>(
+                    value: selectedAccountId,
+                    decoration: InputDecoration(
+                      labelText: 'Account',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: accounts.map((account) => DropdownMenuItem(
+                      value: account.id,
+                      child: Text(account.name),
+                    )).toList(),
+                    onChanged: (value) => selectedAccountId = value,
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Category Selector (expense categories only)
+              AsyncStreamBuilder<List<FinanceCategory>>(
+                state: _categoryController,
+                builder: (context, categories) {
+                  final expenseCategories = categories
+                      .where((c) => c.type == CategoryType.expense)
+                      .toList();
+
+                  return DropdownButtonFormField<String>(
+                    value: selectedCategoryId,
+                    decoration: InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: expenseCategories.map((category) => DropdownMenuItem(
+                      value: category.id,
+                      child: Text(category.name),
+                    )).toList(),
+                    onChanged: (value) => selectedCategoryId = value,
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid amount')),
+                );
+                return;
+              }
+
+              if (selectedAccountId == null) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please select an account')),
+                );
+                return;
+              }
+
+              if (selectedCategoryId == null) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please select a category')),
+                );
+                return;
+              }
+
+              // Call RPC function
+              try {
+                await _supabaseService.client.rpc(
+                  'create_goal_payment_transaction',
+                  params: {
+                    'p_user_id': _supabaseService.userId,
+                    'p_account_id': selectedAccountId,
+                    'p_finance_category_id': selectedCategoryId,
+                    'p_amount': amount,
+                    'p_type': 'expense',
+                    'p_description': 'Goal: ${goal.name}',
+                    'p_date': DateTime.now().toIso8601String(),
+                    'p_notes': null,
+                    'p_goal_id': goal.id,
+                  },
+                );
+
+                // Reload goals
+                _controller.loadGoals();
+
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext, true);
+                }
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text('Failed to record payment: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Record Payment'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment recorded successfully')),
+      );
+    }
+
+    amountController.dispose();
   }
 
   @override
@@ -629,18 +790,10 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                 // Add Transaction Button
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    context.goToTransactionCreate(
-                      initialDescription: 'Goal: ${goal.name}',
-                      initialAmount: goal.monthlyContribution > 0
-                          ? goal.monthlyContribution
-                          : null,
-                      initialType: TransactionType.expense,
-                    );
-                  },
+                  onPressed: () => _showRecordPaymentDialog(goal),
                   icon: Icon(Icons.add, size: 18, color: Colors.blue),
                   label: Text(
-                    'Create Transaction',
+                    'Record Payment',
                     style: TextStyle(color: Colors.blue),
                   ),
                   style: OutlinedButton.styleFrom(
