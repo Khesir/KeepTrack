@@ -30,17 +30,18 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
     supabaseService = locator.get<SupabaseService>();
   }
 
-  void _showTaskDialog({Task? task, List<Project>? projects, List<Task>? allTasks}) {
-    // Filter to get only main tasks (not subtasks) for parent task selection
-    final parentTasks = allTasks?.where((t) => !t.isSubtask).toList();
-
+  void _showTaskDialog({
+    Task? task,
+    List<Project>? projects,
+    String? parentTaskId,
+  }) {
     showDialog(
       context: context,
       builder: (context) => TaskManagementDialog(
         task: task,
         userId: supabaseService.userId!,
         projects: projects,
-        parentTasks: parentTasks,
+        parentTaskId: parentTaskId,
         onSave: (updatedTask) async {
           try {
             if (task != null) {
@@ -109,28 +110,12 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
       appBar: AppBar(
         title: const Text('Tasks'),
         actions: [
-          AsyncStreamBuilder<List<Task>>(
-            state: _controller,
-            builder: (context, tasks) {
-              return AsyncStreamBuilder<List<Project>>(
-                state: _projectController,
-                builder: (context, projects) {
-                  return IconButton(
-                    onPressed: () => _showTaskDialog(
-                      projects: projects,
-                      allTasks: tasks,
-                    ),
-                    icon: const Icon(Icons.add),
-                  );
-                },
-                loadingBuilder: (_) => IconButton(
-                  onPressed: () => _showTaskDialog(allTasks: tasks),
-                  icon: const Icon(Icons.add),
-                ),
-                errorBuilder: (_, __) => IconButton(
-                  onPressed: () => _showTaskDialog(allTasks: tasks),
-                  icon: const Icon(Icons.add),
-                ),
+          AsyncStreamBuilder<List<Project>>(
+            state: _projectController,
+            builder: (context, projects) {
+              return IconButton(
+                onPressed: () => _showTaskDialog(projects: projects),
+                icon: const Icon(Icons.add),
               );
             },
             loadingBuilder: (_) => IconButton(
@@ -144,12 +129,15 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
           ),
         ],
       ),
-      body: AsyncStreamBuilder<List<Task>>(
-        state: _controller,
-        builder: (context, tasks) {
-          return AsyncStreamBuilder<List<Project>>(
-            state: _projectController,
-            builder: (context, projects) {
+      body: AsyncStreamBuilder<List<Project>>(
+        state: _projectController,
+        builder: (context, projects) {
+          return AsyncStreamBuilder<List<Task>>(
+            state: _controller,
+            builder: (context, tasks) {
+              // Filter to show only main tasks (not subtasks) at top level
+              final mainTasks = tasks.where((t) => !t.isSubtask).toList();
+
               return Column(
                 children: [
                   // Stats card - always shown
@@ -172,7 +160,7 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
 
                   // Tasks list or empty state
                   Expanded(
-                    child: tasks.isEmpty
+                    child: mainTasks.isEmpty
                         ? const Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -194,74 +182,14 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: tasks.length,
+                            itemCount: mainTasks.length,
                             itemBuilder: (context, index) {
-                              final task = tasks[index];
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: ListTile(
-                                  leading: Container(
-                                    width: 4,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: _getPriorityColor(task.priority),
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                  title: Text(task.title),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (task.description != null)
-                                        Text(
-                                          task.description!,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            task.status.displayName,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withOpacity(0.6),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          if (task.dueDate != null)
-                                            Text(
-                                              'Due: ${DateFormat('MMM d, yyyy').format(task.dueDate!)}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withOpacity(0.6),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  trailing: Icon(
-                                    task.isCompleted
-                                        ? Icons.check_circle
-                                        : Icons.circle_outlined,
-                                    color: task.isCompleted
-                                        ? Colors.green
-                                        : Colors.grey,
-                                  ),
-                                  onTap: () => _showTaskDialog(
-                                    task: task,
-                                    projects: projects,
-                                    allTasks: tasks,
-                                  ),
-                                ),
+                              final task = mainTasks[index];
+                              return _buildTaskWithSubtasks(
+                                task,
+                                projects,
+                                tasks,
+                                0, // Start at level 0 (no indentation)
                               );
                             },
                           ),
@@ -269,12 +197,163 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
                 ],
               );
             },
-            loadingBuilder: (_) => const SizedBox.shrink(),
-            errorBuilder: (_, __) => const SizedBox.shrink(),
+            loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+            errorBuilder: (context, message) => Center(child: Text(message)),
           );
         },
         loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
         errorBuilder: (context, message) => Center(child: Text(message)),
+      ),
+    );
+  }
+
+  /// Recursively builds a task and all its subtasks
+  Widget _buildTaskWithSubtasks(
+    Task task,
+    List<Project> projects,
+    List<Task> allTasks,
+    int level,
+  ) {
+    final subtasks = allTasks.where((t) => t.parentTaskId == task.id).toList();
+    final indentPadding = level * 24.0;
+
+    return Padding(
+      padding: EdgeInsets.only(left: indentPadding),
+      child: Column(
+        children: [
+          _buildTaskCard(task, projects, allTasks, level),
+          // Recursively render subtasks
+          ...subtasks.map(
+            (subtask) => _buildTaskWithSubtasks(
+              subtask,
+              projects,
+              allTasks,
+              level + 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(
+    Task task,
+    List<Project> projects,
+    List<Task> allTasks,
+    int level,
+  ) {
+    final subtaskCount = allTasks.where((t) => t.parentTaskId == task.id).length;
+    final isSubtask = level > 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Container(
+              width: 4,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _getPriorityColor(task.priority),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            title: Row(
+              children: [
+                if (isSubtask) ...[
+                  Icon(
+                    Icons.subdirectory_arrow_right,
+                    size: 14.0 + (2.0 * (3 - level.clamp(0, 3))), // Smaller for deeper levels
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Expanded(child: Text(task.title)),
+              ],
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (task.description != null)
+                  Text(
+                    task.description!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      task.status.displayName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (task.dueDate != null)
+                      Text(
+                        'Due: ${DateFormat('MMM d, yyyy').format(task.dueDate!)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.6),
+                        ),
+                      ),
+                    if (subtaskCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.list, size: 12, color: Colors.grey[600]),
+                      const SizedBox(width: 2),
+                      Text(
+                        '$subtaskCount',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+            trailing: Icon(
+              task.isCompleted
+                  ? Icons.check_circle
+                  : Icons.circle_outlined,
+              color: task.isCompleted ? Colors.green : Colors.grey,
+            ),
+            onTap: () => _showTaskDialog(
+              task: task,
+              projects: projects,
+            ),
+          ),
+          // Add Subtask button for all tasks
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showTaskDialog(
+                    projects: projects,
+                    parentTaskId: task.id,
+                  ),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Add Subtask'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

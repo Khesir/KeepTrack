@@ -8,7 +8,7 @@ class TaskManagementDialog extends StatefulWidget {
   final Future<void> Function(Task) onSave;
   final Future<void> Function()? onDelete;
   final List<Project>? projects;
-  final List<Task>? parentTasks;
+  final String? parentTaskId; // Direct parent task ID when creating subtask
 
   const TaskManagementDialog({
     super.key,
@@ -17,7 +17,7 @@ class TaskManagementDialog extends StatefulWidget {
     required this.onSave,
     this.onDelete,
     this.projects,
-    this.parentTasks,
+    this.parentTaskId,
   });
 
   @override
@@ -34,7 +34,6 @@ class _TaskManagementDialogState extends State<TaskManagementDialog> {
   DateTime? _dueDate;
   List<String> _tags = [];
   String? _selectedProjectId;
-  String? _selectedParentTaskId;
   final TextEditingController _tagController = TextEditingController();
 
   @override
@@ -48,7 +47,6 @@ class _TaskManagementDialogState extends State<TaskManagementDialog> {
     _dueDate = widget.task?.dueDate;
     _tags = widget.task?.tags.toList() ?? [];
     _selectedProjectId = widget.task?.projectId;
-    _selectedParentTaskId = widget.task?.parentTaskId;
   }
 
   @override
@@ -62,9 +60,16 @@ class _TaskManagementDialogState extends State<TaskManagementDialog> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.task != null;
+    final isSubtask = widget.parentTaskId != null;
 
     return AlertDialog(
-      title: Text(isEdit ? 'Edit Task' : 'Add Task'),
+      title: Text(
+        isEdit
+            ? 'Edit Task'
+            : isSubtask
+                ? 'Add Subtask'
+                : 'Add Task',
+      ),
       content: SizedBox(
         width: MediaQuery.of(context).size.width * 0.9,
         child: SingleChildScrollView(
@@ -147,30 +152,6 @@ class _TaskManagementDialogState extends State<TaskManagementDialog> {
                     onChanged: (v) => setState(() => _selectedProjectId = v),
                   ),
                 if (widget.projects != null && widget.projects!.isNotEmpty)
-                  const SizedBox(height: 12),
-
-                // Parent Task (for subtasks)
-                if (widget.parentTasks != null && widget.parentTasks!.isNotEmpty)
-                  DropdownButtonFormField<String?>(
-                    value: _selectedParentTaskId,
-                    decoration: const InputDecoration(labelText: 'Parent Task'),
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('No Parent (Main Task)'),
-                      ),
-                      ...widget.parentTasks!
-                          .where((t) => t.id != widget.task?.id) // Prevent circular reference
-                          .map(
-                            (task) => DropdownMenuItem<String?>(
-                              value: task.id,
-                              child: Text(task.title),
-                            ),
-                          ),
-                    ],
-                    onChanged: (v) => setState(() => _selectedParentTaskId = v),
-                  ),
-                if (widget.parentTasks != null && widget.parentTasks!.isNotEmpty)
                   const SizedBox(height: 12),
 
                 // Due Date
@@ -321,7 +302,7 @@ class _TaskManagementDialogState extends State<TaskManagementDialog> {
       status: _selectedStatus,
       priority: _selectedPriority,
       projectId: _selectedProjectId,
-      parentTaskId: _selectedParentTaskId,
+      parentTaskId: widget.parentTaskId ?? widget.task?.parentTaskId,
       dueDate: _dueDate,
       tags: _tags,
       userId: widget.userId,

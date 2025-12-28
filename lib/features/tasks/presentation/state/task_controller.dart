@@ -20,13 +20,8 @@ class TaskController extends StreamState<AsyncState<List<Task>>> {
 
   /// Create a new task
   Future<void> createTask(Task task) async {
-    await execute(() async {
-      final created = await _repository
-          .createTask(task)
-          .then((r) => r.unwrap());
-      final current = data ?? [];
-      return [...current, created];
-    });
+    await _repository.createTask(task).then((r) => r.unwrap());
+    await loadTasks();
   }
 
   /// Update an existing task

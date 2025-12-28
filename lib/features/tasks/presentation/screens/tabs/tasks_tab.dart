@@ -135,22 +135,83 @@ class _TasksTabState extends State<TasksTab> {
   }
 
   Widget _buildTaskList(List<Task> tasks) {
+    // Filter to show only main tasks (not subtasks) at top level
+    final mainTasks = tasks.where((t) => !t.isSubtask).toList();
+
     return Card(
       elevation: 0,
       child: ListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: tasks.length,
+        itemCount: mainTasks.length,
         itemBuilder: (context, index) {
-          final task = tasks[index];
-          return _buildTaskItem(task);
+          final task = mainTasks[index];
+          return _buildTaskWithSubtasks(task, tasks, 0);
         },
       ),
     );
   }
 
-  Widget _buildTaskItem(Task task) {
+  /// Recursively builds a task and all its subtasks
+  Widget _buildTaskWithSubtasks(Task task, List<Task> allTasks, int level) {
+    final subtasks = allTasks.where((t) => t.parentTaskId == task.id).toList();
+    final indentPadding = level * 24.0;
+
+    return Padding(
+      padding: EdgeInsets.only(left: indentPadding),
+      child: Column(
+        children: [
+          _buildTaskItem(task, allTasks, level),
+          // Recursively render subtasks
+          ...subtasks.map(
+            (subtask) => _buildTaskWithSubtasks(subtask, allTasks, level + 1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get all descendant tasks (subtasks, sub-subtasks, etc.)
+  List<Task> _getAllDescendants(Task task, List<Task> allTasks) {
+    final descendants = <Task>[];
+    final directChildren = allTasks.where((t) => t.parentTaskId == task.id).toList();
+
+    for (final child in directChildren) {
+      descendants.add(child);
+      descendants.addAll(_getAllDescendants(child, allTasks));
+    }
+
+    return descendants;
+  }
+
+  /// Toggle task completion with cascading to subtasks
+  Future<void> _toggleTaskCompletion(Task task, List<Task> allTasks, bool? value) async {
+    if (value == null) return;
+
+    // Update the task itself
+    final updatedTask = task.copyWith(
+      status: value ? TaskStatus.completed : TaskStatus.todo,
+      completedAt: value ? DateTime.now() : null,
+    );
+    await _controller.updateTask(updatedTask);
+
+    // If checking (completing), cascade to all descendants
+    if (value) {
+      final descendants = _getAllDescendants(task, allTasks);
+      for (final descendant in descendants) {
+        final updatedDescendant = descendant.copyWith(
+          status: TaskStatus.completed,
+          completedAt: DateTime.now(),
+        );
+        await _controller.updateTask(updatedDescendant);
+      }
+    }
+  }
+
+  Widget _buildTaskItem(Task task, List<Task> allTasks, int level) {
     final isExpanded = _selectedTask?.id == task.id;
+    final isSubtask = level > 0;
+    final subtaskCount = allTasks.where((t) => t.parentTaskId == task.id).length;
 
     return Column(
       children: [
@@ -178,9 +239,7 @@ class _TasksTabState extends State<TasksTab> {
                 // Checkbox
                 Checkbox(
                   value: task.isCompleted,
-                  onChanged: (value) {
-                    // Will be wired later
-                  },
+                  onChanged: (value) => _toggleTaskCompletion(task, allTasks, value),
                 ),
                 const SizedBox(width: 8),
 
@@ -189,15 +248,28 @@ class _TasksTabState extends State<TasksTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        task.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          decoration: task.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
+                      Row(
+                        children: [
+                          if (isSubtask) ...[
+                            Icon(
+                              Icons.subdirectory_arrow_right,
+                              size: 14.0 + (2.0 * (3 - level.clamp(0, 3))),
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              task.title,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                decoration: task.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       if (task.description != null) ...[
                         const SizedBox(height: 4),
@@ -246,6 +318,18 @@ class _TasksTabState extends State<TasksTab> {
                                 color: Theme.of(
                                   context,
                                 ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                          if (subtaskCount > 0) ...[
+                            const SizedBox(width: 12),
+                            Icon(Icons.list, size: 12, color: Colors.grey[600]),
+                            const SizedBox(width: 2),
+                            Text(
+                              '$subtaskCount',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
                               ),
                             ),
                           ],

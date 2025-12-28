@@ -21,6 +21,7 @@ import 'migrations/017_update_transactions_structure.dart';
 import 'migrations/018_add_transaction_type.dart';
 import 'migrations/019_add_transaction_context_fields.dart';
 import 'migrations/020_add_finance_transaction_rpcs.dart';
+import 'migrations/021_add_task_parent_task_id.dart';
 
 /// Manages database migrations
 ///
@@ -253,6 +254,7 @@ class MigrationManager {
     Migration018AddTransactionType(),
     Migration019AddTransactionContextFields(),
     Migration020AddFinanceTransactionRpcs(),
+    Migration021AddTaskParentTaskId(),
     // Add new migrations here:
   ];
 
