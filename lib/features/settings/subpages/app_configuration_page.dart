@@ -71,39 +71,21 @@ class AppConfigurationPage extends StatelessWidget {
           _buildSection(context, 'Task Management', [
             _buildTile(
               context,
-              icon: Icons.toggle_on,
-              title: 'Manage Task Statuses',
-              subtitle:
-                  'Define custom task statuses (e.g., To Do, In Progress)',
+              icon: Icons.task_alt,
+              title: 'Manage Tasks',
+              subtitle: 'Add, edit, and delete tasks',
               color: Colors.blue,
               onTap: () =>
-                  Navigator.pushNamed(context, '/task-status-management'),
+                  Navigator.pushNamed(context, '/task-management'),
             ),
             _buildTile(
               context,
-              icon: Icons.priority_high,
-              title: 'Manage Task Priorities',
-              subtitle: 'Configure priority levels for tasks',
-              color: Colors.orange,
-              onTap: () =>
-                  Navigator.pushNamed(context, '/task-priority-management'),
-            ),
-            _buildTile(
-              context,
-              icon: Icons.label,
-              title: 'Manage Task Tags',
-              subtitle: 'Create tags to organize and filter tasks',
+              icon: Icons.folder,
+              title: 'Manage Projects',
+              subtitle: 'Create and organize projects',
               color: Colors.purple,
-              onTap: () => Navigator.pushNamed(context, '/task-tag-management'),
-            ),
-            _buildTile(
-              context,
-              icon: Icons.folder_special,
-              title: 'Manage Project Templates',
-              subtitle: 'Define templates for recurring project types',
-              color: Colors.teal,
               onTap: () =>
-                  Navigator.pushNamed(context, '/project-template-management'),
+                  Navigator.pushNamed(context, '/project-management'),
             ),
           ]),
           const SizedBox(height: 16),

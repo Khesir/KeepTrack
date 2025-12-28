@@ -16,7 +16,6 @@ import 'core/logging/app_logger.dart';
 import 'core/logging/log_viewer_screen.dart';
 import 'features/auth/auth.dart';
 import 'features/tasks/tasks_di.dart';
-import 'features/projects/projects_di.dart';
 import 'features/tasks/presentation/screens/tasks_main_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/logs/logs_screen.dart';
@@ -372,7 +371,6 @@ void _setupDependencies() {
   // Feature dependencies
   setupAuthDependencies(); // Auth must be first
   setupTasksDependencies();
-  setupProjectsDependencies();
   setupFinanceDependencies();
 }
 

@@ -4,6 +4,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:persona_codex/features/settings/setting_page.dart';
+import 'package:persona_codex/features/tasks/presentation/screens/configuration/project_management_screen.dart';
+import 'package:persona_codex/features/tasks/presentation/screens/configuration/task_management_screen.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
@@ -16,17 +18,9 @@ import '../../features/finance/presentation/screens/configuration/debts/debts_ma
 import '../../features/finance/presentation/screens/configuration/planned_payments/planned_payments_management_screen.dart';
 import '../../features/finance/presentation/screens/transactions/create_transaction_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
-import '../../features/settings/management/task_status_management_screen.dart';
-import '../../features/settings/management/task_priority_management_screen.dart';
-import '../../features/settings/management/task_tag_management_screen.dart';
-import '../../features/settings/management/project_template_management_screen.dart';
-import '../../features/tasks/presentation/screens/tasks_home_screen.dart';
-import '../../features/tasks/presentation/screens/task_detail_screen.dart';
-import '../../features/tasks/domain/entities/task.dart';
+import '../../features/tasks/modules/tasks/domain/entities/task.dart';
 
-import '../../features/projects/presentation/screens/project_list_screen.dart';
-import '../../features/projects/presentation/screens/project_detail_screen.dart';
-import '../../features/projects/domain/entities/project.dart';
+import '../../features/tasks/modules/projects/domain/entities/project.dart';
 
 /// App routes
 class AppRoutes {
@@ -54,11 +48,8 @@ class AppRoutes {
   static const String settingsConfig = '/settings/config';
 
   // Task Management Settings
-  static const String taskStatusManagement = '/task-status-management';
-  static const String taskPriorityManagement = '/task-priority-management';
-  static const String taskTagManagement = '/task-tag-management';
-  static const String projectTemplateManagement =
-      '/project-template-management';
+  static const String taskManagement = '/task-management';
+  static const String projectManagement = '/project-management';
 
   // Finance Management
   static const String accountManagement = '/account-management';
@@ -79,29 +70,26 @@ class AppRouter {
   /// Generate routes based on route settings
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
-      // Task list
-      case AppRoutes.taskList:
+      // Tasks
+      case AppRoutes.taskManagement:
         return MaterialPageRoute(
-          builder: (_) => const TasksHomeScreen(),
+          builder: (_) => const TaskManagementScreen(),
           settings: settings,
         );
-
-      // Task detail (view/edit existing task)
-      case AppRoutes.taskDetail:
-        final task = settings.arguments as Task?;
+      case AppRoutes.projectManagement:
         return MaterialPageRoute(
-          builder: (_) => TaskDetailScreen(task: task),
+          builder: (_) => const ProjectManagementScreen(),
           settings: settings,
         );
-
-      // Task create (new task)
-      case AppRoutes.taskCreate:
-        // Support optional initialProjectId via arguments
-        final args = settings.arguments as Map<String, dynamic>?;
-        final initialProjectId = args?['initialProjectId'] as String?;
+      // Project list
+      case AppRoutes.settings:
         return MaterialPageRoute(
-          builder: (_) =>
-              TaskDetailScreen(task: null, initialProjectId: initialProjectId),
+          builder: (_) => const SettingsPage(),
+          settings: settings,
+        );
+      case AppRoutes.settingsConfig:
+        return MaterialPageRoute(
+          builder: (_) => const AppConfigurationPage(),
           settings: settings,
         );
 
@@ -122,59 +110,6 @@ class AppRouter {
       case AppRoutes.budgetCreate:
         return MaterialPageRoute(
           builder: (_) => const CreateBudgetScreen(),
-          settings: settings,
-        );
-
-      // Project list
-      case AppRoutes.projectList:
-        return MaterialPageRoute(
-          builder: (_) => const ProjectListScreen(),
-          settings: settings,
-        );
-
-      // Project detail (view/edit existing project)
-      case AppRoutes.projectDetail:
-        final project = settings.arguments as Project?;
-        if (project == null) {
-          return MaterialPageRoute(
-            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => ProjectDetailScreen(project: project),
-          settings: settings,
-        );
-      // Project list
-      case AppRoutes.settings:
-        return MaterialPageRoute(
-          builder: (_) => const SettingsPage(),
-          settings: settings,
-        );
-      case AppRoutes.settingsConfig:
-        return MaterialPageRoute(
-          builder: (_) => const AppConfigurationPage(),
-          settings: settings,
-        );
-
-      // Task Management Settings
-      case AppRoutes.taskStatusManagement:
-        return MaterialPageRoute(
-          builder: (_) => const TaskStatusManagementScreen(),
-          settings: settings,
-        );
-      case AppRoutes.taskPriorityManagement:
-        return MaterialPageRoute(
-          builder: (_) => const TaskPriorityManagementScreen(),
-          settings: settings,
-        );
-      case AppRoutes.taskTagManagement:
-        return MaterialPageRoute(
-          builder: (_) => const TaskTagManagementScreen(),
-          settings: settings,
-        );
-      case AppRoutes.projectTemplateManagement:
-        return MaterialPageRoute(
-          builder: (_) => const ProjectTemplateManagementScreen(),
           settings: settings,
         );
 
