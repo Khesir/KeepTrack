@@ -155,7 +155,6 @@ class AppRouter {
             initialCategoryId: args?['initialCategoryId'] as String?,
             initialAccountId: args?['initialAccountId'] as String?,
             initialType: args?['initialType'] as TransactionType?,
-            callback: args?['callback'] as Future<void> Function()?,
           ),
           settings: settings,
         );
@@ -256,7 +255,6 @@ extension NavigationExtensions on BuildContext {
     String? initialCategoryId,
     String? initialAccountId,
     TransactionType? initialType,
-    Function? callback,
   }) {
     return AppRouter.push(
       this,
@@ -268,7 +266,6 @@ extension NavigationExtensions on BuildContext {
         if (initialCategoryId != null) 'initialCategoryId': initialCategoryId,
         if (initialAccountId != null) 'initialAccountId': initialAccountId,
         if (initialType != null) 'initialType': initialType,
-        if (callback != null) 'callback': callback,
       },
     );
   }

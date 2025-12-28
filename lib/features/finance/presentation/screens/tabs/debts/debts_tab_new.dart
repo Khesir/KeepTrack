@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/routing/app_router.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
+import 'package:persona_codex/features/finance/presentation/state/finance_category_controller.dart';
+import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../modules/debt/domain/entities/debt.dart';
-import '../../../../modules/transaction/domain/entities/transaction.dart';
 import '../../../state/debt_controller.dart';
 
 /// Debts Tab - Tracks Lending (money lent out) and Borrowing (money owed)
@@ -17,12 +21,190 @@ class DebtsTabNew extends StatefulWidget {
 
 class _DebtsTabNewState extends State<DebtsTabNew> {
   late final DebtController _controller;
+  late final AccountController _accountController;
+  late final FinanceCategoryController _categoryController;
+  late final SupabaseService _supabaseService;
   String _selectedFilter = 'All'; // All, Lending, Borrowing
 
   @override
   void initState() {
     super.initState();
     _controller = locator.get<DebtController>();
+    _accountController = locator.get<AccountController>();
+    _categoryController = locator.get<FinanceCategoryController>();
+    _supabaseService = locator.get<SupabaseService>();
+
+    // Load accounts and categories
+    _accountController.loadAccounts();
+    _categoryController.loadCategories();
+  }
+
+  Future<void> _showRecordPaymentDialog(Debt debt) async {
+    final amountController = TextEditingController();
+    String? selectedAccountId;
+    String? selectedCategoryId;
+
+    // Determine transaction type based on debt type
+    final isLending = debt.type == DebtType.lending;
+    final transactionType = isLending ? 'income' : 'expense';
+    final categoryType = isLending ? CategoryType.income : CategoryType.expense;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          isLending
+              ? 'Record Payment from ${debt.personName}'
+              : 'Record Payment to ${debt.personName}',
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Amount Field
+              TextField(
+                controller: amountController,
+                decoration: InputDecoration(
+                  labelText: 'Amount',
+                  prefixText: '₱',
+                  hintText: 'Remaining: ₱${debt.remainingAmount.toStringAsFixed(2)}',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+
+              // Account Selector
+              AsyncStreamBuilder<List<Account>>(
+                state: _accountController,
+                builder: (context, accounts) {
+                  return DropdownButtonFormField<String>(
+                    value: selectedAccountId,
+                    decoration: InputDecoration(
+                      labelText: 'Account',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: accounts.map((account) => DropdownMenuItem(
+                      value: account.id,
+                      child: Text(account.name),
+                    )).toList(),
+                    onChanged: (value) => selectedAccountId = value,
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Category Selector
+              AsyncStreamBuilder<List<FinanceCategory>>(
+                state: _categoryController,
+                builder: (context, categories) {
+                  final filteredCategories = categories
+                      .where((c) => c.type == categoryType)
+                      .toList();
+
+                  return DropdownButtonFormField<String>(
+                    value: selectedCategoryId,
+                    decoration: InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: filteredCategories.map((category) => DropdownMenuItem(
+                      value: category.id,
+                      child: Text(category.name),
+                    )).toList(),
+                    onChanged: (value) => selectedCategoryId = value,
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid amount')),
+                );
+                return;
+              }
+
+              if (amount > debt.remainingAmount) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Amount cannot exceed remaining debt of ₱${debt.remainingAmount.toStringAsFixed(2)}',
+                    ),
+                  ),
+                );
+                return;
+              }
+
+              if (selectedAccountId == null) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please select an account')),
+                );
+                return;
+              }
+
+              if (selectedCategoryId == null) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please select a category')),
+                );
+                return;
+              }
+
+              // Call RPC function
+              try {
+                await _supabaseService.client.rpc(
+                  'create_debt_payment_transaction',
+                  params: {
+                    'p_user_id': _supabaseService.userId,
+                    'p_account_id': selectedAccountId,
+                    'p_finance_category_id': selectedCategoryId,
+                    'p_amount': amount,
+                    'p_type': transactionType,
+                    'p_description': isLending
+                        ? 'Received payment from ${debt.personName}'
+                        : 'Paid debt to ${debt.personName}',
+                    'p_date': DateTime.now().toIso8601String(),
+                    'p_notes': null,
+                    'p_debt_id': debt.id,
+                  },
+                );
+
+                // Reload debts
+                _controller.loadDebts();
+
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext, true);
+                }
+              } catch (e) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text('Failed to record payment: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Record Payment'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment recorded successfully')),
+      );
+    }
+
+    amountController.dispose();
   }
 
   @override
@@ -586,19 +768,10 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    context.goToTransactionCreate(
-                      initialDescription: debt.type == DebtType.lending
-                          ? "Received payment from ${debt.personName}"
-                          : "Paid Debt from ${debt.personName}",
-                      initialType: debt.type == DebtType.lending
-                          ? TransactionType.income
-                          : TransactionType.expense,
-                    );
-                  },
+                  onPressed: () => _showRecordPaymentDialog(debt),
                   icon: Icon(Icons.add, size: 18, color: color),
                   label: Text(
-                    'Create Transaction',
+                    'Record Payment',
                     style: TextStyle(color: color),
                   ),
                   style: OutlinedButton.styleFrom(

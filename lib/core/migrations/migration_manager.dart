@@ -19,6 +19,8 @@ import 'migrations/014_remove_budget_month_unique.dart';
 import 'migrations/015_add_budget_spent_calculation.dart';
 import 'migrations/017_update_transactions_structure.dart';
 import 'migrations/018_add_transaction_type.dart';
+import 'migrations/019_add_transaction_context_fields.dart';
+import 'migrations/020_add_finance_transaction_rpcs.dart';
 
 /// Manages database migrations
 ///
@@ -249,6 +251,8 @@ class MigrationManager {
     Migration016UpdateAccountsToUUID(),
     Migration017UpdateTransactionsStructure(),
     Migration018AddTransactionType(),
+    Migration019AddTransactionContextFields(),
+    Migration020AddFinanceTransactionRpcs(),
     // Add new migrations here:
   ];
 

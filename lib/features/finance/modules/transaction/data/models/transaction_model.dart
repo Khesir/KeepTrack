@@ -14,6 +14,10 @@ class TransactionModel extends Transaction {
     super.createdAt,
     super.updatedAt,
     super.userId,
+    super.debtId,
+    super.goalId,
+    super.plannedPaymentId,
+    super.refundedTransactionId,
   });
 
   /// Convert from entity
@@ -30,6 +34,10 @@ class TransactionModel extends Transaction {
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
       userId: transaction.userId,
+      debtId: transaction.debtId,
+      goalId: transaction.goalId,
+      plannedPaymentId: transaction.plannedPaymentId,
+      refundedTransactionId: transaction.refundedTransactionId,
     );
   }
 
@@ -54,6 +62,10 @@ class TransactionModel extends Transaction {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       userId: json['user_id'] as String?,
+      debtId: json['debt_id'] as String?,
+      goalId: json['goal_id'] as String?,
+      plannedPaymentId: json['planned_payment_id'] as String?,
+      refundedTransactionId: json['refunded_transaction_id'] as String?,
     );
   }
 
@@ -71,6 +83,10 @@ class TransactionModel extends Transaction {
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
       if (userId != null) 'user_id': userId,
+      if (debtId != null) 'debt_id': debtId,
+      if (goalId != null) 'goal_id': goalId,
+      if (plannedPaymentId != null) 'planned_payment_id': plannedPaymentId,
+      if (refundedTransactionId != null) 'refunded_transaction_id': refundedTransactionId,
     };
   }
 
@@ -88,6 +104,10 @@ class TransactionModel extends Transaction {
       createdAt: createdAt,
       updatedAt: updatedAt,
       userId: userId,
+      debtId: debtId,
+      goalId: goalId,
+      plannedPaymentId: plannedPaymentId,
+      refundedTransactionId: refundedTransactionId,
     );
   }
 }

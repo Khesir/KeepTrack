@@ -45,7 +45,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
         // Category filter chips
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -64,7 +64,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
         if (_selectedCategory == 'Finance')
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.grey[50],
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Row(
               children: [
                 _buildTypeFilterChip('All'),
@@ -101,7 +101,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? GCashColors.primary : Colors.grey[200],
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -109,7 +111,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : Colors.grey[700],
+            color: isSelected
+                ? Theme.of(context).colorScheme.onPrimary
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -146,18 +150,20 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: GCashColors.primary.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 64, color: GCashColors.primary),
+            child: Icon(
+              icon,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 24),
           Text(
             '$feature Logs',
-            style: TextStyle(
-              fontSize: 24,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
             ),
           ),
           const SizedBox(height: 8),
@@ -166,27 +172,29 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: GCashColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.orange[50],
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.construction, size: 18, color: Colors.orange[700]),
+                const Icon(Icons.construction, size: 18, color: Colors.orange),
                 const SizedBox(width: 8),
                 Text(
                   'Under Development',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.orange[700],
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.orange[300]
+                        : Colors.orange[700],
                   ),
                 ),
               ],
@@ -247,8 +255,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                           : isYesterday
                           ? 'Yesterday'
                           : _formatDate(transaction.date),
-                      style: GCashTextStyles.h3.copyWith(
-                        color: Colors.grey[700],
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -324,20 +333,24 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history, size: 64, color: Colors.grey[400]),
+          Icon(
+            Icons.history,
+            size: 64,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 16),
           Text(
             'No transactions yet',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Your transactions will appear here',
-            style: TextStyle(color: Colors.grey[600]),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),
@@ -349,20 +362,24 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.filter_alt_off, size: 64, color: Colors.grey[400]),
+          Icon(
+            Icons.filter_alt_off,
+            size: 64,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 16),
           Text(
             'No $_selectedTypeFilter transactions',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Try selecting a different filter',
-            style: TextStyle(color: Colors.grey[600]),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),
@@ -392,7 +409,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: () {
@@ -407,7 +424,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 24),
@@ -435,7 +452,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
+                              color: Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -443,7 +460,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.blue[700],
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.blue[300]
+                                    : Colors.blue[700],
                               ),
                             ),
                           ),
@@ -457,10 +476,23 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatTime(transaction.date),
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatDateTime(transaction.date),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -507,7 +539,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
     return DateFormat('MMM d, y').format(date);
   }
 
-  String _formatTime(DateTime date) {
-    return DateFormat('h:mm a').format(date);
+  String _formatDateTime(DateTime date) {
+    return DateFormat('MMM d, y • h:mm a').format(date);
   }
 }
