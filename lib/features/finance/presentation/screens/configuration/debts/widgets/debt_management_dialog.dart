@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:persona_codex/features/finance/presentation/state/finance_category_controller.dart';
 
 class DebtManagementDialog extends StatefulWidget {
   final Debt? debt;
   final String userId;
+  final List<Account> accounts;
 
-  final Function(Debt) onSave;
+  final Function(Debt, String?) onSave;
 
   const DebtManagementDialog({
     this.debt,
     required this.userId,
+    required this.accounts,
     required this.onSave,
     super.key,
   });
@@ -24,11 +32,14 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
   late final TextEditingController originalAmountController;
   late final TextEditingController remainingAmountController;
   late final TextEditingController notesController;
+  late final FinanceCategoryController _categoryController;
 
   late DateTime selectedStartDate;
   late DateTime? selectedDueDate;
   late DebtType selectedType;
   late DebtStatus selectedStatus;
+  String? selectedAccountId;
+  String? selectedCategoryId;
 
   bool get isEdit => widget.debt != null;
 
@@ -51,6 +62,10 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     selectedDueDate = d?.dueDate;
     selectedType = d?.type ?? DebtType.lending;
     selectedStatus = d?.status ?? DebtStatus.active;
+    selectedAccountId = d?.accountId ?? widget.accounts.firstOrNull?.id;
+
+    _categoryController = locator.get<FinanceCategoryController>();
+    _categoryController.loadCategories();
   }
 
   @override
@@ -76,6 +91,18 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
       );
       return;
     }
+    if (selectedAccountId == null && !isEdit) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an account')));
+      return;
+    }
+    if (selectedCategoryId == null && !isEdit) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a category')));
+      return;
+    }
 
     final originalAmount = double.tryParse(originalAmountController.text) ?? 0;
     final remainingAmount =
@@ -95,9 +122,11 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
           ? notesController.text.trim()
           : null,
       userId: widget.userId,
+      accountId: selectedAccountId,
+      transactionId: widget.debt?.transactionId,
     );
 
-    widget.onSave(debtEntity);
+    widget.onSave(debtEntity, selectedCategoryId);
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(isEdit ? 'Debt updated' : 'Debt created')),
@@ -136,10 +165,133 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
                 onSelectionChanged: (Set<DebtType> newSelection) {
                   setDialogState(() {
                     selectedType = newSelection.first;
+                    // Reset category selection when type changes
+                    selectedCategoryId = null;
                   });
                 },
               ),
               const SizedBox(height: 16),
+              if (widget.accounts.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'No accounts available. Please create an account first.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                DropdownButtonFormField<String>(
+                  value: selectedAccountId,
+                  decoration: const InputDecoration(
+                    labelText: 'Account/Wallet',
+                    border: OutlineInputBorder(),
+                    hintText: 'Select an account',
+                  ),
+                  items: widget.accounts
+                      .map(
+                        (account) => DropdownMenuItem(
+                          value: account.id,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.account_balance_wallet,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(account.name),
+                              const SizedBox(width: 8),
+                              Text(
+                                '(\$${account.balance.toStringAsFixed(2)})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: isEdit
+                      ? null
+                      : (value) {
+                          setDialogState(() {
+                            selectedAccountId = value;
+                          });
+                        },
+                ),
+              const SizedBox(height: 16),
+              // Category Selector (only for new debts)
+              if (!isEdit)
+                AsyncStreamBuilder<List<FinanceCategory>>(
+                  state: _categoryController,
+                  builder: (context, categories) {
+                    // Filter categories based on debt type
+                    final categoryType = selectedType == DebtType.lending
+                        ? CategoryType
+                              .expense // Lending = money out
+                        : CategoryType.income; // Borrowing = money in
+
+                    final filteredCategories = categories
+                        .where((c) => c.type == categoryType)
+                        .toList();
+
+                    return DropdownButtonFormField<String>(
+                      value: selectedCategoryId,
+                      decoration: InputDecoration(
+                        labelText: 'Category',
+                        border: const OutlineInputBorder(),
+                        hintText: 'Select a category',
+                        helperText: selectedType == DebtType.lending
+                            ? 'Expense category for money lent out'
+                            : 'Income category for money borrowed',
+                      ),
+                      items: filteredCategories
+                          .map(
+                            (category) => DropdownMenuItem(
+                              value: category.id,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    category.type.icon,
+                                    size: 16,
+                                    color: category.type.color,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(category.name),
+                                ],
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedCategoryId = value;
+                        });
+                      },
+                    );
+                  },
+                  loadingBuilder: (_) => const CircularProgressIndicator(),
+                  errorBuilder: (context, message) => Text(
+                    'Error loading categories: $message',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              if (!isEdit) const SizedBox(height: 16),
               TextField(
                 controller: personNameController,
                 decoration: InputDecoration(

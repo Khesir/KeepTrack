@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:persona_codex/features/finance/presentation/screens/configuration/debts/widgets/debt_management_dialog.dart';
+import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
 import 'package:persona_codex/features/finance/presentation/state/debt_controller.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 
@@ -14,33 +16,36 @@ class DebtsManagementScreen extends StatefulWidget {
 }
 
 class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
-  late final DebtController _controller;
+  late final DebtController _debtController;
+  late final AccountController _accountController;
   late final SupabaseService supabaseService;
 
   @override
   void initState() {
     super.initState();
-    _controller = locator.get<DebtController>();
+    _debtController = locator.get<DebtController>();
+    _accountController = locator.get<AccountController>();
     supabaseService = locator.get<SupabaseService>();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _debtController.dispose();
     super.dispose();
   }
 
-  void _showCreateEditDialog({Debt? debt}) {
+  void _showCreateEditDialog({Debt? debt, required List<Account> accounts}) {
     showDialog(
       context: context,
       builder: (context) => DebtManagementDialog(
         debt: debt,
         userId: supabaseService.userId!,
-        onSave: (savedDebt) => {
+        accounts: accounts,
+        onSave: (savedDebt, categoryId) => {
           if (debt != null)
-            {_controller.updateDebt(savedDebt)}
+            {_debtController.updateDebt(savedDebt)}
           else
-            {_controller.createDebt(savedDebt)},
+            {_debtController.createDebtWithCategory(savedDebt, categoryId)},
         },
       ),
     );
@@ -61,7 +66,7 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
           ),
           FilledButton(
             onPressed: () {
-              _controller.deleteDebt(debt.id!);
+              _debtController.deleteDebt(debt.id!);
               Navigator.pop(context);
               ScaffoldMessenger.of(
                 context,
@@ -79,9 +84,74 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Debts')),
-      body: AsyncStreamBuilder<List<Debt>>(
-        state: _controller,
-        builder: (context, debts) {
+      body: AsyncStreamBuilder<List<Account>>(
+        state: _accountController,
+        builder: (context, accounts) {
+          return AsyncStreamBuilder<List<Debt>>(
+            state: _debtController,
+            builder: (context, debts) {
+              return _buildDebtsList(debts, accounts);
+            },
+            loadingBuilder: (context) =>
+                const Center(child: CircularProgressIndicator()),
+            errorBuilder: (context, message) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(message),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _debtController.loadDebts(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+        loadingBuilder: (context) =>
+            const Center(child: CircularProgressIndicator()),
+        errorBuilder: (context, message) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Failed to load accounts: $message'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _accountController.loadAccounts(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: AsyncStreamBuilder<List<Account>>(
+        state: _accountController,
+        builder: (context, accounts) {
+          return FloatingActionButton.extended(
+            onPressed: () => _showCreateEditDialog(accounts: accounts),
+            icon: const Icon(Icons.add),
+            label: const Text('Add Debt'),
+          );
+        },
+        loadingBuilder: (context) => const FloatingActionButton(
+          onPressed: null,
+          child: CircularProgressIndicator(),
+        ),
+        errorBuilder: (context, message) => FloatingActionButton.extended(
+          onPressed: null,
+          icon: const Icon(Icons.error),
+          label: const Text('Error'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDebtsList(List<Debt> debts, List<Account> accounts) {
           if (debts.isEmpty) {
             return Center(
               child: Column(
@@ -184,7 +254,7 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
                     ],
                     onSelected: (value) {
                       if (value == 'edit') {
-                        _showCreateEditDialog(debt: debt);
+                        _showCreateEditDialog(debt: debt, accounts: accounts);
                       } else if (value == 'delete') {
                         _deleteDebt(debt);
                       }
@@ -194,30 +264,5 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
               );
             },
           );
-        },
-        loadingBuilder: (context) =>
-            const Center(child: CircularProgressIndicator()),
-        errorBuilder: (context, message) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(message),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => _controller.loadDebts(),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateEditDialog(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Debt'),
-      ),
-    );
   }
 }

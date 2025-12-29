@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/utils/icon_helper.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import '../../../state/account_controller.dart';
 
@@ -225,12 +226,7 @@ class _AccountsTabNewState extends State<AccountsTabNew> {
         ? Color(int.parse(account.colorHex!.replaceFirst('#', '0xff')))
         : Colors.blue[700]!;
 
-    final accountIcon = account.iconCodePoint != null
-        ? IconData(
-            int.parse(account.iconCodePoint!),
-            fontFamily: 'MaterialIcons',
-          )
-        : Icons.account_balance_wallet;
+    final accountIcon = IconHelper.fromString(account.iconCodePoint);
 
     return Card(
       elevation: 0,

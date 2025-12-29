@@ -14,6 +14,8 @@ class Debt {
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? settledAt;
   final String? userId;
+  final String? accountId; // Account/wallet this debt is associated with
+  final String? transactionId; // Initial transaction when debt was created
 
   Debt({
     this.id,
@@ -30,6 +32,8 @@ class Debt {
     this.updatedAt,
     this.settledAt,
     this.userId,
+    this.accountId,
+    this.transactionId,
   });
 
   /// Calculate repayment progress (0.0 to 1.0)
@@ -64,6 +68,8 @@ class Debt {
     DateTime? updatedAt,
     DateTime? settledAt,
     String? userId,
+    String? accountId,
+    String? transactionId,
   }) {
     return Debt(
       id: id ?? this.id,
@@ -80,6 +86,8 @@ class Debt {
       updatedAt: updatedAt ?? this.updatedAt,
       settledAt: settledAt ?? this.settledAt,
       userId: userId ?? this.userId,
+      accountId: accountId ?? this.accountId,
+      transactionId: transactionId ?? this.transactionId,
     );
   }
 

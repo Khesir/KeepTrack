@@ -87,4 +87,14 @@ class TaskRepositoryImpl implements TaskRepository {
     final tasks = taskModels.cast<Task>();
     return Result.success(tasks);
   }
+
+  @override
+  Future<Result<Map<DateTime, int>>> getTaskActivityForLastMonths(int months) async {
+    try {
+      final activity = await dataSource.getTaskActivityForLastMonths(months);
+      return Result.success(activity);
+    } catch (e) {
+      return Result.error(ServerFailure(message: 'Failed to fetch task activity: $e'));
+    }
+  }
 }

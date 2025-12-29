@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/utils/icon_helper.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 
@@ -115,24 +116,19 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             child: ListTile(
-                              leading: account.iconCodePoint != null
-                                  ? Icon(
-                                      IconData(
-                                        int.parse(account.iconCodePoint!),
-                                        fontFamily: 'MaterialIcons',
-                                      ),
-                                      color: account.colorHex != null
-                                          ? Color(
-                                              int.parse(
-                                                account.colorHex!.replaceFirst(
-                                                  '#',
-                                                  '0xff',
-                                                ),
-                                              ),
-                                            )
-                                          : null,
-                                    )
-                                  : null,
+                              leading: Icon(
+                                IconHelper.fromString(account.iconCodePoint),
+                                color: account.colorHex != null
+                                    ? Color(
+                                        int.parse(
+                                          account.colorHex!.replaceFirst(
+                                            '#',
+                                            '0xff',
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
                               title: Text(account.name),
                               subtitle: Text(
                                 account.accountType.toString().split('.').last,

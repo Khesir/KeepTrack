@@ -31,4 +31,8 @@ abstract class TaskDataSource {
 
   /// Get tasks with filters
   Future<List<TaskModel>> getTasksFiltered(Map<String, dynamic> filters);
+
+  /// Get task completion activity for the last N months
+  /// Returns a map where key is the date (day) and value is the count of completed tasks
+  Future<Map<DateTime, int>> getTaskActivityForLastMonths(int months);
 }

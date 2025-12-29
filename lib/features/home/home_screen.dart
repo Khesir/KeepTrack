@@ -10,6 +10,8 @@ import 'package:persona_codex/features/finance/modules/budget/domain/entities/bu
 import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
 import 'package:persona_codex/features/finance/presentation/state/budget_controller.dart';
 import 'package:persona_codex/features/home/widgets/admin_panel_widget.dart';
+import 'package:persona_codex/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:persona_codex/features/tasks/presentation/state/task_controller.dart';
 
 class HomeScreen extends ScopedScreen {
   const HomeScreen({super.key});
@@ -22,11 +24,13 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     with AppLayoutControlled {
   late final AccountController _accountController;
   late final BudgetController _budgetController;
+  late final TaskController _taskController;
 
   @override
   void registerServices() {
     _accountController = locator.get<AccountController>();
     _budgetController = locator.get<BudgetController>();
+    _taskController = locator.get<TaskController>();
   }
 
   @override
@@ -34,6 +38,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     configureLayout(title: 'Home', showBottomNav: true);
     _accountController.loadAccounts();
     _budgetController.loadBudgets();
+    _taskController.loadTasks();
   }
 
   String _getGreeting() {
@@ -432,16 +437,63 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     return Row(
       children: [
         Expanded(
-          child: _buildStatusCard(
-            title: 'Tasks',
-            icon: Icons.task_alt,
-            color: Colors.blue,
-            mainStat: '12',
-            mainLabel: 'Active',
-            subStats: [
-              ('3', 'Urgent'),
-              ('5', 'Due Today'),
-            ],
+          child: AsyncStreamBuilder<List<Task>>(
+            state: _taskController,
+            loadingBuilder: (_) => Card(
+              elevation: 0,
+              margin: EdgeInsets.zero,
+              child: Container(
+                height: 150,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(),
+              ),
+            ),
+            errorBuilder: (context, message) => _buildStatusCard(
+              title: 'Tasks',
+              icon: Icons.task_alt,
+              color: Colors.blue,
+              mainStat: 'Error',
+              mainLabel: 'Loading failed',
+              subStats: [],
+            ),
+            builder: (context, tasks) {
+              // Calculate task statistics
+              final activeTasks = tasks.where((t) =>
+                t.status != TaskStatus.completed &&
+                t.status != TaskStatus.cancelled &&
+                !t.archived
+              ).toList();
+
+              final urgentTasks = tasks.where((t) =>
+                t.priority == TaskPriority.urgent &&
+                t.status != TaskStatus.completed &&
+                !t.archived
+              ).length;
+
+              final today = DateTime.now();
+              final todayStart = DateTime(today.year, today.month, today.day);
+              final todayEnd = todayStart.add(const Duration(days: 1));
+
+              final dueToday = tasks.where((t) =>
+                t.dueDate != null &&
+                t.dueDate!.isAfter(todayStart) &&
+                t.dueDate!.isBefore(todayEnd) &&
+                t.status != TaskStatus.completed &&
+                !t.archived
+              ).length;
+
+              return _buildStatusCard(
+                title: 'Tasks',
+                icon: Icons.task_alt,
+                color: Colors.blue,
+                mainStat: '${activeTasks.length}',
+                mainLabel: 'Active',
+                subStats: [
+                  ('$urgentTasks', 'Urgent'),
+                  ('$dueToday', 'Due Today'),
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(width: 16),
@@ -625,93 +677,238 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
   }
 
   Widget _buildTodaysTasks() {
-    // Mock data
-    final todayTasks = [
-      ('Complete project proposal', true, Colors.red),
-      ('Team meeting at 2 PM', false, Colors.orange),
-      ('Review code changes', false, Colors.blue),
-    ];
+    return AsyncStreamBuilder<List<Task>>(
+      state: _taskController,
+      loadingBuilder: (_) => Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        child: Container(
+          height: 200,
+          alignment: Alignment.center,
+          child: const CircularProgressIndicator(),
+        ),
+      ),
+      errorBuilder: (context, message) => Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text('Error loading tasks: $message'),
+        ),
+      ),
+      builder: (context, tasks) {
+        // Get today's date range
+        final today = DateTime.now();
+        final todayStart = DateTime(today.year, today.month, today.day);
+        final todayEnd = todayStart.add(const Duration(days: 1));
 
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Today\'s Focus',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // Navigate to tasks
-                },
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (todayTasks.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
+        // Filter tasks: due today, overdue, or high/urgent priority
+        final focusTasks = tasks.where((t) {
+          // Skip completed, cancelled, or archived tasks
+          if (t.status == TaskStatus.completed ||
+              t.status == TaskStatus.cancelled ||
+              t.archived) {
+            return false;
+          }
+
+          // Include if due today
+          if (t.dueDate != null &&
+              t.dueDate!.isAfter(todayStart) &&
+              t.dueDate!.isBefore(todayEnd)) {
+            return true;
+          }
+
+          // Include if overdue
+          if (t.isOverdue) {
+            return true;
+          }
+
+          // Include if high or urgent priority
+          if (t.priority == TaskPriority.urgent ||
+              t.priority == TaskPriority.high) {
+            return true;
+          }
+
+          return false;
+        }).take(5).toList(); // Limit to 5 tasks
+
+        return Card(
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.check_circle_outline,
-                         size: 48, color: Colors.grey[400]),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No tasks for today',
-                      style: TextStyle(color: Colors.grey[600]),
+                    const Text(
+                      'Today\'s Focus',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.taskList);
+                      },
+                      child: const Text('View All'),
                     ),
                   ],
                 ),
-              ),
-            )
-          else
-            ...todayTasks.map((task) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: task.$3,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                const SizedBox(height: 12),
+                if (focusTasks.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          Icon(Icons.check_circle_outline,
+                              size: 48, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No tasks for today',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          task.$1,
-                          style: TextStyle(
-                            fontSize: 14,
-                            decoration: task.$2
-                                ? TextDecoration.lineThrough
-                                : null,
-                            color: task.$2 ? Colors.grey : null,
+                    ),
+                  )
+                else
+                  ...focusTasks.map((task) {
+                    // Determine color based on priority and status
+                    Color indicatorColor;
+                    if (task.isOverdue) {
+                      indicatorColor = Colors.red;
+                    } else if (task.priority == TaskPriority.urgent) {
+                      indicatorColor = Colors.red;
+                    } else if (task.priority == TaskPriority.high) {
+                      indicatorColor = Colors.orange;
+                    } else {
+                      indicatorColor = Colors.blue;
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () {
+                          // Navigate to task list
+                          Navigator.pushNamed(context, AppRoutes.taskList);
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: indicatorColor,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      task.title,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        decoration: task.status == TaskStatus.completed
+                                            ? TextDecoration.lineThrough
+                                            : null,
+                                        color: task.status == TaskStatus.completed
+                                            ? Colors.grey
+                                            : null,
+                                      ),
+                                    ),
+                                    if (task.dueDate != null || task.priority != TaskPriority.low)
+                                      const SizedBox(height: 4),
+                                    if (task.dueDate != null || task.priority != TaskPriority.low)
+                                      Row(
+                                        children: [
+                                          if (task.isOverdue)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: const Text(
+                                                'Overdue',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.red,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          if (task.isOverdue && task.priority != TaskPriority.low)
+                                            const SizedBox(width: 6),
+                                          if (task.priority != TaskPriority.low)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: indicatorColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                task.priority.displayName,
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: indicatorColor,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Checkbox(
+                                value: task.status == TaskStatus.completed,
+                                onChanged: (value) async {
+                                  if (value == true) {
+                                    await _taskController.updateTask(
+                                      task.copyWith(
+                                        status: TaskStatus.completed,
+                                        completedAt: DateTime.now(),
+                                      ),
+                                    );
+                                  } else {
+                                    await _taskController.updateTask(
+                                      task.copyWith(
+                                        status: TaskStatus.todo,
+                                        completedAt: null,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Checkbox(
-                        value: task.$2,
-                        onChanged: (value) {},
-                      ),
-                    ],
-                  ),
-                )),
-        ],
-        ),
-      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

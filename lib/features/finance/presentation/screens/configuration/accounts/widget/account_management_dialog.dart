@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:persona_codex/core/utils/icon_helper.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account_enums.dart';
 
@@ -30,20 +31,11 @@ class _AccountDialogState extends State<AccountManagementDialog> {
   bool _isActive = true;
   bool _isArchived = false;
   Color _selectedColor = Colors.blue;
-  IconData? _selectedIcon;
+  IconData _selectedIcon = IconHelper.defaultIcon;
 
-  // Example icon list (expand as needed)
-  final List<IconData> _iconOptions = [
-    Icons.account_balance,
-    Icons.attach_money,
-    Icons.savings,
-    Icons.credit_card,
-    Icons.wallet_giftcard,
-    Icons.account_box,
-    Icons.monetization_on,
-    Icons.shopping_cart,
-    Icons.house,
-  ];
+  // Get icon options from IconHelper to ensure tree-shakeable icons
+  List<IconData> get _iconOptions =>
+      IconHelper.getAvailableIcons().map((e) => e.$1).toList();
 
   @override
   void initState() {
@@ -61,12 +53,7 @@ class _AccountDialogState extends State<AccountManagementDialog> {
     _selectedColor = widget.account?.colorHex != null
         ? Color(int.parse(widget.account!.colorHex!.replaceFirst('#', '0xff')))
         : Colors.blue;
-    _selectedIcon = widget.account?.iconCodePoint != null
-        ? IconData(
-            int.parse(widget.account!.iconCodePoint!),
-            fontFamily: 'MaterialIcons',
-          )
-        : null;
+    _selectedIcon = IconHelper.fromString(widget.account?.iconCodePoint);
   }
 
   @override
@@ -314,7 +301,7 @@ class _AccountDialogState extends State<AccountManagementDialog> {
           ? null
           : _bankController.text.trim(),
       colorHex: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0')}',
-      iconCodePoint: _selectedIcon?.codePoint.toString(),
+      iconCodePoint: _selectedIcon.codePoint.toString(),
       isActive: _isActive,
       isArchived: _isArchived,
       userId: widget.userId,

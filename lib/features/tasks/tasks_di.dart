@@ -3,6 +3,7 @@
 /// Use cases and controllers are instantiated directly without DI
 library;
 
+import 'package:persona_codex/features/profile/presentation/state/task_activity_controller.dart';
 import 'package:persona_codex/features/tasks/presentation/state/task_controller.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 
@@ -49,5 +50,10 @@ void setupTasksDependencies() {
   locator.registerFactory<ProjectController>(() {
     final repo = locator.get<ProjectRepository>();
     return ProjectController(repo);
+  });
+
+  locator.registerFactory<TaskActivityController>(() {
+    final repo = locator.get<TaskRepository>();
+    return TaskActivityController(repo);
   });
 }

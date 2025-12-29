@@ -16,6 +16,8 @@ class DebtModel extends Debt {
     super.updatedAt,
     super.settledAt,
     super.userId,
+    super.accountId,
+    super.transactionId,
   });
 
   /// Convert from JSON (Supabase response)
@@ -49,6 +51,8 @@ class DebtModel extends Debt {
           ? DateTime.parse(json['settled_at'] as String)
           : null,
       userId: json['user_id'] as String?,
+      accountId: json['account_id'] as String?,
+      transactionId: json['transaction_id'] as String?,
     );
   }
 
@@ -67,6 +71,8 @@ class DebtModel extends Debt {
       if (notes != null) 'notes': notes,
       if (settledAt != null) 'settled_at': settledAt!.toIso8601String(),
       if (userId != null) 'user_id': userId,
+      if (accountId != null) 'account_id': accountId,
+      if (transactionId != null) 'transaction_id': transactionId,
     };
   }
 
@@ -87,6 +93,8 @@ class DebtModel extends Debt {
       updatedAt: debt.updatedAt,
       settledAt: debt.settledAt,
       userId: debt.userId,
+      accountId: debt.accountId,
+      transactionId: debt.transactionId,
     );
   }
 }

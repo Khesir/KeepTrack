@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/utils/icon_helper.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
@@ -503,10 +504,8 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
         ? Color(int.parse(goal.colorHex!.replaceFirst('#', '0xFF')))
         : Colors.purple;
 
-    // Parse icon from code point
-    final icon = goal.iconCodePoint != null
-        ? IconData(int.parse(goal.iconCodePoint!), fontFamily: 'MaterialIcons')
-        : Icons.flag;
+    // Parse icon from code point using IconHelper for tree-shakeable icons
+    final icon = IconHelper.fromString(goal.iconCodePoint);
 
     return Card(
       elevation: 0,

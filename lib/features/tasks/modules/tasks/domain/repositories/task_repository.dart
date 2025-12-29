@@ -35,4 +35,8 @@ abstract class TaskRepository {
     String? projectId,
     List<String>? tags,
   });
+
+  /// Get task completion activity for the last N months
+  /// Returns a map where key is the date (day) and value is the count of completed tasks
+  Future<Result<Map<DateTime, int>>> getTaskActivityForLastMonths(int months);
 }

@@ -34,9 +34,11 @@ void main() async {
   if (isProd) {
     const url = String.fromEnvironment('SUPABASE_URL');
     const key = String.fromEnvironment('SUPABASE_ANON_KEY');
+    const googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
 
     AppLogger.info("SUPABASE_URL length: ${url.length}");
     AppLogger.info("SUPABASE_ANON_KEY length: ${key.length}");
+    AppLogger.info("GOOGLE_WEB_CLIENT_ID length: ${googleWebClientId.length}");
 
     // Runtime checks that work in release builds
     if (url.isEmpty || key.isEmpty) {
@@ -46,13 +48,24 @@ void main() async {
           'SUPABASE_ANON_KEY: ${key.isEmpty ? "NOT SET" : "OK"}\n\n'
           'Make sure to pass them via --dart-define:\n'
           'flutter build apk --release --dart-define="PROD=true" '
-          '--dart-define="SUPABASE_URL=..." --dart-define="SUPABASE_ANON_KEY=..."';
+          '--dart-define="SUPABASE_URL=..." --dart-define="SUPABASE_ANON_KEY=..." '
+          '--dart-define="GOOGLE_WEB_CLIENT_ID=..."';
       AppLogger.error(error);
       runApp(_buildErrorScreen(Exception(error), false, false));
       return;
     }
 
-    // Production: read from --dart-define
+    // Production: Initialize dotenv with dart-define values
+    // This ensures AuthService can access dotenv.env without NotInitializedError
+    AppLogger.info("Production mode: Initializing dotenv with dart-define values");
+    dotenv.testLoad(fileInput: '''
+SUPABASE_URL=$url
+SUPABASE_ANON_KEY=$key
+GOOGLE_WEB_CLIENT_ID=$googleWebClientId
+DEV_BYPASS=false
+PROD=true
+''');
+
     await _initializeAppWithRetry(supabaseUrl: url, supabaseAnonKey: key);
   } else {
     // Dev: load from assets/.env

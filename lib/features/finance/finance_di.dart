@@ -126,8 +126,10 @@ void setupFinanceDependencies() {
     return GoalController(repository);
   });
   locator.registerFactory<DebtController>(() {
-    final repository = locator.get<DebtRepository>();
-    return DebtController(repository);
+    final debtRepository = locator.get<DebtRepository>();
+    final transactionRepository = locator.get<TransactionRepository>();
+    final supabaseService = locator.get<SupabaseService>();
+    return DebtController(debtRepository, transactionRepository, supabaseService);
   });
   locator.registerFactory<PlannedPaymentController>(() {
     final repository = locator.get<PlannedPaymentRepository>();

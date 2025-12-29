@@ -161,4 +161,36 @@ class TaskDataSourceSupabase implements TaskDataSource {
         .map((doc) => TaskModel.fromJson(doc as Map<String, dynamic>))
         .toList();
   }
+
+  @override
+  Future<Map<DateTime, int>> getTaskActivityForLastMonths(int months) async {
+    // Calculate the start date (N months ago)
+    final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month - months, now.day);
+
+    // Query completed tasks in the date range
+    final response = await supabaseService.client
+        .from(tableName)
+        .select('completed_at')
+        .eq('user_id', supabaseService.userId!)
+        .eq('status', 'completed')
+        .not('completed_at', 'is', null)
+        .gte('completed_at', startDate.toIso8601String())
+        .order('completed_at', ascending: true);
+
+    // Group tasks by date (day)
+    final Map<DateTime, int> activity = {};
+
+    for (final task in (response as List)) {
+      final completedAtStr = task['completed_at'] as String?;
+      if (completedAtStr != null) {
+        final completedAt = DateTime.parse(completedAtStr);
+        // Normalize to day (remove time component)
+        final date = DateTime(completedAt.year, completedAt.month, completedAt.day);
+        activity[date] = (activity[date] ?? 0) + 1;
+      }
+    }
+
+    return activity;
+  }
 }

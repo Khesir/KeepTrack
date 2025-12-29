@@ -22,6 +22,8 @@ import 'migrations/018_add_transaction_type.dart';
 import 'migrations/019_add_transaction_context_fields.dart';
 import 'migrations/020_add_finance_transaction_rpcs.dart';
 import 'migrations/021_add_task_parent_task_id.dart';
+import 'migrations/022_add_debt_account_transaction_fields.dart';
+import 'migrations/023_add_create_debt_with_transaction_rpc.dart';
 
 /// Manages database migrations
 ///
@@ -255,6 +257,8 @@ class MigrationManager {
     Migration019AddTransactionContextFields(),
     Migration020AddFinanceTransactionRpcs(),
     Migration021AddTaskParentTaskId(),
+    Migration022AddDebtAccountTransactionFields(),
+    Migration023AddCreateDebtWithTransactionRpc(),
     // Add new migrations here:
   ];
 

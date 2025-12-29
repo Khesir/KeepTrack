@@ -17,8 +17,10 @@ import '../../features/finance/presentation/screens/configuration/goals/goals_ma
 import '../../features/finance/presentation/screens/configuration/debts/debts_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/planned_payments/planned_payments_management_screen.dart';
 import '../../features/finance/presentation/screens/transactions/create_transaction_screen.dart';
+import '../../features/finance/presentation/screens/finance_main_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 import '../../features/tasks/modules/tasks/domain/entities/task.dart';
+import '../../features/tasks/presentation/screens/tasks_main_screen.dart';
 
 import '../../features/tasks/modules/projects/domain/entities/project.dart';
 
@@ -71,6 +73,17 @@ class AppRouter {
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       // Tasks
+      case AppRoutes.taskList:
+        return MaterialPageRoute(
+          builder: (_) => const TasksMainScreen(),
+          settings: settings,
+        );
+      case AppRoutes.taskCreate:
+        // Redirect to task management screen for task creation
+        return MaterialPageRoute(
+          builder: (_) => const TaskManagementScreen(),
+          settings: settings,
+        );
       case AppRoutes.taskManagement:
         return MaterialPageRoute(
           builder: (_) => const TaskManagementScreen(),
@@ -81,7 +94,15 @@ class AppRouter {
           builder: (_) => const ProjectManagementScreen(),
           settings: settings,
         );
-      // Project list
+
+      // Budget
+      case AppRoutes.budgetList:
+        return MaterialPageRoute(
+          builder: (_) => const FinanceMainScreen(),
+          settings: settings,
+        );
+
+      // Settings
       case AppRoutes.settings:
         return MaterialPageRoute(
           builder: (_) => const SettingsPage(),
