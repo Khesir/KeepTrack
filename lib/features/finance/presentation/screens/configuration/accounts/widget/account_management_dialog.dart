@@ -32,6 +32,7 @@ class _AccountDialogState extends State<AccountManagementDialog> {
   bool _isArchived = false;
   Color _selectedColor = Colors.blue;
   IconData _selectedIcon = IconHelper.defaultIcon;
+  bool _isSaving = false;
 
   // Get icon options from IconHelper to ensure tree-shakeable icons
   List<IconData> get _iconOptions =>
@@ -254,10 +255,19 @@ class _AccountDialogState extends State<AccountManagementDialog> {
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isSaving ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(onPressed: _save, child: Text(isEdit ? 'Save' : 'Add')),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _save,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(isEdit ? 'Save' : 'Add'),
+        ),
       ],
     );
   }
@@ -289,25 +299,32 @@ class _AccountDialogState extends State<AccountManagementDialog> {
     );
   }
 
-  void _save() async {
+  Future<void> _save() async {
+    if (_isSaving) return; // Prevent double-submit
     if (!_formKey.currentState!.validate()) return;
 
-    final account = Account(
-      id: widget.account?.id,
-      name: _nameController.text.trim(),
-      accountType: _selectedType,
-      balance: double.tryParse(_balanceController.text) ?? 0,
-      bankAccountNumber: _bankController.text.trim().isEmpty
-          ? null
-          : _bankController.text.trim(),
-      colorHex: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0')}',
-      iconCodePoint: _selectedIcon.codePoint.toString(),
-      isActive: _isActive,
-      isArchived: _isArchived,
-      userId: widget.userId,
-    );
+    setState(() => _isSaving = true);
 
-    await widget.onSave(account);
-    if (mounted) Navigator.pop(context);
+    try {
+      final account = Account(
+        id: widget.account?.id,
+        name: _nameController.text.trim(),
+        accountType: _selectedType,
+        balance: double.tryParse(_balanceController.text) ?? 0,
+        bankAccountNumber: _bankController.text.trim().isEmpty
+            ? null
+            : _bankController.text.trim(),
+        colorHex: '#${_selectedColor.value.toRadixString(16).padLeft(8, '0')}',
+        iconCodePoint: _selectedIcon.codePoint.toString(),
+        isActive: _isActive,
+        isArchived: _isArchived,
+        userId: widget.userId,
+      );
+
+      await widget.onSave(account);
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }

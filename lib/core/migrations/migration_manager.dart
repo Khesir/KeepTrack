@@ -27,6 +27,8 @@ import 'migrations/023_add_create_debt_with_transaction_rpc.dart';
 import 'migrations/024_add_transaction_fee_fields.dart';
 import 'migrations/025_add_budget_category_fee_tracking.dart';
 import 'migrations/026_fix_transaction_date_to_timestamp.dart';
+import 'migrations/027_add_planned_payment_installments.dart';
+import 'migrations/028_add_planned_payment_end_date.dart';
 
 /// Manages database migrations
 ///
@@ -265,6 +267,8 @@ class MigrationManager {
     Migration024AddTransactionFeeFields(),
     Migration025AddBudgetCategoryFeeTracking(),
     Migration026FixTransactionDateToTimestamp(),
+    Migration027AddPlannedPaymentInstallments(),
+    Migration028AddPlannedPaymentEndDate(),
     // Add new migrations here:
   ];
 

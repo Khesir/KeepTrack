@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/state/stream_state.dart';
 import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
@@ -41,6 +43,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
   String? selectedAccountId;
   String? selectedCategoryId;
 
+  bool _isSaving = false;
   bool get isEdit => widget.debt != null;
 
   @override
@@ -78,7 +81,9 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     super.dispose();
   }
 
-  void _saveDebt() {
+  Future<void> _saveDebt() async {
+    if (_isSaving) return; // Prevent double-submit
+
     if (personNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a person name')),
@@ -104,37 +109,49 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
       return;
     }
 
-    final originalAmount = double.tryParse(originalAmountController.text) ?? 0;
-    final remainingAmount =
-        double.tryParse(remainingAmountController.text) ?? originalAmount;
+    setState(() => _isSaving = true);
 
-    final debtEntity = Debt(
-      id: widget.debt?.id,
-      type: selectedType,
-      personName: personNameController.text.trim(),
-      description: descriptionController.text.trim(),
-      originalAmount: originalAmount,
-      remainingAmount: remainingAmount,
-      startDate: selectedStartDate,
-      dueDate: selectedDueDate,
-      status: selectedStatus,
-      notes: notesController.text.trim().isNotEmpty
-          ? notesController.text.trim()
-          : null,
-      userId: widget.userId,
-      accountId: selectedAccountId,
-      transactionId: widget.debt?.transactionId,
-    );
+    try {
+      final originalAmount = double.tryParse(originalAmountController.text) ?? 0;
+      final remainingAmount =
+          double.tryParse(remainingAmountController.text) ?? originalAmount;
 
-    widget.onSave(debtEntity, selectedCategoryId);
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(isEdit ? 'Debt updated' : 'Debt created')),
-    );
+      final debtEntity = Debt(
+        id: widget.debt?.id,
+        type: selectedType,
+        personName: personNameController.text.trim(),
+        description: descriptionController.text.trim(),
+        originalAmount: originalAmount,
+        remainingAmount: remainingAmount,
+        startDate: selectedStartDate,
+        dueDate: selectedDueDate,
+        status: selectedStatus,
+        notes: notesController.text.trim().isNotEmpty
+            ? notesController.text.trim()
+            : null,
+        userId: widget.userId,
+        accountId: selectedAccountId,
+        transactionId: widget.debt?.transactionId,
+      );
+
+      widget.onSave(debtEntity, selectedCategoryId);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isEdit ? 'Debt updated' : 'Debt created')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get currency symbol from settings
+    final settingsController = locator.get<SettingsController>();
+    final currencySymbol = settingsController.data?.currency.symbol ?? '₱';
+
     return StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
         title: Text(isEdit ? 'Edit Debt' : 'Create Debt'),
@@ -316,10 +333,10 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
               const SizedBox(height: 16),
               TextField(
                 controller: originalAmountController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Original Amount',
-                  border: OutlineInputBorder(),
-                  prefixText: '\$ ',
+                  border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -433,12 +450,18 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _isSaving ? null : () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: _saveDebt,
-            child: Text(isEdit ? 'Update' : 'Create'),
+            onPressed: _isSaving ? null : _saveDebt,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(isEdit ? 'Update' : 'Create'),
           ),
         ],
       ),

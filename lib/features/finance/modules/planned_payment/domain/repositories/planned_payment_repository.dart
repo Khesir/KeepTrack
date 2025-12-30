@@ -35,4 +35,8 @@ abstract class PlannedPaymentRepository {
 
   /// Update the next payment date (after a payment is made)
   Future<Result<PlannedPayment>> recordPayment(String id);
+
+  /// Skip a payment (move to next payment date without recording payment)
+  /// For installments, this does NOT count as a paid installment
+  Future<Result<PlannedPayment>> skipPayment(String id);
 }

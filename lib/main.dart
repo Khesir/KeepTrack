@@ -9,11 +9,16 @@ import 'package:persona_codex/features/finance/finance_di.dart';
 import 'package:persona_codex/features/finance/presentation/screens/finance_main_screen.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/di/di_logger.dart';
 import 'core/routing/app_router.dart';
 import 'core/migrations/migration_manager.dart';
 import 'core/logging/app_logger.dart';
 import 'core/logging/log_viewer_screen.dart';
+import 'core/settings/data/repositories/settings_repository.dart';
+import 'core/settings/domain/entities/app_settings.dart';
+import 'core/settings/presentation/settings_controller.dart';
+import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/tasks/presentation/screens/tasks_main_screen.dart';
@@ -103,12 +108,17 @@ Future<void> _initializeAppWithRetry({
       await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
       AppLogger.info('✅ Supabase initialized');
 
+      // Initialize SharedPreferences
+      AppLogger.info('🔧 Initializing SharedPreferences...');
+      final sharedPreferences = await SharedPreferences.getInstance();
+      AppLogger.info('✅ SharedPreferences initialized');
+
       // Run database migrations BEFORE setting up dependencies
       final migrationManager = MigrationManager(Supabase.instance.client);
       await migrationManager.runMigrations();
 
       // Setup app dependencies
-      _setupDependencies();
+      _setupDependencies(sharedPreferences);
 
       // Run the app - SUCCESS!
       runApp(const PersonalCodexApp());
@@ -374,11 +384,22 @@ Widget _buildErrorScreen(
 }
 
 /// Setup all dependencies
-void _setupDependencies() {
+void _setupDependencies(SharedPreferences sharedPreferences) {
   // Core Supabase service (shared infrastructure)
   // Note: Supabase is already initialized in main(), we just wrap the client
   locator.registerLazySingleton<SupabaseService>(() {
     return SupabaseService.fromClient(Supabase.instance.client);
+  });
+
+  // Core Settings service
+  locator.registerSingleton<SharedPreferences>(sharedPreferences);
+
+  locator.registerLazySingleton<SettingsRepository>(() {
+    return SettingsRepository(locator.get<SharedPreferences>());
+  });
+
+  locator.registerLazySingleton<SettingsController>(() {
+    return SettingsController(locator.get<SettingsRepository>());
   });
 
   // Feature dependencies
@@ -388,25 +409,51 @@ void _setupDependencies() {
 }
 
 /// Main app widget
-class PersonalCodexApp extends StatelessWidget {
+class PersonalCodexApp extends StatefulWidget {
   const PersonalCodexApp({super.key});
 
   @override
+  State<PersonalCodexApp> createState() => _PersonalCodexAppState();
+}
+
+class _PersonalCodexAppState extends State<PersonalCodexApp> {
+  late final SettingsController _settingsController;
+
+  @override
+  void initState() {
+    super.initState();
+    _settingsController = locator.get<SettingsController>();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      // App info
-      title: 'Personal Codex',
-      debugShowCheckedModeBanner: false,
+    return StreamBuilder<AsyncState<AppSettings>>(
+      stream: _settingsController.stream,
+      initialData: _settingsController.state,
+      builder: (context, snapshot) {
+        // Extract data from AsyncState
+        final asyncState = snapshot.data;
+        final settings = asyncState is AsyncData<AppSettings>
+            ? asyncState.data
+            : const AppSettings();
 
-      // Theme
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // Follow system theme
-      // Routing
-      onGenerateRoute: AppRouter.onGenerateRoute,
+        return MaterialApp(
+          // App info
+          title: 'Personal Codex',
+          debugShowCheckedModeBanner: false,
 
-      // Home screen (bottom nav with tabs) - protected by auth guard
-      home: const AuthGuard(child: MainScreen()),
+          // Theme
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: settings.themeMode.toThemeMode(),
+
+          // Routing
+          onGenerateRoute: AppRouter.onGenerateRoute,
+
+          // Home screen (bottom nav with tabs) - protected by auth guard
+          home: const AuthGuard(child: MainScreen()),
+        );
+      },
     );
   }
 }

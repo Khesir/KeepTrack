@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/state/stream_state.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
 import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../../../core/routing/app_router.dart';
 import '../../../../modules/budget/domain/entities/budget.dart';
 import '../../../../modules/budget/domain/entities/budget_category.dart';
 import '../../../../modules/finance_category/domain/entities/finance_category.dart';
-import '../../../state/account_controller.dart';
 import '../../../state/budget_controller.dart';
 import '../../../state/finance_category_controller.dart';
 
@@ -23,12 +22,12 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
   late final BudgetController _controller;
   late final FinanceCategoryController _financeCategoryController;
   late final SupabaseService _supabaseService;
-  late final AccountController _accountController;
   final _formKey = GlobalKey<FormState>();
   final List<BudgetCategory> _categories = [];
   bool _isCreating = false;
   String _selectedMonth = '';
-  String? _selectedAccountId; // Add this
+  bool _copyFromBudget = false;
+  String? _sourceBudgetId;
 
   @override
   void initState() {
@@ -36,7 +35,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     _controller = locator.get<BudgetController>();
     _financeCategoryController = locator.get<FinanceCategoryController>();
     _supabaseService = locator.get<SupabaseService>();
-    _accountController = locator.get<AccountController>();
 
     // Initialize with current month only
     final now = DateTime.now();
@@ -101,15 +99,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
   }
 
   Future<void> _createBudget() async {
-    if (_selectedAccountId == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select an account')),
-        );
-      }
-      return;
-    }
-
     if (_categories.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -143,7 +132,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
         categories: [],
         status: BudgetStatus.active,
         userId: _supabaseService.userId,
-        accountId: _selectedAccountId,
       );
 
       // Create budget and get the returned budget with ID
@@ -177,6 +165,47 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     } finally {
       if (mounted) {
         setState(() => _isCreating = false);
+      }
+    }
+  }
+
+  Future<void> _copyBudgetCategories(String budgetId) async {
+    try {
+      final budgets = _controller.data ?? [];
+      final sourceBudget = budgets.firstWhere((b) => b.id == budgetId);
+
+      setState(() {
+        _categories.clear();
+        // Copy all categories from source budget
+        for (final category in sourceBudget.categories) {
+          _categories.add(
+            BudgetCategory(
+              budgetId: '', // Will be set when creating
+              financeCategoryId: category.financeCategoryId,
+              targetAmount: category.targetAmount,
+              financeCategory: category.financeCategory,
+            ),
+          );
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Copied ${_categories.length} categories from ${_formatMonthDisplay(sourceBudget.month)}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error copying budget: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -248,73 +277,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
             children: [
               const SizedBox(height: 16),
 
-              // Account Selection Card
-              AsyncStreamBuilder<List<Account>>(
-                state: _accountController,
-                builder: (context, accounts) {
-                  // Auto-select first account if none selected
-                  if (_selectedAccountId == null && accounts.isNotEmpty) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      setState(() {
-                        _selectedAccountId = accounts.first.id;
-                      });
-                    });
-                  }
-
-                  final selectedAccount = accounts
-                      .where((acc) => acc.id == _selectedAccountId)
-                      .firstOrNull;
-
-                  return Card(
-                    child: ListTile(
-                      leading: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: selectedAccount?.colorHex != null
-                              ? Color(
-                                  int.parse(
-                                    selectedAccount!.colorHex!.replaceFirst(
-                                      '#',
-                                      '0xFF',
-                                    ),
-                                  ),
-                                ).withOpacity(0.2)
-                              : Colors.grey.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.account_balance_wallet),
-                      ),
-                      title: const Text('Account'),
-                      subtitle: Text(
-                        selectedAccount?.name ?? 'Select an account',
-                        style: TextStyle(
-                          fontWeight: selectedAccount != null
-                              ? FontWeight.w500
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      trailing: const Icon(Icons.arrow_drop_down),
-                      onTap: () => _showAccountPicker(accounts),
-                    ),
-                  );
-                },
-                loadingBuilder: (context) => const Card(
-                  child: ListTile(
-                    leading: Icon(Icons.account_balance_wallet),
-                    title: Text('Loading accounts...'),
-                  ),
-                ),
-                errorBuilder: (context, message) => Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.error, color: Colors.red),
-                    title: const Text('Error loading accounts'),
-                    subtitle: Text(message),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
               // Month selection card
               Card(
                 child: ListTile(
@@ -324,6 +286,79 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                   trailing: const Icon(Icons.info_outline),
                   onTap: _selectMonth,
                 ),
+              ),
+              const SizedBox(height: 8),
+
+              // Copy from previous budget option
+              AsyncStreamBuilder<List<Budget>>(
+                state: _controller,
+                builder: (context, budgets) {
+                  // Filter budgets and exclude current month
+                  final availableBudgets = budgets
+                      .where((b) =>
+                          b.month != _selectedMonth &&
+                          b.categories.isNotEmpty)
+                      .toList()
+                    ..sort((a, b) => b.month.compareTo(a.month)); // Most recent first
+
+                  if (availableBudgets.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Card(
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          secondary: const Icon(Icons.copy_all),
+                          title: const Text('Copy from previous budget'),
+                          subtitle: const Text('Use an existing budget as template'),
+                          value: _copyFromBudget,
+                          onChanged: (value) {
+                            setState(() {
+                              _copyFromBudget = value;
+                              if (!value) {
+                                _sourceBudgetId = null;
+                                _categories.clear();
+                              }
+                            });
+                          },
+                        ),
+                        if (_copyFromBudget) ...[
+                          const Divider(height: 1),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: DropdownButtonFormField<String>(
+                              value: _sourceBudgetId,
+                              decoration: const InputDecoration(
+                                labelText: 'Select budget to copy',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.history),
+                              ),
+                              items: availableBudgets
+                                  .map(
+                                    (budget) => DropdownMenuItem(
+                                      value: budget.id,
+                                      child: Text(
+                                        _formatMonthDisplay(budget.month),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (budgetId) async {
+                                if (budgetId != null) {
+                                  setState(() => _sourceBudgetId = budgetId);
+                                  await _copyBudgetCategories(budgetId);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+                loadingBuilder: (context) => const SizedBox.shrink(),
+                errorBuilder: (context, message) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 16),
 
@@ -390,9 +425,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   TextButton.icon(
-                    onPressed: _selectedAccountId != null
-                        ? _showCategoryDialog
-                        : null,
+                    onPressed: _showCategoryDialog,
                     icon: const Icon(Icons.add),
                     label: const Text('Add Category'),
                   ),
@@ -414,9 +447,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              _selectedAccountId == null
-                                  ? 'Select an account first'
-                                  : 'No categories added',
+                              'No categories added',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey[600],
@@ -424,9 +455,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _selectedAccountId == null
-                                  ? 'Choose an account to start adding categories'
-                                  : 'Tap "Add Category" to get started',
+                              'Tap "Add Category" to get started',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[500],
@@ -489,7 +518,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
           ),
         ),
       ),
-      floatingActionButton: _categories.isNotEmpty && _selectedAccountId != null
+      floatingActionButton: _categories.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _isCreating ? null : _createBudget,
               icon: _isCreating
@@ -505,58 +534,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
               label: Text(_isCreating ? 'Creating...' : 'Create Budget'),
             )
           : null,
-    );
-  }
-
-  void _showAccountPicker(List<Account> accounts) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Account'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: accounts.length,
-            itemBuilder: (context, index) {
-              final account = accounts[index];
-              final isSelected = account.id == _selectedAccountId;
-              return ListTile(
-                leading: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: account.colorHex != null
-                        ? Color(
-                            int.parse(
-                              account.colorHex!.replaceFirst('#', '0xFF'),
-                            ),
-                          )
-                        : Colors.grey,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                title: Text(account.name),
-                trailing: isSelected
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : null,
-                onTap: () {
-                  setState(() {
-                    _selectedAccountId = account.id;
-                  });
-                  Navigator.pop(context);
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
     );
   }
 

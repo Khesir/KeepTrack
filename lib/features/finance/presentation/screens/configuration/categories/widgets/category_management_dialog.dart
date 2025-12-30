@@ -22,6 +22,7 @@ class CategoryManagementDialog extends StatefulWidget {
 class _CategoryManagementScreenState extends State<CategoryManagementDialog> {
   late final TextEditingController nameController;
   late CategoryType selectedType;
+  bool _isSaving = false;
   bool get isEdit => widget.financeCategory != null;
 
   @override
@@ -32,7 +33,9 @@ class _CategoryManagementScreenState extends State<CategoryManagementDialog> {
     selectedType = fc?.type ?? CategoryType.expense;
   }
 
-  void _saveCategory() {
+  Future<void> _saveCategory() async {
+    if (_isSaving) return; // Prevent double-submit
+
     if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a category name')),
@@ -40,16 +43,24 @@ class _CategoryManagementScreenState extends State<CategoryManagementDialog> {
       return;
     }
 
-    final category = FinanceCategory(
-      name: nameController.text.trim(),
-      type: selectedType,
-      userId: widget.userId,
-    );
-    widget.onSave(category);
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(isEdit ? 'Category updated' : 'Category created')),
-    );
+    setState(() => _isSaving = true);
+
+    try {
+      final category = FinanceCategory(
+        name: nameController.text.trim(),
+        type: selectedType,
+        userId: widget.userId,
+      );
+      widget.onSave(category);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isEdit ? 'Category updated' : 'Category created')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -95,12 +106,18 @@ class _CategoryManagementScreenState extends State<CategoryManagementDialog> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _isSaving ? null : () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: _saveCategory,
-            child: Text(isEdit ? 'Update' : 'Create'),
+            onPressed: _isSaving ? null : _saveCategory,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(isEdit ? 'Update' : 'Create'),
           ),
         ],
       ),

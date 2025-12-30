@@ -103,9 +103,85 @@ class PlannedPaymentRepositoryImpl implements PlannedPaymentRepository {
       return updatePlannedPayment(updated);
     }
 
-    // For recurring payments, calculate next payment date
+    // For installment plans, decrement remaining installments
+    if (payment.isInstallmentPlan) {
+      final newRemaining = (payment.remainingInstallments ?? 0) - 1;
+      final nextDate = _calculateNextPaymentDate(
+        payment.nextPaymentDate,
+        payment.frequency,
+      );
+
+      // Check if this was the last installment OR if end date is reached
+      final shouldClose = newRemaining <= 0 ||
+          (payment.endDate != null && nextDate.isAfter(payment.endDate!));
+
+      if (shouldClose) {
+        final updated = payment.copyWith(
+          lastPaymentDate: DateTime.now(),
+          remainingInstallments: newRemaining.clamp(0, payment.totalInstallments ?? 0),
+          status: PaymentStatus.closed,
+          updatedAt: DateTime.now(),
+        );
+        return updatePlannedPayment(updated);
+      }
+
+      // Otherwise, update remaining count and next payment date
+      final updated = payment.copyWith(
+        lastPaymentDate: DateTime.now(),
+        remainingInstallments: newRemaining,
+        nextPaymentDate: nextDate,
+        updatedAt: DateTime.now(),
+      );
+      return updatePlannedPayment(updated);
+    }
+
+    // For regular recurring payments, calculate next payment date
+    final nextDate = _calculateNextPaymentDate(
+      payment.nextPaymentDate,
+      payment.frequency,
+    );
+
+    // Check if next payment date would be after end date
+    if (payment.endDate != null && nextDate.isAfter(payment.endDate!)) {
+      // End date reached, close the payment
+      final updated = payment.copyWith(
+        lastPaymentDate: DateTime.now(),
+        nextPaymentDate: nextDate,
+        status: PaymentStatus.closed,
+        updatedAt: DateTime.now(),
+      );
+      return updatePlannedPayment(updated);
+    }
+
+    // Otherwise, just update to next payment date
     final updated = payment.copyWith(
       lastPaymentDate: DateTime.now(),
+      nextPaymentDate: nextDate,
+      updatedAt: DateTime.now(),
+    );
+
+    return updatePlannedPayment(updated);
+  }
+
+  @override
+  Future<Result<PlannedPayment>> skipPayment(String id) async {
+    final result = await getPlannedPaymentById(id);
+    if (result.isError) {
+      return result;
+    }
+
+    final payment = result.data;
+
+    // Cannot skip one-time payments
+    if (payment.frequency == PaymentFrequency.oneTime) {
+      return Result.error(
+        ValidationFailure('Cannot skip one-time payments'),
+      );
+    }
+
+    // For all payment types (installments and recurring), just move next payment date
+    // For installments, remaining count stays the same (skipping doesn't count as payment)
+    final updated = payment.copyWith(
       nextPaymentDate: _calculateNextPaymentDate(
         payment.nextPaymentDate,
         payment.frequency,

@@ -11,12 +11,15 @@ class PlannedPaymentModel extends PlannedPayment {
     required super.frequency,
     required super.nextPaymentDate,
     super.lastPaymentDate,
+    super.endDate,
     super.accountId,
     super.status,
     super.notes,
     super.createdAt,
     super.updatedAt,
     super.userId,
+    super.totalInstallments,
+    super.remainingInstallments,
   });
 
   /// Convert from JSON (Supabase response)
@@ -38,6 +41,9 @@ class PlannedPaymentModel extends PlannedPayment {
       lastPaymentDate: json['last_payment_date'] != null
           ? DateTime.parse(json['last_payment_date'] as String)
           : null,
+      endDate: json['end_date'] != null
+          ? DateTime.parse(json['end_date'] as String)
+          : null,
       accountId: json['account_id'] as String?,
       status: PaymentStatus.values.firstWhere(
         (e) => e.name == json['status'],
@@ -51,6 +57,8 @@ class PlannedPaymentModel extends PlannedPayment {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       userId: json['user_id'] as String?,
+      totalInstallments: json['total_installments'] as int?,
+      remainingInstallments: json['remaining_installments'] as int?,
     );
   }
 
@@ -66,10 +74,15 @@ class PlannedPaymentModel extends PlannedPayment {
       'next_payment_date': nextPaymentDate.toIso8601String(),
       if (lastPaymentDate != null)
         'last_payment_date': lastPaymentDate!.toIso8601String(),
+      if (endDate != null)
+        'end_date': endDate!.toIso8601String(),
       if (accountId != null) 'account_id': accountId,
       'status': status.name,
       if (notes != null) 'notes': notes,
       if (userId != null) 'user_id': userId,
+      if (totalInstallments != null) 'total_installments': totalInstallments,
+      if (remainingInstallments != null)
+        'remaining_installments': remainingInstallments,
     };
   }
 
@@ -84,12 +97,15 @@ class PlannedPaymentModel extends PlannedPayment {
       frequency: payment.frequency,
       nextPaymentDate: payment.nextPaymentDate,
       lastPaymentDate: payment.lastPaymentDate,
+      endDate: payment.endDate,
       accountId: payment.accountId,
       status: payment.status,
       notes: payment.notes,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
       userId: payment.userId,
+      totalInstallments: payment.totalInstallments,
+      remainingInstallments: payment.remainingInstallments,
     );
   }
 }

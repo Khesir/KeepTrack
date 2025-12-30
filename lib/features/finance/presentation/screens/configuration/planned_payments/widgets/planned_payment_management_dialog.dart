@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
+import 'package:persona_codex/core/state/stream_state.dart';
 import 'package:persona_codex/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 
 import '../../../../../modules/planned_payment/domain/entities/payment_enums.dart';
@@ -27,10 +30,12 @@ class _PlannedPaymentManagementDialogState
   late final TextEditingController notesController;
 
   late DateTime selectedNextPaymentDate;
+  DateTime? selectedEndDate;
   late PaymentCategory selectedCategory;
   late PaymentFrequency selectedFrequency;
   late PaymentStatus selectedStatus;
 
+  bool _isSaving = false;
   bool get isEdit => widget.payment != null;
 
   @override
@@ -43,6 +48,7 @@ class _PlannedPaymentManagementDialogState
     notesController = TextEditingController(text: p?.notes ?? '');
 
     selectedNextPaymentDate = p?.nextPaymentDate ?? DateTime.now();
+    selectedEndDate = p?.endDate;
     selectedCategory = p?.category ?? PaymentCategory.bills;
     selectedFrequency = p?.frequency ?? PaymentFrequency.monthly;
     selectedStatus = p?.status ?? PaymentStatus.active;
@@ -57,7 +63,9 @@ class _PlannedPaymentManagementDialogState
     super.dispose();
   }
 
-  void _savePayment() {
+  Future<void> _savePayment() async {
+    if (_isSaving) return; // Prevent double-submit
+
     if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a payment name')),
@@ -77,29 +85,40 @@ class _PlannedPaymentManagementDialogState
       return;
     }
 
-    final amount = double.tryParse(amountController.text) ?? 0;
+    setState(() => _isSaving = true);
 
-    final paymentEntity = PlannedPayment(
-      id: widget.payment?.id,
-      name: nameController.text.trim(),
-      payee: payeeController.text.trim(),
-      amount: amount,
-      category: selectedCategory,
-      frequency: selectedFrequency,
-      nextPaymentDate: selectedNextPaymentDate,
-      status: selectedStatus,
-      notes: notesController.text.trim().isNotEmpty
-          ? notesController.text.trim()
-          : null,
-      userId: widget.userId,
-    );
+    try {
+      final amount = double.tryParse(amountController.text) ?? 0;
 
-    widget.onSave(paymentEntity);
-    Navigator.pop(context);
+      final paymentEntity = PlannedPayment(
+        id: widget.payment?.id,
+        name: nameController.text.trim(),
+        payee: payeeController.text.trim(),
+        amount: amount,
+        category: selectedCategory,
+        frequency: selectedFrequency,
+        nextPaymentDate: selectedNextPaymentDate,
+        endDate: selectedEndDate,
+        status: selectedStatus,
+        notes: notesController.text.trim().isNotEmpty
+            ? notesController.text.trim()
+            : null,
+        userId: widget.userId,
+      );
+
+      widget.onSave(paymentEntity);
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get currency symbol from settings
+    final settingsController = locator.get<SettingsController>();
+    final currencySymbol = settingsController.data?.currency.symbol ?? '₱';
+
     return AlertDialog(
       title: Text(isEdit ? 'Edit Planned Payment' : 'Create Planned Payment'),
       content: SingleChildScrollView(
@@ -127,10 +146,10 @@ class _PlannedPaymentManagementDialogState
             // Amount
             TextField(
               controller: amountController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Amount',
-                border: OutlineInputBorder(),
-                prefixText: '\$ ',
+                border: const OutlineInputBorder(),
+                prefixText: '$currencySymbol ',
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -171,26 +190,67 @@ class _PlannedPaymentManagementDialogState
               },
             ),
             const SizedBox(height: 16),
-            // Next payment date
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Next Payment Date'),
-              subtitle: Text(
-                '${selectedNextPaymentDate.year}-${selectedNextPaymentDate.month.toString().padLeft(2, '0')}-${selectedNextPaymentDate.day.toString().padLeft(2, '0')}',
+            // Next payment date - make whole tile clickable
+            InkWell(
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: selectedNextPaymentDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                );
+                if (date != null) {
+                  setState(() => selectedNextPaymentDate = date);
+                }
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Next Payment Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                child: Text(
+                  '${selectedNextPaymentDate.year}-${selectedNextPaymentDate.month.toString().padLeft(2, '0')}-${selectedNextPaymentDate.day.toString().padLeft(2, '0')}',
+                ),
               ),
-              trailing: IconButton(
-                icon: const Icon(Icons.calendar_today),
-                onPressed: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: selectedNextPaymentDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 3650)),
-                  );
-                  if (date != null) {
-                    setState(() => selectedNextPaymentDate = date);
-                  }
-                },
+            ),
+            const SizedBox(height: 16),
+            // End date (optional)
+            InkWell(
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: selectedEndDate ?? selectedNextPaymentDate.add(const Duration(days: 365)),
+                  firstDate: selectedNextPaymentDate,
+                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                );
+                if (date != null) {
+                  setState(() => selectedEndDate = date);
+                }
+              },
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'End Date (Optional)',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: selectedEndDate != null
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            setState(() => selectedEndDate = null);
+                          },
+                        )
+                      : const Icon(Icons.calendar_today),
+                ),
+                child: Text(
+                  selectedEndDate != null
+                      ? '${selectedEndDate!.year}-${selectedEndDate!.month.toString().padLeft(2, '0')}-${selectedEndDate!.day.toString().padLeft(2, '0')}'
+                      : 'No end date - continues indefinitely',
+                  style: TextStyle(
+                    color: selectedEndDate != null
+                        ? null
+                        : Theme.of(context).hintColor,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -230,12 +290,18 @@ class _PlannedPaymentManagementDialogState
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isSaving ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _savePayment,
-          child: Text(isEdit ? 'Update' : 'Create'),
+          onPressed: _isSaving ? null : _savePayment,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(isEdit ? 'Update' : 'Create'),
         ),
       ],
     );

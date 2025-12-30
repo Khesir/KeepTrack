@@ -235,6 +235,23 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 }
               }).toList();
 
+        // Sort debts by status: overdue, active, settled, then rest
+        filteredDebts.sort((a, b) {
+          int getStatusPriority(DebtStatus status) {
+            switch (status) {
+              case DebtStatus.overdue:
+                return 0; // Highest priority
+              case DebtStatus.active:
+                return 1;
+              case DebtStatus.settled:
+                return 2;
+              default:
+                return 3; // Lowest priority
+            }
+          }
+          return getStatusPriority(a.status).compareTo(getStatusPriority(b.status));
+        });
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(

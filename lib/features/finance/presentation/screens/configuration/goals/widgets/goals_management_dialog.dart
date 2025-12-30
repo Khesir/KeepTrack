@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:persona_codex/core/di/service_locator.dart';
+import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
+import 'package:persona_codex/core/state/stream_state.dart';
 
 import '../../../../../modules/goal/domain/entities/goal.dart';
 
@@ -29,6 +32,7 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
   late GoalStatus selectedStatus;
   late Color selectedColor;
 
+  bool _isSaving = false;
   bool get isEdit => widget.goal != null;
 
   @override
@@ -64,7 +68,9 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
     super.dispose();
   }
 
-  void _saveGoal() {
+  Future<void> _saveGoal() async {
+    if (_isSaving) return; // Prevent double-submit
+
     if (nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -78,35 +84,47 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
       return;
     }
 
-    final targetAmount = double.tryParse(targetAmountController.text) ?? 0;
-    final currentAmount = double.tryParse(currentAmountController.text) ?? 0;
-    final monthlyContribution =
-        double.tryParse(monthlyContributionController.text) ?? 0;
+    setState(() => _isSaving = true);
 
-    final colorHex = '#${selectedColor.value.toRadixString(16).substring(2)}';
+    try {
+      final targetAmount = double.tryParse(targetAmountController.text) ?? 0;
+      final currentAmount = double.tryParse(currentAmountController.text) ?? 0;
+      final monthlyContribution =
+          double.tryParse(monthlyContributionController.text) ?? 0;
 
-    final goalEntity = Goal(
-      id: widget.goal?.id,
-      name: nameController.text.trim(),
-      description: descriptionController.text.trim(),
-      targetAmount: targetAmount,
-      currentAmount: currentAmount,
-      targetDate: selectedTargetDate,
-      colorHex: colorHex,
-      status: selectedStatus,
-      monthlyContribution: monthlyContribution,
-      userId: widget.userId,
-    );
+      final colorHex = '#${selectedColor.value.toRadixString(16).substring(2)}';
 
-    widget.onSave(goalEntity);
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(isEdit ? 'Goal updated' : 'Goal created')),
-    );
+      final goalEntity = Goal(
+        id: widget.goal?.id,
+        name: nameController.text.trim(),
+        description: descriptionController.text.trim(),
+        targetAmount: targetAmount,
+        currentAmount: currentAmount,
+        targetDate: selectedTargetDate,
+        colorHex: colorHex,
+        status: selectedStatus,
+        monthlyContribution: monthlyContribution,
+        userId: widget.userId,
+      );
+
+      widget.onSave(goalEntity);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isEdit ? 'Goal updated' : 'Goal created')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get currency symbol from settings
+    final settingsController = locator.get<SettingsController>();
+    final currencySymbol = settingsController.data?.currency.symbol ?? '₱';
+
     return StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
         title: Text(isEdit ? 'Edit Goal' : 'Create Goal'),
@@ -137,10 +155,10 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
               const SizedBox(height: 16),
               TextField(
                 controller: targetAmountController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Target Amount',
-                  border: OutlineInputBorder(),
-                  prefixText: '\$ ',
+                  border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -149,10 +167,10 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
               const SizedBox(height: 16),
               TextField(
                 controller: currentAmountController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Current Amount',
-                  border: OutlineInputBorder(),
-                  prefixText: '\$ ',
+                  border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -161,10 +179,10 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
               const SizedBox(height: 16),
               TextField(
                 controller: monthlyContributionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Monthly Contribution',
-                  border: OutlineInputBorder(),
-                  prefixText: '\$ ',
+                  border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -274,12 +292,18 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _isSaving ? null : () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: _saveGoal,
-            child: Text(isEdit ? 'Update' : 'Create'),
+            onPressed: _isSaving ? null : _saveGoal,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(isEdit ? 'Update' : 'Create'),
           ),
         ],
       ),

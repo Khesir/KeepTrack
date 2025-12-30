@@ -52,11 +52,19 @@ class Budget {
     return categories.fold(0.0, (sum, cat) => sum + cat.targetAmount);
   }
 
-  /// Calculate total spent amount across all categories
+  /// Calculate total spent amount across all categories (includes fees)
   double get totalSpent {
     return categories.fold(
       0.0,
-      (sum, cat) => sum + (cat.spentAmount ?? 0.0),
+      (sum, cat) => sum + cat.totalSpent,
+    );
+  }
+
+  /// Calculate total fees paid across all categories
+  double get totalFees {
+    return categories.fold(
+      0.0,
+      (sum, cat) => sum + (cat.feeSpent ?? 0.0),
     );
   }
 

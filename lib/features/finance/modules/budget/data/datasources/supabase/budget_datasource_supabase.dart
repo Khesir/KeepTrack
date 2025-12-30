@@ -65,6 +65,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
               targetAmount: budgetCategory.targetAmount,
               financeCategory: financeCategory.toEntity(),
               spentAmount: budgetCategory.spentAmount,
+              feeSpent: budgetCategory.feeSpent,
               createdAt: budgetCategory.createdAt,
               updatedAt: budgetCategory.updatedAt,
             );
@@ -132,6 +133,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
             targetAmount: budgetCategory.targetAmount,
             financeCategory: financeCategory.toEntity(),
             spentAmount: budgetCategory.spentAmount,
+            feeSpent: budgetCategory.feeSpent,
             createdAt: budgetCategory.createdAt,
             updatedAt: budgetCategory.updatedAt,
           );
@@ -198,6 +200,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
             targetAmount: budgetCategory.targetAmount,
             financeCategory: financeCategory.toEntity(),
             spentAmount: budgetCategory.spentAmount,
+            feeSpent: budgetCategory.feeSpent,
             createdAt: budgetCategory.createdAt,
             updatedAt: budgetCategory.updatedAt,
           );

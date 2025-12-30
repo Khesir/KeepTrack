@@ -107,6 +107,7 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
     // Calculate total budget stats from categories
     final totalBudget = budget.budgetTarget;
     final totalSpent = budget.totalSpent;
+    final totalFees = budget.totalFees;
     final totalRemaining = totalBudget - totalSpent;
 
     return SingleChildScrollView(
@@ -115,7 +116,7 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Monthly Summary Card
-          _buildMonthlySummaryCard(totalBudget, totalSpent, totalRemaining),
+          _buildMonthlySummaryCard(totalBudget, totalSpent, totalFees, totalRemaining),
           const SizedBox(height: 24),
 
           // Header
@@ -153,6 +154,7 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
   Widget _buildMonthlySummaryCard(
     double total,
     double spent,
+    double fees,
     double remaining,
   ) {
     final percentSpent = total > 0 ? (spent / total).clamp(0.0, 1.0) : 0.0;
@@ -241,9 +243,10 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                   ),
                 ),
                 Expanded(
-                  child: _buildSummaryStatItem(
+                  child: _buildSummaryStatItemWithFees(
                     'Spent',
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(spent),
+                    spent,
+                    fees,
                     Colors.red[700]!,
                   ),
                 ),
@@ -286,12 +289,51 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
     );
   }
 
+  Widget _buildSummaryStatItemWithFees(String label, double amount, double fees, Color color) {
+    final hasFees = fees > 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(amount + fees),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        if (hasFees) ...[
+          const SizedBox(height: 2),
+          Text(
+            '(incl. ₱${NumberFormat('#,##0.00').format(fees)} fees)',
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildCategoryCard(BudgetCategory category) {
     final limit = category.targetAmount;
     final spent = category.spentAmount ?? 0.0;
-    final percentSpent = limit > 0 ? (spent / limit).clamp(0.0, 1.0) : 0.0;
-    final remaining = limit - spent;
-    final isOverBudget = spent > limit;
+    final feeSpent = category.feeSpent ?? 0.0;
+    final totalSpent = category.totalSpent;
+    final percentSpent = limit > 0 ? (totalSpent / limit).clamp(0.0, 1.0) : 0.0;
+    final remaining = limit - totalSpent;
+    final isOverBudget = totalSpent > limit;
+    final hasFees = feeSpent > 0;
 
     final financeCategory = category.financeCategory;
     final String categoryName;
@@ -387,14 +429,31 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
               // Spending Info
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(spent),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: _getProgressColor(percentSpent),
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(totalSpent),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: _getProgressColor(percentSpent),
+                        ),
+                      ),
+                      if (hasFees) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '₱${NumberFormat('#,##0.00').format(spent)} + ₱${NumberFormat('#,##0.00').format(feeSpent)} fees',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   Text(
                     'of ${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(limit)}',

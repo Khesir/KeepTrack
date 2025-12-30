@@ -3,7 +3,6 @@ import 'package:persona_codex/core/state/stream_state.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../modules/debt/domain/entities/debt.dart';
 import '../../modules/debt/domain/repositories/debt_repository.dart';
-import '../../modules/transaction/domain/entities/transaction.dart';
 import '../../modules/transaction/domain/repositories/transaction_repository.dart';
 
 /// Controller for managing debt list state
