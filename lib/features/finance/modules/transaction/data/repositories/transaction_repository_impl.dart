@@ -160,17 +160,25 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   /// Calculate the balance adjustment amount for a transaction
-  /// Income: +amount (adds to balance)
-  /// Expense: -amount (subtracts from balance)
-  /// Transfer: -amount (treated as expense for source account)
+  /// Includes fees in the calculation:
+  /// - Income: +amount - fee (you receive less due to platform/service fees)
+  /// - Expense: -(amount + fee) (you pay the cost plus any taxes/fees)
+  /// - Transfer: -(amount + fee) (source account pays transfer amount + fee)
   double _calculateBalanceAdjustment(Transaction transaction) {
     switch (transaction.type) {
       case TransactionType.income:
-        return transaction.amount;
+        // For income, fees are deducted (e.g., platform commission, bank fees)
+        // You receive: amount - fee
+        return transaction.amount - transaction.fee;
       case TransactionType.expense:
-        return -transaction.amount;
+        // For expenses, fees add to the total cost (e.g., tax, service charge)
+        // You pay: amount + fee
+        return -(transaction.amount + transaction.fee);
       case TransactionType.transfer:
-        return -transaction.amount;
+        // For transfers, source account pays the transfer amount + transfer fee
+        // Source pays: amount + fee
+        // Note: Destination account receives only 'amount' (handled separately)
+        return -(transaction.amount + transaction.fee);
     }
   }
 }

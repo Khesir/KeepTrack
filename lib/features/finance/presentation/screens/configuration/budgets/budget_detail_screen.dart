@@ -627,10 +627,13 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
 
   Widget _buildCategoryCard(BudgetCategory category, Color color) {
     final spent = category.spentAmount ?? 0.0;
+    final feeSpent = category.feeSpent ?? 0.0;
+    final totalSpent = category.totalSpent;
     final target = category.targetAmount;
-    final remaining = target - spent;
-    final percentage = target > 0 ? (spent / target).clamp(0.0, 1.0) : 0.0;
-    final isOverBudget = spent > target;
+    final remaining = target - totalSpent;
+    final percentage = target > 0 ? (totalSpent / target).clamp(0.0, 1.0) : 0.0;
+    final isOverBudget = totalSpent > target;
+    final hasFees = feeSpent > 0;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -684,13 +687,22 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
                       style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                     Text(
-                      '₱${spent.toStringAsFixed(2)}',
+                      '₱${totalSpent.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: isOverBudget ? Colors.red : color,
                       ),
                     ),
+                    if (hasFees)
+                      Text(
+                        '(₱${spent.toStringAsFixed(2)} + ₱${feeSpent.toStringAsFixed(2)} fees)',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[500],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                   ],
                 ),
                 Column(

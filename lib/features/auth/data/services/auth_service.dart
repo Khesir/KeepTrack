@@ -79,6 +79,13 @@ class AuthService {
         return _devBypass(isAdmin: false);
       }
 
+      // IMPORTANT: Clear any existing Supabase session first
+      // This ensures the account picker is always shown, even if there's a cached session
+      if (_supabase.auth.currentUser != null) {
+        AppLogger.info('Existing Supabase session found, clearing to force account picker');
+        await _supabase.auth.signOut();
+      }
+
       // On web, use Supabase OAuth flow (redirect-based)
       if (kIsWeb) {
         AppLogger.info('Web platform detected - using Supabase OAuth redirect');
@@ -105,6 +112,19 @@ class AuthService {
 
       // On mobile/desktop, use google_sign_in package
       AppLogger.info('Mobile/Desktop platform - using google_sign_in package');
+
+      // Force disconnect to ensure account picker is shown on every sign-in
+      // disconnect() fully revokes access, while signOut() might cache the account
+      // This is especially important on Android to prevent auto-selecting the last account
+      try {
+        if (await _googleSignInInstance.isSignedIn()) {
+          AppLogger.info('User already signed in to Google, disconnecting to force account picker');
+          await _googleSignInInstance.disconnect();
+        }
+      } catch (e) {
+        AppLogger.warning('Error checking/clearing Google Sign-In state: $e');
+        // Continue anyway - disconnect might fail if already disconnected
+      }
 
       final GoogleSignInAccount? googleUser = await _googleSignInInstance.signIn();
       if (googleUser == null) {
@@ -170,9 +190,11 @@ class AuthService {
     try {
       AppLogger.info('Signing out user...');
 
-      // Sign out from Google (only if initialized)
+      // Disconnect from Google (only if initialized)
+      // Using disconnect() instead of signOut() to fully revoke access
+      // This ensures the account picker shows on next sign-in (especially on Android)
       if (_googleSignIn != null && await _googleSignIn!.isSignedIn()) {
-        await _googleSignIn!.signOut();
+        await _googleSignIn!.disconnect();
       }
 
       // Sign out from Supabase

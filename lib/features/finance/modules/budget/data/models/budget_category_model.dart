@@ -10,6 +10,7 @@ class BudgetCategoryModel extends BudgetCategory {
     super.userId,
     super.financeCategory,
     super.spentAmount,
+    super.feeSpent,
     super.createdAt,
     super.updatedAt,
   });
@@ -24,6 +25,7 @@ class BudgetCategoryModel extends BudgetCategory {
       targetAmount: entity.targetAmount,
       financeCategory: entity.financeCategory,
       spentAmount: entity.spentAmount,
+      feeSpent: entity.feeSpent,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     );
@@ -40,6 +42,9 @@ class BudgetCategoryModel extends BudgetCategory {
       financeCategory: null, // Hydrated separately
       spentAmount: json['spent_amount'] != null
           ? (json['spent_amount'] as num).toDouble()
+          : null,
+      feeSpent: json['fee_spent'] != null
+          ? (json['fee_spent'] as num).toDouble()
           : null,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
@@ -59,6 +64,7 @@ class BudgetCategoryModel extends BudgetCategory {
       if (userId != null) 'user_id': userId,
       'target_amount': targetAmount,
       if (spentAmount != null) 'spent_amount': spentAmount,
+      if (feeSpent != null) 'fee_spent': feeSpent,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
     };

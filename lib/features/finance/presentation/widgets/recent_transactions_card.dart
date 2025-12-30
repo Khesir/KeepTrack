@@ -101,6 +101,9 @@ class RecentTransactionsCard extends StatelessWidget {
     final isExpense =
         transaction.type == finance_transaction.TransactionType.expense;
 
+    final hasFee = transaction.hasFee;
+    final displayAmount = transaction.totalCost;
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: isIncome
@@ -127,21 +130,52 @@ class RecentTransactionsCard extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
-        _formatDate(transaction.date),
-        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _formatDate(transaction.date),
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          if (hasFee)
+            Text(
+              '₱${transaction.amount.toStringAsFixed(2)} + ₱${transaction.fee.toStringAsFixed(2)} fee',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+        ],
       ),
-      trailing: Text(
-        '${isExpense ? '-' : isIncome ? '+' : ''}\$${transaction.amount.toStringAsFixed(2)}',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: isIncome
-              ? Colors.green[700]
-              : isExpense
-                  ? Colors.red[700]
-                  : Colors.grey[700],
-          fontSize: 16,
-        ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '${isExpense ? '-' : isIncome ? '+' : ''}₱${displayAmount.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isIncome
+                  ? Colors.green[700]
+                  : isExpense
+                      ? Colors.red[700]
+                      : Colors.grey[700],
+              fontSize: 16,
+            ),
+          ),
+          if (hasFee)
+            Text(
+              transaction.feeDescription ?? 'Fee',
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+        ],
       ),
     );
   }

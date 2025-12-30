@@ -38,6 +38,7 @@ import 'presentation/state/transaction_controller.dart';
 import 'presentation/state/goal_controller.dart';
 import 'presentation/state/debt_controller.dart';
 import 'presentation/state/planned_payment_controller.dart';
+import 'data/services/finance_initialization_service.dart';
 
 /// Setup finance management dependencies
 void setupFinanceDependencies() {
@@ -110,6 +111,12 @@ void setupFinanceDependencies() {
   locator.registerFactory<PlannedPaymentRepository>(() {
     final dataSource = locator.get<PlannedPaymentDataSource>();
     return PlannedPaymentRepositoryImpl(dataSource);
+  });
+
+  // Services
+  locator.registerFactory<FinanceInitializationService>(() {
+    final categoryRepository = locator.get<FinanceCategoryRepository>();
+    return FinanceInitializationService(categoryRepository);
   });
 
   // Controllers

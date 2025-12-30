@@ -14,6 +14,7 @@ class BudgetCategory {
 
   // Optional derived / metadata
   final double? spentAmount;
+  final double? feeSpent; // Total fees/taxes paid for this category
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -25,12 +26,16 @@ class BudgetCategory {
     this.userId,
     this.financeCategory,
     this.spentAmount,
+    this.feeSpent,
     this.createdAt,
     this.updatedAt,
   });
 
   /// Whether this category is fully hydrated
   bool get isHydrated => financeCategory != null;
+
+  /// Total spent including fees (amount + fees)
+  double get totalSpent => (spentAmount ?? 0.0) + (feeSpent ?? 0.0);
 
   BudgetCategory copyWith({
     String? id,
@@ -40,6 +45,7 @@ class BudgetCategory {
     double? targetAmount,
     FinanceCategory? financeCategory,
     double? spentAmount,
+    double? feeSpent,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -51,6 +57,7 @@ class BudgetCategory {
       targetAmount: targetAmount ?? this.targetAmount,
       financeCategory: financeCategory ?? this.financeCategory,
       spentAmount: spentAmount ?? this.spentAmount,
+      feeSpent: feeSpent ?? this.feeSpent,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

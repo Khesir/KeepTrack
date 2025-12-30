@@ -42,6 +42,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
+  final _feeController = TextEditingController();
+  final _feeDescriptionController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _notesController = TextEditingController();
   TransactionType _selectedType = TransactionType.expense;
@@ -49,6 +51,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   String? _selectedCategoryId;
   DateTime _selectedDate = DateTime.now();
   bool _isCreating = false;
+  bool _showFeeFields = false;
 
   @override
   void initState() {
@@ -83,6 +86,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   @override
   void dispose() {
     _amountController.dispose();
+    _feeController.dispose();
+    _feeDescriptionController.dispose();
     _descriptionController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -154,6 +159,11 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     });
 
     try {
+      // Parse fee amount (default to 0 if empty)
+      final feeAmount = _feeController.text.trim().isEmpty
+          ? 0.0
+          : double.parse(_feeController.text);
+
       final transaction = Transaction(
         accountId: _selectedAccountId,
         financeCategoryId: _selectedCategoryId,
@@ -166,6 +176,10 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        fee: feeAmount,
+        feeDescription: _feeDescriptionController.text.trim().isEmpty
+            ? null
+            : _feeDescriptionController.text.trim(),
         userId: supabaseService.userId,
       );
 
@@ -236,6 +250,10 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                 return null;
               },
             ),
+            const SizedBox(height: 16),
+
+            // Fee Section (Optional - Expandable)
+            _buildFeeSection(colorScheme),
             const SizedBox(height: 16),
 
             // Account Selector
@@ -563,5 +581,170 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildFeeSection(ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          // Header with expand/collapse button
+          InkWell(
+            onTap: () {
+              setState(() {
+                _showFeeFields = !_showFeeFields;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.receipt_long,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Fees & Charges (Optional)',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        if (!_showFeeFields && _feeController.text.isNotEmpty)
+                          Text(
+                            '₱${_feeController.text} fee added',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
+                                ),
+                          )
+                        else if (!_showFeeFields)
+                          Text(
+                            'Tap to add tax, service charge, or transfer fee',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _showFeeFields ? Icons.expand_less : Icons.expand_more,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expandable fee fields
+          if (_showFeeFields) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Fee Amount Field
+                  TextFormField(
+                    controller: _feeController,
+                    decoration: InputDecoration(
+                      labelText: 'Fee Amount',
+                      hintText: 'e.g., 154 for tax, 18 for transfer fee',
+                      prefixText: '₱',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surface,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d+\.?\d{0,2}'),
+                      ),
+                    ],
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final amount = double.tryParse(value);
+                        if (amount == null || amount < 0) {
+                          return 'Please enter a valid fee amount';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Fee Description Field
+                  TextFormField(
+                    controller: _feeDescriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'Fee Description (Optional)',
+                      hintText: 'e.g., Tax, Service Charge, Transfer Fee',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surface,
+                    ),
+                    maxLength: 50,
+                  ),
+
+                  // Helper text
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _getFeeHelperText(),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onPrimaryContainer,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getFeeHelperText() {
+    switch (_selectedType) {
+      case TransactionType.expense:
+        return 'For expenses: fees are added to the total cost (e.g., 2000 + 154 tax = 2154 total)';
+      case TransactionType.income:
+        return 'For income: fees are deducted from amount received (e.g., 5000 - 250 commission = 4750 received)';
+      case TransactionType.transfer:
+        return 'For transfers: source account pays amount + fee, destination receives amount only';
+    }
   }
 }

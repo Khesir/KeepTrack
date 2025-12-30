@@ -12,6 +12,10 @@ class Transaction {
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final String? userId;
 
+  // Fee fields
+  final double fee; // Additional fee/charge (tax, service fee, transfer fee, etc.)
+  final String? feeDescription; // Description of the fee (e.g., "Tax", "Service Charge")
+
   // Context metadata - links to related entities
   final String? debtId; // Link to debt if this transaction is a debt payment
   final String? goalId; // Link to goal if this transaction is a goal contribution
@@ -30,6 +34,8 @@ class Transaction {
     this.createdAt,
     this.updatedAt,
     this.userId,
+    this.fee = 0.0,
+    this.feeDescription,
     this.debtId,
     this.goalId,
     this.plannedPaymentId,
@@ -48,6 +54,8 @@ class Transaction {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? userId,
+    double? fee,
+    String? feeDescription,
     String? debtId,
     String? goalId,
     String? plannedPaymentId,
@@ -65,6 +73,8 @@ class Transaction {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       userId: userId ?? this.userId,
+      fee: fee ?? this.fee,
+      feeDescription: feeDescription ?? this.feeDescription,
       debtId: debtId ?? this.debtId,
       goalId: goalId ?? this.goalId,
       plannedPaymentId: plannedPaymentId ?? this.plannedPaymentId,
@@ -82,9 +92,18 @@ class Transaction {
   @override
   int get hashCode => id.hashCode;
 
+  /// Total cost including fees (amount + fee)
+  /// For expenses: this is what's deducted from your account
+  /// For income: amount - fee (what you actually receive)
+  /// For transfer: source pays amount + fee, destination receives amount
+  double get totalCost => amount + fee;
+
+  /// Check if transaction has a fee
+  bool get hasFee => fee > 0;
+
   @override
   String toString() =>
-      'Transaction(id: $id, amount: $amount, type: $type, date: $date)';
+      'Transaction(id: $id, amount: $amount, fee: $fee, type: $type, date: $date)';
 }
 
 enum TransactionType {
