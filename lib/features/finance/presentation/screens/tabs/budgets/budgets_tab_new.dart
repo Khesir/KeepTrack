@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/state/stream_state.dart';
 import '../../../../modules/budget/domain/entities/budget.dart';
 import '../../../../modules/budget/domain/entities/budget_category.dart';
 import '../../../../modules/finance_category/domain/entities/finance_category_enums.dart';
@@ -22,7 +23,43 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
   void initState() {
     super.initState();
     _controller = locator.get<BudgetController>();
-    _controller.loadBudgets();
+    _loadAndRefreshBudget();
+  }
+
+  Future<void> _loadAndRefreshBudget() async {
+    await _controller.loadBudgets();
+
+    // Auto-refresh current month's budget if it exists
+    final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
+    final budgets = _controller.state is AsyncData<List<Budget>>
+        ? (_controller.state as AsyncData<List<Budget>>).data
+        : <Budget>[];
+
+    try {
+      final activeBudget = budgets.firstWhere(
+        (b) => b.month == currentMonth && b.status == BudgetStatus.active,
+      );
+
+      if (activeBudget.id != null) {
+        await _controller.manualRecalculateBudgetSpent(activeBudget.id!);
+      }
+    } catch (e) {
+      // No active budget for current month, that's okay
+    }
+  }
+
+  Future<void> _refreshBudget() async {
+    await _loadAndRefreshBudget();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Budget refreshed!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -110,9 +147,12 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
     final totalFees = budget.totalFees;
     final totalRemaining = totalBudget - totalSpent;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: _refreshBudget,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Monthly Summary Card
@@ -147,6 +187,7 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
             );
           }),
         ],
+        ),
       ),
     );
   }

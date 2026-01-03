@@ -109,6 +109,185 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
     }
   }
 
+  Future<void> _debugBudget() async {
+    if (_currentBudget.id == null) return;
+
+    try {
+      final debugInfo = await _controller.debugBudgetCategories(_currentBudget.id!);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Budget Debug Info'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Budget Month: ${debugInfo['budget_month']}'),
+                const SizedBox(height: 16),
+                const Text(
+                  'Categories:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ...((debugInfo['categories'] as List?) ?? []).map((catData) {
+                  final cat = catData['category'] as Map<String, dynamic>;
+                  final transactions = catData['transactions'] as List;
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Category ID: ${cat['finance_category_id']}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('Target: ₱${cat['target_amount']}'),
+                          Text('DB Spent: ₱${cat['spent_amount'] ?? 0}'),
+                          Text('DB Fees: ₱${cat['fee_spent'] ?? 0}'),
+                          Text('Calculated Spent: ₱${catData['calculated_spent']}'),
+                          Text('Calculated Fees: ₱${catData['calculated_fees']}'),
+                          Text(
+                            'Transactions: ${catData['transaction_count']}',
+                            style: TextStyle(
+                              color: transactions.isEmpty ? Colors.red : Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (transactions.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Transaction Details:',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            ...transactions.map((t) => Text(
+                                  '  - ₱${t['amount']} (fee: ₱${t['fee'] ?? 0}) - ${t['description']}',
+                                  style: const TextStyle(fontSize: 10),
+                                )),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Debug error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _refreshBudget() async {
+    try {
+      if (_currentBudget.id == null) return;
+
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Recalculating budget...'),
+              ],
+            ),
+            duration: Duration(seconds: 30),
+          ),
+        );
+      }
+
+      // Use manual calculation (bypasses broken database function)
+      await _controller.manualRecalculateBudgetSpent(_currentBudget.id!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Budget recalculated successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error recalculating budget: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _editBudget() async {
+    // Show warning dialog first
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Budget'),
+        content: const Text(
+          'You are about to edit this budget. Changes to category targets may affect your budget tracking and calculations.\n\nDo you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('Edit'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Navigate to edit screen
+    await Navigator.of(context).pushNamed(
+      '/budget/edit',
+      arguments: _currentBudget,
+    );
+
+    // Reload budget after returning from edit
+    _controller.loadBudgets();
+  }
+
   Future<void> _deleteBudget() async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -168,9 +347,23 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
         title: Text(_formatMonthDisplay(_currentBudget.month)),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Budget',
+            onPressed: _refreshBudget,
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               switch (value) {
+                case 'debug':
+                  _debugBudget();
+                  break;
+                case 'refresh':
+                  _refreshBudget();
+                  break;
+                case 'edit':
+                  _editBudget();
+                  break;
                 case 'toggle_status':
                   _toggleBudgetStatus();
                   break;
@@ -180,6 +373,49 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'debug',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.bug_report,
+                      size: 20,
+                      color: Colors.orange,
+                    ),
+                    SizedBox(width: 12),
+                    Text('Debug Info'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'refresh',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.refresh,
+                      size: 20,
+                    ),
+                    SizedBox(width: 12),
+                    Text('Refresh Amounts'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.edit,
+                      size: 20,
+                    ),
+                    SizedBox(width: 12),
+                    Text('Edit Budget'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'toggle_status',
                 child: Row(

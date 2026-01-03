@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/state/stream_state.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import '../../../../../../core/ui/scoped_screen.dart';
 import '../../../../../../core/routing/app_router.dart';
@@ -50,6 +51,33 @@ class _BudgetManagementScreenState
     context.goToBudgetDetail(budget).then((_) => _controller.loadBudgets());
   }
 
+  Future<void> _refreshAllBudgets() async {
+    final budgets = _controller.state is AsyncData<List<Budget>>
+        ? (_controller.state as AsyncData<List<Budget>>).data
+        : <Budget>[];
+
+    for (final budget in budgets) {
+      if (budget.id != null && budget.status == BudgetStatus.active) {
+        try {
+          await _controller.manualRecalculateBudgetSpent(budget.id!);
+        } catch (e) {
+          // Continue with next budget even if one fails
+          print('Error refreshing budget ${budget.id}: $e');
+        }
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All budgets refreshed!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -59,6 +87,11 @@ class _BudgetManagementScreenState
         title: const Text('Manage Budgets'),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh All Budgets',
+            onPressed: _refreshAllBudgets,
+          ),
           if (_filterStatus != null)
             IconButton(
               icon: const Icon(Icons.filter_list_off),
@@ -473,21 +506,57 @@ class _BudgetManagementScreenState
               ),
               const SizedBox(height: 20),
 
-              // Budget Total
-              Text(
-                '₱${currentBudget.totalBudgetedIncome.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-              const Text(
-                'Monthly Budget',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
+              // Income and Expense Targets
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Income Target',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '₱${currentBudget.totalBudgetedIncome.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Expense Target',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '₱${currentBudget.totalBudgetedExpenses.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -542,23 +611,6 @@ class _BudgetManagementScreenState
     } catch (e) {
       return monthStr;
     }
-  }
-
-  Widget _buildSummaryItem(String label, double amount, Color color) {
-    return Column(
-      children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-        const SizedBox(height: 4),
-        Text(
-          '₱${amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildBudgetVisualBar(Budget budget) {
@@ -695,26 +747,16 @@ class _BudgetCard extends StatelessWidget {
     }
   }
 
+  String _getDisplayTitle() {
+    if (budget.title != null && budget.title!.isNotEmpty) {
+      return budget.title!;
+    }
+    return _formatMonthDisplay(budget.month);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
-    // Determine display based on budget status and state
-    Color displayColor;
-    String displayLabel;
-    double displayValue;
-
-    if (budget.status == BudgetStatus.closed) {
-      // For closed budgets, show surplus/deficit
-      displayColor = budget.surplusOrDeficit >= 0 ? Colors.green : Colors.red;
-      displayLabel = budget.surplusOrDeficit >= 0 ? 'Surplus' : 'Deficit';
-      displayValue = budget.surplusOrDeficit.abs();
-    } else {
-      // For active budgets, show remaining budget
-      displayColor = budget.isOverBudget ? Colors.red : Colors.blue;
-      displayLabel = 'Budget Target';
-      displayValue = budget.budgetTarget;
-    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -731,81 +773,147 @@ class _BudgetCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header with title/month and status
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: displayColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.pie_chart,
-                          color: displayColor,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _formatMonthDisplay(budget.month),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  (budget.status == BudgetStatus.active
-                                          ? Colors.green
-                                          : Colors.grey)
-                                      .withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              budget.status.displayName,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: budget.status == BudgetStatus.active
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: (budget.budgetType == BudgetType.income
                                     ? Colors.green
-                                    : Colors.grey,
+                                    : Colors.red)
+                                .withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            budget.budgetType == BudgetType.income
+                                ? Icons.arrow_downward
+                                : Icons.arrow_upward,
+                            color: budget.budgetType == BudgetType.income
+                                ? Colors.green
+                                : Colors.red,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getDisplayTitle(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: (budget.periodType ==
+                                                  BudgetPeriodType.monthly
+                                              ? Colors.blue
+                                              : Colors.purple)
+                                          .withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      budget.periodType.displayName,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: budget.periodType ==
+                                                BudgetPeriodType.monthly
+                                            ? Colors.blue
+                                            : Colors.purple,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: (budget.status ==
+                                                  BudgetStatus.active
+                                              ? Colors.green
+                                              : Colors.grey)
+                                          .withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      budget.status.displayName,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            budget.status == BudgetStatus.active
+                                                ? Colors.green
+                                                : Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatMonthDisplay(budget.month),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Income/Expense summary
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.arrow_downward, size: 12, color: Colors.green),
+                          const SizedBox(width: 4),
+                          Text(
+                            '₱${budget.totalBudgetedIncome.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '₱${displayValue.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: displayColor,
-                        ),
-                      ),
-                      Text(
-                        displayLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: displayColor,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.arrow_upward, size: 12, color: Colors.red),
+                          const SizedBox(width: 4),
+                          Text(
+                            '₱${budget.totalBudgetedExpenses.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

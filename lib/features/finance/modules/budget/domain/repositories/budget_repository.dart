@@ -42,4 +42,7 @@ abstract class BudgetRepository {
 
   /// Delete a category
   Future<Result<Budget>> deleteCategory(String budgetId, String categoryId);
+
+  /// Refresh spent amounts for a budget (manually trigger recalculation)
+  Future<Result<Budget>> refreshBudgetSpentAmounts(String budgetId);
 }

@@ -1,13 +1,16 @@
 import '../../../finance_category/domain/entities/finance_category_enums.dart';
 import 'budget_category.dart';
 
-/// Monthly budget entity
+/// Budget entity - Can be monthly recurring or one-time
 ///
 /// Note: Budget now references transactions by ID instead of embedding them.
 /// Use TransactionRepository to fetch transactions for a budget.
 class Budget {
   final String? id; // Optional - Supabase auto-generates
   final String month; // Format: YYYY-MM (e.g., "2024-12")
+  final String? title; // User-defined budget title (required for one-time budgets)
+  final BudgetType budgetType; // Income or Expense budget
+  final BudgetPeriodType periodType; // Monthly or One-time
   final List<BudgetCategory> categories;
   final BudgetStatus status;
   final String? notes;
@@ -20,6 +23,9 @@ class Budget {
   const Budget({
     this.id,
     required this.month,
+    this.title,
+    this.budgetType = BudgetType.expense,
+    this.periodType = BudgetPeriodType.monthly,
     this.categories = const [],
     this.status = BudgetStatus.active,
     this.notes,
@@ -116,6 +122,9 @@ class Budget {
   Budget copyWith({
     String? id,
     String? month,
+    String? title,
+    BudgetType? budgetType,
+    BudgetPeriodType? periodType,
     List<BudgetCategory>? categories,
     BudgetStatus? status,
     String? notes,
@@ -128,6 +137,9 @@ class Budget {
     return Budget(
       id: id ?? this.id,
       month: month ?? this.month,
+      title: title ?? this.title,
+      budgetType: budgetType ?? this.budgetType,
+      periodType: periodType ?? this.periodType,
       categories: categories ?? this.categories,
       status: status ?? this.status,
       notes: notes ?? this.notes,
@@ -154,7 +166,7 @@ class Budget {
 
   @override
   String toString() =>
-      'Budget(id: $id, month: $month, userId: $userId, accountId: $accountId, status: $status)';
+      'Budget(id: $id, month: $month, title: $title, type: $budgetType, period: $periodType, userId: $userId, accountId: $accountId, status: $status)';
 }
 
 enum BudgetStatus {
@@ -167,6 +179,43 @@ enum BudgetStatus {
         return 'Active';
       case BudgetStatus.closed:
         return 'Closed';
+    }
+  }
+}
+
+enum BudgetType {
+  income,
+  expense;
+
+  String get displayName {
+    switch (this) {
+      case BudgetType.income:
+        return 'Income';
+      case BudgetType.expense:
+        return 'Expense';
+    }
+  }
+}
+
+enum BudgetPeriodType {
+  monthly,
+  oneTime;
+
+  String get displayName {
+    switch (this) {
+      case BudgetPeriodType.monthly:
+        return 'Monthly';
+      case BudgetPeriodType.oneTime:
+        return 'One-Time';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case BudgetPeriodType.monthly:
+        return 'Track recurring monthly finances';
+      case BudgetPeriodType.oneTime:
+        return 'Budget for specific event or project';
     }
   }
 }

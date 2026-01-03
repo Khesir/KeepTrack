@@ -225,6 +225,9 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
       // Create budget WITHOUT categories first
       final budgetData = {
         'month': budget.month,
+        if (budget.title != null) 'title': budget.title,
+        'budget_type': budget.budgetType.name,
+        'period_type': budget.periodType.name,
         'status': budget.status.name,
         if (budget.notes != null) 'notes': budget.notes,
         'user_id': supabaseService.userId!,
@@ -277,6 +280,9 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
       // Update budget data (WITHOUT categories)
       final budgetData = {
         'month': budget.month,
+        if (budget.title != null) 'title': budget.title,
+        'budget_type': budget.budgetType.name,
+        'period_type': budget.periodType.name,
         'status': budget.status.name,
         if (budget.notes != null) 'notes': budget.notes,
         'updated_at': DateTime.now().toIso8601String(),
@@ -320,6 +326,168 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
     } catch (e, stackTrace) {
       throw UnknownFailure(
         message: 'Failed to delete budget',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
+  Future<void> refreshBudgetSpentAmounts(String budgetId) async {
+    try {
+      // Call the database function to recalculate spent amounts
+      await supabaseService.client.rpc(
+        'update_budget_spent_amounts',
+        params: {'p_budget_id': budgetId},
+      );
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to refresh budget spent amounts',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
+  Future<void> manualRecalculateBudgetSpent(String budgetId) async {
+    try {
+      // Get budget month
+      final budgetResponse = await supabaseService.client
+          .from(tableName)
+          .select('month')
+          .eq('id', budgetId)
+          .single();
+
+      final budgetMonth = budgetResponse['month'] as String;
+
+      // Parse month to get date range
+      final parts = budgetMonth.split('-');
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final startDate = DateTime(year, month, 1);
+      final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+
+      // Get all budget categories for this budget
+      final categoriesResponse = await supabaseService.client
+          .from('budget_categories')
+          .select('id, finance_category_id')
+          .eq('budget_id', budgetId);
+
+      final categories = categoriesResponse as List;
+
+      print('🔄 Recalculating budget for month: $budgetMonth');
+      print('📅 Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
+      print('📊 Processing ${categories.length} categories');
+
+      // For each category, calculate spent amounts from transactions
+      for (final category in categories) {
+        final categoryId = category['id'] as String;
+        final financeCategoryId = category['finance_category_id'] as String;
+
+        // Get all transactions for this category in this month
+        final transactions = await supabaseService.client
+            .from('transactions')
+            .select('amount, fee, date, description')
+            .eq('finance_category_id', financeCategoryId)
+            .gte('date', startDate.toIso8601String())
+            .lte('date', endDate.toIso8601String());
+
+        // Calculate totals
+        double totalSpent = 0.0;
+        double totalFees = 0.0;
+
+        for (final transaction in transactions as List) {
+          final amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
+          final fee = (transaction['fee'] as num?)?.toDouble() ?? 0.0;
+          totalSpent += amount.abs();
+          totalFees += fee.abs();
+        }
+
+        print('💰 Category $financeCategoryId: ${(transactions as List).length} transactions, ₱$totalSpent spent, ₱$totalFees fees');
+
+        // Update budget category with calculated amounts
+        await supabaseService.client
+            .from('budget_categories')
+            .update({
+              'spent_amount': totalSpent,
+              'fee_spent': totalFees,
+            })
+            .eq('id', categoryId);
+      }
+
+      print('✅ Budget recalculation complete!');
+    } catch (e, stackTrace) {
+      print('❌ Error recalculating budget: $e');
+      throw UnknownFailure(
+        message: 'Failed to manually recalculate budget spent amounts',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> debugBudgetCategories(String budgetId) async {
+    try {
+      // Get budget info
+      final budgetResponse = await supabaseService.client
+          .from(tableName)
+          .select('id, month')
+          .eq('id', budgetId)
+          .single();
+
+      final budgetMonth = budgetResponse['month'] as String;
+
+      // Get budget categories
+      final categoriesResponse = await supabaseService.client
+          .from('budget_categories')
+          .select('id, finance_category_id, target_amount, spent_amount, fee_spent')
+          .eq('budget_id', budgetId);
+
+      // For each category, get matching transactions
+      final categoriesWithTransactions = [];
+      for (final cat in categoriesResponse as List) {
+        final categoryId = cat['finance_category_id'];
+
+        // Parse month to get date range
+        final parts = budgetMonth.split('-');
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        final startDate = DateTime(year, month, 1);
+        final endDate = DateTime(year, month + 1, 0);
+
+        // Get transactions for this category in this month
+        final transactions = await supabaseService.client
+            .from('transactions')
+            .select('id, amount, fee, date, description')
+            .eq('finance_category_id', categoryId)
+            .gte('date', startDate.toIso8601String())
+            .lte('date', endDate.toIso8601String());
+
+        categoriesWithTransactions.add({
+          'category': cat,
+          'transactions': transactions,
+          'transaction_count': (transactions as List).length,
+          'calculated_spent': (transactions as List).fold<double>(
+            0.0,
+            (sum, t) => sum + ((t['amount'] as num?)?.toDouble() ?? 0.0).abs(),
+          ),
+          'calculated_fees': (transactions as List).fold<double>(
+            0.0,
+            (sum, t) => sum + ((t['fee'] as num?)?.toDouble() ?? 0.0).abs(),
+          ),
+        });
+      }
+
+      return {
+        'budget_id': budgetId,
+        'budget_month': budgetMonth,
+        'categories': categoriesWithTransactions,
+      };
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to debug budget categories',
         originalError: e,
         stackTrace: stackTrace,
       );

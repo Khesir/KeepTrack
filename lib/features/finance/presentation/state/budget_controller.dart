@@ -33,12 +33,6 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
     return createdBudget!;
   }
 
-  /// Check if a budget exists for a specific month and user
-  bool budgetExistsForMonth(String month, String? userId) {
-    final budgets = data ?? [];
-    return budgets.any((b) => b.month == month && b.userId == userId);
-  }
-
   /// Update an existing budget
   Future<void> updateBudget(Budget budget) async {
     await execute(() async {
@@ -131,5 +125,43 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   Future<Budget?> getActiveBudget() async {
     final result = await _repository.getActiveBudget();
     return result.isSuccess ? result.data : null;
+  }
+
+  /// Refresh budget spent amounts (manually trigger recalculation)
+  Future<void> refreshBudgetSpentAmounts(String budgetId) async {
+    await execute(() async {
+      final result = await _repository.refreshBudgetSpentAmounts(budgetId);
+      final refreshedBudget = result.unwrap();
+
+      // Update the budget in the current list
+      final current = data ?? [];
+      final updatedList = current
+          .map((b) => b.id == budgetId ? refreshedBudget : b)
+          .toList();
+      return updatedList;
+    });
+  }
+
+  /// Manually recalculate budget spent amounts (bypasses database function)
+  Future<void> manualRecalculateBudgetSpent(String budgetId) async {
+    await execute(() async {
+      final datasource = _repository as dynamic;
+      if (datasource.dataSource != null) {
+        await datasource.dataSource.manualRecalculateBudgetSpent(budgetId);
+      }
+
+      // Reload budgets to get updated values
+      final result = await _repository.getBudgets();
+      return result.unwrap();
+    });
+  }
+
+  /// Debug budget categories and transactions (for troubleshooting)
+  Future<Map<String, dynamic>> debugBudgetCategories(String budgetId) async {
+    final datasource = _repository as dynamic;
+    if (datasource.dataSource != null) {
+      return await datasource.dataSource.debugBudgetCategories(budgetId);
+    }
+    return {};
   }
 }

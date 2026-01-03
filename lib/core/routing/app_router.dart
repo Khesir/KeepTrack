@@ -44,6 +44,7 @@ class AppRoutes {
   static const String budgetList = '/budget';
   static const String budgetDetail = '/budget/detail';
   static const String budgetCreate = '/budget/create';
+  static const String budgetEdit = '/budget/edit';
 
   // Settings
   static const String settings = '/settings';
@@ -131,6 +132,19 @@ class AppRouter {
       case AppRoutes.budgetCreate:
         return MaterialPageRoute(
           builder: (_) => const CreateBudgetScreen(),
+          settings: settings,
+        );
+
+      // Budget edit (edit existing budget)
+      case AppRoutes.budgetEdit:
+        final budget = settings.arguments as Budget?;
+        if (budget == null) {
+          return MaterialPageRoute(
+            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => CreateBudgetScreen(existingBudget: budget),
           settings: settings,
         );
 

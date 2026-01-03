@@ -188,4 +188,18 @@ class BudgetRepositoryImpl implements BudgetRepository {
     return getBudgetById(budgetId);
   }
 
+  @override
+  Future<Result<Budget>> refreshBudgetSpentAmounts(String budgetId) async {
+    try {
+      // Call the database function to recalculate spent amounts
+      await dataSource.refreshBudgetSpentAmounts(budgetId);
+
+      // Return the refreshed budget
+      return getBudgetById(budgetId);
+    } catch (e) {
+      return Result.error(
+        UnknownFailure(message: 'Failed to refresh budget spent amounts: $e'),
+      );
+    }
+  }
 }

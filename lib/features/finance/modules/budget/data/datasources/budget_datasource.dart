@@ -8,4 +8,13 @@ abstract class BudgetDataSource {
   Future<BudgetModel> createBudget(BudgetModel budget);
   Future<BudgetModel> updateBudget(BudgetModel budget);
   Future<void> deleteBudget(String id);
+
+  /// Manually trigger refresh of budget spent amounts
+  Future<void> refreshBudgetSpentAmounts(String budgetId);
+
+  /// Manually recalculate and update budget spent amounts (direct calculation)
+  Future<void> manualRecalculateBudgetSpent(String budgetId);
+
+  /// Debug: Get raw budget category data to verify spent amounts
+  Future<Map<String, dynamic>> debugBudgetCategories(String budgetId);
 }

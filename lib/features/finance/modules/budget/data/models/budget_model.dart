@@ -8,6 +8,9 @@ class BudgetModel extends Budget {
   BudgetModel({
     super.id,
     required super.month,
+    super.title,
+    super.budgetType = BudgetType.expense,
+    super.periodType = BudgetPeriodType.monthly,
     super.categories = const [],
     required BudgetStatus status,
     super.notes,
@@ -23,6 +26,9 @@ class BudgetModel extends Budget {
     return BudgetModel(
       id: budget.id,
       month: budget.month,
+      title: budget.title,
+      budgetType: budget.budgetType,
+      periodType: budget.periodType,
       categories: budget.categories
           .map((cat) => BudgetCategoryModel.fromEntity(cat))
           .toList(),
@@ -41,6 +47,19 @@ class BudgetModel extends Budget {
     return BudgetModel(
       id: json['id'] as String?,
       month: json['month'] as String,
+      title: json['title'] as String?,
+      budgetType: json['budget_type'] != null
+          ? BudgetType.values.firstWhere(
+              (e) => e.name == (json['budget_type'] as String),
+              orElse: () => BudgetType.expense,
+            )
+          : BudgetType.expense,
+      periodType: json['period_type'] != null
+          ? BudgetPeriodType.values.firstWhere(
+              (e) => e.name == (json['period_type'] as String),
+              orElse: () => BudgetPeriodType.monthly,
+            )
+          : BudgetPeriodType.monthly,
       categories: const [], // Categories loaded separately
       status: BudgetStatus.values.firstWhere(
         (e) => e.name == (json['status'] as String),
@@ -65,6 +84,9 @@ class BudgetModel extends Budget {
     return {
       if (id != null) 'id': id,
       'month': month,
+      if (title != null) 'title': title,
+      'budget_type': budgetType.name,
+      'period_type': periodType.name,
       'status': status.name,
       if (notes != null) 'notes': notes,
       if (userId != null) 'user_id': userId,
@@ -80,6 +102,9 @@ class BudgetModel extends Budget {
     return BudgetModel(
       id: id,
       month: month,
+      title: title,
+      budgetType: budgetType,
+      periodType: periodType,
       categories: newCategories,
       status: status,
       notes: notes,
