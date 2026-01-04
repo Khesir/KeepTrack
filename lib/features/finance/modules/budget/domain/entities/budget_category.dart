@@ -9,12 +9,14 @@ class BudgetCategory {
 
   final double targetAmount;
 
+  /// Calculated client-side from transactions (not stored in DB)
+  final double? spentAmount;
+  final double? feeSpent;
+
   /// Nullable for partial hydration
   final FinanceCategory? financeCategory;
 
-  // Optional derived / metadata
-  final double? spentAmount;
-  final double? feeSpent; // Total fees/taxes paid for this category
+  // Optional metadata
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -23,10 +25,10 @@ class BudgetCategory {
     required this.budgetId,
     required this.financeCategoryId,
     required this.targetAmount,
-    this.userId,
-    this.financeCategory,
     this.spentAmount,
     this.feeSpent,
+    this.userId,
+    this.financeCategory,
     this.createdAt,
     this.updatedAt,
   });
@@ -34,7 +36,7 @@ class BudgetCategory {
   /// Whether this category is fully hydrated
   bool get isHydrated => financeCategory != null;
 
-  /// Total spent including fees (amount + fees)
+  /// Total spent including fees (calculated client-side)
   double get totalSpent => (spentAmount ?? 0.0) + (feeSpent ?? 0.0);
 
   BudgetCategory copyWith({
@@ -43,9 +45,9 @@ class BudgetCategory {
     String? financeCategoryId,
     String? userId,
     double? targetAmount,
-    FinanceCategory? financeCategory,
     double? spentAmount,
     double? feeSpent,
+    FinanceCategory? financeCategory,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -55,9 +57,9 @@ class BudgetCategory {
       financeCategoryId: financeCategoryId ?? this.financeCategoryId,
       userId: userId ?? this.userId,
       targetAmount: targetAmount ?? this.targetAmount,
-      financeCategory: financeCategory ?? this.financeCategory,
       spentAmount: spentAmount ?? this.spentAmount,
       feeSpent: feeSpent ?? this.feeSpent,
+      financeCategory: financeCategory ?? this.financeCategory,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

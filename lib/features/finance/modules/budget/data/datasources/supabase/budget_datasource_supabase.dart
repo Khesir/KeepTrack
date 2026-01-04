@@ -64,8 +64,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
               userId: budgetCategory.userId,
               targetAmount: budgetCategory.targetAmount,
               financeCategory: financeCategory.toEntity(),
-              spentAmount: budgetCategory.spentAmount,
-              feeSpent: budgetCategory.feeSpent,
+              // spentAmount and feeSpent calculated client-side, not from DB
               createdAt: budgetCategory.createdAt,
               updatedAt: budgetCategory.updatedAt,
             );
@@ -132,8 +131,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
             userId: budgetCategory.userId,
             targetAmount: budgetCategory.targetAmount,
             financeCategory: financeCategory.toEntity(),
-            spentAmount: budgetCategory.spentAmount,
-            feeSpent: budgetCategory.feeSpent,
+            // spentAmount and feeSpent calculated client-side, not from DB
             createdAt: budgetCategory.createdAt,
             updatedAt: budgetCategory.updatedAt,
           );
@@ -199,8 +197,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
             userId: budgetCategory.userId,
             targetAmount: budgetCategory.targetAmount,
             financeCategory: financeCategory.toEntity(),
-            spentAmount: budgetCategory.spentAmount,
-            feeSpent: budgetCategory.feeSpent,
+            // spentAmount and feeSpent calculated client-side, not from DB
             createdAt: budgetCategory.createdAt,
             updatedAt: budgetCategory.updatedAt,
           );
@@ -230,6 +227,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
         'period_type': budget.periodType.name,
         'status': budget.status.name,
         if (budget.notes != null) 'notes': budget.notes,
+        if (budget.customTargetAmount != null) 'custom_target_amount': budget.customTargetAmount,
         'user_id': supabaseService.userId!,
       };
 
@@ -285,6 +283,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
         'period_type': budget.periodType.name,
         'status': budget.status.name,
         if (budget.notes != null) 'notes': budget.notes,
+        if (budget.customTargetAmount != null) 'custom_target_amount': budget.customTargetAmount,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -335,11 +334,8 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
   @override
   Future<void> refreshBudgetSpentAmounts(String budgetId) async {
     try {
-      // Call the database function to recalculate spent amounts
-      await supabaseService.client.rpc(
-        'update_budget_spent_amounts',
-        params: {'p_budget_id': budgetId},
-      );
+      // Use client-side calculation since DB triggers were removed in migration 031
+      await manualRecalculateBudgetSpent(budgetId);
     } catch (e, stackTrace) {
       throw UnknownFailure(
         message: 'Failed to refresh budget spent amounts',
@@ -406,14 +402,8 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
 
         print('💰 Category $financeCategoryId: ${(transactions as List).length} transactions, ₱$totalSpent spent, ₱$totalFees fees');
 
-        // Update budget category with calculated amounts
-        await supabaseService.client
-            .from('budget_categories')
-            .update({
-              'spent_amount': totalSpent,
-              'fee_spent': totalFees,
-            })
-            .eq('id', categoryId);
+        // Note: spent_amount and fee_spent columns removed in migration 031
+        // Values are now calculated client-side only, not stored in DB
       }
 
       print('✅ Budget recalculation complete!');
@@ -439,10 +429,10 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
 
       final budgetMonth = budgetResponse['month'] as String;
 
-      // Get budget categories
+      // Get budget categories (spent_amount and fee_spent removed in migration 031)
       final categoriesResponse = await supabaseService.client
           .from('budget_categories')
-          .select('id, finance_category_id, target_amount, spent_amount, fee_spent')
+          .select('id, finance_category_id, target_amount')
           .eq('budget_id', budgetId);
 
       // For each category, get matching transactions
@@ -492,5 +482,109 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  @override
+  Future<BudgetModel?> getBudgetWithSpentAmounts(String budgetId) async {
+    try {
+      // First, get the budget normally
+      final budget = await getBudgetById(budgetId);
+      if (budget == null) return null;
+
+      // Calculate spent amounts for all categories
+      final enrichedCategories = await _calculateSpentAmountsForCategories(
+        budget.categories.cast<BudgetCategoryModel>(),
+        budget.month,
+      );
+
+      // Return budget with enriched categories
+      return budget.withCategories(enrichedCategories);
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to get budget with spent amounts',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
+  Future<List<BudgetModel>> getBudgetsWithSpentAmounts() async {
+    try {
+      // Get all budgets normally
+      final budgets = await getBudgets();
+
+      // Enrich each budget with spent amounts
+      final enrichedBudgets = <BudgetModel>[];
+      for (final budget in budgets) {
+        final enrichedCategories = await _calculateSpentAmountsForCategories(
+          budget.categories.cast<BudgetCategoryModel>(),
+          budget.month,
+        );
+        enrichedBudgets.add(budget.withCategories(enrichedCategories));
+      }
+
+      return enrichedBudgets;
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to get budgets with spent amounts',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Helper: Calculate spent amounts for budget categories from transactions
+  Future<List<BudgetCategoryModel>> _calculateSpentAmountsForCategories(
+    List<BudgetCategoryModel> categories,
+    String budgetMonth,
+  ) async {
+    // Parse month to get date range
+    final parts = budgetMonth.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+
+    final enrichedCategories = <BudgetCategoryModel>[];
+
+    for (final category in categories) {
+      // Query transactions for this category in this month
+      final transactions = await supabaseService.client
+          .from('transactions')
+          .select('amount, fee')
+          .eq('finance_category_id', category.financeCategoryId)
+          .gte('date', startDate.toIso8601String())
+          .lte('date', endDate.toIso8601String());
+
+      // Calculate totals
+      double totalSpent = 0.0;
+      double totalFees = 0.0;
+
+      for (final transaction in transactions as List) {
+        final amount = (transaction['amount'] as num?)?.toDouble() ?? 0.0;
+        final fee = (transaction['fee'] as num?)?.toDouble() ?? 0.0;
+        totalSpent += amount.abs();
+        totalFees += fee.abs();
+      }
+
+      // Create new category with spent amounts populated
+      enrichedCategories.add(
+        BudgetCategoryModel(
+          id: category.id,
+          budgetId: category.budgetId,
+          financeCategoryId: category.financeCategoryId,
+          targetAmount: category.targetAmount,
+          spentAmount: totalSpent,
+          feeSpent: totalFees,
+          userId: category.userId,
+          financeCategory: category.financeCategory,
+          createdAt: category.createdAt,
+          updatedAt: category.updatedAt,
+        ),
+      );
+    }
+
+    return enrichedCategories;
   }
 }

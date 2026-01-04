@@ -45,4 +45,10 @@ abstract class BudgetRepository {
 
   /// Refresh spent amounts for a budget (manually trigger recalculation)
   Future<Result<Budget>> refreshBudgetSpentAmounts(String budgetId);
+
+  /// Get all budgets with spent amounts calculated from transactions
+  Future<Result<List<Budget>>> getBudgetsWithSpentAmounts();
+
+  /// Get budget by ID with spent amounts calculated from transactions
+  Future<Result<Budget>> getBudgetByIdWithSpentAmounts(String id);
 }

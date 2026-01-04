@@ -3,12 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:persona_codex/core/di/service_locator.dart';
 import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:persona_codex/core/state/stream_state.dart';
 import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../modules/account/domain/entities/account.dart';
+import '../../../modules/budget/domain/entities/budget.dart';
 import '../../../modules/finance_category/domain/entities/finance_category.dart';
 import '../../../modules/finance_category/domain/entities/finance_category_enums.dart';
 import '../../../modules/transaction/domain/entities/transaction.dart';
 import '../../state/account_controller.dart';
+import '../../state/budget_controller.dart';
 import '../../state/finance_category_controller.dart';
 import '../../state/transaction_controller.dart';
 
@@ -38,6 +41,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   late final TransactionController _transactionController;
   late final AccountController _accountController;
   late final FinanceCategoryController _categoryController;
+  late final BudgetController _budgetController;
   late final SupabaseService supabaseService;
 
   final _formKey = GlobalKey<FormState>();
@@ -59,6 +63,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     _transactionController = locator.get<TransactionController>();
     _accountController = locator.get<AccountController>();
     _categoryController = locator.get<FinanceCategoryController>();
+    _budgetController = locator.get<BudgetController>();
     supabaseService = locator.get<SupabaseService>();
 
     // Initialize with provided values
@@ -78,9 +83,38 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       _selectedType = widget.initialType!;
     }
 
-    // Load accounts and categories
+    // Load accounts, categories, and budgets
     _accountController.loadAccounts();
     _categoryController.loadCategories();
+    _budgetController.loadBudgets();
+  }
+
+  /// Find matching budget for transaction based on date and category
+  String? _findMatchingBudgetId() {
+    if (_selectedCategoryId == null) return null;
+
+    final budgets = _budgetController.state is AsyncData<List<Budget>>
+        ? (_budgetController.state as AsyncData<List<Budget>>).data
+        : <Budget>[];
+
+    // Get month from selected date (YYYY-MM format)
+    final transactionMonth = DateFormat('yyyy-MM').format(_selectedDate);
+
+    // Find active budget for this month that contains the selected category
+    try {
+      final matchingBudget = budgets.firstWhere(
+        (budget) =>
+            budget.month == transactionMonth &&
+            budget.status == BudgetStatus.active &&
+            budget.categories.any(
+              (cat) => cat.financeCategoryId == _selectedCategoryId,
+            ),
+      );
+      return matchingBudget.id;
+    } catch (e) {
+      // No matching budget found, that's okay
+      return null;
+    }
   }
 
   @override
@@ -164,6 +198,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           ? 0.0
           : double.parse(_feeController.text);
 
+      // Find matching budget for this transaction
+      final budgetId = _findMatchingBudgetId();
+
       final transaction = Transaction(
         accountId: _selectedAccountId,
         financeCategoryId: _selectedCategoryId,
@@ -180,6 +217,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         feeDescription: _feeDescriptionController.text.trim().isEmpty
             ? null
             : _feeDescriptionController.text.trim(),
+        budgetId: budgetId, // Auto-link to budget if found
         userId: supabaseService.userId,
       );
 

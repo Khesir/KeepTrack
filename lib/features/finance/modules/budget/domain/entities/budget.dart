@@ -14,6 +14,7 @@ class Budget {
   final List<BudgetCategory> categories;
   final BudgetStatus status;
   final String? notes;
+  final double? customTargetAmount; // Optional custom target (overrides calculated from categories)
   final String? userId; // User identifier (UUID)
   final String? accountId; // Account identifier (UUID)
   final DateTime? createdAt; // Optional - Supabase auto-generates
@@ -29,6 +30,7 @@ class Budget {
     this.categories = const [],
     this.status = BudgetStatus.active,
     this.notes,
+    this.customTargetAmount,
     this.userId,
     this.accountId,
     this.createdAt,
@@ -53,8 +55,13 @@ class Budget {
       getTotalBudgetedByType(CategoryType.savings) +
       getTotalBudgetedByType(CategoryType.transfer);
 
-  /// Budget Target = Sum of ALL category targets
+  /// Budget Target = Custom target if set, otherwise sum of ALL category targets
   double get budgetTarget {
+    return customTargetAmount ?? categories.fold(0.0, (sum, cat) => sum + cat.targetAmount);
+  }
+
+  /// Get calculated target from categories (ignoring custom target)
+  double get calculatedTargetFromCategories {
     return categories.fold(0.0, (sum, cat) => sum + cat.targetAmount);
   }
 
@@ -128,6 +135,7 @@ class Budget {
     List<BudgetCategory>? categories,
     BudgetStatus? status,
     String? notes,
+    double? customTargetAmount,
     String? userId,
     String? accountId,
     DateTime? createdAt,
@@ -143,6 +151,7 @@ class Budget {
       categories: categories ?? this.categories,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      customTargetAmount: customTargetAmount ?? this.customTargetAmount,
       userId: userId ?? this.userId,
       accountId: accountId ?? this.accountId,
       createdAt: createdAt ?? this.createdAt,

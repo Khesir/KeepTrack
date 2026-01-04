@@ -202,4 +202,35 @@ class BudgetRepositoryImpl implements BudgetRepository {
       );
     }
   }
+
+  @override
+  Future<Result<List<Budget>>> getBudgetsWithSpentAmounts() async {
+    try {
+      final budgets = await dataSource.getBudgetsWithSpentAmounts();
+      // BudgetModel extends Budget, so no conversion needed
+      return Result.success(budgets.cast<Budget>());
+    } catch (e) {
+      return Result.error(
+        UnknownFailure(message: 'Failed to get budgets with spent amounts: $e'),
+      );
+    }
+  }
+
+  @override
+  Future<Result<Budget>> getBudgetByIdWithSpentAmounts(String id) async {
+    try {
+      final budget = await dataSource.getBudgetWithSpentAmounts(id);
+      if (budget == null) {
+        return Result.error(
+          NotFoundFailure(message: 'Budget not found with ID: $id'),
+        );
+      }
+      // BudgetModel extends Budget, so no conversion needed
+      return Result.success(budget);
+    } catch (e) {
+      return Result.error(
+        UnknownFailure(message: 'Failed to get budget with spent amounts: $e'),
+      );
+    }
+  }
 }

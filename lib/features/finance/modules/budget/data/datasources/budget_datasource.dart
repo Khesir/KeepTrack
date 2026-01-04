@@ -15,6 +15,12 @@ abstract class BudgetDataSource {
   /// Manually recalculate and update budget spent amounts (direct calculation)
   Future<void> manualRecalculateBudgetSpent(String budgetId);
 
+  /// Get budget with spent amounts calculated from transactions
+  Future<BudgetModel?> getBudgetWithSpentAmounts(String budgetId);
+
+  /// Get all budgets with spent amounts calculated from transactions
+  Future<List<BudgetModel>> getBudgetsWithSpentAmounts();
+
   /// Debug: Get raw budget category data to verify spent amounts
   Future<Map<String, dynamic>> debugBudgetCategories(String budgetId);
 }

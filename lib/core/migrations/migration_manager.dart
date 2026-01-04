@@ -30,6 +30,8 @@ import 'migrations/026_fix_transaction_date_to_timestamp.dart';
 import 'migrations/027_add_planned_payment_installments.dart';
 import 'migrations/028_add_planned_payment_end_date.dart';
 import 'migrations/029_add_budget_fields.dart';
+import 'migrations/030_add_budget_custom_target_amount.dart';
+import 'migrations/031_add_transaction_budget_link_and_remove_triggers.dart';
 
 /// Manages database migrations
 ///
@@ -271,6 +273,8 @@ class MigrationManager {
     Migration027AddPlannedPaymentInstallments(),
     Migration028AddPlannedPaymentEndDate(),
     Migration029AddBudgetFields(),
+    Migration030AddBudgetCustomTargetAmount(),
+    Migration031AddTransactionBudgetLinkAndRemoveTriggers(),
     // Add new migrations here:
   ];
 

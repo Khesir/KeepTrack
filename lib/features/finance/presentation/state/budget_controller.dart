@@ -9,13 +9,21 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
   final BudgetRepository _repository;
 
   BudgetController(this._repository) : super(const AsyncLoading()) {
-    loadBudgets();
+    loadBudgetsWithSpentAmounts();
   }
 
-  /// Load all budgets
+  /// Load all budgets (without spent amounts calculated)
   Future<void> loadBudgets() async {
     await execute(() async {
       final result = await _repository.getBudgets();
+      return result.unwrap();
+    });
+  }
+
+  /// Load all budgets with spent amounts calculated from transactions
+  Future<void> loadBudgetsWithSpentAmounts() async {
+    await execute(() async {
+      final result = await _repository.getBudgetsWithSpentAmounts();
       return result.unwrap();
     });
   }

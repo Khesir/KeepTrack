@@ -27,25 +27,8 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
   }
 
   Future<void> _loadAndRefreshBudget() async {
-    await _controller.loadBudgets();
-
-    // Auto-refresh current month's budget if it exists
-    final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
-    final budgets = _controller.state is AsyncData<List<Budget>>
-        ? (_controller.state as AsyncData<List<Budget>>).data
-        : <Budget>[];
-
-    try {
-      final activeBudget = budgets.firstWhere(
-        (b) => b.month == currentMonth && b.status == BudgetStatus.active,
-      );
-
-      if (activeBudget.id != null) {
-        await _controller.manualRecalculateBudgetSpent(activeBudget.id!);
-      }
-    } catch (e) {
-      // No active budget for current month, that's okay
-    }
+    // Load budgets with spent amounts already calculated
+    await _controller.loadBudgetsWithSpentAmounts();
   }
 
   Future<void> _refreshBudget() async {

@@ -17,6 +17,7 @@ class Transaction {
   final String? feeDescription; // Description of the fee (e.g., "Tax", "Service Charge")
 
   // Context metadata - links to related entities
+  final String? budgetId; // Link to budget if this transaction is tracked in a budget
   final String? debtId; // Link to debt if this transaction is a debt payment
   final String? goalId; // Link to goal if this transaction is a goal contribution
   final String? plannedPaymentId; // Link to planned payment if this transaction fulfills one
@@ -36,6 +37,7 @@ class Transaction {
     this.userId,
     this.fee = 0.0,
     this.feeDescription,
+    this.budgetId,
     this.debtId,
     this.goalId,
     this.plannedPaymentId,
@@ -56,6 +58,7 @@ class Transaction {
     String? userId,
     double? fee,
     String? feeDescription,
+    String? budgetId,
     String? debtId,
     String? goalId,
     String? plannedPaymentId,
@@ -75,6 +78,7 @@ class Transaction {
       userId: userId ?? this.userId,
       fee: fee ?? this.fee,
       feeDescription: feeDescription ?? this.feeDescription,
+      budgetId: budgetId ?? this.budgetId,
       debtId: debtId ?? this.debtId,
       goalId: goalId ?? this.goalId,
       plannedPaymentId: plannedPaymentId ?? this.plannedPaymentId,

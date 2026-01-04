@@ -26,6 +26,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
   late final SupabaseService _supabaseService;
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _customTargetController = TextEditingController();
   final List<BudgetCategory> _categories = [];
   bool _isCreating = false;
   String _selectedMonth = '';
@@ -33,6 +34,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
   BudgetPeriodType _periodType = BudgetPeriodType.monthly;
   bool _copyFromBudget = false;
   String? _sourceBudgetId;
+  bool _useCustomTarget = false;
 
   @override
   void initState() {
@@ -48,6 +50,10 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       _budgetType = widget.existingBudget!.budgetType;
       _periodType = widget.existingBudget!.periodType;
       _categories.addAll(widget.existingBudget!.categories);
+      if (widget.existingBudget!.customTargetAmount != null) {
+        _useCustomTarget = true;
+        _customTargetController.text = widget.existingBudget!.customTargetAmount.toString();
+      }
     } else {
       final now = DateTime.now();
       _selectedMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
@@ -60,6 +66,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _customTargetController.dispose();
     super.dispose();
   }
 
@@ -170,6 +177,14 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
           }
         }
 
+        // Update budget custom target amount
+        final updatedBudget = widget.existingBudget!.copyWith(
+          customTargetAmount: _useCustomTarget && _customTargetController.text.isNotEmpty
+              ? double.tryParse(_customTargetController.text)
+              : null,
+        );
+        await _controller.updateBudget(updatedBudget);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Budget updated successfully!')),
@@ -184,6 +199,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
           periodType: _periodType,
           categories: [],
           status: BudgetStatus.active,
+          customTargetAmount: _useCustomTarget && _customTargetController.text.isNotEmpty
+              ? double.tryParse(_customTargetController.text)
+              : null,
           userId: _supabaseService.userId,
         );
 
@@ -355,10 +373,10 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
             TextButton(onPressed: _saveBudget, child: const Text('SAVE')),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Form(
-          key: _formKey,
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
               const SizedBox(height: 16),
@@ -529,7 +547,62 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                 loadingBuilder: (context) => const SizedBox.shrink(),
                 errorBuilder: (context, message) => const SizedBox.shrink(),
               ),
-              if (!isEditing) const SizedBox(height: 16),
+              if (!isEditing) const SizedBox(height: 8),
+
+              // Custom Target Amount Card
+              Card(
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      secondary: const Icon(Icons.tune),
+                      title: const Text('Set Custom Budget Target'),
+                      subtitle: Text(
+                        _useCustomTarget
+                            ? 'Override calculated target from categories'
+                            : 'Target calculated from categories: ₱${_categories.fold(0.0, (sum, cat) => sum + cat.targetAmount).toStringAsFixed(2)}',
+                      ),
+                      value: _useCustomTarget,
+                      onChanged: (value) {
+                        setState(() {
+                          _useCustomTarget = value;
+                          if (!value) {
+                            _customTargetController.clear();
+                          }
+                        });
+                      },
+                    ),
+                    if (_useCustomTarget) ...[
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: TextFormField(
+                          controller: _customTargetController,
+                          decoration: const InputDecoration(
+                            labelText: 'Custom Target Amount',
+                            border: OutlineInputBorder(),
+                            prefixText: '₱ ',
+                            prefixIcon: Icon(Icons.attach_money),
+                            helperText: 'Leave empty to use calculated target',
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value != null && value.isNotEmpty) {
+                              if (double.tryParse(value) == null) {
+                                return 'Please enter a valid number';
+                              }
+                              if (double.parse(value) <= 0) {
+                                return 'Amount must be greater than 0';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // Summary Card
               Card(
@@ -603,86 +676,87 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
               const SizedBox(height: 8),
 
               // Categories list
-              Expanded(
-                child: _categories.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.category_outlined,
-                              size: 64,
-                              color: Colors.grey[400],
+              _categories.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.category_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No categories added',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No categories added',
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap "Add Category" to get started',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 80),
+                      itemCount: _categories.length,
+                      itemBuilder: (context, index) {
+                        final category = _categories[index];
+                        final isIncome =
+                            category.financeCategory?.type ==
+                            CategoryType.income;
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          child: ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: (isIncome ? Colors.green : Colors.red)
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                isIncome
+                                    ? Icons.arrow_downward
+                                    : Icons.arrow_upward,
+                                color: isIncome ? Colors.green : Colors.red,
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(category.financeCategory?.name ?? ''),
+                            subtitle: Text(
+                              category.financeCategory?.type.displayName ??
+                                  '',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 12,
                                 color: Colors.grey[600],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tap "Add Category" to get started',
+                            trailing: Text(
+                              '₱${category.targetAmount.toStringAsFixed(2)}',
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[500],
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: isIncome ? Colors.green : Colors.red,
                               ),
                             ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        itemCount: _categories.length,
-                        itemBuilder: (context, index) {
-                          final category = _categories[index];
-                          final isIncome =
-                              category.financeCategory?.type ==
-                              CategoryType.income;
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            child: ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: (isIncome ? Colors.green : Colors.red)
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  isIncome
-                                      ? Icons.arrow_downward
-                                      : Icons.arrow_upward,
-                                  color: isIncome ? Colors.green : Colors.red,
-                                  size: 20,
-                                ),
-                              ),
-                              title: Text(category.financeCategory?.name ?? ''),
-                              subtitle: Text(
-                                category.financeCategory?.type.displayName ??
-                                    '',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              trailing: Text(
-                                '₱${category.targetAmount.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: isIncome ? Colors.green : Colors.red,
-                                ),
-                              ),
-                              onTap: () =>
-                                  _showCategoryDialog(category: category),
-                            ),
-                          );
-                        },
-                      ),
-              ),
+                            onTap: () =>
+                                _showCategoryDialog(category: category),
+                          ),
+                        );
+                      },
+                    ),
             ],
           ),
         ),
@@ -775,21 +849,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     return AsyncStreamBuilder<List<FinanceCategory>>(
       state: widget.controller,
       builder: (context, financeCategories) {
-        // Filter categories based on budget type
-        final filteredByType = financeCategories.where((cat) {
-          if (widget.budgetType == BudgetType.income) {
-            return cat.type == CategoryType.income;
-          } else {
-            // Expense budget: include expense, investment, savings, transfer
-            return cat.type == CategoryType.expense ||
-                cat.type == CategoryType.investment ||
-                cat.type == CategoryType.savings ||
-                cat.type == CategoryType.transfer;
-          }
-        }).toList();
-
         // Filter out already selected categories (except when editing)
-        final availableCategories = filteredByType.where((cat) {
+        final availableCategories = financeCategories.where((cat) {
           if (isEdit && cat.id == widget.category?.financeCategoryId) {
             return true; // Allow current category when editing
           }

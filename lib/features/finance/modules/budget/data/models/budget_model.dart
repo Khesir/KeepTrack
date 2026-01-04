@@ -14,6 +14,7 @@ class BudgetModel extends Budget {
     super.categories = const [],
     required BudgetStatus status,
     super.notes,
+    super.customTargetAmount,
     super.userId,
     super.accountId,
     super.createdAt,
@@ -34,6 +35,7 @@ class BudgetModel extends Budget {
           .toList(),
       status: budget.status,
       notes: budget.notes,
+      customTargetAmount: budget.customTargetAmount,
       userId: budget.userId,
       accountId: budget.accountId,
       createdAt: budget.createdAt,
@@ -65,6 +67,9 @@ class BudgetModel extends Budget {
         (e) => e.name == (json['status'] as String),
       ),
       notes: json['notes'] as String?,
+      customTargetAmount: json['custom_target_amount'] != null
+          ? (json['custom_target_amount'] as num).toDouble()
+          : null,
       userId: json['user_id'] as String?,
       accountId: json['account_id'] as String?,
       createdAt: json['created_at'] != null
@@ -89,6 +94,7 @@ class BudgetModel extends Budget {
       'period_type': periodType.name,
       'status': status.name,
       if (notes != null) 'notes': notes,
+      if (customTargetAmount != null) 'custom_target_amount': customTargetAmount,
       if (userId != null) 'user_id': userId,
       if (accountId != null) 'account_id': accountId,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
@@ -108,6 +114,7 @@ class BudgetModel extends Budget {
       categories: newCategories,
       status: status,
       notes: notes,
+      customTargetAmount: customTargetAmount,
       userId: userId,
       accountId: accountId,
       createdAt: createdAt,
