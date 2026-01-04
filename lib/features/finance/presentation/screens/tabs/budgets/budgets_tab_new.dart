@@ -70,27 +70,29 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
         ),
       ),
       builder: (context, budgets) {
-        // Find active budget for current month
-        final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
-        Budget? activeBudget;
-        try {
-          activeBudget = budgets.firstWhere(
-            (b) => b.month == currentMonth && b.status == BudgetStatus.active,
-          );
-        } catch (e) {
-          activeBudget = null;
+        // Filter active budgets and separate by type
+        final activeBudgets = budgets
+            .where((b) => b.status == BudgetStatus.active)
+            .toList()
+          ..sort((a, b) => b.month.compareTo(a.month)); // Most recent first
+
+        final incomeBudgets = activeBudgets
+            .where((b) => b.budgetType == BudgetType.income)
+            .toList();
+        final expenseBudgets = activeBudgets
+            .where((b) => b.budgetType == BudgetType.expense)
+            .toList();
+
+        if (incomeBudgets.isEmpty && expenseBudgets.isEmpty) {
+          return _buildEmptyState();
         }
 
-        if (activeBudget == null || activeBudget.categories.isEmpty) {
-          return _buildEmptyState(currentMonth);
-        }
-
-        return _buildBudgetContent(activeBudget);
+        return _buildBudgetContent(incomeBudgets, expenseBudgets);
       },
     );
   }
 
-  Widget _buildEmptyState(String currentMonth) {
+  Widget _buildEmptyState() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -104,14 +106,14 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No budget for ${_formatMonthDisplay(currentMonth)}',
+              'No Active Budgets',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Create a budget to start tracking your spending',
+              'Create a budget to start tracking your finances',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -123,162 +125,282 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
     );
   }
 
-  Widget _buildBudgetContent(Budget budget) {
-    // Calculate total budget stats from categories
-    final totalBudget = budget.budgetTarget;
-    final totalSpent = budget.totalSpent;
-    final totalFees = budget.totalFees;
-    final totalRemaining = totalBudget - totalSpent;
-
+  Widget _buildBudgetContent(List<Budget> incomeBudgets, List<Budget> expenseBudgets) {
     return RefreshIndicator(
       onRefresh: _refreshBudget,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Monthly Summary Card
-          _buildMonthlySummaryCard(totalBudget, totalSpent, totalFees, totalRemaining),
-          const SizedBox(height: 24),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Text(
+              'Active Budgets',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
 
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Budget Categories',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            // Income Budgets Section
+            if (incomeBudgets.isNotEmpty) ...[
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.arrow_downward, color: Colors.green, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Income Budgets',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${incomeBudgets.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '${budget.categories.length} categories',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
+              const SizedBox(height: 16),
+              ...incomeBudgets.map((budget) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildBudgetCard(budget, Colors.green),
+                  )),
+              const SizedBox(height: 24),
             ],
-          ),
-          const SizedBox(height: 16),
 
-          // Categories List
-          ...budget.categories.map((category) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildCategoryCard(category),
-            );
-          }),
-        ],
+            // Expense Budgets Section
+            if (expenseBudgets.isNotEmpty) ...[
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.arrow_upward, color: Colors.red, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Expense Budgets',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${expenseBudgets.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...expenseBudgets.map((budget) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildBudgetCard(budget, Colors.red),
+                  )),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMonthlySummaryCard(
-    double total,
-    double spent,
-    double fees,
-    double remaining,
-  ) {
-    final percentSpent = total > 0 ? (spent / total).clamp(0.0, 1.0) : 0.0;
+  Widget _buildBudgetCard(Budget budget, Color color) {
+    final totalBudget = budget.budgetTarget;
+    final totalSpent = budget.totalSpent;
+    final totalFees = budget.totalFees;
+    final totalRemaining = totalBudget - totalSpent;
+    final percentSpent = totalBudget > 0 ? (totalSpent / totalBudget).clamp(0.0, 1.0) : 0.0;
 
     return Card(
       elevation: 0,
+      color: color.withValues(alpha: 0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Budget Header
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.pie_chart,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 24,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _formatMonthDisplay(budget.month),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (budget.title != null && budget.title!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          budget.title!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  DateFormat('MMMM yyyy').format(DateTime.now()),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    budget.periodType.displayName,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // Progress Bar
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: percentSpent,
+                minHeight: 12,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  percentSpent > 1.0 ? Colors.red : color,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Stats
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Total Spent',
+                      'Spent',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontSize: 12,
+                        color: Colors.grey[600],
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
-                      '${(percentSpent * 100).toInt()}%',
+                      '₱${NumberFormat('#,##0').format(totalSpent)}',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: _getProgressColor(percentSpent),
+                        color: percentSpent > 1.0 ? Colors.red : color,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: percentSpent,
-                    minHeight: 12,
-                    backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _getProgressColor(percentSpent),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Budget',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '₱${NumberFormat('#,##0').format(totalBudget)}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Remaining',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '₱${NumberFormat('#,##0').format(totalRemaining)}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: totalRemaining < 0 ? Colors.red : Colors.grey[700],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
-            // Stats Row
+            // Categories count
             Row(
               children: [
-                Expanded(
-                  child: _buildSummaryStatItem(
-                    'Budget',
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(total),
-                    Colors.blue[700]!,
-                  ),
-                ),
-                Expanded(
-                  child: _buildSummaryStatItemWithFees(
-                    'Spent',
-                    spent,
-                    fees,
-                    Colors.red[700]!,
-                  ),
-                ),
-                Expanded(
-                  child: _buildSummaryStatItem(
-                    'Remaining',
-                    NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(remaining),
-                    Colors.green[700]!,
+                Icon(Icons.category, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text(
+                  '${budget.categories.length} categories',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
                   ),
                 ),
               ],
@@ -287,274 +409,6 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
         ),
       ),
     );
-  }
-
-  Widget _buildSummaryStatItem(String label, String value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryStatItemWithFees(String label, double amount, double fees, Color color) {
-    final hasFees = fees > 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(amount + fees),
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        if (hasFees) ...[
-          const SizedBox(height: 2),
-          Text(
-            '(incl. ₱${NumberFormat('#,##0.00').format(fees)} fees)',
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildCategoryCard(BudgetCategory category) {
-    final limit = category.targetAmount;
-    final spent = category.spentAmount ?? 0.0;
-    final feeSpent = category.feeSpent ?? 0.0;
-    final totalSpent = category.totalSpent;
-    final percentSpent = limit > 0 ? (totalSpent / limit).clamp(0.0, 1.0) : 0.0;
-    final remaining = limit - totalSpent;
-    final isOverBudget = totalSpent > limit;
-    final hasFees = feeSpent > 0;
-
-    final financeCategory = category.financeCategory;
-    final String categoryName;
-    final Color categoryColor;
-    final IconData categoryIcon;
-    final String categoryTypeName;
-
-    if (financeCategory != null) {
-      categoryName = financeCategory.name;
-      categoryColor = financeCategory.type.color;
-      categoryIcon = financeCategory.type.icon;
-      categoryTypeName = financeCategory.type.displayName;
-    } else {
-      categoryName = 'Unknown';
-      categoryColor = Colors.grey;
-      categoryIcon = Icons.category;
-      categoryTypeName = '';
-    }
-
-    return Card(
-      elevation: 0,
-      child: InkWell(
-        onTap: () {
-          // Navigate to category detail if needed
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Category Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: categoryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(categoryIcon, color: categoryColor, size: 24),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          categoryName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          categoryTypeName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isOverBudget)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning, size: 14, color: Colors.red[700]),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Over',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.red[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Spending Info
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(totalSpent),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: _getProgressColor(percentSpent),
-                        ),
-                      ),
-                      if (hasFees) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          '₱${NumberFormat('#,##0.00').format(spent)} + ₱${NumberFormat('#,##0.00').format(feeSpent)} fees',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    'of ${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(limit)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Progress Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: percentSpent.clamp(0.0, 1.0),
-                  minHeight: 10,
-                  backgroundColor: categoryColor.withValues(alpha: 0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    _getProgressColor(percentSpent),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Stats Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isOverBudget ? Icons.trending_up : Icons.trending_down,
-                        size: 16,
-                        color: isOverBudget ? Colors.red[700] : Colors.green[700],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isOverBudget
-                            ? 'Over by ${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(remaining.abs())}'
-                            : '${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(remaining)} left',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: isOverBudget ? Colors.red[700] : Colors.green[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '${(percentSpent * 100).toInt()}%',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: _getProgressColor(percentSpent),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _getProgressColor(double percent) {
-    if (percent >= 1.0) {
-      return Colors.red[700]!;
-    } else if (percent >= 0.8) {
-      return Colors.orange[700]!;
-    } else if (percent >= 0.5) {
-      return Colors.blue[700]!;
-    } else {
-      return Colors.green[700]!;
-    }
   }
 
   String _formatMonthDisplay(String monthStr) {

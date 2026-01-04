@@ -34,8 +34,8 @@ class _BudgetManagementScreenState
 
   @override
   void onReady() {
-    // Load budgets when screen is ready
-    _controller.loadBudgets();
+    // Load budgets with spent amounts when screen is ready
+    _controller.loadBudgetsWithSpentAmounts();
   }
 
   @override
@@ -44,11 +44,11 @@ class _BudgetManagementScreenState
   }
 
   void _createBudget() {
-    context.goToBudgetCreate().then((_) => _controller.loadBudgets());
+    context.goToBudgetCreate().then((_) => _controller.loadBudgetsWithSpentAmounts());
   }
 
   void _openBudget(Budget budget) {
-    context.goToBudgetDetail(budget).then((_) => _controller.loadBudgets());
+    context.goToBudgetDetail(budget).then((_) => _controller.loadBudgetsWithSpentAmounts());
   }
 
   Future<void> _refreshAllBudgets() async {
@@ -189,12 +189,12 @@ class _BudgetManagementScreenState
                   ),
                 ),
 
-              // Budget List
+              // Single unified budget list
               Expanded(
                 child: filteredBudgets.isEmpty
                     ? _buildFilteredEmptyState(colorScheme)
                     : RefreshIndicator(
-                        onRefresh: _controller.loadBudgets,
+                        onRefresh: _controller.loadBudgetsWithSpentAmounts,
                         child: ListView.builder(
                           padding: const EdgeInsets.all(16),
                           itemCount: filteredBudgets.length,
@@ -237,7 +237,7 @@ class _BudgetManagementScreenState
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
-                  onPressed: () => _controller.loadBudgets(),
+                  onPressed: () => _controller.loadBudgetsWithSpentAmounts(),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Retry'),
                   style: ElevatedButton.styleFrom(
@@ -346,19 +346,32 @@ class _BudgetManagementScreenState
     final now = DateTime.now();
     final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
-    // Check if budget exists for current month
-    Budget? currentBudget;
+    // Get income and expense budgets for current month
+    Budget? incomeBudget;
+    Budget? expenseBudget;
+
     try {
-      currentBudget = budgets.firstWhere((b) => b.month == currentMonth);
+      incomeBudget = budgets.firstWhere(
+        (b) => b.month == currentMonth && b.budgetType == BudgetType.income,
+      );
     } catch (e) {
-      currentBudget = null;
+      incomeBudget = null;
     }
 
-    if (currentBudget == null) {
+    try {
+      expenseBudget = budgets.firstWhere(
+        (b) => b.month == currentMonth && b.budgetType == BudgetType.expense,
+      );
+    } catch (e) {
+      expenseBudget = null;
+    }
+
+    // If neither budget exists, show create prompt
+    if (incomeBudget == null && expenseBudget == null) {
       return _buildCreateBudgetPrompt(currentMonth);
     }
 
-    return _buildCurrentBudgetSummary(currentMonth, currentBudget);
+    return _buildCurrentBudgetSummary(currentMonth, incomeBudget, expenseBudget);
   }
 
   Widget _buildCreateBudgetPrompt(String currentMonth) {
@@ -445,146 +458,338 @@ class _BudgetManagementScreenState
     );
   }
 
-  Widget _buildCurrentBudgetSummary(String currentMonth, Budget currentBudget) {
+  Widget _buildCurrentBudgetSummary(
+    String currentMonth,
+    Budget? incomeBudget,
+    Budget? expenseBudget,
+  ) {
+    final incomeTarget = incomeBudget?.budgetTarget ?? 0.0;
+    final incomeSpent = incomeBudget?.totalSpent ?? 0.0;
+    final expenseTarget = expenseBudget?.budgetTarget ?? 0.0;
+    final expenseSpent = expenseBudget?.totalSpent ?? 0.0;
+
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _openBudget(currentBudget),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _formatMonthDisplay(currentMonth),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _formatMonthDisplay(currentMonth),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Current Month Budget',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Active',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Current Month Budgets',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Income Budget Card
+            if (incomeBudget != null) ...[
+              InkWell(
+                onTap: () => _openBudget(incomeBudget),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.green.withValues(alpha: 0.3),
+                      width: 1,
                     ),
                   ),
-                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_downward,
+                              color: Colors.green,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Income Budget',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: (incomeBudget.status == BudgetStatus.active
+                                      ? Colors.green
+                                      : Colors.grey)
+                                  .withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              incomeBudget.status.displayName,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: incomeBudget.status == BudgetStatus.active
+                                    ? Colors.green
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBudgetMiniBar(
+                        incomeSpent,
+                        incomeTarget,
+                        Colors.green,
+                        incomeBudget.isOverBudget,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 20),
-
-              // Income and Expense Targets
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Income Target',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '₱${currentBudget.totalBudgetedIncome.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Expense Target',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '₱${currentBudget.totalBudgetedExpenses.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // HP Bar
-              _buildBudgetVisualBar(currentBudget),
-
               const SizedBox(height: 12),
-              Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.touch_app, size: 14, color: Colors.grey[600]),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Tap to view details',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
-                      ),
+            ] else ...[
+              _buildMissingBudgetCard('Income', Colors.green, BudgetType.income),
+              const SizedBox(height: 12),
+            ],
+
+            // Expense Budget Card
+            if (expenseBudget != null) ...[
+              InkWell(
+                onTap: () => _openBudget(expenseBudget),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3),
+                      width: 1,
                     ),
-                  ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_upward,
+                              color: Colors.red,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Expense Budget',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: (expenseBudget.status == BudgetStatus.active
+                                      ? Colors.green
+                                      : Colors.grey)
+                                  .withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              expenseBudget.status.displayName,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: expenseBudget.status == BudgetStatus.active
+                                    ? Colors.green
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildBudgetMiniBar(
+                        expenseSpent,
+                        expenseTarget,
+                        Colors.red,
+                        expenseBudget.isOverBudget,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...[
+              _buildMissingBudgetCard('Expense', Colors.red, BudgetType.expense),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMissingBudgetCard(String type, Color color, BudgetType budgetType) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              budgetType == BudgetType.income
+                  ? Icons.arrow_downward
+                  : Icons.arrow_upward,
+              color: Colors.grey,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No $type Budget',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _createBudget,
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBudgetMiniBar(
+    double spent,
+    double target,
+    Color baseColor,
+    bool isOverBudget,
+  ) {
+    final spentPercentage = target > 0 ? (spent / target).clamp(0.0, 1.0) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          height: 24,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!, width: 1),
+          ),
+          child: Stack(
+            children: [
+              if (spentPercentage > 0)
+                FractionallySizedBox(
+                  widthFactor: spentPercentage,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isOverBudget ? Colors.red : baseColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              Center(
+                child: Text(
+                  '₱${spent.toStringAsFixed(0)} / ₱${target.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black54,
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
         ),
-      ),
+        if (isOverBudget) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.warning_amber, size: 12, color: Colors.red[700]),
+              const SizedBox(width: 4),
+              Text(
+                'Over budget',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.red[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 
@@ -611,108 +816,6 @@ class _BudgetManagementScreenState
     } catch (e) {
       return monthStr;
     }
-  }
-
-  Widget _buildBudgetVisualBar(Budget budget) {
-    final spent = budget.totalSpent;
-    final target = budget.budgetTarget;
-
-    final spentPercentage = target > 0 ? (spent / target).clamp(0.0, 1.0) : 0.0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // HP-style bar
-        Container(
-          height: 28,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.grey[300]!, width: 2),
-          ),
-          child: Stack(
-            children: [
-              // Actual spent (gradient based on if over budget)
-              if (spentPercentage > 0)
-                FractionallySizedBox(
-                  widthFactor: spentPercentage,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: budget.isOverBudget
-                            ? [Colors.red[400]!, Colors.red[600]!]
-                            : [Colors.blue[400]!, Colors.blue[600]!],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (budget.isOverBudget ? Colors.red : Colors.blue)
-                              .withValues(alpha: 0.3),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              // Amount text overlay
-              Center(
-                child: Text(
-                  '₱${spent.toStringAsFixed(0)} / ₱${target.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black54,
-                        blurRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Legend
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildLegendItem(
-              budget.isOverBudget ? Colors.red[500]! : Colors.blue[500]!,
-              'Spent',
-            ),
-            const SizedBox(width: 16),
-            _buildLegendItem(Colors.grey[300]!, 'Remaining'),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -882,38 +985,27 @@ class _BudgetCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Income/Expense summary
+                  // Budget target amount
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.arrow_downward, size: 12, color: Colors.green),
-                          const SizedBox(width: 4),
-                          Text(
-                            '₱${budget.totalBudgetedIncome.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '₱${budget.budgetTarget.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: budget.budgetType == BudgetType.income
+                              ? Colors.green
+                              : Colors.red,
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.arrow_upward, size: 12, color: Colors.red),
-                          const SizedBox(width: 4),
-                          Text(
-                            '₱${budget.totalBudgetedExpenses.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Target',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
@@ -967,6 +1059,11 @@ class _BudgetCard extends StatelessWidget {
 
     final spentPercentage = target > 0 ? (spent / target).clamp(0.0, 1.0) : 0.0;
 
+    // Use budget type color
+    final budgetColor = budget.budgetType == BudgetType.income
+        ? Colors.green
+        : Colors.red;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -989,12 +1086,12 @@ class _BudgetCard extends StatelessWidget {
                       gradient: LinearGradient(
                         colors: budget.isOverBudget
                             ? [Colors.red[400]!, Colors.red[600]!]
-                            : [Colors.blue[400]!, Colors.blue[600]!],
+                            : [budgetColor[400]!, budgetColor[600]!],
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: (budget.isOverBudget ? Colors.red : Colors.blue)
+                          color: (budget.isOverBudget ? Colors.red : budgetColor)
                               .withValues(alpha: 0.3),
                           blurRadius: 4,
                         ),
@@ -1028,7 +1125,7 @@ class _BudgetCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildLegendItem(
-              budget.isOverBudget ? Colors.red[500]! : Colors.blue[500]!,
+              budget.isOverBudget ? Colors.red[500]! : budgetColor[500]!,
               'Spent',
             ),
             const SizedBox(width: 16),

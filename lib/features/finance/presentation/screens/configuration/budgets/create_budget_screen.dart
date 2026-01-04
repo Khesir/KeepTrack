@@ -342,17 +342,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existingBudget != null;
-    final totalExpenses = _categories
-        .where((c) =>
-            c.financeCategory?.type == CategoryType.expense ||
-            c.financeCategory?.type == CategoryType.investment ||
-            c.financeCategory?.type == CategoryType.savings ||
-            c.financeCategory?.type == CategoryType.transfer)
-        .fold(0.0, (sum, c) => sum + c.targetAmount);
-    final totalIncome = _categories
-        .where((c) => c.financeCategory?.type == CategoryType.income)
-        .fold(0.0, (sum, c) => sum + c.targetAmount);
-    final balance = totalIncome - totalExpenses;
 
     return Scaffold(
       appBar: AppBar(
@@ -604,60 +593,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Summary Card
-              Card(
-                color: (balance >= 0 ? Colors.green : Colors.red).withOpacity(
-                  0.1,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildSummaryItem(
-                            'Income',
-                            totalIncome,
-                            Colors.green,
-                          ),
-                          _buildSummaryItem(
-                            'Expenses',
-                            totalExpenses,
-                            Colors.red,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Balance: ',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          Text(
-                            '₱${balance.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: balance >= 0 ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
               // Categories header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -782,22 +717,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
     );
   }
 
-  Widget _buildSummaryItem(String label, double amount, Color color) {
-    return Column(
-      children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-        const SizedBox(height: 4),
-        Text(
-          '₱${amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 /// Category Dialog - Simplified without account selection
@@ -849,8 +768,21 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     return AsyncStreamBuilder<List<FinanceCategory>>(
       state: widget.controller,
       builder: (context, financeCategories) {
+        // Filter categories based on budget type
+        final typedCategories = financeCategories.where((cat) {
+          if (widget.budgetType == BudgetType.income) {
+            return cat.type == CategoryType.income;
+          } else {
+            // Expense budget includes: expense, investment, savings, transfer
+            return cat.type == CategoryType.expense ||
+                cat.type == CategoryType.investment ||
+                cat.type == CategoryType.savings ||
+                cat.type == CategoryType.transfer;
+          }
+        }).toList();
+
         // Filter out already selected categories (except when editing)
-        final availableCategories = financeCategories.where((cat) {
+        final availableCategories = typedCategories.where((cat) {
           if (isEdit && cat.id == widget.category?.financeCategoryId) {
             return true; // Allow current category when editing
           }

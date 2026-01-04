@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:persona_codex/core/ui/app_layout_controller.dart';
 import 'package:persona_codex/core/ui/ui.dart';
 import 'package:persona_codex/features/profile/presentation/widgets/user_info_card.dart';
-import 'package:persona_codex/features/profile/presentation/widgets/contribution_chart.dart';
 import 'package:persona_codex/features/profile/presentation/widgets/balance_graph.dart';
 
 class ProfileScreen extends ScopedScreen {
@@ -33,17 +32,6 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen>
         children: [
           // User Info Card
           const UserInfoCard(),
-          const SizedBox(height: 24),
-
-          // GitHub-like Contribution Chart for Tasks
-          Text(
-            'Task Activity',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 12),
-          const ContributionChart(),
           const SizedBox(height: 24),
 
           // Balance Graph

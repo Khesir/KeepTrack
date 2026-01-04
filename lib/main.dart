@@ -21,7 +21,6 @@ import 'core/settings/presentation/settings_controller.dart';
 import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
 import 'features/tasks/tasks_di.dart';
-import 'features/tasks/presentation/screens/tasks_main_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/logs/logs_screen.dart';
 import 'features/profile/presentation/profile_screen.dart';
@@ -471,7 +470,6 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    TasksMainScreen(),
     FinanceMainScreen(),
     LogsScreen(),
     ProfileScreen(),
@@ -532,10 +530,6 @@ class _MainScreenState extends State<MainScreen> {
                       NavigationDestination(
                         icon: Icon(Icons.home),
                         label: 'Home',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.task_alt),
-                        label: 'Tasks',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.account_balance_wallet),
