@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
 
 class TransactionCompletionDialog extends StatefulWidget {
   final Task task;

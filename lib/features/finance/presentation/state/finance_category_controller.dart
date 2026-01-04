@@ -1,5 +1,5 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 
 import '../../modules/finance_category/domain/entities/finance_category.dart';
 import '../../modules/finance_category/domain/entities/finance_category_enums.dart';

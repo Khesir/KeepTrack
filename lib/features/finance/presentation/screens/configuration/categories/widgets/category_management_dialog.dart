@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 
 class CategoryManagementDialog extends StatefulWidget {
   final FinanceCategory? financeCategory;

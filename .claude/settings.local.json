@@ -3,7 +3,11 @@
     "allow": [
       "Bash(flutter analyze:*)",
       "WebSearch",
-      "Bash(flutter pub get:*)"
+      "Bash(flutter pub get:*)",
+      "Bash(find:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub:*)",
+      "WebFetch(domain:pub.dev)"
     ]
   }
 }

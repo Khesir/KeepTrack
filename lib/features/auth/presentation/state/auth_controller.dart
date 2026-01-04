@@ -1,10 +1,10 @@
-import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/core/state/state.dart';
-import 'package:persona_codex/core/logging/app_logger.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/features/auth/data/services/auth_service.dart';
-import 'package:persona_codex/features/auth/domain/entities/user.dart';
-import 'package:persona_codex/features/finance/data/services/finance_initialization_service.dart';
+import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/core/state/state.dart';
+import 'package:keep_track/core/logging/app_logger.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/features/auth/data/services/auth_service.dart';
+import 'package:keep_track/features/auth/domain/entities/user.dart';
+import 'package:keep_track/features/finance/data/services/finance_initialization_service.dart';
 
 class AuthController extends StreamState<AsyncState<User?>> {
   final AuthService _authService;

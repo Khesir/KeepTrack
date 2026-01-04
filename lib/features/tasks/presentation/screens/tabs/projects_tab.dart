@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/tasks/modules/projects/domain/entities/project.dart';
-import 'package:persona_codex/features/tasks/presentation/state/project_controller.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
+import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 
 /// Projects Tab with Card Design
 class ProjectsTab extends StatefulWidget {

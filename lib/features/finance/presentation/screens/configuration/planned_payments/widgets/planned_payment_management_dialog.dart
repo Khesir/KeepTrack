@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 
 import '../../../../../modules/planned_payment/domain/entities/payment_enums.dart';
 

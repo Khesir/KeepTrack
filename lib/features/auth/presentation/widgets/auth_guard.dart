@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/auth/presentation/screens/login_screen.dart';
-import 'package:persona_codex/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/auth/presentation/screens/login_screen.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 
 /// Auth Guard widget that protects routes requiring authentication
 ///

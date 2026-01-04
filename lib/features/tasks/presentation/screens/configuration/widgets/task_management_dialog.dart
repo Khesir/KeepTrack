@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/features/tasks/modules/projects/domain/entities/project.dart';
-import 'package:persona_codex/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
+import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
 
 class TaskManagementDialog extends StatefulWidget {
   final Task? task;

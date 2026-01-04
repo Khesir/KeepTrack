@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/profile/presentation/state/task_activity_controller.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/profile/presentation/state/task_activity_controller.dart';
 
 class ContributionChart extends StatefulWidget {
   const ContributionChart({super.key});

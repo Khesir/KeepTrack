@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:persona_codex/core/logging/app_logger.dart';
+import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
 /// Migration 021 - Add parent_task_id to tasks table for subtask support

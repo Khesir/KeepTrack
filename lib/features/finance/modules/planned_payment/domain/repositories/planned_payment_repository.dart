@@ -1,5 +1,5 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 
 import '../entities/payment_enums.dart';
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/tasks/modules/tasks/domain/entities/task.dart';
-import 'package:persona_codex/features/tasks/presentation/state/task_controller.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 
 /// Tasks Tab with List View
 class TasksTab extends StatefulWidget {

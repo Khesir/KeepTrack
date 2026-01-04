@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/shared/presentation/theme_mode_indicator.dart';
+import 'package:keep_track/shared/presentation/theme_mode_indicator.dart';
 
 /// Reusable layout wrapper for non-tabbed screens
 /// Provides consistent AppBar, loading overlay, and optional FAB

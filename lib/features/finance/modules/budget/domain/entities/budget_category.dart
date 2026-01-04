@@ -1,4 +1,4 @@
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 
 /// Budget category entity (Domain)
 class BudgetCategory {

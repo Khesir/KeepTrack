@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:persona_codex/core/utils/icon_helper.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account_enums.dart';
+import 'package:keep_track/core/utils/icon_helper.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account_enums.dart';
 
 class AccountManagementDialog extends StatefulWidget {
   final Account? account;

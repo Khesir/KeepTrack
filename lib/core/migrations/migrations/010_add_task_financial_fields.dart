@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:persona_codex/core/logging/app_logger.dart';
+import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
 /// Migration 010 - Add financial integration fields to tasks table

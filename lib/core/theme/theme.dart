@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/theme/app_theme.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 
 /// App theme aligned with Shadcn-inspired AppColors
 class AppTheme {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import 'package:persona_codex/core/ui/ui.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/ui.dart';
 import 'tabs/tasks_tab.dart';
 import 'tabs/projects_tab.dart';
 import 'tabs/pomodoro_tab.dart';

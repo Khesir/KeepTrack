@@ -1,4 +1,4 @@
-import 'package:persona_codex/core/error/result.dart';
+import 'package:keep_track/core/error/result.dart';
 import '../entities/budget.dart';
 import '../entities/budget_category.dart';
 

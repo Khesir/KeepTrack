@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/modules/transaction/domain/entities/transaction.dart';
-import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
-import 'package:persona_codex/features/finance/presentation/state/transaction_controller.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
+import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 
 class BalanceGraph extends StatefulWidget {
   const BalanceGraph({super.key});

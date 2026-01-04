@@ -1,5 +1,5 @@
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../models/debt_model.dart';
 import '../debt_datasource.dart';
 

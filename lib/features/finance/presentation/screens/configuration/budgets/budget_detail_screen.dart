@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/ui/scoped_screen.dart';
-import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:intl/intl.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/state.dart';
+import 'package:keep_track/core/ui/scoped_screen.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../../../modules/budget/domain/entities/budget.dart';
 import '../../../../modules/budget/domain/entities/budget_category.dart';
 import '../../../state/account_controller.dart';
 import '../../../state/budget_controller.dart';
+import '../../../state/transaction_controller.dart';
 
 /// Budget detail screen - Shows details of a specific budget
 class BudgetDetailScreen extends ScopedScreen {
@@ -24,24 +29,93 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
     with AppLayoutControlled {
   late final BudgetController _controller;
   late final AccountController _accountController;
+  late final TransactionController _transactionController;
   late Budget _currentBudget;
+  List<Transaction> _budgetTransactions = [];
 
   @override
   void registerServices() {
     _controller = locator.get<BudgetController>();
     _accountController = locator.get<AccountController>();
+    _transactionController = locator.get<TransactionController>();
   }
 
   @override
   void initState() {
     super.initState();
     _currentBudget = widget.budget;
+    _loadBudgetTransactions();
   }
 
   @override
   void onReady() {
     _controller.loadBudgets();
     _accountController.loadAccounts();
+  }
+
+  Future<void> _loadBudgetTransactions() async {
+    // Listen to transaction stream and filter
+    _transactionController.stream.listen((state) {
+      if (state is AsyncData<List<Transaction>>) {
+        final allTransactions = state.data;
+
+        // Filter transactions based on budget period type
+        final List<Transaction> filtered;
+
+        if (_currentBudget.periodType == BudgetPeriodType.monthly) {
+          // Monthly budgets: Include only unassigned transactions (budget_id = null)
+          // that match category, type, and date
+
+          // Parse the budget month (format: YYYY-MM)
+          final parts = _currentBudget.month.split('-');
+          if (parts.length != 2) {
+            filtered = [];
+          } else {
+            final year = int.parse(parts[0]);
+            final month = int.parse(parts[1]);
+
+            final categoryIds = _currentBudget.categories
+                .map((c) => c.financeCategoryId)
+                .toSet();
+            final budgetType = _currentBudget.budgetType;
+
+            filtered = allTransactions.where((t) {
+              // Must have no budget assignment
+              if (t.budgetId != null) return false;
+
+              // Date filtering - only transactions in the exact month
+              final txYear = t.date.year;
+              final txMonth = t.date.month;
+              final inDateRange = txYear == year && txMonth == month;
+
+              // Category filtering
+              final inBudgetCategory = categoryIds.contains(t.financeCategoryId);
+
+              // Type filtering - match transaction type with budget type
+              final matchesType = (budgetType == BudgetType.income && t.type == TransactionType.income) ||
+                                  (budgetType == BudgetType.expense && t.type == TransactionType.expense);
+
+              return inDateRange && inBudgetCategory && matchesType;
+            }).toList();
+          }
+        } else {
+          // One-time budgets: Include only transactions explicitly assigned to this budget
+          // No date filtering - one-time budgets can span multiple months
+          filtered = allTransactions.where((t) {
+            return t.budgetId == _currentBudget.id;
+          }).toList();
+        }
+
+        // Sort by date descending
+        filtered.sort((a, b) => b.date.compareTo(a.date));
+
+        if (mounted) {
+          setState(() {
+            _budgetTransactions = filtered;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -499,6 +573,46 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
                 else
                   _buildCategoriesList(),
 
+                const SizedBox(height: 24),
+
+                // Transactions Section
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Transactions',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_budgetTransactions.length}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Transactions List
+                if (_budgetTransactions.isEmpty)
+                  _buildEmptyTransactions()
+                else
+                  _buildTransactionsList(),
+
                 const SizedBox(height: 16),
               ],
             ),
@@ -535,14 +649,26 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Show title if available (for one-time budgets), otherwise show month
                       Text(
-                        _formatMonthDisplay(_currentBudget.month),
+                        _currentBudget.title != null && _currentBudget.title!.isNotEmpty
+                            ? _currentBudget.title!
+                            : _formatMonthDisplay(_currentBudget.month),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
+                      // Show month as subtitle for one-time budgets with title
+                      if (_currentBudget.title != null && _currentBudget.title!.isNotEmpty)
+                        Text(
+                          _formatMonthDisplay(_currentBudget.month),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                       if (account != null)
                         Row(
                           children: [
@@ -624,7 +750,11 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
             // Quick stats row
             Row(
               children: [
-                _buildQuickStat('Spent', _currentBudget.totalSpent, balanceColor),
+                _buildQuickStat(
+                  _currentBudget.budgetType == BudgetType.income ? 'Earned' : 'Spent',
+                  _currentBudget.totalSpent,
+                  balanceColor,
+                ),
                 const SizedBox(width: 16),
                 _buildQuickStat(
                   'Remaining',
@@ -742,7 +872,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
               children: [
                 _buildLegendItem(
                   _currentBudget.isOverBudget ? Colors.red[500]! : Colors.blue[500]!,
-                  'Spent',
+                  _currentBudget.budgetType == BudgetType.income ? 'Earned' : 'Spent',
                 ),
                 const SizedBox(width: 16),
                 _buildLegendItem(Colors.grey[300]!, 'Remaining'),
@@ -919,7 +1049,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Spent',
+                      category.financeCategory?.type == CategoryType.income ? 'Earned' : 'Spent',
                       style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                     Text(
@@ -997,6 +1127,143 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyTransactions() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No transactions yet',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Transactions in this budget will appear here',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionsList() {
+    return Column(
+      children: _budgetTransactions.map((transaction) {
+        return _buildTransactionCard(transaction);
+      }).toList(),
+    );
+  }
+
+  Widget _buildTransactionCard(Transaction transaction) {
+    final isIncome = transaction.type == TransactionType.income;
+    final isExpense = transaction.type == TransactionType.expense;
+    final color = isIncome
+        ? Colors.green
+        : isExpense
+            ? Colors.red
+            : Colors.blue;
+
+    final displayAmount = isExpense
+        ? -transaction.totalCost
+        : isIncome
+            ? transaction.totalCost
+            : transaction.amount;
+
+    // Find the category name from budget categories
+    final budgetCategory = _currentBudget.categories
+        .where((c) => c.financeCategoryId == transaction.financeCategoryId)
+        .firstOrNull;
+    final category = budgetCategory?.financeCategory;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            category?.type.icon ?? Icons.category,
+            color: color,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          transaction.description ?? category?.name ?? 'Transaction',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Row(
+          children: [
+            Icon(
+              isIncome
+                  ? Icons.arrow_downward
+                  : isExpense
+                      ? Icons.arrow_upward
+                      : Icons.swap_horiz,
+              size: 12,
+              color: Colors.grey[600],
+            ),
+            const SizedBox(width: 4),
+            Text(
+              category?.name ?? 'Unknown',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            if (transaction.hasFee) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.receipt, size: 12, color: Colors.grey[600]),
+              const SizedBox(width: 2),
+              Text(
+                '+${currencyFormatter.currencySymbol}${transaction.fee.toStringAsFixed(2)} fee',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${isExpense ? '-' : isIncome ? '+' : ''}${currencyFormatter.currencySymbol}${displayAmount.abs().toStringAsFixed(2)}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: isIncome
+                    ? Colors.green[700]
+                    : isExpense
+                        ? Colors.red[700]
+                        : Colors.blue[700],
+              ),
+            ),
+            Text(
+              DateFormat('MMM d').format(transaction.date),
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+              ),
+            ),
           ],
         ),
       ),

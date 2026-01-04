@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/routing/app_router.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 import '../../../../modules/budget/domain/entities/budget.dart';
 import '../../../../modules/budget/domain/entities/budget_category.dart';
 import '../../../../modules/finance_category/domain/entities/finance_category_enums.dart';
@@ -254,9 +256,18 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
           width: 1,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.budgetDetail,
+            arguments: budget,
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Budget Header
@@ -267,17 +278,21 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Show title if available, otherwise show month
                       Text(
-                        _formatMonthDisplay(budget.month),
+                        budget.title != null && budget.title!.isNotEmpty
+                            ? budget.title!
+                            : _formatMonthDisplay(budget.month),
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      // Show month as subtitle if title is present
                       if (budget.title != null && budget.title!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
-                          budget.title!,
+                          _formatMonthDisplay(budget.month),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -407,6 +422,7 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 
 import '../../../../../modules/goal/domain/entities/goal.dart';
 
@@ -122,8 +123,7 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
   @override
   Widget build(BuildContext context) {
     // Get currency symbol from settings
-    final settingsController = locator.get<SettingsController>();
-    final currencySymbol = settingsController.data?.currency.symbol ?? '₱';
+    final currencySymbol = currencyFormatter.currencySymbol;
 
     return StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(

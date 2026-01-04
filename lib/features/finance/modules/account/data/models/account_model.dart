@@ -1,4 +1,4 @@
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 
 import '../../domain/entities/account_enums.dart';
 

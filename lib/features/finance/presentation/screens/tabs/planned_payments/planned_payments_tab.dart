@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
-import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
-import 'package:persona_codex/features/finance/presentation/state/finance_category_controller.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../modules/planned_payment/domain/entities/payment_enums.dart';
 import '../../../../modules/planned_payment/domain/entities/planned_payment.dart';
 import '../../../state/planned_payment_controller.dart';
@@ -429,7 +430,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
             const SizedBox(height: 12),
             Text(
               NumberFormat.currency(
-                symbol: '₱',
+                symbol: currencyFormatter.currencySymbol,
                 decimalDigits: 2,
               ).format(amount),
               style: const TextStyle(
@@ -635,7 +636,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                           const SizedBox(height: 4),
                           Text(
                             NumberFormat.currency(
-                              symbol: '₱',
+                              symbol: currencyFormatter.currencySymbol,
                               decimalDigits: 2,
                             ).format(payment.amount),
                             style: TextStyle(

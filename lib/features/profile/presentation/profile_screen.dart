@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import 'package:persona_codex/core/ui/ui.dart';
-import 'package:persona_codex/features/profile/presentation/widgets/user_info_card.dart';
-import 'package:persona_codex/features/profile/presentation/widgets/balance_graph.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/ui.dart';
+import 'package:keep_track/features/profile/presentation/widgets/user_info_card.dart';
+import 'package:keep_track/features/profile/presentation/widgets/balance_graph.dart';
 
 class ProfileScreen extends ScopedScreen {
   const ProfileScreen({super.key});

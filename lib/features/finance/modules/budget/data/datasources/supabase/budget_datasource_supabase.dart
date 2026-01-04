@@ -1,7 +1,8 @@
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../models/budget_model.dart';
 import '../../models/budget_category_model.dart';
+import '../../../domain/entities/budget.dart';
 import '../../../../finance_category/data/models/finance_category_model.dart';
 import '../budget_datasource.dart';
 import '../budget_category_datasource.dart';
@@ -348,21 +349,19 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
   @override
   Future<void> manualRecalculateBudgetSpent(String budgetId) async {
     try {
-      // Get budget month
+      // Get budget details
       final budgetResponse = await supabaseService.client
           .from(tableName)
-          .select('month')
+          .select('month, budget_type, period_type')
           .eq('id', budgetId)
           .single();
 
       final budgetMonth = budgetResponse['month'] as String;
+      final budgetTypeStr = budgetResponse['budget_type'] as String;
+      final periodTypeStr = budgetResponse['period_type'] as String;
 
-      // Parse month to get date range
-      final parts = budgetMonth.split('-');
-      final year = int.parse(parts[0]);
-      final month = int.parse(parts[1]);
-      final startDate = DateTime(year, month, 1);
-      final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+      final budgetType = budgetTypeStr == 'income' ? BudgetType.income : BudgetType.expense;
+      final periodType = periodTypeStr == 'one_time' ? BudgetPeriodType.oneTime : BudgetPeriodType.monthly;
 
       // Get all budget categories for this budget
       final categoriesResponse = await supabaseService.client
@@ -373,7 +372,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
       final categories = categoriesResponse as List;
 
       print('🔄 Recalculating budget for month: $budgetMonth');
-      print('📅 Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
+      print('📊 Budget type: $budgetTypeStr, Period: $periodTypeStr');
       print('📊 Processing ${categories.length} categories');
 
       // For each category, calculate spent amounts from transactions
@@ -381,13 +380,41 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
         final categoryId = category['id'] as String;
         final financeCategoryId = category['finance_category_id'] as String;
 
-        // Get all transactions for this category in this month
-        final transactions = await supabaseService.client
+        // Build query based on budget period type
+        var query = supabaseService.client
             .from('transactions')
-            .select('amount, fee, date, description')
-            .eq('finance_category_id', financeCategoryId)
-            .gte('date', startDate.toIso8601String())
-            .lte('date', endDate.toIso8601String());
+            .select('amount, fee, type, date, description')
+            .eq('finance_category_id', financeCategoryId);
+
+        if (periodType == BudgetPeriodType.monthly) {
+          // Parse month to get date range for monthly budgets
+          final parts = budgetMonth.split('-');
+          final year = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final startDate = DateTime(year, month, 1);
+          final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+
+          print('📅 Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
+
+          // Monthly budgets: Only count unassigned transactions (budget_id = null)
+          query = query
+              .gte('date', startDate.toIso8601String())
+              .lte('date', endDate.toIso8601String())
+              .isFilter('budget_id', null);
+
+          // Filter by transaction type to match budget type
+          if (budgetType == BudgetType.income) {
+            query = query.eq('type', 'income');
+          } else if (budgetType == BudgetType.expense) {
+            query = query.eq('type', 'expense');
+          }
+        } else {
+          // One-time budgets: Only count transactions explicitly assigned to this budget
+          query = query.eq('budget_id', budgetId);
+          print('🎯 One-time budget: filtering by budget_id = $budgetId');
+        }
+
+        final transactions = await query;
 
         // Calculate totals
         double totalSpent = 0.0;
@@ -494,7 +521,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
       // Calculate spent amounts for all categories
       final enrichedCategories = await _calculateSpentAmountsForCategories(
         budget.categories.cast<BudgetCategoryModel>(),
-        budget.month,
+        budget,
       );
 
       // Return budget with enriched categories
@@ -519,7 +546,7 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
       for (final budget in budgets) {
         final enrichedCategories = await _calculateSpentAmountsForCategories(
           budget.categories.cast<BudgetCategoryModel>(),
-          budget.month,
+          budget,
         );
         enrichedBudgets.add(budget.withCategories(enrichedCategories));
       }
@@ -537,25 +564,47 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
   /// Helper: Calculate spent amounts for budget categories from transactions
   Future<List<BudgetCategoryModel>> _calculateSpentAmountsForCategories(
     List<BudgetCategoryModel> categories,
-    String budgetMonth,
+    BudgetModel budget,
   ) async {
-    // Parse month to get date range
-    final parts = budgetMonth.split('-');
-    final year = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-    final startDate = DateTime(year, month, 1);
-    final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
-
     final enrichedCategories = <BudgetCategoryModel>[];
 
     for (final category in categories) {
-      // Query transactions for this category in this month
-      final transactions = await supabaseService.client
+      // Build query based on budget period type
+      var query = supabaseService.client
           .from('transactions')
-          .select('amount, fee')
-          .eq('finance_category_id', category.financeCategoryId)
-          .gte('date', startDate.toIso8601String())
-          .lte('date', endDate.toIso8601String());
+          .select('amount, fee, type')
+          .eq('finance_category_id', category.financeCategoryId);
+
+      if (budget.periodType == BudgetPeriodType.monthly) {
+        // Parse month to get date range for monthly budgets
+        final parts = budget.month.split('-');
+        final year = int.parse(parts[0]);
+        final month = int.parse(parts[1]);
+        final startDate = DateTime(year, month, 1);
+        final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
+
+        // Monthly budgets: Only count unassigned transactions (budget_id = null)
+        // in the budget's month that match the budget type
+        query = query
+            .gte('date', startDate.toIso8601String())
+            .lte('date', endDate.toIso8601String())
+            .isFilter('budget_id', null);
+
+        // Filter by transaction type to match budget type
+        if (budget.budgetType == BudgetType.income) {
+          query = query.eq('type', 'income');
+        } else if (budget.budgetType == BudgetType.expense) {
+          query = query.eq('type', 'expense');
+        }
+      } else {
+        // One-time budgets: Only count transactions explicitly assigned to this budget
+        // No date filtering - one-time budgets can span multiple months
+        if (budget.id != null) {
+          query = query.eq('budget_id', budget.id!);
+        }
+      }
+
+      final transactions = await query;
 
       // Calculate totals
       double totalSpent = 0.0;

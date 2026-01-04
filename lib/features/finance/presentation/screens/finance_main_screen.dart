@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import 'package:persona_codex/core/ui/ui.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/ui.dart';
 import 'tabs/accounts/accounts_tab_new.dart';
 import 'tabs/budgets/budgets_tab_new.dart';
 import 'tabs/debts/debts_tab_new.dart';

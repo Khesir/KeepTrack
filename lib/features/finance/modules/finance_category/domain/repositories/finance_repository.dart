@@ -1,4 +1,4 @@
-import 'package:persona_codex/core/error/result.dart';
+import 'package:keep_track/core/error/result.dart';
 
 import '../entities/finance_category.dart';
 import '../entities/finance_category_enums.dart';

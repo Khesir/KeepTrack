@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import 'package:persona_codex/core/ui/ui.dart';
-import 'package:persona_codex/core/routing/app_router.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/modules/budget/domain/entities/budget.dart';
-import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
-import 'package:persona_codex/features/finance/presentation/state/budget_controller.dart';
-import 'package:persona_codex/features/home/widgets/admin_panel_widget.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/ui.dart';
+import 'package:keep_track/core/routing/app_router.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
+import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/budget_controller.dart';
+import 'package:keep_track/features/home/widgets/admin_panel_widget.dart';
 
 class HomeScreen extends ScopedScreen {
   const HomeScreen({super.key});
@@ -92,11 +93,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
         children: [
           Row(
             children: [
-              Icon(
-                _getGreetingIcon(),
-                color: Colors.white,
-                size: 28,
-              ),
+              Icon(_getGreetingIcon(), color: Colors.white, size: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -112,10 +109,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                     ),
                     const Text(
                       'Welcome back!',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                   ],
                 ),
@@ -193,38 +187,30 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
               child: const CircularProgressIndicator(),
             ),
           ),
-          errorBuilder: (context, message) => _buildFinanceCard(
-            totalBalance,
-            accounts.length,
-            null,
-          ),
+          errorBuilder: (context, message) =>
+              _buildFinanceCard(totalBalance, accounts.length, []),
           builder: (context, budgets) {
-            // Get current month budget
-            final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
-            Budget? currentBudget;
-            try {
-              currentBudget = budgets.firstWhere(
-                (b) => b.month == currentMonth && b.status == BudgetStatus.active,
-              );
-            } catch (e) {
-              currentBudget = null;
-            }
+            // Get all active budgets, sorted by month descending
+            final activeBudgets =
+                budgets.where((b) => b.status == BudgetStatus.active).toList()
+                  ..sort((a, b) => b.month.compareTo(a.month));
 
-            return _buildFinanceCard(totalBalance, accounts.length, currentBudget);
+            return _buildFinanceCard(
+              totalBalance,
+              accounts.length,
+              activeBudgets,
+            );
           },
         );
       },
     );
   }
 
-  Widget _buildFinanceCard(double totalBalance, int accountCount, Budget? budget) {
-    final budgetTarget = budget?.budgetTarget ?? 0.0;
-    final actualSpent = budget?.totalSpent ?? 0.0;
-
-    final actualPercentage = budgetTarget > 0
-        ? (actualSpent / budgetTarget).clamp(0.0, 1.0)
-        : 0.0;
-
+  Widget _buildFinanceCard(
+    double totalBalance,
+    int accountCount,
+    List<Budget> budgets,
+  ) {
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
@@ -238,13 +224,13 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
               children: [
                 const Text(
                   'Finance Overview',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -252,11 +238,14 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.account_balance_wallet,
-                          size: 16, color: Colors.green[700]),
+                      Icon(
+                        Icons.account_balance_wallet,
+                        size: 16,
+                        color: Colors.green[700],
+                      ),
                       const SizedBox(width: 4),
                       Text(
-                        'All Accounts',
+                        '$accountCount Accounts',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.green[700],
@@ -272,7 +261,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
 
             // Account Balance
             Text(
-              '₱${NumberFormat('#,##0.00').format(totalBalance)}',
+              '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(totalBalance)}',
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -281,120 +270,216 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
             ),
             const Text(
               'Current Balance',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
             const SizedBox(height: 24),
 
-            // Budget HP Bar
+            // Active Budgets Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Monthly Budget',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                  'Active Budgets',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
-                if (budget == null)
-                  Text(
-                    'No active budget',
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${budgets.length}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[700],
                     ),
                   ),
+                ),
               ],
-            ),
-            const SizedBox(height: 8),
-
-            // HP-style bar
-            Container(
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey[300]!, width: 2),
-              ),
-              child: budget != null
-                  ? Stack(
-                      children: [
-                        // Actual spent
-                        if (actualPercentage > 0)
-                          FractionallySizedBox(
-                            widthFactor: actualPercentage,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: budget.isOverBudget
-                                      ? [Colors.red[400]!, Colors.red[600]!]
-                                      : [Colors.blue[400]!, Colors.blue[600]!],
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (budget.isOverBudget
-                                            ? Colors.red
-                                            : Colors.blue)
-                                        .withOpacity(0.3),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        // Amount text overlay
-                        Center(
-                          child: Text(
-                            '₱${actualSpent.toStringAsFixed(0)} / ₱${budgetTarget.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black54,
-                                  blurRadius: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : const Center(
-                      child: Text(
-                        'Create a budget to track spending',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
             ),
             const SizedBox(height: 12),
 
-            // Legend
-            if (budget != null)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildLegendItem(
-                    budget.isOverBudget ? Colors.red[500]! : Colors.blue[500]!,
-                    'Spent',
-                  ),
-                  const SizedBox(width: 16),
-                  _buildLegendItem(Colors.grey[300]!, 'Remaining'),
-                ],
+            // Budgets List or Empty State
+            if (budgets.isEmpty)
+              Container(
+                height: 80,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'No active budgets\nCreate a budget to track spending',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              )
+            else
+              ...budgets
+                  .take(3)
+                  .map((budget) => _buildBudgetSummaryCard(budget)),
+
+            // View All Button
+            if (budgets.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, AppRoutes.budgetList);
+                  },
+                  child: Text('View all ${budgets.length} budgets'),
+                ),
               ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildBudgetSummaryCard(Budget budget) {
+    final spent = budget.totalSpent;
+    final target = budget.budgetTarget;
+    final percentage = target > 0 ? (spent / target).clamp(0.0, 1.0) : 0.0;
+    final isOverBudget = spent > target;
+
+    final color = budget.budgetType == BudgetType.income
+        ? Colors.green
+        : budget.budgetType == BudgetType.expense
+        ? Colors.red
+        : Colors.blue;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.budgetDetail,
+            arguments: budget,
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        budget.budgetType == BudgetType.income
+                            ? Icons.arrow_downward
+                            : Icons.arrow_upward,
+                        size: 16,
+                        color: color,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        budget.title != null && budget.title!.isNotEmpty
+                            ? budget.title!
+                            : _formatMonthDisplay(budget.month),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isOverBudget && budget.budgetType == BudgetType.expense)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Over',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: percentage,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation(
+                  isOverBudget && budget.budgetType == BudgetType.expense
+                      ? Colors.red
+                      : color,
+                ),
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(spent)} / ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(target)}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+                  Text(
+                    '${(percentage * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatMonthDisplay(String monthStr) {
+    try {
+      final parts = monthStr.split('-');
+      final year = parts[0];
+      final month = int.parse(parts[1]);
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${monthNames[month - 1]} $year';
+    } catch (e) {
+      return monthStr;
+    }
   }
 
   Widget _buildLegendItem(Color color, String label) {
@@ -405,15 +490,15 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
           Container(
             width: 12,
             height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
           ),
         ],
       ),
@@ -422,15 +507,30 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
 
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
-      ('Add Transaction', Icons.add_circle, Colors.green, () {
-        Navigator.pushNamed(context, AppRoutes.transactionCreate);
-      }),
-      ('View Budget', Icons.account_balance, Colors.purple, () {
-        Navigator.pushNamed(context, AppRoutes.budgetList);
-      }),
-      ('Settings', Icons.settings, Colors.orange, () {
-        Navigator.pushNamed(context, AppRoutes.settings);
-      }),
+      (
+        'Add Transaction',
+        Icons.add_circle,
+        Colors.green,
+        () {
+          Navigator.pushNamed(context, AppRoutes.transactionCreate);
+        },
+      ),
+      (
+        'View Budget',
+        Icons.account_balance,
+        Colors.purple,
+        () {
+          Navigator.pushNamed(context, AppRoutes.budgetManagement);
+        },
+      ),
+      (
+        'Settings',
+        Icons.settings,
+        Colors.orange,
+        () {
+          Navigator.pushNamed(context, AppRoutes.settings);
+        },
+      ),
     ];
 
     return Column(
@@ -438,10 +538,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
       children: [
         const Text(
           'Quick Actions',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -452,12 +549,14 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
           crossAxisSpacing: 12,
           childAspectRatio: 1.5,
           children: actions
-              .map((action) => _buildQuickActionButton(
-                    label: action.$1,
-                    icon: action.$2,
-                    color: action.$3,
-                    onTap: action.$4,
-                  ))
+              .map(
+                (action) => _buildQuickActionButton(
+                  label: action.$1,
+                  icon: action.$2,
+                  color: action.$3,
+                  onTap: action.$4,
+                ),
+              )
               .toList(),
         ),
       ],

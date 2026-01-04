@@ -1,6 +1,6 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../modules/debt/domain/entities/debt.dart';
 import '../../modules/debt/domain/repositories/debt_repository.dart';
 import '../../modules/transaction/domain/repositories/transaction_repository.dart';

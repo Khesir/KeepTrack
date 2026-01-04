@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/core/logging/app_logger.dart';
-import 'package:persona_codex/features/auth/domain/entities/user.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/core/logging/app_logger.dart';
+import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 class AuthService {

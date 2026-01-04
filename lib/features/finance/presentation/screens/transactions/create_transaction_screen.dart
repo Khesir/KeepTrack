@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../modules/account/domain/entities/account.dart';
 import '../../../modules/budget/domain/entities/budget.dart';
 import '../../../modules/finance_category/domain/entities/finance_category.dart';
@@ -53,6 +54,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   TransactionType _selectedType = TransactionType.expense;
   String? _selectedAccountId;
   String? _selectedCategoryId;
+  String? _selectedBudgetId; // For manually assigning to one-time budgets only
   DateTime _selectedDate = DateTime.now();
   bool _isCreating = false;
   bool _showFeeFields = false;
@@ -89,32 +91,19 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     _budgetController.loadBudgets();
   }
 
-  /// Find matching budget for transaction based on date and category
-  String? _findMatchingBudgetId() {
-    if (_selectedCategoryId == null) return null;
-
+  /// Get list of active one-time budgets for manual selection
+  /// Monthly budgets should NOT be manually assigned - they auto-calculate
+  List<Budget> _getOnetimeBudgets() {
     final budgets = _budgetController.state is AsyncData<List<Budget>>
         ? (_budgetController.state as AsyncData<List<Budget>>).data
         : <Budget>[];
 
-    // Get month from selected date (YYYY-MM format)
-    final transactionMonth = DateFormat('yyyy-MM').format(_selectedDate);
-
-    // Find active budget for this month that contains the selected category
-    try {
-      final matchingBudget = budgets.firstWhere(
-        (budget) =>
-            budget.month == transactionMonth &&
-            budget.status == BudgetStatus.active &&
-            budget.categories.any(
-              (cat) => cat.financeCategoryId == _selectedCategoryId,
-            ),
-      );
-      return matchingBudget.id;
-    } catch (e) {
-      // No matching budget found, that's okay
-      return null;
-    }
+    return budgets
+        .where((b) =>
+          b.status == BudgetStatus.active &&
+          b.periodType == BudgetPeriodType.oneTime
+        )
+        .toList();
   }
 
   @override
@@ -198,8 +187,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           ? 0.0
           : double.parse(_feeController.text);
 
-      // Find matching budget for this transaction
-      final budgetId = _findMatchingBudgetId();
+      // Only assign budget_id for one-time budgets (manual selection)
+      // Monthly budgets should have budget_id = null so they auto-calculate
+      final budgetId = _selectedBudgetId; // Only set if one-time budget selected
 
       final transaction = Transaction(
         accountId: _selectedAccountId,
@@ -217,7 +207,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         feeDescription: _feeDescriptionController.text.trim().isEmpty
             ? null
             : _feeDescriptionController.text.trim(),
-        budgetId: budgetId, // Auto-link to budget if found
+        budgetId: budgetId, // Only for one-time budgets, null for monthly
         userId: supabaseService.userId,
       );
 
@@ -450,6 +440,115 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
               },
             ),
             const SizedBox(height: 16),
+
+            // One-Time Budget Selector (Optional)
+            AsyncStreamBuilder<List<Budget>>(
+              state: _budgetController,
+              loadingBuilder: (context) => const SizedBox.shrink(),
+              errorBuilder: (context, message) => const SizedBox.shrink(),
+              builder: (context, budgets) {
+                final onetimeBudgets = _getOnetimeBudgets();
+
+                // Only show if there are one-time budgets available
+                if (onetimeBudgets.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Column(
+                  children: [
+                    // Info card explaining budget assignment
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: colorScheme.primary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Budget Assignment: Monthly budgets automatically track unassigned transactions. '
+                              'Only assign to one-time budgets for specific expenses like vacations or events.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onPrimaryContainer,
+                                    height: 1.4,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _selectedBudgetId,
+                      decoration: InputDecoration(
+                        labelText: 'Budget (Optional - One-Time Only)',
+                        hintText: 'Assign to a one-time budget',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest,
+                        helperText: 'Only one-time budgets shown. Monthly budgets auto-calculate.',
+                        helperMaxLines: 2,
+                      ),
+                      items: [
+                        // Add "None" option to clear selection
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('None (Monthly budget will auto-calculate)'),
+                        ),
+                        ...onetimeBudgets.map(
+                          (budget) {
+                            final title = budget.title ?? 'Untitled';
+                            // Parse month string (format: "2024-12") to DateTime for formatting
+                            final parts = budget.month.split('-');
+                            final monthDate = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+                            final monthStr = DateFormat('MMM y').format(monthDate);
+                            return DropdownMenuItem(
+                              value: budget.id,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  Text(
+                                    '$monthStr • ${budget.budgetType.displayName}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedBudgetId = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
+            ),
 
             // Date & Time Selector
             InkWell(

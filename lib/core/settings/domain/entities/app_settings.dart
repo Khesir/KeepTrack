@@ -43,7 +43,25 @@ enum AppThemeMode {
 /// Currency options
 enum AppCurrency {
   peso('₱', 'PHP', 'Philippine Peso'),
-  dollar('\$', 'USD', 'US Dollar');
+  dollar('\$', 'USD', 'US Dollar'),
+  euro('€', 'EUR', 'Euro'),
+  pound('£', 'GBP', 'British Pound'),
+  yen('¥', 'JPY', 'Japanese Yen'),
+  yuan('¥', 'CNY', 'Chinese Yuan'),
+  won('₩', 'KRW', 'South Korean Won'),
+  rupee('₹', 'INR', 'Indian Rupee'),
+  baht('฿', 'THB', 'Thai Baht'),
+  ringgit('RM', 'MYR', 'Malaysian Ringgit'),
+  singapore('S\$', 'SGD', 'Singapore Dollar'),
+  hongkong('HK\$', 'HKD', 'Hong Kong Dollar'),
+  australian('A\$', 'AUD', 'Australian Dollar'),
+  canadian('C\$', 'CAD', 'Canadian Dollar'),
+  ruble('₽', 'RUB', 'Russian Ruble'),
+  real('R\$', 'BRL', 'Brazilian Real'),
+  rand('R', 'ZAR', 'South African Rand'),
+  dirham('د.إ', 'AED', 'UAE Dirham'),
+  riyal('﷼', 'SAR', 'Saudi Riyal'),
+  franc('CHF', 'CHF', 'Swiss Franc');
 
   final String symbol;
   final String code;

@@ -1,11 +1,11 @@
 {
-    "name": "persona_codex",
-    "short_name": "persona_codex",
+    "name": "Keep Track",
+    "short_name": "Keep Track",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#1976D2",
     "theme_color": "#1976D2",
-    "description": "A new Flutter project.",
+    "description": "Your personal productivity hub - track finances, tasks, and goals.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

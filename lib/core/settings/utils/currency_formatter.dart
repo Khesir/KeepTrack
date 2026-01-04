@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 
 /// Utility class for formatting currency based on user settings
 class CurrencyFormatter {

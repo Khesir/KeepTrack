@@ -1,4 +1,4 @@
-import 'package:persona_codex/features/finance/modules/debt/data/models/debt_model.dart';
+import 'package:keep_track/features/finance/modules/debt/data/models/debt_model.dart';
 
 /// Data source interface for Debt operations
 abstract class DebtDataSource {

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/state/state.dart';
-import 'package:persona_codex/core/theme/gcash_theme.dart';
-import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import 'package:persona_codex/core/ui/ui.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/state.dart';
+import 'package:keep_track/core/theme/gcash_theme.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/ui.dart';
 import '../finance/modules/transaction/domain/entities/transaction.dart';
 import '../finance/modules/finance_category/domain/entities/finance_category.dart';
 import '../finance/modules/finance_category/domain/entities/finance_category_enums.dart';
@@ -24,9 +25,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
   late final TransactionController _controller;
   late final FinanceCategoryController _categoryController;
   Map<String, FinanceCategory> _categoriesMap = {};
-  String _selectedCategory = 'All'; // All, Tasks, Finance
+  String _selectedCategory = 'All'; // All, Transactions
   String _selectedTypeFilter =
-      'All'; // All, Income, Expense, Transfer (only for Finance)
+      'All'; // All, Income, Expense, Transfer (only for Transactions)
 
   @override
   void initState() {
@@ -71,16 +72,14 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
               children: [
                 _buildCategoryChip('All'),
                 const SizedBox(width: 8),
-                _buildCategoryChip('Tasks'),
-                const SizedBox(width: 8),
-                _buildCategoryChip('Finance'),
+                _buildCategoryChip('Transactions'),
               ],
             ),
           ),
         ),
 
-        // Type filter chips (only show for Finance category)
-        if (_selectedCategory == 'Finance')
+        // Type filter chips (only show for Transactions category)
+        if (_selectedCategory == 'Transactions')
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -99,9 +98,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
 
         // Content based on selected category
         Expanded(
-          child: _selectedCategory == 'Tasks'
-              ? _buildComingSoon('Tasks', Icons.task_alt)
-              : _buildFinanceLogs(),
+          child: _buildFinanceLogs(),
         ),
       ],
     );
@@ -157,69 +154,6 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
             : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         fontSize: 13,
-      ),
-    );
-  }
-
-  Widget _buildComingSoon(String feature, IconData icon) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            '$feature Logs',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Coming Soon',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.construction, size: 18, color: Colors.orange),
-                const SizedBox(width: 8),
-                Text(
-                  'Under Development',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.orange[300]
-                        : Colors.orange[700],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -511,7 +445,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                             ),
                             const SizedBox(width: 2),
                             Text(
-                              '+₱${transaction.fee.toStringAsFixed(2)} fee',
+                              '+${currencyFormatter.currencySymbol}${transaction.fee.toStringAsFixed(2)} fee',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Theme.of(context)
@@ -555,7 +489,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
 
                 // Amount (with fees included)
                 Text(
-                  '${isExpense ? '-' : isIncome ? '+' : ''}₱${displayAmount.abs().toStringAsFixed(2)}',
+                  '${isExpense ? '-' : isIncome ? '+' : ''}${currencyFormatter.currencySymbol}${displayAmount.abs().toStringAsFixed(2)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

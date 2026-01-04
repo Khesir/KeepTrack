@@ -1,9 +1,9 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/features/finance/modules/goal/data/datasources/goal_datasource.dart';
-import 'package:persona_codex/features/finance/modules/goal/data/models/goal_model.dart';
-import 'package:persona_codex/features/finance/modules/goal/domain/entities/goal.dart';
-import 'package:persona_codex/features/finance/modules/goal/domain/repositories/goal_repository.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/features/finance/modules/goal/data/datasources/goal_datasource.dart';
+import 'package:keep_track/features/finance/modules/goal/data/models/goal_model.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/repositories/goal_repository.dart';
 
 /// Goal repository implementation
 class GoalRepositoryImpl implements GoalRepository {

@@ -3,9 +3,9 @@
 /// Use cases and controllers are instantiated directly without DI
 library;
 
-import 'package:persona_codex/features/profile/presentation/state/task_activity_controller.dart';
-import 'package:persona_codex/features/tasks/presentation/state/task_controller.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/features/profile/presentation/state/task_activity_controller.dart';
+import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
 import '../../core/di/service_locator.dart';
 import 'modules/tasks/data/datasources/mongodb/task_datasource_supabase.dart';

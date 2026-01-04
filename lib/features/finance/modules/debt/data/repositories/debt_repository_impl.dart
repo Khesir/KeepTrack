@@ -1,9 +1,9 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/features/finance/modules/debt/data/datasources/debt_datasource.dart';
-import 'package:persona_codex/features/finance/modules/debt/data/models/debt_model.dart';
-import 'package:persona_codex/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:persona_codex/features/finance/modules/debt/domain/repositories/debt_repository.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/features/finance/modules/debt/data/datasources/debt_datasource.dart';
+import 'package:keep_track/features/finance/modules/debt/data/models/debt_model.dart';
+import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/debt/domain/repositories/debt_repository.dart';
 
 /// Debt repository implementation
 class DebtRepositoryImpl implements DebtRepository {

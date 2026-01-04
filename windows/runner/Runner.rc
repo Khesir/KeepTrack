@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "persona_codex" "\0"
+            VALUE "FileDescription", "keep_track" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "persona_codex" "\0"
+            VALUE "InternalName", "keep_track" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "persona_codex.exe" "\0"
-            VALUE "ProductName", "persona_codex" "\0"
+            VALUE "OriginalFilename", "keep_track.exe" "\0"
+            VALUE "ProductName", "keep_track" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

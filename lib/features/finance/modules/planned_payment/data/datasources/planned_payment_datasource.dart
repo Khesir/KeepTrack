@@ -1,4 +1,4 @@
-import 'package:persona_codex/features/finance/modules/planned_payment/data/models/planned_payment_model.dart';
+import 'package:keep_track/features/finance/modules/planned_payment/data/models/planned_payment_model.dart';
 
 /// Data source interface for PlannedPayment operations
 abstract class PlannedPaymentDataSource {

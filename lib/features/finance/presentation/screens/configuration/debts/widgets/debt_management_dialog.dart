@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
-import 'package:persona_codex/features/finance/presentation/state/finance_category_controller.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 
 class DebtManagementDialog extends StatefulWidget {
   final Debt? debt;
@@ -149,8 +150,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
   @override
   Widget build(BuildContext context) {
     // Get currency symbol from settings
-    final settingsController = locator.get<SettingsController>();
-    final currencySymbol = settingsController.data?.currency.symbol ?? '₱';
+    final currencySymbol = currencyFormatter.currencySymbol;
 
     return StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(

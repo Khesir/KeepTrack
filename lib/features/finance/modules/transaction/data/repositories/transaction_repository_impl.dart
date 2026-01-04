@@ -1,4 +1,4 @@
-import 'package:persona_codex/core/error/result.dart';
+import 'package:keep_track/core/error/result.dart';
 
 import '../../domain/entities/transaction.dart';
 import '../../domain/repositories/transaction_repository.dart';

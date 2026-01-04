@@ -1,5 +1,5 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/features/finance/modules/goal/domain/entities/goal.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 
 /// Repository interface for managing financial goals
 abstract class GoalRepository {

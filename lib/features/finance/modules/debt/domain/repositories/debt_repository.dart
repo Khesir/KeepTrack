@@ -1,5 +1,5 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 
 /// Repository interface for managing debts (lending and borrowing)
 abstract class DebtRepository {

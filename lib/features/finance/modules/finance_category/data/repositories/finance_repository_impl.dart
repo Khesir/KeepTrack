@@ -1,6 +1,6 @@
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
 
 import '../../domain/entities/finance_category.dart';
 import '../../domain/entities/finance_category_enums.dart';

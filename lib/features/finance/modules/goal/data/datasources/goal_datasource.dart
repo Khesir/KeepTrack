@@ -1,4 +1,4 @@
-import 'package:persona_codex/features/finance/modules/goal/data/models/goal_model.dart';
+import 'package:keep_track/features/finance/modules/goal/data/models/goal_model.dart';
 
 /// Data source interface for Goal operations
 abstract class GoalDataSource {

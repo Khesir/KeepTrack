@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
 
 /// Transactions Tab with Timeline View
@@ -179,7 +180,7 @@ class _TransactionsTabNewState extends State<TransactionsTabNew> {
                 ),
               ),
               Text(
-                NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(totalForDay.abs()),
+                NumberFormat.currency(symbol: currencyFormatter.currencySymbol, decimalDigits: 0).format(totalForDay.abs()),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -246,7 +247,7 @@ class _TransactionsTabNewState extends State<TransactionsTabNew> {
                           ),
                         ),
                         Text(
-                          '${isIncome ? '+' : '-'}${NumberFormat.currency(symbol: '₱', decimalDigits: 0).format(transaction.amount)}',
+                          '${isIncome ? '+' : '-'}${NumberFormat.currency(symbol: currencyFormatter.currencySymbol, decimalDigits: 0).format(transaction.amount)}',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -369,7 +370,7 @@ class _TransactionsTabNewState extends State<TransactionsTabNew> {
             ),
             const SizedBox(height: 4),
             Text(
-              '${isIncome ? '+' : '-'}${NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(transaction.amount)}',
+              '${isIncome ? '+' : '-'}${NumberFormat.currency(symbol: currencyFormatter.currencySymbol, decimalDigits: 2).format(transaction.amount)}',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,

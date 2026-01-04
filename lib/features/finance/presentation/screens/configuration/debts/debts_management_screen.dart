@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
-import 'package:persona_codex/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:persona_codex/features/finance/presentation/screens/configuration/debts/widgets/debt_management_dialog.dart';
-import 'package:persona_codex/features/finance/presentation/state/account_controller.dart';
-import 'package:persona_codex/features/finance/presentation/state/debt_controller.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/presentation/screens/configuration/debts/widgets/debt_management_dialog.dart';
+import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
 class DebtsManagementScreen extends StatefulWidget {
   const DebtsManagementScreen({super.key});

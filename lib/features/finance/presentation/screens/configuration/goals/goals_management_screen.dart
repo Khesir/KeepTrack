@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/features/finance/modules/goal/domain/entities/goal.dart';
-import 'package:persona_codex/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
-import 'package:persona_codex/features/finance/presentation/state/goal_controller.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
+import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
+import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
 class GoalsManagementScreen extends StatefulWidget {
   const GoalsManagementScreen({super.key});

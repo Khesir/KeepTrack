@@ -1,7 +1,7 @@
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/features/finance/modules/account/data/datasources/account_datasource.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/features/finance/modules/account/data/datasources/account_datasource.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 
 import '../../domain/repositories/account_repository.dart';
 import '../models/account_model.dart';

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/routing/app_router.dart';
-import 'package:persona_codex/core/settings/domain/entities/app_settings.dart';
-import 'package:persona_codex/core/settings/presentation/settings_controller.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/routing/app_router.dart';
+import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});

@@ -2,12 +2,12 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/theme/theme.dart';
-import 'package:persona_codex/core/ui/app_layout_controller.dart';
-import 'package:persona_codex/features/finance/finance_di.dart';
-import 'package:persona_codex/features/finance/presentation/screens/finance_main_screen.dart';
-import 'package:persona_codex/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/theme/theme.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/features/finance/finance_di.dart';
+import 'package:keep_track/features/finance/presentation/screens/finance_main_screen.dart';
+import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/di/di_logger.dart';

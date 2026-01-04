@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/utils/icon_helper.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/utils/icon_helper.dart';
+import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import '../../../state/account_controller.dart';
 
 /// Accounts Tab with Card Design
@@ -198,7 +199,7 @@ class _AccountsTabNewState extends State<AccountsTabNew> {
             const SizedBox(height: 16),
             Text(
               NumberFormat.currency(
-                symbol: '₱',
+                symbol: currencyFormatter.currencySymbol,
                 decimalDigits: 2,
               ).format(totalBalance),
               style: const TextStyle(
@@ -321,7 +322,7 @@ class _AccountsTabNewState extends State<AccountsTabNew> {
                       const SizedBox(height: 4),
                       Text(
                         NumberFormat.currency(
-                          symbol: '₱',
+                          symbol: currencyFormatter.currencySymbol,
                           decimalDigits: 2,
                         ).format(account.balance),
                         style: TextStyle(

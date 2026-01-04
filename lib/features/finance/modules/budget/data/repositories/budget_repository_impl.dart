@@ -1,5 +1,5 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/core/error/failure.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/error/failure.dart';
 
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';

@@ -1,13 +1,13 @@
-import 'package:persona_codex/features/finance/modules/account/data/datasources/account_datasource.dart';
-import 'package:persona_codex/features/finance/modules/account/data/datasources/supabase/account_datasource_supabase.dart';
-import 'package:persona_codex/features/finance/modules/account/data/repositories/account_repository_impl.dart';
-import 'package:persona_codex/features/finance/modules/account/domain/repositories/account_repository.dart';
-import 'package:persona_codex/features/finance/modules/budget/data/datasources/budget_category_datasource.dart';
-import 'package:persona_codex/features/finance/modules/budget/data/datasources/supabase/budget_category_datasource_supabase.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/data/datasources/supabase/finance_category_datasource_supabase.dart';
-import 'package:persona_codex/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
-import 'package:persona_codex/features/finance/presentation/state/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/account/data/datasources/account_datasource.dart';
+import 'package:keep_track/features/finance/modules/account/data/datasources/supabase/account_datasource_supabase.dart';
+import 'package:keep_track/features/finance/modules/account/data/repositories/account_repository_impl.dart';
+import 'package:keep_track/features/finance/modules/account/domain/repositories/account_repository.dart';
+import 'package:keep_track/features/finance/modules/budget/data/datasources/budget_category_datasource.dart';
+import 'package:keep_track/features/finance/modules/budget/data/datasources/supabase/budget_category_datasource_supabase.dart';
+import 'package:keep_track/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
+import 'package:keep_track/features/finance/modules/finance_category/data/datasources/supabase/finance_category_datasource_supabase.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
+import 'package:keep_track/features/finance/presentation/state/budget_controller.dart';
 
 import '../../core/di/service_locator.dart';
 import '../../shared/infrastructure/supabase/supabase_service.dart';

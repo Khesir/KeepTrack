@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/core/state/stream_builder_widget.dart';
-import 'package:persona_codex/core/state/state.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/state.dart';
 import '../../../modules/transaction/domain/entities/transaction.dart' as finance_transaction;
 import '../../../modules/finance_category/domain/entities/finance_category.dart';
 import '../../../modules/finance_category/domain/entities/finance_category_enums.dart';
@@ -228,7 +229,7 @@ class _FinanceLogsTabState extends State<FinanceLogsTab> {
                                   // Amount
                                   Text(
                                     NumberFormat.currency(
-                                      symbol: '₱',
+                                      symbol: currencyFormatter.currencySymbol,
                                       decimalDigits: 2,
                                     ).format(displayAmount.abs()),
                                     style: TextStyle(

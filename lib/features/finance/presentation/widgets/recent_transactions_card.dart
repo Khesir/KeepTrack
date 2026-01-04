@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import '../../modules/transaction/domain/entities/transaction.dart' as finance_transaction;
 
 /// Card widget displaying recent transactions
@@ -142,7 +143,7 @@ class RecentTransactionsCard extends StatelessWidget {
           ),
           if (hasFee)
             Text(
-              '₱${transaction.amount.toStringAsFixed(2)} + ₱${transaction.fee.toStringAsFixed(2)} fee',
+              '${currencyFormatter.currencySymbol}${transaction.amount.toStringAsFixed(2)} + ${currencyFormatter.currencySymbol}${transaction.fee.toStringAsFixed(2)} fee',
               style: TextStyle(
                 fontSize: 11,
                 color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
@@ -156,7 +157,7 @@ class RecentTransactionsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            '${isExpense ? '-' : isIncome ? '+' : ''}₱${displayAmount.toStringAsFixed(2)}',
+            '${isExpense ? '-' : isIncome ? '+' : ''}${currencyFormatter.currencySymbol}${displayAmount.toStringAsFixed(2)}',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: isIncome

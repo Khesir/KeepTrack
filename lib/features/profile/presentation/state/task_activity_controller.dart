@@ -1,6 +1,6 @@
-import 'package:persona_codex/core/error/result.dart';
-import 'package:persona_codex/core/state/stream_state.dart';
-import 'package:persona_codex/features/tasks/modules/tasks/domain/repositories/task_repository.dart';
+import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/features/tasks/modules/tasks/domain/repositories/task_repository.dart';
 
 /// Controller for managing task activity state
 class TaskActivityController extends StreamState<AsyncState<Map<DateTime, int>>> {

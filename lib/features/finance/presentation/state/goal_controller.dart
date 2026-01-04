@@ -1,4 +1,4 @@
-import 'package:persona_codex/core/state/stream_state.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 import '../../modules/goal/domain/entities/goal.dart';
 import '../../modules/goal/domain/repositories/goal_repository.dart';
 

@@ -4,7 +4,7 @@ library;
 
 import 'dart:async';
 
-import 'package:persona_codex/core/error/failure.dart';
+import 'package:keep_track/core/error/failure.dart';
 
 /// Base class for state containers using streams
 /// Implements disposable pattern for cleanup

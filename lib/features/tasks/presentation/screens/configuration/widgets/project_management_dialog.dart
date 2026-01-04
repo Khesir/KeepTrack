@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:persona_codex/features/tasks/modules/projects/domain/entities/project.dart';
+import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 
 class ProjectManagementDialog extends StatefulWidget {
   final Project? project;

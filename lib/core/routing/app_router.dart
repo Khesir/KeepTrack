@@ -3,9 +3,9 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:persona_codex/features/settings/setting_page.dart';
-import 'package:persona_codex/features/tasks/presentation/screens/configuration/project_management_screen.dart';
-import 'package:persona_codex/features/tasks/presentation/screens/configuration/task_management_screen.dart';
+import 'package:keep_track/features/settings/setting_page.dart';
+import 'package:keep_track/features/tasks/presentation/screens/configuration/project_management_screen.dart';
+import 'package:keep_track/features/tasks/presentation/screens/configuration/task_management_screen.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';

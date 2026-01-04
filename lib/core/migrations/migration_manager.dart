@@ -1,8 +1,8 @@
-import 'package:persona_codex/core/migrations/migrations/003_create_accounts_table.dart';
-import 'package:persona_codex/core/migrations/migrations/012_create_budget_categories_table.dart';
-import 'package:persona_codex/core/migrations/migrations/016_update_accounts_to_uuid.dart';
+import 'package:keep_track/core/migrations/migrations/003_create_accounts_table.dart';
+import 'package:keep_track/core/migrations/migrations/012_create_budget_categories_table.dart';
+import 'package:keep_track/core/migrations/migrations/016_update_accounts_to_uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:persona_codex/core/logging/app_logger.dart';
+import 'package:keep_track/core/logging/app_logger.dart';
 import 'migration.dart';
 import 'migrations/001_create_initial_schema.dart';
 import 'migrations/002_add_archive_task.dart';
@@ -33,6 +33,7 @@ import 'migrations/029_add_budget_fields.dart';
 import 'migrations/030_add_budget_custom_target_amount.dart';
 import 'migrations/031_add_transaction_budget_link_and_remove_triggers.dart';
 import 'migrations/032_update_budget_unique_constraint.dart';
+import 'migrations/033_fix_budget_constraint_for_onetime.dart';
 
 /// Manages database migrations
 ///
@@ -277,6 +278,7 @@ class MigrationManager {
     Migration030AddBudgetCustomTargetAmount(),
     Migration031AddTransactionBudgetLinkAndRemoveTriggers(),
     Migration032UpdateBudgetUniqueConstraint(),
+    Migration033FixBudgetConstraintForOnetime(),
     // Add new migrations here:
   ];
 

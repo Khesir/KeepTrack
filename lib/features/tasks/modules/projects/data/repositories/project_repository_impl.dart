@@ -1,5 +1,5 @@
-import 'package:persona_codex/core/error/failure.dart';
-import 'package:persona_codex/core/error/result.dart';
+import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/core/error/result.dart';
 
 import '../../domain/entities/project.dart';
 import '../../domain/repositories/project_repository.dart';

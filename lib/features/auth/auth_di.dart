@@ -1,6 +1,6 @@
-import 'package:persona_codex/core/di/service_locator.dart';
-import 'package:persona_codex/features/auth/data/services/auth_service.dart';
-import 'package:persona_codex/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/features/auth/data/services/auth_service.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void setupAuthDependencies() {
