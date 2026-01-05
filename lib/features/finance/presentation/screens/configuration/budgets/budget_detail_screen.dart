@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
@@ -32,6 +34,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
   late final TransactionController _transactionController;
   late Budget _currentBudget;
   List<Transaction> _budgetTransactions = [];
+  StreamSubscription<AsyncState<List<Budget>>>? _budgetSubscription;
 
   @override
   void registerServices() {
@@ -45,6 +48,24 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
     super.initState();
     _currentBudget = widget.budget;
     _loadBudgetTransactions();
+    _listenToBudgetUpdates();
+  }
+
+  void _listenToBudgetUpdates() {
+    _budgetSubscription = _controller.stream.listen((state) {
+      if (state is AsyncData<List<Budget>>) {
+        final budgets = state.data;
+        // Find the updated budget in the list
+        final updatedBudget = budgets.where((b) => b.id == _currentBudget.id).firstOrNull;
+
+        // Update local state with the latest budget data
+        if (mounted && updatedBudget != null) {
+          setState(() {
+            _currentBudget = updatedBudget;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -123,6 +144,8 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
 
   @override
   void onDispose() {
+    // Cancel budget subscription
+    _budgetSubscription?.cancel();
     // Don't dispose controllers - they're singletons
   }
 
@@ -361,8 +384,8 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
       arguments: _currentBudget,
     );
 
-    // Reload budget after returning from edit
-    _controller.loadBudgets();
+    // Reload budget after returning from edit (the stream listener will update the UI)
+    await _controller.loadBudgets();
   }
 
   Future<void> _deleteBudget() async {
