@@ -3,6 +3,7 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
@@ -683,6 +684,15 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
     return InkWell(
       onTap: () {
+        // Redirect to transfer screen if transfer type is selected
+        if (type == TransactionType.transfer) {
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.transferCreate,
+          );
+          return;
+        }
+
         setState(() {
           _selectedType = type;
           // Reset category when type changes

@@ -92,17 +92,20 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
               final inBudgetCategory = categoryIds.contains(t.financeCategoryId);
 
               // Type filtering - match transaction type with budget type
+              // IMPORTANT: Exclude transfer transactions from all budget calculations
               final matchesType = (budgetType == BudgetType.income && t.type == TransactionType.income) ||
                                   (budgetType == BudgetType.expense && t.type == TransactionType.expense);
+              final isNotTransfer = t.type != TransactionType.transfer;
 
-              return inDateRange && inBudgetCategory && matchesType;
+              return inDateRange && inBudgetCategory && matchesType && isNotTransfer;
             }).toList();
           }
         } else {
           // One-time budgets: Include only transactions explicitly assigned to this budget
           // No date filtering - one-time budgets can span multiple months
+          // IMPORTANT: Exclude transfer transactions from all budget calculations
           filtered = allTransactions.where((t) {
-            return t.budgetId == _currentBudget.id;
+            return t.budgetId == _currentBudget.id && t.type != TransactionType.transfer;
           }).toList();
         }
 

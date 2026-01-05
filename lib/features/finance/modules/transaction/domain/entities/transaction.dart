@@ -1,7 +1,8 @@
 /// Financial transaction entity (independent of budgets)
 class Transaction {
   final String? id; // Optional - Supabase auto-generates
-  final String? accountId; // Optional - can be null for cash transactions
+  final String? accountId; // Source account (or only account for income/expense)
+  final String? toAccountId; // Destination account (only for transfer transactions)
   final String? financeCategoryId;
   final double amount;
   final TransactionType type;
@@ -26,6 +27,7 @@ class Transaction {
   Transaction({
     this.id,
     this.accountId,
+    this.toAccountId,
     this.financeCategoryId,
     required this.amount,
     required this.type,
@@ -47,6 +49,7 @@ class Transaction {
   Transaction copyWith({
     String? id,
     String? accountId,
+    String? toAccountId,
     String? financeCategoryId,
     double? amount,
     TransactionType? type,
@@ -67,6 +70,7 @@ class Transaction {
     return Transaction(
       id: id ?? this.id,
       accountId: accountId ?? this.accountId,
+      toAccountId: toAccountId ?? this.toAccountId,
       financeCategoryId: financeCategoryId ?? this.financeCategoryId,
       amount: amount ?? this.amount,
       type: type ?? this.type,

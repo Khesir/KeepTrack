@@ -397,10 +397,12 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
           print('📅 Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
 
           // Monthly budgets: Only count unassigned transactions (budget_id = null)
+          // IMPORTANT: Exclude transfer transactions from all budget calculations
           query = query
               .gte('date', startDate.toIso8601String())
               .lte('date', endDate.toIso8601String())
-              .isFilter('budget_id', null);
+              .isFilter('budget_id', null)
+              .not('type', 'eq', 'transfer'); // Exclude transfers
 
           // Filter by transaction type to match budget type
           if (budgetType == BudgetType.income) {
@@ -410,7 +412,8 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
           }
         } else {
           // One-time budgets: Only count transactions explicitly assigned to this budget
-          query = query.eq('budget_id', budgetId);
+          // IMPORTANT: Exclude transfer transactions from all budget calculations
+          query = query.eq('budget_id', budgetId).not('type', 'eq', 'transfer');
           print('🎯 One-time budget: filtering by budget_id = $budgetId');
         }
 
@@ -585,10 +588,12 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
 
         // Monthly budgets: Only count unassigned transactions (budget_id = null)
         // in the budget's month that match the budget type
+        // IMPORTANT: Exclude transfer transactions from all budget calculations
         query = query
             .gte('date', startDate.toIso8601String())
             .lte('date', endDate.toIso8601String())
-            .isFilter('budget_id', null);
+            .isFilter('budget_id', null)
+            .not('type', 'eq', 'transfer'); // Exclude transfers
 
         // Filter by transaction type to match budget type
         if (budget.budgetType == BudgetType.income) {
@@ -599,8 +604,9 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
       } else {
         // One-time budgets: Only count transactions explicitly assigned to this budget
         // No date filtering - one-time budgets can span multiple months
+        // IMPORTANT: Exclude transfer transactions from all budget calculations
         if (budget.id != null) {
-          query = query.eq('budget_id', budget.id!);
+          query = query.eq('budget_id', budget.id!).not('type', 'eq', 'transfer');
         }
       }
 

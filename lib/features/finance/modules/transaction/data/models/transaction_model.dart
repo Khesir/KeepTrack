@@ -5,6 +5,7 @@ class TransactionModel extends Transaction {
   TransactionModel({
     super.id,
     super.accountId,
+    super.toAccountId,
     super.financeCategoryId,
     required super.amount,
     required super.type,
@@ -28,6 +29,7 @@ class TransactionModel extends Transaction {
     return TransactionModel(
       id: transaction.id,
       accountId: transaction.accountId,
+      toAccountId: transaction.toAccountId,
       financeCategoryId: transaction.financeCategoryId,
       amount: transaction.amount,
       type: transaction.type,
@@ -52,6 +54,7 @@ class TransactionModel extends Transaction {
     return TransactionModel(
       id: json['id'] as String?,
       accountId: json['account_id'] as String?,
+      toAccountId: json['to_account_id'] as String?,
       financeCategoryId: json['finance_category_id'] as String?,
       amount: (json['amount'] as num).toDouble(),
       type: TransactionType.values.firstWhere(
@@ -83,6 +86,7 @@ class TransactionModel extends Transaction {
     return {
       if (id != null) 'id': id,
       'account_id': accountId,
+      if (toAccountId != null) 'to_account_id': toAccountId,
       'finance_category_id': financeCategoryId,
       'amount': amount,
       'type': type.name,
@@ -107,6 +111,7 @@ class TransactionModel extends Transaction {
     return Transaction(
       id: id,
       accountId: accountId,
+      toAccountId: toAccountId,
       financeCategoryId: financeCategoryId,
       amount: amount,
       type: type,
