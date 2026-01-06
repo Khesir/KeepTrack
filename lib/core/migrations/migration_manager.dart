@@ -37,6 +37,7 @@ import 'migrations/033_fix_budget_constraint_for_onetime.dart';
 import 'migrations/034_add_transfer_account_field.dart';
 import 'migrations/035_add_transfer_category_type.dart';
 import 'migrations/036_add_transfer_transaction_trigger.dart';
+import 'migrations/037_update_planned_payment_rpcs.dart';
 
 /// Manages database migrations
 ///
@@ -285,6 +286,7 @@ class MigrationManager {
     Migration034AddTransferAccountField(),
     Migration035AddTransferCategoryType(),
     Migration036AddTransferTransactionTrigger(),
+    Migration037UpdatePlannedPaymentRpcs(),
     // Add new migrations here:
   ];
 

@@ -45,6 +45,8 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
     final amountController = TextEditingController(
       text: payment.amount.toStringAsFixed(2),
     );
+    final feeController = TextEditingController(text: '0.00');
+    final feeDescriptionController = TextEditingController();
     String? selectedAccountId;
     String? selectedCategoryId;
 
@@ -110,6 +112,45 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                   );
                 },
               ),
+              const SizedBox(height: 16),
+
+              // Fee Section
+              const Divider(),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.receipt_long, size: 16, color: Theme.of(dialogContext).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Additional Fees (Optional)',
+                    style: Theme.of(dialogContext).textTheme.titleSmall,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Fee Amount Field
+              TextField(
+                controller: feeController,
+                decoration: InputDecoration(
+                  labelText: 'Fee Amount',
+                  prefixText: '₱',
+                  helperText: 'Tax, service charge, etc.',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 12),
+
+              // Fee Description Field
+              TextField(
+                controller: feeDescriptionController,
+                decoration: InputDecoration(
+                  labelText: 'Fee Description',
+                  hintText: 'e.g., Tax, Service Charge',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
             ],
           ),
         ),
@@ -142,6 +183,12 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                 return;
               }
 
+              // Parse fee amount
+              final fee = double.tryParse(feeController.text) ?? 0.0;
+              final feeDescription = feeDescriptionController.text.trim().isEmpty
+                  ? null
+                  : feeDescriptionController.text.trim();
+
               // Call RPC function
               try {
                 await _supabaseService.client.rpc(
@@ -156,6 +203,8 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                     'p_date': DateTime.now().toIso8601String(),
                     'p_notes': null,
                     'p_planned_payment_id': payment.id,
+                    'p_fee': fee,
+                    'p_fee_description': feeDescription,
                   },
                 );
 
@@ -186,6 +235,58 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
     }
 
     amountController.dispose();
+    feeController.dispose();
+    feeDescriptionController.dispose();
+  }
+
+  Future<void> _skipPlannedPayment(PlannedPayment payment) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Skip Payment'),
+        content: Text(
+          'Skip the next payment for "${payment.name}"?\n\n'
+          'This will move the next payment date forward by one ${payment.frequency.displayName.toLowerCase()} without recording a transaction.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Skip Payment'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _supabaseService.client.rpc(
+        'skip_planned_payment',
+        params: {
+          'p_user_id': _supabaseService.userId,
+          'p_planned_payment_id': payment.id,
+        },
+      );
+
+      _controller.loadPlannedPayments();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment skipped successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to skip payment: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -769,39 +870,88 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: payment.status == PaymentStatus.active
-                      ? () => _showRecordPaymentDialog(payment)
-                      : null, // Disabled when not active
-                  icon: Icon(
-                    Icons.add,
-                    size: 18,
-                    color: payment.status == PaymentStatus.active
-                        ? Colors.blue
-                        : Colors.grey,
-                  ),
-                  label: Text(
-                    'Record Payment',
-                    style: TextStyle(
-                      color: payment.status == PaymentStatus.active
-                          ? Colors.blue
-                          : Colors.grey,
+
+                // Action Buttons Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: payment.status == PaymentStatus.active
+                            ? () => _showRecordPaymentDialog(payment)
+                            : null, // Disabled when not active
+                        icon: Icon(
+                          Icons.add,
+                          size: 18,
+                          color: payment.status == PaymentStatus.active
+                              ? Colors.blue
+                              : Colors.grey,
+                        ),
+                        label: Text(
+                          'Record Payment',
+                          style: TextStyle(
+                            color: payment.status == PaymentStatus.active
+                                ? Colors.blue
+                                : Colors.grey,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: payment.status == PaymentStatus.active
+                                ? Colors.blue
+                                : Colors.grey,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: payment.status == PaymentStatus.active
-                          ? Colors.blue
-                          : Colors.grey,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: payment.status == PaymentStatus.active &&
+                                payment.frequency != PaymentFrequency.oneTime
+                            ? () => _skipPlannedPayment(payment)
+                            : null, // Disabled when not active or is one-time
+                        icon: Icon(
+                          Icons.skip_next,
+                          size: 18,
+                          color: payment.status == PaymentStatus.active &&
+                                  payment.frequency != PaymentFrequency.oneTime
+                              ? Colors.orange
+                              : Colors.grey,
+                        ),
+                        label: Text(
+                          'Skip',
+                          style: TextStyle(
+                            color: payment.status == PaymentStatus.active &&
+                                    payment.frequency != PaymentFrequency.oneTime
+                                ? Colors.orange
+                                : Colors.grey,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: payment.status == PaymentStatus.active &&
+                                    payment.frequency != PaymentFrequency.oneTime
+                                ? Colors.orange
+                                : Colors.grey,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),
