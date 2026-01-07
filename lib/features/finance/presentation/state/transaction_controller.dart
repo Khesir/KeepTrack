@@ -11,6 +11,16 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
     loadRecentTransactions();
   }
 
+  /// Load all transactions
+  Future<void> loadAllTransactions() async {
+    await execute(() async {
+      final transactions = await _repository
+          .getTransactions()
+          .then((r) => r.unwrap());
+      return transactions;
+    });
+  }
+
   /// Load recent transactions
   Future<void> loadRecentTransactions({int limit = 10}) async {
     await execute(() async {

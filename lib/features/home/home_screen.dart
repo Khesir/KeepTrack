@@ -46,26 +46,36 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Admin Panel (only visible for admin users)
-          const AdminPanelWidget(),
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Admin Panel (only visible for admin users)
+            const AdminPanelWidget(),
 
-          // Welcome Section
-          _buildWelcomeSection(),
-          const SizedBox(height: 24),
+            // Welcome Section
+            _buildWelcomeSection(),
+            const SizedBox(height: 24),
 
-          // Finance Snapshot
-          _buildFinanceSnapshot(),
-          const SizedBox(height: 24),
+            // Finance Snapshot
+            _buildFinanceSnapshot(),
+            const SizedBox(height: 24),
 
-          // Quick Actions
-          _buildQuickActions(context),
-          const SizedBox(height: 24),
-        ],
+            // Quick Actions
+            _buildQuickActions(context),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, AppRoutes.transactionCreate);
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Add Transaction'),
+        backgroundColor: Colors.green,
       ),
     );
   }

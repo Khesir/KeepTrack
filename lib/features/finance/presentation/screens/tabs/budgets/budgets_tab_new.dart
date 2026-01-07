@@ -49,48 +49,57 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Budget>>(
-      state: _controller,
-      loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
-      errorBuilder: (context, message) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading budgets',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
+    return Scaffold(
+      body: AsyncStreamBuilder<List<Budget>>(
+        state: _controller,
+        loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+        errorBuilder: (context, message) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading budgets',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                style: const TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
+        builder: (context, budgets) {
+          // Filter active budgets and separate by type
+          final activeBudgets = budgets
+              .where((b) => b.status == BudgetStatus.active)
+              .toList()
+            ..sort((a, b) => b.month.compareTo(a.month)); // Most recent first
+
+          final incomeBudgets = activeBudgets
+              .where((b) => b.budgetType == BudgetType.income)
+              .toList();
+          final expenseBudgets = activeBudgets
+              .where((b) => b.budgetType == BudgetType.expense)
+              .toList();
+
+          if (incomeBudgets.isEmpty && expenseBudgets.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return _buildBudgetContent(incomeBudgets, expenseBudgets);
+        },
       ),
-      builder: (context, budgets) {
-        // Filter active budgets and separate by type
-        final activeBudgets = budgets
-            .where((b) => b.status == BudgetStatus.active)
-            .toList()
-          ..sort((a, b) => b.month.compareTo(a.month)); // Most recent first
-
-        final incomeBudgets = activeBudgets
-            .where((b) => b.budgetType == BudgetType.income)
-            .toList();
-        final expenseBudgets = activeBudgets
-            .where((b) => b.budgetType == BudgetType.expense)
-            .toList();
-
-        if (incomeBudgets.isEmpty && expenseBudgets.isEmpty) {
-          return _buildEmptyState();
-        }
-
-        return _buildBudgetContent(incomeBudgets, expenseBudgets);
-      },
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, '/budget-management');
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Manage Budgets'),
+      ),
     );
   }
 

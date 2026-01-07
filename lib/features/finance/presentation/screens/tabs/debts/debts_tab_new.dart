@@ -210,162 +210,171 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Debt>>(
-      state: _controller,
-      builder: (context, debts) {
-        // Calculate totals
-        final totalLending = debts
-            .where((d) => d.type == DebtType.lending)
-            .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
+    return Scaffold(
+      body: AsyncStreamBuilder<List<Debt>>(
+        state: _controller,
+        builder: (context, debts) {
+          // Calculate totals
+          final totalLending = debts
+              .where((d) => d.type == DebtType.lending)
+              .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
 
-        final totalBorrowing = debts
-            .where((d) => d.type == DebtType.borrowing)
-            .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
+          final totalBorrowing = debts
+              .where((d) => d.type == DebtType.borrowing)
+              .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
 
-        // Filter debts
-        final filteredDebts = _selectedFilter == 'All'
-            ? debts
-            : debts.where((d) {
-                switch (_selectedFilter) {
-                  case 'Lending':
-                    return d.type == DebtType.lending;
-                  case 'Borrowing':
-                    return d.type == DebtType.borrowing;
-                  default:
-                    return true;
-                }
-              }).toList();
+          // Filter debts
+          final filteredDebts = _selectedFilter == 'All'
+              ? debts
+              : debts.where((d) {
+                  switch (_selectedFilter) {
+                    case 'Lending':
+                      return d.type == DebtType.lending;
+                    case 'Borrowing':
+                      return d.type == DebtType.borrowing;
+                    default:
+                      return true;
+                  }
+                }).toList();
 
-        // Sort debts by status: overdue, active, settled, then rest
-        filteredDebts.sort((a, b) {
-          int getStatusPriority(DebtStatus status) {
-            switch (status) {
-              case DebtStatus.overdue:
-                return 0; // Highest priority
-              case DebtStatus.active:
-                return 1;
-              case DebtStatus.settled:
-                return 2;
-              default:
-                return 3; // Lowest priority
+          // Sort debts by status: overdue, active, settled, then rest
+          filteredDebts.sort((a, b) {
+            int getStatusPriority(DebtStatus status) {
+              switch (status) {
+                case DebtStatus.overdue:
+                  return 0; // Highest priority
+                case DebtStatus.active:
+                  return 1;
+                case DebtStatus.settled:
+                  return 2;
+                default:
+                  return 3; // Lowest priority
+              }
             }
-          }
-          return getStatusPriority(a.status).compareTo(getStatusPriority(b.status));
-        });
+            return getStatusPriority(a.status).compareTo(getStatusPriority(b.status));
+          });
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Summary Cards Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Lending',
-                      totalLending,
-                      Colors.green,
-                      Icons.arrow_upward,
-                      'Money you lent',
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Summary Cards Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Lending',
+                        totalLending,
+                        Colors.green,
+                        Icons.arrow_upward,
+                        'Money you lent',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Borrowing',
-                      totalBorrowing,
-                      Colors.red,
-                      Icons.arrow_downward,
-                      'Money you owe',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Borrowing',
+                        totalBorrowing,
+                        Colors.red,
+                        Icons.arrow_downward,
+                        'Money you owe',
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Net Balance Card
-              _buildNetBalanceCard(totalLending - totalBorrowing),
-              const SizedBox(height: 24),
-
-              // Filter Chips
-              Row(
-                children: [
-                  _buildFilterChip('All'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Lending'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Borrowing'),
-                  const Spacer(),
-                  Text(
-                    '${filteredDebts.length} ${filteredDebts.length == 1 ? 'debt' : 'debts'}',
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Debts List
-              if (filteredDebts.isEmpty)
-                _buildEmptyState()
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredDebts.length,
-                  itemBuilder: (context, index) {
-                    final debt = filteredDebts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildDebtCard(debt),
-                    );
-                  },
+                  ],
                 ),
-            ],
+                const SizedBox(height: 24),
+
+                // Net Balance Card
+                _buildNetBalanceCard(totalLending - totalBorrowing),
+                const SizedBox(height: 24),
+
+                // Filter Chips
+                Row(
+                  children: [
+                    _buildFilterChip('All'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Lending'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Borrowing'),
+                    const Spacer(),
+                    Text(
+                      '${filteredDebts.length} ${filteredDebts.length == 1 ? 'debt' : 'debts'}',
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Debts List
+                if (filteredDebts.isEmpty)
+                  _buildEmptyState()
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filteredDebts.length,
+                    itemBuilder: (context, index) {
+                      final debt = filteredDebts[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildDebtCard(debt),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          );
+        },
+        loadingBuilder: (_) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
           ),
-        );
-      },
-      loadingBuilder: (_) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
+        ),
+        errorBuilder: (context, message) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading debts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _controller.loadDebts(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      errorBuilder: (context, message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading debts',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _controller.loadDebts(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, '/debts-management');
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Manage Debts'),
       ),
     );
   }

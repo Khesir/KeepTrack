@@ -291,145 +291,154 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<PlannedPayment>>(
-      state: _controller,
-      builder: (context, payments) {
-        // Calculate monthly total
-        final monthlyTotal = payments
-            .where((p) => p.status == PaymentStatus.active)
-            .fold<double>(0, (sum, payment) => sum + payment.amount);
+    return Scaffold(
+      body: AsyncStreamBuilder<List<PlannedPayment>>(
+        state: _controller,
+        builder: (context, payments) {
+          // Calculate monthly total
+          final monthlyTotal = payments
+              .where((p) => p.status == PaymentStatus.active)
+              .fold<double>(0, (sum, payment) => sum + payment.amount);
 
-        // Get upcoming payments (next 7 days)
-        final upcomingPayments = payments
-            .where((p) => p.isUpcoming && p.status == PaymentStatus.active)
-            .toList();
+          // Get upcoming payments (next 7 days)
+          final upcomingPayments = payments
+              .where((p) => p.isUpcoming && p.status == PaymentStatus.active)
+              .toList();
 
-        // Filter payments
-        final filteredPayments = _getFilteredPayments(
-          payments,
-          upcomingPayments,
-        );
+          // Filter payments
+          final filteredPayments = _getFilteredPayments(
+            payments,
+            upcomingPayments,
+          );
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Summary Cards Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Monthly Total',
-                      monthlyTotal,
-                      Colors.purple,
-                      Icons.calendar_month,
-                      '${payments.where((p) => p.status == PaymentStatus.active).length} active payments',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Upcoming',
-                      upcomingPayments.fold<double>(
-                        0,
-                        (sum, p) => sum + p.amount,
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Summary Cards Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Monthly Total',
+                        monthlyTotal,
+                        Colors.purple,
+                        Icons.calendar_month,
+                        '${payments.where((p) => p.status == PaymentStatus.active).length} active payments',
                       ),
-                      Colors.orange,
-                      Icons.notifications_active,
-                      '${upcomingPayments.length} in next 7 days',
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Upcoming Payments Alert
-              if (upcomingPayments.isNotEmpty) ...[
-                _buildUpcomingAlert(upcomingPayments),
-                const SizedBox(height: 24),
-              ],
-
-              // Filter Chips
-              Row(
-                children: [
-                  _buildFilterChip('All'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Active'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Upcoming'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Paused'),
-                  const Spacer(),
-                  Text(
-                    '${filteredPayments.length} ${filteredPayments.length == 1 ? 'payment' : 'payments'}',
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Upcoming',
+                        upcomingPayments.fold<double>(
+                          0,
+                          (sum, p) => sum + p.amount,
+                        ),
+                        Colors.orange,
+                        Icons.notifications_active,
+                        '${upcomingPayments.length} in next 7 days',
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Payments List
-              if (filteredPayments.isEmpty)
-                _buildEmptyState()
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredPayments.length,
-                  itemBuilder: (context, index) {
-                    final payment = filteredPayments[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildPaymentCard(payment),
-                    );
-                  },
+                  ],
                 ),
-            ],
+                const SizedBox(height: 24),
+
+                // Upcoming Payments Alert
+                if (upcomingPayments.isNotEmpty) ...[
+                  _buildUpcomingAlert(upcomingPayments),
+                  const SizedBox(height: 24),
+                ],
+
+                // Filter Chips
+                Row(
+                  children: [
+                    _buildFilterChip('All'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Active'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Upcoming'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Paused'),
+                    const Spacer(),
+                    Text(
+                      '${filteredPayments.length} ${filteredPayments.length == 1 ? 'payment' : 'payments'}',
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Payments List
+                if (filteredPayments.isEmpty)
+                  _buildEmptyState()
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filteredPayments.length,
+                    itemBuilder: (context, index) {
+                      final payment = filteredPayments[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildPaymentCard(payment),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          );
+        },
+        loadingBuilder: (_) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
           ),
-        );
-      },
-      loadingBuilder: (_) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
+        ),
+        errorBuilder: (context, message) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading planned payments',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _controller.loadPlannedPayments(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      errorBuilder: (context, message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading planned payments',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _controller.loadPlannedPayments(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, '/planned-payments-management');
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Manage Payments'),
       ),
     );
   }

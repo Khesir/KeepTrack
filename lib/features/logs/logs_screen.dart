@@ -25,9 +25,8 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
   late final TransactionController _controller;
   late final FinanceCategoryController _categoryController;
   Map<String, FinanceCategory> _categoriesMap = {};
-  String _selectedCategory = 'All'; // All, Transactions
-  String _selectedTypeFilter =
-      'All'; // All, Income, Expense, Transfer (only for Transactions)
+  String _selectedTypeFilter = 'All'; // All, Income, Expense, Transfer
+  int _limit = 50; // Default limit
 
   @override
   void initState() {
@@ -35,17 +34,25 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
     _controller = locator.get<TransactionController>();
     _categoryController = locator.get<FinanceCategoryController>();
     _categoryController.loadCategories();
+    _loadTransactions();
 
     // Listen to category updates to build the map
     _categoryController.stream.listen((state) {
       if (state is AsyncData<List<FinanceCategory>>) {
         setState(() {
-          _categoriesMap = {
-            for (var cat in state.data) cat.id!: cat
-          };
+          _categoriesMap = {for (var cat in state.data) cat.id!: cat};
         });
       }
     });
+  }
+
+  Future<void> _loadTransactions() async {
+    if (_limit == -1) {
+      // Load all transactions
+      await _controller.loadAllTransactions();
+    } else {
+      await _controller.loadRecentTransactions(limit: _limit);
+    }
   }
 
   @override
@@ -55,34 +62,19 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
 
   @override
   void onReady() {
-    configureLayout(title: 'Activity Logs', showBottomNav: true);
+    configureLayout(title: 'Transaction Logs', showBottomNav: true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Category filter chips
+        // Type filter chips
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Theme.of(context).colorScheme.surface,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildCategoryChip('All'),
-                const SizedBox(width: 8),
-                _buildCategoryChip('Transactions'),
-              ],
-            ),
-          ),
-        ),
-
-        // Type filter chips (only show for Transactions category)
-        if (_selectedCategory == 'Transactions')
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Row(
               children: [
                 _buildTypeFilterChip('All'),
@@ -95,44 +87,66 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
               ],
             ),
           ),
-
-        // Content based on selected category
-        Expanded(
-          child: _buildFinanceLogs(),
         ),
-      ],
-    );
-  }
 
-  Widget _buildCategoryChip(String label) {
-    final isSelected = _selectedCategory == label;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedCategory = label;
-          // Reset type filter when changing category
-          _selectedTypeFilter = 'All';
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isSelected
-                ? Theme.of(context).colorScheme.onPrimary
-                : Theme.of(context).colorScheme.onSurface,
+        // Limit control
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          color: Theme.of(context).colorScheme.surface,
+          child: Row(
+            children: [
+              Text(
+                'Show:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButton<int>(
+                  value: _limit,
+                  isExpanded: true,
+                  underline: Container(
+                    height: 1,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withOpacity(0.3),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 10, child: Text('10 transactions')),
+                    DropdownMenuItem(value: 50, child: Text('50 transactions')),
+                    DropdownMenuItem(
+                      value: 100,
+                      child: Text('100 transactions'),
+                    ),
+                    DropdownMenuItem(
+                      value: 500,
+                      child: Text('500 transactions'),
+                    ),
+                    DropdownMenuItem(
+                      value: -1,
+                      child: Text('All transactions'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _limit = value);
+                      _loadTransactions();
+                    }
+                  },
+                ),
+              ),
+            ],
           ),
         ),
-      ),
+
+        // Content based on selected category
+        Expanded(child: _buildFinanceLogs()),
+      ],
     );
   }
 
@@ -210,7 +224,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                           : _formatDate(transaction.date),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -250,7 +266,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: () => _controller.loadRecentTransactions(),
+                onPressed: _loadTransactions,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
               ),
@@ -289,20 +305,24 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
           Icon(
             Icons.history,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
             'No transactions yet',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
             'Your transactions will appear here',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -318,20 +338,24 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
           Icon(
             Icons.filter_alt_off,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
             'No $_selectedTypeFilter transactions',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
             'Try selecting a different filter',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -356,15 +380,15 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
     final color = isIncome
         ? Colors.green
         : isExpense
-            ? Colors.red
-            : Colors.blue;
+        ? Colors.red
+        : Colors.blue;
 
     // Get display amount with sign
     final displayAmount = isExpense
         ? -transaction.totalCost
         : isIncome
-            ? transaction.totalCost
-            : transaction.amount;
+        ? transaction.totalCost
+        : transaction.amount;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -414,23 +438,21 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                             isIncome
                                 ? Icons.arrow_downward
                                 : isExpense
-                                    ? Icons.arrow_upward
-                                    : Icons.swap_horiz,
+                                ? Icons.arrow_upward
+                                : Icons.swap_horiz,
                             size: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             categoryName,
                             style: TextStyle(
                               fontSize: 13,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
                           ),
                           if (transaction.hasFee) ...[
@@ -438,20 +460,18 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                             Icon(
                               Icons.receipt,
                               size: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.7),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.7),
                             ),
                             const SizedBox(width: 2),
                             Text(
                               '+${currencyFormatter.currencySymbol}${transaction.fee.toStringAsFixed(2)} fee',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.7),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.7),
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -464,22 +484,19 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                           Icon(
                             Icons.access_time,
                             size: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             _formatDateTime(transaction.date),
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                      fontSize: 11,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                  fontSize: 11,
+                                ),
                           ),
                         ],
                       ),
@@ -489,15 +506,19 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
 
                 // Amount (with fees included)
                 Text(
-                  '${isExpense ? '-' : isIncome ? '+' : ''}${currencyFormatter.currencySymbol}${displayAmount.abs().toStringAsFixed(2)}',
+                  '${isExpense
+                      ? '-'
+                      : isIncome
+                      ? '+'
+                      : ''}${currencyFormatter.currencySymbol}${displayAmount.abs().toStringAsFixed(2)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     color: isIncome
                         ? Colors.green[700]
                         : isExpense
-                            ? Colors.red[700]
-                            : Colors.blue[700],
+                        ? Colors.red[700]
+                        : Colors.blue[700],
                   ),
                 ),
               ],

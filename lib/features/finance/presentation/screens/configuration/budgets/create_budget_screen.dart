@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -53,7 +52,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       _categories.addAll(widget.existingBudget!.categories);
       if (widget.existingBudget!.customTargetAmount != null) {
         _useCustomTarget = true;
-        _customTargetController.text = widget.existingBudget!.customTargetAmount.toString();
+        _customTargetController.text = widget.existingBudget!.customTargetAmount
+            .toString();
       }
     } else {
       final now = DateTime.now();
@@ -165,7 +165,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
 
         // Update or add categories
         for (final category in _categories) {
-          if (category.id != null && existingCategoryIds.contains(category.id)) {
+          if (category.id != null &&
+              existingCategoryIds.contains(category.id)) {
             // Update existing category
             await _controller.updateCategory(budgetId, category);
           } else {
@@ -180,7 +181,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
 
         // Update budget custom target amount
         final updatedBudget = widget.existingBudget!.copyWith(
-          customTargetAmount: _useCustomTarget && _customTargetController.text.isNotEmpty
+          customTargetAmount:
+              _useCustomTarget && _customTargetController.text.isNotEmpty
               ? double.tryParse(_customTargetController.text)
               : null,
         );
@@ -195,12 +197,15 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
         // Create mode: Create new budget
         final budget = Budget(
           month: _selectedMonth,
-          title: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
+          title: _titleController.text.trim().isEmpty
+              ? null
+              : _titleController.text.trim(),
           budgetType: _budgetType,
           periodType: _periodType,
           categories: [],
           status: BudgetStatus.active,
-          customTargetAmount: _useCustomTarget && _customTargetController.text.isNotEmpty
+          customTargetAmount:
+              _useCustomTarget && _customTargetController.text.isNotEmpty
               ? double.tryParse(_customTargetController.text)
               : null,
           userId: _supabaseService.userId,
@@ -238,7 +243,9 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error ${isEditing ? 'updating' : 'creating'} budget: $e'),
+            content: Text(
+              'Error ${isEditing ? 'updating' : 'creating'} budget: $e',
+            ),
           ),
         );
       }
@@ -375,7 +382,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  labelText: 'Budget Title ${_periodType == BudgetPeriodType.oneTime ? '(Required for one-time budgets)' : '(Optional)'}',
+                  labelText:
+                      'Budget Title ${_periodType == BudgetPeriodType.oneTime ? '(Required for one-time budgets)' : '(Optional)'}',
                   hintText: 'e.g., Vacation, Monthly Expenses, etc.',
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.title),
@@ -408,14 +416,17 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                             title: Text(type.displayName),
                             value: type,
                             groupValue: _budgetType,
-                            onChanged: isEditing ? null : (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _budgetType = value;
-                                  _categories.clear(); // Clear categories when changing type
-                                });
-                              }
-                            },
+                            onChanged: isEditing
+                                ? null
+                                : (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _budgetType = value;
+                                        _categories
+                                            .clear(); // Clear categories when changing type
+                                      });
+                                    }
+                                  },
                           ),
                         );
                       }).toList(),
@@ -441,11 +452,13 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                         subtitle: Text(type.description),
                         value: type,
                         groupValue: _periodType,
-                        onChanged: isEditing ? null : (value) {
-                          if (value != null) {
-                            setState(() => _periodType = value);
-                          }
-                        },
+                        onChanged: isEditing
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  setState(() => _periodType = value);
+                                }
+                              },
                       );
                     }),
                   ],
@@ -468,75 +481,82 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
               // Copy from previous budget option (only in create mode)
               if (!isEditing)
                 AsyncStreamBuilder<List<Budget>>(
-                state: _controller,
-                builder: (context, budgets) {
-                  // Filter budgets and exclude current month
-                  final availableBudgets = budgets
-                      .where((b) =>
-                          b.month != _selectedMonth &&
-                          b.categories.isNotEmpty)
-                      .toList()
-                    ..sort((a, b) => b.month.compareTo(a.month)); // Most recent first
+                  state: _controller,
+                  builder: (context, budgets) {
+                    // Filter budgets and exclude current month
+                    final availableBudgets =
+                        budgets
+                            .where(
+                              (b) =>
+                                  b.month != _selectedMonth &&
+                                  b.categories.isNotEmpty,
+                            )
+                            .toList()
+                          ..sort(
+                            (a, b) => b.month.compareTo(a.month),
+                          ); // Most recent first
 
-                  if (availableBudgets.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
+                    if (availableBudgets.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
 
-                  return Card(
-                    child: Column(
-                      children: [
-                        SwitchListTile(
-                          secondary: const Icon(Icons.copy_all),
-                          title: const Text('Copy from previous budget'),
-                          subtitle: const Text('Use an existing budget as template'),
-                          value: _copyFromBudget,
-                          onChanged: (value) {
-                            setState(() {
-                              _copyFromBudget = value;
-                              if (!value) {
-                                _sourceBudgetId = null;
-                                _categories.clear();
-                              }
-                            });
-                          },
-                        ),
-                        if (_copyFromBudget) ...[
-                          const Divider(height: 1),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: DropdownButtonFormField<String>(
-                              value: _sourceBudgetId,
-                              decoration: const InputDecoration(
-                                labelText: 'Select budget to copy',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.history),
-                              ),
-                              items: availableBudgets
-                                  .map(
-                                    (budget) => DropdownMenuItem(
-                                      value: budget.id,
-                                      child: Text(
-                                        _formatMonthDisplay(budget.month),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (budgetId) async {
-                                if (budgetId != null) {
-                                  setState(() => _sourceBudgetId = budgetId);
-                                  await _copyBudgetCategories(budgetId);
-                                }
-                              },
+                    return Card(
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            secondary: const Icon(Icons.copy_all),
+                            title: const Text('Copy from previous budget'),
+                            subtitle: const Text(
+                              'Use an existing budget as template',
                             ),
+                            value: _copyFromBudget,
+                            onChanged: (value) {
+                              setState(() {
+                                _copyFromBudget = value;
+                                if (!value) {
+                                  _sourceBudgetId = null;
+                                  _categories.clear();
+                                }
+                              });
+                            },
                           ),
+                          if (_copyFromBudget) ...[
+                            const Divider(height: 1),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: DropdownButtonFormField<String>(
+                                value: _sourceBudgetId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Select budget to copy',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.history),
+                                ),
+                                items: availableBudgets
+                                    .map(
+                                      (budget) => DropdownMenuItem(
+                                        value: budget.id,
+                                        child: Text(
+                                          _formatMonthDisplay(budget.month),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (budgetId) async {
+                                  if (budgetId != null) {
+                                    setState(() => _sourceBudgetId = budgetId);
+                                    await _copyBudgetCategories(budgetId);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  );
-                },
-                loadingBuilder: (context) => const SizedBox.shrink(),
-                errorBuilder: (context, message) => const SizedBox.shrink(),
-              ),
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context) => const SizedBox.shrink(),
+                  errorBuilder: (context, message) => const SizedBox.shrink(),
+                ),
               if (!isEditing) const SizedBox(height: 8),
 
               // Custom Target Amount Card
@@ -672,8 +692,7 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                             ),
                             title: Text(category.financeCategory?.name ?? ''),
                             subtitle: Text(
-                              category.financeCategory?.type.displayName ??
-                                  '',
+                              category.financeCategory?.type.displayName ?? '',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[600],
@@ -710,14 +729,19 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
                       ),
                     )
                   : const Icon(Icons.save),
-              label: Text(_isCreating
-                  ? (widget.existingBudget != null ? 'Updating...' : 'Creating...')
-                  : (widget.existingBudget != null ? 'Update Budget' : 'Create Budget')),
+              label: Text(
+                _isCreating
+                    ? (widget.existingBudget != null
+                          ? 'Updating...'
+                          : 'Creating...')
+                    : (widget.existingBudget != null
+                          ? 'Update Budget'
+                          : 'Create Budget'),
+              ),
             )
           : null,
     );
   }
-
 }
 
 /// Category Dialog - Simplified without account selection
@@ -787,8 +811,9 @@ class _CategoryDialogState extends State<_CategoryDialog> {
           if (isEdit && cat.id == widget.category?.financeCategoryId) {
             return true; // Allow current category when editing
           }
-          return !widget.existingCategories
-              .any((existing) => existing.financeCategoryId == cat.id);
+          return !widget.existingCategories.any(
+            (existing) => existing.financeCategoryId == cat.id,
+          );
         }).toList();
 
         return AlertDialog(

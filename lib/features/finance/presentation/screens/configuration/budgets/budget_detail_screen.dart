@@ -72,9 +72,14 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
   void onReady() {
     _controller.loadBudgets();
     _accountController.loadAccounts();
+    // Load all transactions to ensure we get all budget transactions
+    _transactionController.loadAllTransactions();
   }
 
   Future<void> _loadBudgetTransactions() async {
+    // Load all transactions first
+    await _transactionController.loadAllTransactions();
+
     // Listen to transaction stream and filter
     _transactionController.stream.listen((state) {
       if (state is AsyncData<List<Transaction>>) {
@@ -328,6 +333,9 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
 
       // Use manual calculation (bypasses broken database function)
       await _controller.manualRecalculateBudgetSpent(_currentBudget.id!);
+
+      // Reload all transactions to refresh the list
+      await _transactionController.loadAllTransactions();
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();

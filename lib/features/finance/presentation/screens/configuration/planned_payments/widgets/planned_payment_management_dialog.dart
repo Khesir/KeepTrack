@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
@@ -221,7 +220,9 @@ class _PlannedPaymentManagementDialogState
               onTap: () async {
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: selectedEndDate ?? selectedNextPaymentDate.add(const Duration(days: 365)),
+                  initialDate:
+                      selectedEndDate ??
+                      selectedNextPaymentDate.add(const Duration(days: 365)),
                   firstDate: selectedNextPaymentDate,
                   lastDate: DateTime.now().add(const Duration(days: 3650)),
                 );

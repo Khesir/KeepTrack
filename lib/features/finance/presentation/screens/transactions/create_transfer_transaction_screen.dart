@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../modules/account/domain/entities/account.dart';
 import '../../../modules/finance_category/domain/entities/finance_category.dart';
@@ -198,17 +197,11 @@ class _CreateTransferTransactionScreenState
               decoration: BoxDecoration(
                 color: Colors.purple.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.purple.withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: Colors.purple.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.swap_horiz,
-                    color: Colors.purple,
-                    size: 28,
-                  ),
+                  Icon(Icons.swap_horiz, color: Colors.purple, size: 28),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -237,7 +230,9 @@ class _CreateTransferTransactionScreenState
                 filled: true,
                 fillColor: colorScheme.surfaceContainerHighest,
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
               ],
@@ -269,7 +264,9 @@ class _CreateTransferTransactionScreenState
                 helperText: 'Fee is deducted from source account',
                 helperMaxLines: 2,
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
               ],
@@ -327,7 +324,27 @@ class _CreateTransferTransactionScreenState
                       .map(
                         (account) => DropdownMenuItem(
                           value: account.id,
-                          child: Text(account.name),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  account.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: account.balance >= 0
+                                      ? Colors.green[700]
+                                      : Colors.red[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                       .toList(),
@@ -368,7 +385,27 @@ class _CreateTransferTransactionScreenState
                       .map(
                         (account) => DropdownMenuItem(
                           value: account.id,
-                          child: Text(account.name),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  account.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: account.balance >= 0
+                                      ? Colors.green[700]
+                                      : Colors.red[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                       .toList(),

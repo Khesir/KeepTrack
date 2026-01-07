@@ -61,14 +61,19 @@ void main() async {
 
     // Production: Initialize dotenv with dart-define values
     // This ensures AuthService can access dotenv.env without NotInitializedError
-    AppLogger.info("Production mode: Initializing dotenv with dart-define values");
-    dotenv.testLoad(fileInput: '''
+    AppLogger.info(
+      "Production mode: Initializing dotenv with dart-define values",
+    );
+    dotenv.testLoad(
+      fileInput:
+          '''
 SUPABASE_URL=$url
 SUPABASE_ANON_KEY=$key
 GOOGLE_WEB_CLIENT_ID=$googleWebClientId
 DEV_BYPASS=false
 PROD=true
-''');
+''',
+    );
 
     await _initializeAppWithRetry(supabaseUrl: url, supabaseAnonKey: key);
   } else {
@@ -537,7 +542,7 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.history),
-                        label: 'Logs',
+                        label: 'Transactions',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.person),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
@@ -215,7 +217,7 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '\$${debt.paidAmount.toStringAsFixed(2)} paid of \$${debt.originalAmount.toStringAsFixed(2)} (${debt.progress.toStringAsFixed(1)}%)',
+                        '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(debt.paidAmount)} paid of ${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(debt.originalAmount)} (${debt.progress.toStringAsFixed(1)}%)',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       if (debt.dueDate != null)

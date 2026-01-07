@@ -3,19 +3,14 @@ import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../modules/debt/domain/entities/debt.dart';
 import '../../modules/debt/domain/repositories/debt_repository.dart';
-import '../../modules/transaction/domain/repositories/transaction_repository.dart';
 
 /// Controller for managing debt list state
 class DebtController extends StreamState<AsyncState<List<Debt>>> {
   final DebtRepository _debtRepository;
-  final TransactionRepository _transactionRepository;
   final SupabaseService _supabaseService;
 
-  DebtController(
-    this._debtRepository,
-    this._transactionRepository,
-    this._supabaseService,
-  ) : super(const AsyncLoading()) {
+  DebtController(this._debtRepository, this._supabaseService)
+    : super(const AsyncLoading()) {
     loadDebts();
   }
 

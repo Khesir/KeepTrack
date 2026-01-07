@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
@@ -113,7 +111,8 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     setState(() => _isSaving = true);
 
     try {
-      final originalAmount = double.tryParse(originalAmountController.text) ?? 0;
+      final originalAmount =
+          double.tryParse(originalAmountController.text) ?? 0;
       final remainingAmount =
           double.tryParse(remainingAmountController.text) ?? originalAmount;
 

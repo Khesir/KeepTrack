@@ -190,135 +190,144 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Goal>>(
-      state: _controller,
-      builder: (context, goals) {
-        // Calculate summary stats
-        final activeGoals = goals
-            .where((g) => g.status == GoalStatus.active)
-            .toList();
-        final totalTargetAmount = activeGoals.fold<double>(
-          0,
-          (sum, goal) => sum + goal.targetAmount,
-        );
-        final totalSavedAmount = activeGoals.fold<double>(
-          0,
-          (sum, goal) => sum + goal.currentAmount,
-        );
-        final overallProgress = totalTargetAmount > 0
-            ? totalSavedAmount / totalTargetAmount
-            : 0.0;
+    return Scaffold(
+      body: AsyncStreamBuilder<List<Goal>>(
+        state: _controller,
+        builder: (context, goals) {
+          // Calculate summary stats
+          final activeGoals = goals
+              .where((g) => g.status == GoalStatus.active)
+              .toList();
+          final totalTargetAmount = activeGoals.fold<double>(
+            0,
+            (sum, goal) => sum + goal.targetAmount,
+          );
+          final totalSavedAmount = activeGoals.fold<double>(
+            0,
+            (sum, goal) => sum + goal.currentAmount,
+          );
+          final overallProgress = totalTargetAmount > 0
+              ? totalSavedAmount / totalTargetAmount
+              : 0.0;
 
-        // Filter goals
-        final filteredGoals = _selectedFilter == 'All'
-            ? goals
-            : goals.where((g) {
-                switch (_selectedFilter) {
-                  case 'Active':
-                    return g.status == GoalStatus.active;
-                  case 'Completed':
-                    return g.status == GoalStatus.completed;
-                  case 'Paused':
-                    return g.status == GoalStatus.paused;
-                  default:
-                    return true;
-                }
-              }).toList();
+          // Filter goals
+          final filteredGoals = _selectedFilter == 'All'
+              ? goals
+              : goals.where((g) {
+                  switch (_selectedFilter) {
+                    case 'Active':
+                      return g.status == GoalStatus.active;
+                    case 'Completed':
+                      return g.status == GoalStatus.completed;
+                    case 'Paused':
+                      return g.status == GoalStatus.paused;
+                    default:
+                      return true;
+                  }
+                }).toList();
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Overall Progress Card
-              _buildOverallProgressCard(
-                totalTargetAmount,
-                totalSavedAmount,
-                overallProgress,
-                activeGoals.length,
-              ),
-              const SizedBox(height: 24),
-
-              // Filter Chips
-              Row(
-                children: [
-                  _buildFilterChip('All'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Active'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Completed'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Paused'),
-                  const Spacer(),
-                  Text(
-                    '${filteredGoals.length} ${filteredGoals.length == 1 ? 'goal' : 'goals'}',
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Goals List
-              if (filteredGoals.isEmpty)
-                _buildEmptyState()
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredGoals.length,
-                  itemBuilder: (context, index) {
-                    final goal = filteredGoals[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildGoalCard(goal),
-                    );
-                  },
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Overall Progress Card
+                _buildOverallProgressCard(
+                  totalTargetAmount,
+                  totalSavedAmount,
+                  overallProgress,
+                  activeGoals.length,
                 ),
-            ],
+                const SizedBox(height: 24),
+
+                // Filter Chips
+                Row(
+                  children: [
+                    _buildFilterChip('All'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Active'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Completed'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Paused'),
+                    const Spacer(),
+                    Text(
+                      '${filteredGoals.length} ${filteredGoals.length == 1 ? 'goal' : 'goals'}',
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Goals List
+                if (filteredGoals.isEmpty)
+                  _buildEmptyState()
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filteredGoals.length,
+                    itemBuilder: (context, index) {
+                      final goal = filteredGoals[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildGoalCard(goal),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          );
+        },
+        loadingBuilder: (_) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
           ),
-        );
-      },
-      loadingBuilder: (_) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
+        ),
+        errorBuilder: (context, message) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading goals',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _controller.loadGoals(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      errorBuilder: (context, message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading goals',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _controller.loadGoals(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushNamed(context, '/goals-management');
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Manage Goals'),
       ),
     );
   }

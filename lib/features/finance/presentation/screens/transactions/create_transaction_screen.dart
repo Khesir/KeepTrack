@@ -100,9 +100,10 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         : <Budget>[];
 
     return budgets
-        .where((b) =>
-          b.status == BudgetStatus.active &&
-          b.periodType == BudgetPeriodType.oneTime
+        .where(
+          (b) =>
+              b.status == BudgetStatus.active &&
+              b.periodType == BudgetPeriodType.oneTime,
         )
         .toList();
   }
@@ -190,7 +191,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
       // Only assign budget_id for one-time budgets (manual selection)
       // Monthly budgets should have budget_id = null so they auto-calculate
-      final budgetId = _selectedBudgetId; // Only set if one-time budget selected
+      final budgetId =
+          _selectedBudgetId; // Only set if one-time budget selected
 
       final transaction = Transaction(
         accountId: _selectedAccountId,
@@ -286,6 +288,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             const SizedBox(height: 16),
 
             // Account Selector
+            // Account Selector - FIXED VERSION with better state handling
             AsyncStreamBuilder<List<Account>>(
               state: _accountController,
               loadingBuilder: (context) => const LinearProgressIndicator(),
@@ -312,8 +315,28 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     ),
                   );
                 }
+
+                // CRITICAL FIX: Validate that selectedAccountId exists in the list
+                // If it doesn't exist, reset it to null
+                if (_selectedAccountId != null &&
+                    !accounts.any((acc) => acc.id == _selectedAccountId)) {
+                  // Schedule state update after build
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _selectedAccountId = null;
+                      });
+                    }
+                  });
+                }
+
                 return DropdownButtonFormField<String>(
-                  value: _selectedAccountId,
+                  value:
+                      _selectedAccountId != null &&
+                          accounts.any((acc) => acc.id == _selectedAccountId)
+                      ? _selectedAccountId
+                      : null, // Only use value if it exists in the list
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: 'Account',
                     border: OutlineInputBorder(
@@ -326,7 +349,27 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                       .map(
                         (account) => DropdownMenuItem(
                           value: account.id,
-                          child: Text(account.name),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  account.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: account.balance >= 0
+                                      ? Colors.green[700]
+                                      : Colors.red[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                       .toList(),
@@ -341,6 +384,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     }
                     return null;
                   },
+                  menuMaxHeight: 300,
                 );
               },
             ),
@@ -461,7 +505,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        color: colorScheme.primaryContainer.withValues(
+                          alpha: 0.3,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: colorScheme.primary.withValues(alpha: 0.2),
@@ -480,7 +526,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                             child: Text(
                               'Budget Assignment: Monthly budgets automatically track unassigned transactions. '
                               'Only assign to one-time budgets for specific expenses like vacations or events.',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
                                     color: colorScheme.onPrimaryContainer,
                                     height: 1.4,
                                   ),
@@ -500,44 +547,52 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                         ),
                         filled: true,
                         fillColor: colorScheme.surfaceContainerHighest,
-                        helperText: 'Only one-time budgets shown. Monthly budgets auto-calculate.',
+                        helperText:
+                            'Only one-time budgets shown. Monthly budgets auto-calculate.',
                         helperMaxLines: 2,
                       ),
                       items: [
                         // Add "None" option to clear selection
                         const DropdownMenuItem<String>(
                           value: null,
-                          child: Text('None (Monthly budget will auto-calculate)'),
+                          child: Text(
+                            'None (Monthly budget will auto-calculate)',
+                          ),
                         ),
-                        ...onetimeBudgets.map(
-                          (budget) {
-                            final title = budget.title ?? 'Untitled';
-                            // Parse month string (format: "2024-12") to DateTime for formatting
-                            final parts = budget.month.split('-');
-                            final monthDate = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-                            final monthStr = DateFormat('MMM y').format(monthDate);
-                            return DropdownMenuItem(
-                              value: budget.id,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                        ...onetimeBudgets.map((budget) {
+                          final title = budget.title ?? 'Untitled';
+                          // Parse month string (format: "2024-12") to DateTime for formatting
+                          final parts = budget.month.split('-');
+                          final monthDate = DateTime(
+                            int.parse(parts[0]),
+                            int.parse(parts[1]),
+                          );
+                          final monthStr = DateFormat(
+                            'MMM y',
+                          ).format(monthDate);
+                          return DropdownMenuItem(
+                            value: budget.id,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  Text(
-                                    '$monthStr • ${budget.budgetType.displayName}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
+                                ),
+                                Text(
+                                  '$monthStr • ${budget.budgetType.displayName}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                       onChanged: (value) {
                         setState(() {
@@ -686,10 +741,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       onTap: () {
         // Redirect to transfer screen if transfer type is selected
         if (type == TransactionType.transfer) {
-          Navigator.pushReplacementNamed(
-            context,
-            AppRoutes.transferCreate,
-          );
+          Navigator.pushReplacementNamed(context, AppRoutes.transferCreate);
           return;
         }
 
@@ -734,9 +786,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     return Card(
       elevation: 0,
       color: colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
           // Header with expand/collapse button
@@ -763,24 +813,20 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                       children: [
                         Text(
                           'Fees & Charges (Optional)',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
+                          style: Theme.of(context).textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         if (!_showFeeFields && _feeController.text.isNotEmpty)
                           Text(
                             '₱${_feeController.text} fee added',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.primary,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.primary),
                           )
                         else if (!_showFeeFields)
                           Text(
                             'Tap to add tax, service charge, or transfer fee',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                       ],
                     ),
@@ -853,7 +899,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -867,7 +915,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                         Expanded(
                           child: Text(
                             _getFeeHelperText(),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
                                   color: colorScheme.onPrimaryContainer,
                                 ),
                           ),
