@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/theme/theme.dart';
-import 'package:keep_track/core/ui/app_layout_controller.dart';
-import 'package:keep_track/features/finance/finance_di.dart';
-import 'package:keep_track/features/finance/presentation/screens/finance_main_screen.dart';
+import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,9 +19,7 @@ import 'core/settings/presentation/settings_controller.dart';
 import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
 import 'features/tasks/tasks_di.dart';
-import 'features/home/home_screen.dart';
-import 'features/logs/logs_screen.dart';
-import 'features/profile/presentation/profile_screen.dart';
+import 'features/finance/finance_di.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -454,106 +450,11 @@ class _PersonalCodexAppState extends State<PersonalCodexApp> {
           // Routing
           onGenerateRoute: AppRouter.onGenerateRoute,
 
-          // Home screen (bottom nav with tabs) - protected by auth guard
-          home: const AuthGuard(child: MainScreen()),
+          // Home screen - Module selection after login, protected by auth guard
+          home: const AuthGuard(child: ModuleSelectionScreen()),
         );
       },
     );
   }
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
-
-  @override
-  State<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
-  final _layoutController = AppLayoutController();
-
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    FinanceMainScreen(),
-    LogsScreen(),
-    ProfileScreen(),
-  ];
-  @override
-  void dispose() {
-    _layoutController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppLayoutProvider(
-      controller: _layoutController,
-      child: AnimatedBuilder(
-        animation: _layoutController,
-        builder: (context, child) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(_layoutController.title),
-              actions: [
-                // Logging action button
-                IconButton(
-                  icon: const Icon(Icons.bug_report),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LogViewerScreen(),
-                      ),
-                    );
-                  },
-                  tooltip: 'View Logs',
-                ),
-                if (_layoutController.showSettings)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/settings');
-                      },
-                    ),
-                  ),
-                // Other actions from layout controller
-                if (_layoutController.actions != null)
-                  ..._layoutController.actions!,
-              ],
-            ),
-            body: _screens[_currentIndex],
-            bottomNavigationBar: _layoutController.showBottomNav
-                ? NavigationBar(
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: (index) {
-                      setState(() => _currentIndex = index);
-                    },
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.home),
-                        label: 'Home',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.account_balance_wallet),
-                        label: 'Finance',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.history),
-                        label: 'Transactions',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.person),
-                        label: 'Profile',
-                      ),
-                    ],
-                  )
-                : null,
-          );
-        },
-      ),
-    );
-  }
-}

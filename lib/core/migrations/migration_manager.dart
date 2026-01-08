@@ -38,6 +38,7 @@ import 'migrations/034_add_transfer_account_field.dart';
 import 'migrations/035_add_transfer_category_type.dart';
 import 'migrations/036_add_transfer_transaction_trigger.dart';
 import 'migrations/037_update_planned_payment_rpcs.dart';
+import 'migrations/038_add_project_status_and_metadata.dart';
 
 /// Manages database migrations
 ///
@@ -287,6 +288,7 @@ class MigrationManager {
     Migration035AddTransferCategoryType(),
     Migration036AddTransferTransactionTrigger(),
     Migration037UpdatePlannedPaymentRpcs(),
+    Migration038AddProjectStatusAndMetadata(),
     // Add new migrations here:
   ];
 

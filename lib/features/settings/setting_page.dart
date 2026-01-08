@@ -6,7 +6,9 @@ import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  final String? mode;
+
+  const SettingsPage({super.key, this.mode});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -28,9 +30,8 @@ class _SettingsPageState extends State<SettingsPage> {
       body: AsyncStreamBuilder<AppSettings>(
         state: _controller,
         loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
-        errorBuilder: (context, message) => Center(
-          child: Text('Error loading settings: $message'),
-        ),
+        errorBuilder: (context, message) =>
+            Center(child: Text('Error loading settings: $message')),
         builder: (context, settings) {
           return ListView(
             children: [
@@ -69,7 +70,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   'Manage accounts, categories, transactions, and goals',
                 ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.settingsConfig),
+                onTap: () {
+                  if (widget.mode == "finance") {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.settingsConfigFinance,
+                    );
+                  } else if (widget.mode == "task") {
+                    Navigator.pushNamed(context, AppRoutes.settingsConfigTask);
+                  } else {
+                    Navigator.pushNamed(context, AppRoutes.settingsConfig);
+                  }
+                },
               ),
 
               const Divider(),
@@ -193,9 +205,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SnackBar(content: Text('Settings reset to defaults')),
               );
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.orange,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
             child: const Text('Reset'),
           ),
         ],

@@ -8,6 +8,8 @@ class Project {
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final bool isArchived;
   final String? userId;
+  final ProjectStatus status; // Project status: active, postponed, closed
+  final Map<String, String> metadata; // Dynamic metadata (e.g., links, ERD, etc.)
 
   Project({
     this.id,
@@ -18,6 +20,8 @@ class Project {
     this.updatedAt,
     this.isArchived = false,
     this.userId,
+    this.status = ProjectStatus.active,
+    this.metadata = const {},
   });
 
   /// Copy with method for immutability
@@ -30,6 +34,8 @@ class Project {
     DateTime? updatedAt,
     bool? isArchived,
     String? userId,
+    ProjectStatus? status,
+    Map<String, String>? metadata,
   }) {
     return Project(
       id: id ?? this.id,
@@ -40,6 +46,8 @@ class Project {
       updatedAt: updatedAt ?? this.updatedAt,
       isArchived: isArchived ?? this.isArchived,
       userId: userId ?? this.userId,
+      status: status ?? this.status,
+      metadata: metadata ?? this.metadata,
     );
   }
 
@@ -56,4 +64,21 @@ class Project {
 
   @override
   String toString() => 'Project(id: $id, name: $name)';
+}
+
+enum ProjectStatus {
+  active,
+  postponed,
+  closed;
+
+  String get displayName {
+    switch (this) {
+      case ProjectStatus.active:
+        return 'Active';
+      case ProjectStatus.postponed:
+        return 'Postponed';
+      case ProjectStatus.closed:
+        return 'Closed';
+    }
+  }
 }

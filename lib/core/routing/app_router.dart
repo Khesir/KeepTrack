@@ -3,7 +3,12 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:keep_track/features/module_selection/finance_module_screen.dart';
+import 'package:keep_track/features/module_selection/module_selection_screen.dart';
+import 'package:keep_track/features/module_selection/task_module_screen.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
+import 'package:keep_track/features/settings/subpages/app_configuration_finance_page.dart';
+import 'package:keep_track/features/settings/subpages/app_configuration_task_page.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/project_management_screen.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/task_management_screen.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
@@ -30,6 +35,11 @@ class AppRoutes {
   // Home
   static const String home = '/';
 
+  // Module Selection
+  static const String moduleSelection = '/module-selection';
+  static const String financeModule = '/finance-module';
+  static const String taskModule = '/task-module';
+
   // Tasks
   static const String taskList = '/tasks';
   static const String taskDetail = '/tasks/detail';
@@ -50,7 +60,8 @@ class AppRoutes {
   // Settings
   static const String settings = '/settings';
   static const String settingsConfig = '/settings/config';
-
+  static const String settingsConfigTask = '/settings/config-task';
+  static const String settingsConfigFinance = '/settings/config-finance';
   // Task Management Settings
   static const String taskManagement = '/task-management';
   static const String projectManagement = '/project-management';
@@ -75,6 +86,23 @@ class AppRouter {
   /// Generate routes based on route settings
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      // Module Selection
+      case AppRoutes.moduleSelection:
+        return MaterialPageRoute(
+          builder: (_) => const ModuleSelectionScreen(),
+          settings: settings,
+        );
+      case AppRoutes.financeModule:
+        return MaterialPageRoute(
+          builder: (_) => const FinanceModuleScreen(),
+          settings: settings,
+        );
+      case AppRoutes.taskModule:
+        return MaterialPageRoute(
+          builder: (_) => const TaskModuleScreen(),
+          settings: settings,
+        );
+
       // Tasks
       case AppRoutes.taskList:
         return MaterialPageRoute(
@@ -107,13 +135,24 @@ class AppRouter {
 
       // Settings
       case AppRoutes.settings:
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (_) => const SettingsPage(),
+          builder: (_) => SettingsPage(mode: args?['mode'] as String?),
           settings: settings,
         );
       case AppRoutes.settingsConfig:
         return MaterialPageRoute(
           builder: (_) => const AppConfigurationPage(),
+          settings: settings,
+        );
+      case AppRoutes.settingsConfigFinance:
+        return MaterialPageRoute(
+          builder: (_) => const AppConfigurationFinancePage(),
+          settings: settings,
+        );
+      case AppRoutes.settingsConfigTask:
+        return MaterialPageRoute(
+          builder: (_) => const AppConfigurationTaskPage(),
           settings: settings,
         );
 

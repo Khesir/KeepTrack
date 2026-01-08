@@ -2,24 +2,56 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
+import 'package:keep_track/features/tasks/presentation/screens/project_details_screen.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 
+enum ProjectStatusFilter { all, active, postponed, closed }
+
 /// Projects Tab with Card Design
-class ProjectsTab extends StatefulWidget {
+class ProjectsTab extends ScopedScreen {
   const ProjectsTab({super.key});
 
   @override
   State<ProjectsTab> createState() => _ProjectsTabState();
 }
 
-class _ProjectsTabState extends State<ProjectsTab> {
+class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
+    with AppLayoutControlled {
   late final ProjectController _controller;
+  ProjectStatusFilter _statusFilter = ProjectStatusFilter.all;
 
   @override
-  void initState() {
-    super.initState();
+  void registerServices() {
     _controller = locator.get<ProjectController>();
+  }
+
+  @override
+  void onReady() {
+    configureLayout(title: 'Projects', showBottomNav: true);
+  }
+
+  List<Project> _filterProjects(List<Project> projects) {
+    if (_statusFilter == ProjectStatusFilter.all) {
+      return projects.where((p) => !p.isArchived).toList();
+    }
+
+    return projects.where((project) {
+      if (project.isArchived) return false;
+
+      switch (_statusFilter) {
+        case ProjectStatusFilter.active:
+          return project.status == ProjectStatus.active;
+        case ProjectStatusFilter.postponed:
+          return project.status == ProjectStatus.postponed;
+        case ProjectStatusFilter.closed:
+          return project.status == ProjectStatus.closed;
+        case ProjectStatusFilter.all:
+          return true;
+      }
+    }).toList();
   }
 
   @override
@@ -27,6 +59,8 @@ class _ProjectsTabState extends State<ProjectsTab> {
     return AsyncStreamBuilder<List<Project>>(
       state: _controller,
       builder: (context, projects) {
+        final filteredProjects = _filterProjects(projects);
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -37,13 +71,13 @@ class _ProjectsTabState extends State<ProjectsTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Active Projects',
+                    'Projects',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    '${projects.length} project${projects.length != 1 ? 's' : ''}',
+                    '${filteredProjects.length} project${filteredProjects.length != 1 ? 's' : ''}',
                     style: TextStyle(
                       color: Theme.of(
                         context,
@@ -52,10 +86,27 @@ class _ProjectsTabState extends State<ProjectsTab> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+
+              // Status Filters
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip('All', ProjectStatusFilter.all),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Active', ProjectStatusFilter.active),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Postponed', ProjectStatusFilter.postponed),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Closed', ProjectStatusFilter.closed),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
 
               // Empty State or Projects Grid
-              if (projects.isEmpty)
+              if (filteredProjects.isEmpty)
                 _buildEmptyState()
               else
                 GridView.builder(
@@ -67,9 +118,9 @@ class _ProjectsTabState extends State<ProjectsTab> {
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
-                  itemCount: projects.length,
+                  itemCount: filteredProjects.length,
                   itemBuilder: (context, index) {
-                    final project = projects[index];
+                    final project = filteredProjects[index];
                     return _buildProjectCard(project);
                   },
                 ),
@@ -118,6 +169,20 @@ class _ProjectsTabState extends State<ProjectsTab> {
     );
   }
 
+  Widget _buildFilterChip(String label, ProjectStatusFilter filter) {
+    final isSelected = _statusFilter == filter;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _statusFilter = filter;
+        });
+      },
+      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -132,14 +197,16 @@ class _ProjectsTabState extends State<ProjectsTab> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No projects yet',
+              'No projects found',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Create your first project to get started',
+              _statusFilter == ProjectStatusFilter.all
+                  ? 'Create your first project to get started'
+                  : 'No projects with this status',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
               ),
@@ -156,12 +223,24 @@ class _ProjectsTabState extends State<ProjectsTab> {
         ? Color(int.parse(project.color!.replaceFirst('#', '0xff')))
         : Colors.blue[700]!;
 
+    final statusColor = project.status == ProjectStatus.active
+        ? Colors.green
+        : project.status == ProjectStatus.postponed
+            ? Colors.orange
+            : Colors.grey;
+
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
           // Navigate to project detail
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProjectDetailsScreen(project: project),
+            ),
+          );
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,38 +324,42 @@ class _ProjectsTabState extends State<ProjectsTab> {
                         ],
                       ),
 
-                    if (project.isArchived) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[50],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.archive,
-                              size: 12,
-                              color: Colors.orange[700],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Archived',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.orange[700],
-                              ),
-                            ),
-                          ],
-                        ),
+                    // Status Badge
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                    ],
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: statusColor),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            project.status == ProjectStatus.active
+                                ? Icons.check_circle
+                                : project.status == ProjectStatus.postponed
+                                    ? Icons.pause_circle
+                                    : Icons.cancel,
+                            size: 12,
+                            color: statusColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            project.status.displayName,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

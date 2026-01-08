@@ -3,9 +3,17 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/profile/presentation/widgets/user_info_card.dart';
 import 'package:keep_track/features/profile/presentation/widgets/balance_graph.dart';
+import 'package:keep_track/features/profile/presentation/widgets/task_stats_card.dart';
+
+enum ModuleType { finance, task }
 
 class ProfileScreen extends ScopedScreen {
-  const ProfileScreen({super.key});
+  final ModuleType moduleType;
+
+  const ProfileScreen({
+    super.key,
+    this.moduleType = ModuleType.finance,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -34,15 +42,28 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen>
           const UserInfoCard(),
           const SizedBox(height: 24),
 
-          // Balance Graph
-          Text(
-            'Balance Overview',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 12),
-          const BalanceGraph(),
+          // Module-specific content
+          if (widget.moduleType == ModuleType.finance) ...[
+            // Balance Graph for Finance Module
+            Text(
+              'Balance Overview',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            const BalanceGraph(),
+          ] else if (widget.moduleType == ModuleType.task) ...[
+            // Task Stats for Task Module
+            Text(
+              'Task Statistics',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            const TaskStatsCard(),
+          ],
           const SizedBox(height: 24),
         ],
       ),

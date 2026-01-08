@@ -1,8 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/ui.dart';
 
 /// Pomodoro Session Tab - Coming Soon
-class PomodoroTab extends StatelessWidget {
+class PomodoroTab extends ScopedScreen {
   const PomodoroTab({super.key});
+
+  @override
+  State<PomodoroTab> createState() => _PomodoroTabState();
+}
+
+class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
+    with AppLayoutControlled {
+  @override
+  void registerServices() {
+    // No services needed
+  }
+
+  @override
+  void onReady() {
+    configureLayout(title: 'Pomodoro', showBottomNav: true);
+  }
 
   @override
   Widget build(BuildContext context) {
