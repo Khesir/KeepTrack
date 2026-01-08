@@ -9,6 +9,8 @@ import 'package:keep_track/features/tasks/modules/projects/domain/entities/proje
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 
+import '../module_selection/task_module_screen.dart';
+
 /// Task-focused Home Screen for Task Management Module
 class TaskHomeScreen extends ScopedScreen {
   const TaskHomeScreen({super.key});
@@ -324,7 +326,9 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                 'View Projects',
                 Icons.folder,
                 Colors.purple,
-                () => Navigator.pushNamed(context, AppRoutes.projectList),
+                () {
+                  TaskModuleInherited.of(context)?.changeTab(2);
+                },
               ),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
@@ -97,7 +98,10 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
                     const SizedBox(width: 8),
                     _buildFilterChip('Active', ProjectStatusFilter.active),
                     const SizedBox(width: 8),
-                    _buildFilterChip('Postponed', ProjectStatusFilter.postponed),
+                    _buildFilterChip(
+                      'Postponed',
+                      ProjectStatusFilter.postponed,
+                    ),
                     const SizedBox(width: 8),
                     _buildFilterChip('Closed', ProjectStatusFilter.closed),
                   ],
@@ -226,21 +230,17 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
     final statusColor = project.status == ProjectStatus.active
         ? Colors.green
         : project.status == ProjectStatus.postponed
-            ? Colors.orange
-            : Colors.grey;
+        ? Colors.orange
+        : Colors.grey;
 
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          // Navigate to project detail
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProjectDetailsScreen(project: project),
-            ),
-          );
+          context
+              .goToProjectDetail(project)
+              .then((_) => _controller.loadActiveProjects());
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,8 +343,8 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
                             project.status == ProjectStatus.active
                                 ? Icons.check_circle
                                 : project.status == ProjectStatus.postponed
-                                    ? Icons.pause_circle
-                                    : Icons.cancel,
+                                ? Icons.pause_circle
+                                : Icons.cancel,
                             size: 12,
                             color: statusColor,
                           ),

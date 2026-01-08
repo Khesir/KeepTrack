@@ -20,6 +20,9 @@ class TaskModuleScreen extends StatefulWidget {
 class _TaskModuleScreenState extends State<TaskModuleScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
+  void _changeTab(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   final List<Widget> _screens = const [
     TaskHomeScreen(),
@@ -39,91 +42,112 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
   Widget build(BuildContext context) {
     return AppLayoutProvider(
       controller: _layoutController,
-      child: AnimatedBuilder(
-        animation: _layoutController,
-        builder: (context, child) {
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  // Go back to module selection
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ModuleSelectionScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Back to Module Selection',
-              ),
-              title: Text(_layoutController.title),
-              actions: [
-                // Logging action button
-                IconButton(
-                  icon: const Icon(Icons.bug_report),
+      child: TaskModuleInherited(
+        changeTab: _changeTab,
+        child: AnimatedBuilder(
+          animation: _layoutController,
+          builder: (context, child) {
+            return Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
                   onPressed: () {
-                    Navigator.push(
+                    // Go back to module selection
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const LogViewerScreen(),
+                        builder: (context) => const ModuleSelectionScreen(),
                       ),
                     );
                   },
-                  tooltip: 'View Logs',
+                  tooltip: 'Back to Module Selection',
                 ),
-                if (_layoutController.showSettings)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/settings',
-                          arguments: {'mode': 'task'},
-                        );
-                      },
-                    ),
-                  ),
-                // Other actions from layout controller
-                ..._layoutController.actions,
-              ],
-            ),
-            body: _screens[_currentIndex],
-            bottomNavigationBar: _layoutController.showBottomNav
-                ? NavigationBar(
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: (index) {
-                      setState(() => _currentIndex = index);
+                title: Text(_layoutController.title),
+                actions: [
+                  // Logging action button
+                  IconButton(
+                    icon: const Icon(Icons.bug_report),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LogViewerScreen(),
+                        ),
+                      );
                     },
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.home),
-                        label: 'Home',
+                    tooltip: 'View Logs',
+                  ),
+                  if (_layoutController.showSettings)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: IconButton(
+                        icon: const Icon(Icons.settings),
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/settings',
+                            arguments: {'mode': 'task'},
+                          );
+                        },
                       ),
-                      NavigationDestination(
-                        icon: Icon(Icons.task_alt),
-                        label: 'Tasks',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.folder),
-                        label: 'Projects',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.timer),
-                        label: 'Pomodoro',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.person),
-                        label: 'Profile',
-                      ),
-                    ],
-                  )
-                : null,
-          );
-        },
+                    ),
+                  // Other actions from layout controller
+                  ..._layoutController.actions,
+                ],
+              ),
+              body: _screens[_currentIndex],
+              bottomNavigationBar: _layoutController.showBottomNav
+                  ? NavigationBar(
+                      selectedIndex: _currentIndex,
+                      onDestinationSelected: (index) {
+                        setState(() => _currentIndex = index);
+                      },
+                      destinations: const [
+                        NavigationDestination(
+                          icon: Icon(Icons.home),
+                          label: 'Home',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.task_alt),
+                          label: 'Tasks',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.folder),
+                          label: 'Projects',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.timer),
+                          label: 'Pomodoro',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.person),
+                          label: 'Profile',
+                        ),
+                      ],
+                    )
+                  : null,
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+// Create an InheritedWidget to pass the callback down
+class TaskModuleInherited extends InheritedWidget {
+  final void Function(int) changeTab;
+
+  const TaskModuleInherited({
+    super.key,
+    required this.changeTab,
+    required super.child,
+  });
+
+  static TaskModuleInherited? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<TaskModuleInherited>();
+  }
+
+  @override
+  bool updateShouldNotify(TaskModuleInherited oldWidget) => false;
 }

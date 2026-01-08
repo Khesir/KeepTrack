@@ -26,6 +26,7 @@ import '../../features/finance/presentation/screens/transactions/create_transfer
 import '../../features/finance/presentation/screens/finance_main_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 import '../../features/tasks/modules/tasks/domain/entities/task.dart';
+import '../../features/tasks/presentation/screens/project_details_screen.dart';
 import '../../features/tasks/presentation/screens/tasks_main_screen.dart';
 
 import '../../features/tasks/modules/projects/domain/entities/project.dart';
@@ -123,6 +124,18 @@ class AppRouter {
       case AppRoutes.projectManagement:
         return MaterialPageRoute(
           builder: (_) => const ProjectManagementScreen(),
+          settings: settings,
+        );
+
+      case AppRoutes.projectDetail:
+        final project = settings.arguments as Project?;
+        if (project == null) {
+          return MaterialPageRoute(
+            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => ProjectDetailsScreen(project: project),
           settings: settings,
         );
 

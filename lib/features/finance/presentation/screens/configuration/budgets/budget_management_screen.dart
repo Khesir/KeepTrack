@@ -29,11 +29,6 @@ class _BudgetManagementScreenState
   }
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   void onReady() {
     // Load budgets with spent amounts when screen is ready
     _controller.loadBudgetsWithSpentAmounts();
@@ -987,7 +982,8 @@ class _BudgetCard extends StatelessWidget {
                                     ),
                                   ),
                                   // Only show month as metadata if title exists
-                                  if (budget.title != null && budget.title!.isNotEmpty) ...[
+                                  if (budget.title != null &&
+                                      budget.title!.isNotEmpty) ...[
                                     const SizedBox(width: 4),
                                     Text(
                                       _formatMonthDisplay(budget.month),
