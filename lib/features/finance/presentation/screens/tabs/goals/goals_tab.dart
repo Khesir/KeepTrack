@@ -324,7 +324,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                         else if (isDesktop)
                           ResponsiveGrid(
                             spacing: AppSpacing.lg,
-                            desktopChildAspectRatio: 1.3,
+                            desktopChildAspectRatio: 1.5,
                             children: filteredGoals
                                 .map((goal) => _buildGoalCard(goal))
                                 .toList(),

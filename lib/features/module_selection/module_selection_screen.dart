@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 
 /// Netflix-style module selection screen after login
 /// Users can choose between Task Management and Finance Management
@@ -22,11 +24,19 @@ class ModuleSelectionScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Header
+              // Header with profile
               Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   children: [
+                    // User profile in top right
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _buildUserProfile(context),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     Icon(
                       Icons.dashboard,
                       size: 64,
@@ -126,6 +136,144 @@ class ModuleSelectionScreen extends StatelessWidget {
 
   void _navigateToFinanceModule(BuildContext context) {
     Navigator.pushReplacementNamed(context, '/finance-module');
+  }
+
+  Widget _buildUserProfile(BuildContext context) {
+    final authController = locator.get<AuthController>();
+    final user = authController.currentUser;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return PopupMenuButton<String>(
+          tooltip: 'Account options',
+          offset: const Offset(0, 8),
+          constraints: BoxConstraints(
+            minWidth: 200,
+            maxWidth: 200,
+          ),
+          onSelected: (value) async {
+            if (value == 'signout') {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Sign Out'),
+                  content: const Text('Are you sure you want to sign out?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Sign Out'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true) {
+                await authController.signOut();
+              }
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'profile',
+              enabled: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    user?.displayName ?? 'User',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    user?.email ?? 'No email',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Divider(height: 16),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'signout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, size: 18, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Sign Out', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Avatar
+                if (user?.photoUrl != null)
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(user!.photoUrl!),
+                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  )
+                else
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          Theme.of(context).colorScheme.primary,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.person, size: 18, color: Colors.white),
+                  ),
+                const SizedBox(width: 8),
+                // User name
+                Text(
+                  user?.displayName ?? 'User',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 

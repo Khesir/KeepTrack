@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/logging/log_viewer_screen.dart';
+import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/home/task_home_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
@@ -52,6 +56,24 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
 
   List<Widget> _buildActions() {
     return [
+      // Theme toggle button
+      IconButton(
+        icon: Icon(
+          Theme.of(context).brightness == Brightness.dark
+              ? Icons.light_mode
+              : Icons.dark_mode,
+        ),
+        onPressed: () {
+          final settingsController = locator.get<SettingsController>();
+          final currentTheme = Theme.of(context).brightness;
+          settingsController.updateThemeMode(
+            currentTheme == Brightness.dark
+                ? AppThemeMode.light
+                : AppThemeMode.dark,
+          );
+        },
+        tooltip: 'Toggle Theme',
+      ),
       // Logging action button
       IconButton(
         icon: const Icon(Icons.bug_report),
@@ -191,6 +213,9 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
               ],
             ),
           ),
+          // Logout button
+          _buildUserProfileSection(),
+          // All Modules button
           InkWell(
             onTap: _navigateToModuleSelection,
             child: Container(
@@ -250,6 +275,118 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
           const Spacer(),
           ..._buildActions(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildUserProfileSection() {
+    final authController = locator.get<AuthController>();
+    final user = authController.currentUser;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: PopupMenuButton<String>(
+        tooltip: 'Account options',
+        offset: const Offset(0, -8),
+        constraints: const BoxConstraints(
+          minWidth: 236, // 260 (sidebar width) - 24 (padding)
+          maxWidth: 236,
+        ),
+        onSelected: (value) async {
+          if (value == 'signout') {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Sign Out'),
+                content: const Text('Are you sure you want to sign out?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Sign Out'),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed == true && mounted) {
+              await authController.signOut();
+            }
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'signout',
+            child: Row(
+              children: [
+                Icon(Icons.logout, size: 18, color: Colors.red),
+                SizedBox(width: 12),
+                Text('Sign Out', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+        ],
+        child: Row(
+          children: [
+            // Avatar
+            if (user?.photoUrl != null)
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: NetworkImage(user!.photoUrl!),
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+              )
+            else
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.7),
+                      AppColors.primary,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person, size: 20, color: Colors.white),
+              ),
+            const SizedBox(width: 12),
+            // User info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    user?.displayName ?? 'User',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    user?.email ?? 'No email',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.more_vert, size: 20, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }

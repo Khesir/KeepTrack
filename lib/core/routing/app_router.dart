@@ -27,7 +27,6 @@ import '../../features/finance/presentation/screens/finance_main_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 import '../../features/tasks/modules/tasks/domain/entities/task.dart';
 import '../../features/tasks/presentation/screens/project_details_screen.dart';
-import '../../features/tasks/presentation/screens/tasks_main_screen.dart';
 
 import '../../features/tasks/modules/projects/domain/entities/project.dart';
 
@@ -42,7 +41,6 @@ class AppRoutes {
   static const String taskModule = '/task-module';
 
   // Tasks
-  static const String taskList = '/tasks';
   static const String taskDetail = '/tasks/detail';
   static const String taskCreate = '/tasks/create';
 
@@ -105,11 +103,6 @@ class AppRouter {
         );
 
       // Tasks
-      case AppRoutes.taskList:
-        return MaterialPageRoute(
-          builder: (_) => const TasksMainScreen(),
-          settings: settings,
-        );
       case AppRoutes.taskCreate:
         // Redirect to task management screen for task creation
         return MaterialPageRoute(
@@ -298,10 +291,6 @@ class AppRouter {
 /// Helper extensions for easier navigation
 extension NavigationExtensions on BuildContext {
   // Tasks
-  Future<void> goToTaskList() {
-    return AppRouter.push(this, AppRoutes.taskList);
-  }
-
   Future<void> goToTaskDetail(Task task) {
     return AppRouter.push(this, AppRoutes.taskDetail, arguments: task);
   }

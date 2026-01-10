@@ -632,6 +632,18 @@ class _TasksHomeScreenNewState extends ScopedScreenState<TasksHomeScreenNew>
             ),
             child: Row(
               children: [
+                // Checkbox
+                Checkbox(
+                  value: task.isCompleted,
+                  onChanged: (value) {
+                    // Will be wired later
+                  },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
                 // Priority indicator
                 Container(
                   width: 4,
@@ -642,15 +654,6 @@ class _TasksHomeScreenNewState extends ScopedScreenState<TasksHomeScreenNew>
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Checkbox
-                Checkbox(
-                  value: task.isCompleted,
-                  onChanged: (value) {
-                    // Will be wired later
-                  },
-                ),
-                const SizedBox(width: 8),
 
                 // Task info
                 Expanded(

@@ -4,6 +4,7 @@ import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 
 class SettingsPage extends StatefulWidget {
   final String? mode;
@@ -82,6 +83,17 @@ class _SettingsPageState extends State<SettingsPage> {
                     Navigator.pushNamed(context, AppRoutes.settingsConfig);
                   }
                 },
+              ),
+
+              const Divider(),
+
+              // Account Section
+              _buildSectionHeader('Account'),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                subtitle: const Text('Sign out of your account'),
+                onTap: () => _showSignOutDialog(context),
               ),
 
               const Divider(),
@@ -178,6 +190,31 @@ class _SettingsPageState extends State<SettingsPage> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSignOutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final authController = locator.get<AuthController>();
+              await authController.signOut();
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Sign Out'),
           ),
         ],
       ),

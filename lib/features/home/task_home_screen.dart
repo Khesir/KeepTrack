@@ -559,15 +559,15 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                   return _buildTaskItem(task);
                 },
               ),
-            if (currentTasks.length > 5)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: TextButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, AppRoutes.taskList),
-                  child: Text('View all ${currentTasks.length} tasks'),
-                ),
-              ),
+            // if (currentTasks.length > 5)
+            //   Padding(
+            //     padding: const EdgeInsets.only(top: 8),
+            //     child: TextButton(
+            //       onPressed: () =>
+            //           Navigator.pushNamed(context, AppRoutes.taskList),
+            //       child: Text('View all ${currentTasks.length} tasks'),
+            //     ),
+            //   ),
           ],
         );
       },
@@ -604,6 +604,25 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
+            // Checkbox to mark task as complete
+            Checkbox(
+              value: task.isCompleted,
+              onChanged: (value) async {
+                if (value != null) {
+                  final updatedTask = task.copyWith(
+                    status: value
+                        ? TaskStatus.completed
+                        : TaskStatus.inProgress,
+                    completedAt: value ? DateTime.now() : null,
+                  );
+                  await _taskController.updateTask(updatedTask);
+                }
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               width: 4,
               height: 50,
@@ -619,9 +638,17 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                 children: [
                   Text(
                     task.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      decoration: task.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
+                      color: task.isCompleted
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.5)
+                          : null,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -636,6 +663,9 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                         color: Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
+                        decoration: task.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
