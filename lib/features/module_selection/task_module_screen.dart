@@ -14,6 +14,8 @@ import 'package:keep_track/features/tasks/presentation/screens/tabs/tasks_tab_ne
 import 'package:keep_track/features/tasks/presentation/screens/tabs/projects_tab.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/pomodoro_tab.dart';
 
+import '../auth/presentation/screens/auth_settings_screen.dart';
+
 /// Task Module Screen - Wraps the task management functionality
 /// This is what users see when they select "Task Management" from module selection
 class TaskModuleScreen extends StatefulWidget {
@@ -48,9 +50,7 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
   void _navigateToModuleSelection() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ModuleSelectionScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ModuleSelectionScreen()),
     );
   }
 
@@ -80,9 +80,7 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const LogViewerScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const LogViewerScreen()),
           );
         },
         tooltip: 'View Logs',
@@ -115,7 +113,8 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
           builder: (context, child) {
             return LayoutBuilder(
               builder: (context, constraints) {
-                final isDesktop = constraints.maxWidth >= ResponsiveBreakpoints.desktop;
+                final isDesktop =
+                    constraints.maxWidth >= ResponsiveBreakpoints.desktop;
 
                 if (isDesktop) {
                   return _buildDesktopLayout();
@@ -225,11 +224,18 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.apps, size: 20, color: AppColors.textSecondary),
-                  const SizedBox(width: 12),
-                  Text('All Modules', style: AppTextStyles.bodyMedium.copyWith(
+                  const Icon(
+                    Icons.apps,
+                    size: 20,
                     color: AppColors.textSecondary,
-                  )),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'All Modules',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -249,13 +255,19 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
       ),
       child: ListTile(
         dense: true,
-        leading: Icon(icon, size: 20,
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary),
-        title: Text(label,
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-                color: isActive ? AppColors.textPrimary : AppColors.textSecondary)),
+        leading: Icon(
+          icon,
+          size: 20,
+          color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
         onTap: () => _changeTab(index),
       ),
     );
@@ -296,7 +308,13 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
           maxWidth: 236,
         ),
         onSelected: (value) async {
-          if (value == 'signout') {
+          if (value == 'manage_account') {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const AuthSettingsScreen(),
+              ),
+            );
+          } else if (value == 'signout') {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
@@ -321,6 +339,16 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
           }
         },
         itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'manage_account',
+            child: Row(
+              children: [
+                Icon(Icons.manage_accounts, size: 18),
+                SizedBox(width: 12),
+                Text('Manage Account'),
+              ],
+            ),
+          ),
           const PopupMenuItem(
             value: 'signout',
             child: Row(
@@ -384,7 +412,11 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.more_vert, size: 20, color: AppColors.textSecondary),
+            const Icon(
+              Icons.more_vert,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
           ],
         ),
       ),

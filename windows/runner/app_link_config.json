@@ -1,0 +1,9 @@
+{
+  "schemes": [
+    {
+      "scheme": "io.supabase.ioatjdckcmkreqarpyzr",
+      "name": "Personal Codex Authentication",
+      "description": "Handle OAuth callbacks for Personal Codex"
+    }
+  ]
+}

@@ -105,8 +105,16 @@ Future<void> _initializeAppWithRetry({
         AppLogger.info('🔄 Retry attempt $retryCount/$maxRetries...');
       }
 
-      await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-      AppLogger.info('✅ Supabase initialized');
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+        // Use PKCE auth flow with loopback redirect for desktop
+        // This automatically starts a local server on http://127.0.0.1:PORT for OAuth callbacks
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+      );
+      AppLogger.info('✅ Supabase initialized with PKCE + loopback redirect');
 
       // Initialize SharedPreferences
       AppLogger.info('🔧 Initializing SharedPreferences...');

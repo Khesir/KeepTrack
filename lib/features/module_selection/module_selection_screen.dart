@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 
 /// Netflix-style module selection screen after login
 /// Users can choose between Task Management and Finance Management
@@ -152,7 +153,13 @@ class ModuleSelectionScreen extends StatelessWidget {
             maxWidth: 200,
           ),
           onSelected: (value) async {
-            if (value == 'signout') {
+            if (value == 'manage_account') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AuthSettingsScreen(),
+                ),
+              );
+            } else if (value == 'signout') {
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -204,6 +211,16 @@ class ModuleSelectionScreen extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Divider(height: 16),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'manage_account',
+              child: Row(
+                children: [
+                  Icon(Icons.manage_accounts, size: 18),
+                  SizedBox(width: 12),
+                  Text('Manage Account'),
                 ],
               ),
             ),

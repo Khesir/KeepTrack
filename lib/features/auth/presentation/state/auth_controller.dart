@@ -9,29 +9,23 @@ import 'package:keep_track/features/finance/data/services/finance_initialization
 class AuthController extends StreamState<AsyncState<User?>> {
   final AuthService _authService;
 
-  AuthController(this._authService) : super(const AsyncLoading()) {
+  // Start with null state instead of loading - let _init() determine the actual state
+  AuthController(this._authService) : super(const AsyncData(null)) {
     _init();
   }
 
   /// Initialize auth state
-  void _init() {
-    // Check current auth state
-    final currentUser = _authService.currentUser;
-    if (currentUser != null) {
-      emit(AsyncData(currentUser));
-      // Initialize user data if needed (handles auto-login from session restoration)
-      _initializeUserData(currentUser.id);
-    } else {
-      emit(const AsyncData(null));
-    }
-
-    // Listen to auth state changes
+  void _init() async {
+    // Listen to auth state changes FIRST
     _authService.authStateChanges.listen(
       (user) {
-        emit(AsyncData(user));
-        // Initialize user data when user signs in via OAuth redirect or session restore
         if (user != null) {
+          AppLogger.info('Auth state changed: User signed in - ${user.email}');
+          emit(AsyncData(user));
           _initializeUserData(user.id);
+        } else {
+          AppLogger.info('Auth state changed: User signed out');
+          emit(const AsyncData(null));
         }
       },
       onError: (error) {
@@ -39,6 +33,25 @@ class AuthController extends StreamState<AsyncState<User?>> {
         emit(AsyncError('Auth error', error));
       },
     );
+
+    // On web, if there's an OAuth callback in progress (URL has ?code=...),
+    // Supabase processes it automatically. Wait for auth state listener to fire.
+    // Give it up to 2 seconds to process the OAuth callback.
+    for (int i = 0; i < 20; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final currentUser = _authService.currentUser;
+      if (currentUser != null) {
+        AppLogger.info('User authenticated: ${currentUser.email}');
+        emit(AsyncData(currentUser));
+        _initializeUserData(currentUser.id);
+        return; // Done!
+      }
+    }
+
+    // After 2 seconds, if still no user, assume not logged in
+    AppLogger.info('No authenticated user found');
+    emit(const AsyncData(null));
   }
 
   /// Sign in with Google
@@ -64,6 +77,46 @@ class AuthController extends StreamState<AsyncState<User?>> {
     );
   }
 
+  /// Sign in with email and password (simple, works on all platforms!)
+  Future<void> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    emit(const AsyncLoading());
+    final result = await _authService.signInWithEmail(
+      email: email,
+      password: password,
+    );
+    result.fold(
+      onSuccess: (user) async {
+        emit(AsyncData(user));
+        _initializeUserData(user.id);
+      },
+      onError: (failure) => emit(AsyncError(failure.message, failure)),
+    );
+  }
+
+  /// Sign up with email and password
+  Future<void> signUpWithEmail({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    emit(const AsyncLoading());
+    final result = await _authService.signUpWithEmail(
+      email: email,
+      password: password,
+      displayName: displayName,
+    );
+    result.fold(
+      onSuccess: (user) async {
+        emit(AsyncData(user));
+        _initializeUserData(user.id);
+      },
+      onError: (failure) => emit(AsyncError(failure.message, failure)),
+    );
+  }
+
   /// Sign in as Admin (Dev mode only)
   Future<void> signInAsAdmin() async {
     emit(const AsyncLoading());
@@ -76,6 +129,27 @@ class AuthController extends StreamState<AsyncState<User?>> {
       },
       onError: (failure) => emit(AsyncError(failure.message, failure)),
     );
+  }
+
+  /// Sign in with Magic Link (passwordless email)
+  Future<void> signInWithMagicLink(String email) async {
+    emit(const AsyncLoading());
+    final result = await _authService.signInWithMagicLink(email);
+    result.fold(
+      onSuccess: (_) {
+        // Magic link sent - show success message
+        // User will be signed in when they click the link in their email
+        emit(const AsyncData(null));
+        AppLogger.info('Magic link sent to: $email');
+      },
+      onError: (failure) => emit(AsyncError(failure.message, failure)),
+    );
+  }
+
+  /// Cancel sign-in (reset to idle state)
+  void cancelSignIn() {
+    AppLogger.info('Sign-in cancelled by user');
+    emit(const AsyncData(null));
   }
 
   /// Sign out

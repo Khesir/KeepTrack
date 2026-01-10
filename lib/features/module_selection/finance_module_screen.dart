@@ -18,6 +18,8 @@ import 'package:keep_track/features/logs/logs_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
 
+import '../auth/presentation/screens/auth_settings_screen.dart';
+
 /// Finance Module Screen - Wraps the existing finance functionality
 /// This is what users see when they select "Finance Management" from module selection
 class FinanceModuleScreen extends StatefulWidget {
@@ -35,12 +37,12 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   final List<Widget> _allScreens = const [
     HomeScreen(),
     FinanceMainScreen(), // Index 1 - shown on mobile "Finance" tab
-    AccountsTabNew(),    // Index 2 - Finance sub-item
-    BudgetsTabNew(),     // Index 3 - Finance sub-item
-    GoalsTabNew(),       // Index 4 - Finance sub-item
-    DebtsTabNew(),       // Index 5 - Finance sub-item
+    AccountsTabNew(), // Index 2 - Finance sub-item
+    BudgetsTabNew(), // Index 3 - Finance sub-item
+    GoalsTabNew(), // Index 4 - Finance sub-item
+    DebtsTabNew(), // Index 5 - Finance sub-item
     PlannedPaymentsTabNew(), // Index 6 - Finance sub-item
-    LogsScreen(),        // Index 7
+    LogsScreen(), // Index 7
     ProfileScreen(moduleType: ModuleType.finance), // Index 8
   ];
 
@@ -53,9 +55,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   void _navigateToModuleSelection() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ModuleSelectionScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const ModuleSelectionScreen()),
     );
   }
 
@@ -85,9 +85,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const LogViewerScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const LogViewerScreen()),
           );
         },
         tooltip: 'View Logs',
@@ -118,7 +116,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         builder: (context, child) {
           return LayoutBuilder(
             builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth >= ResponsiveBreakpoints.desktop;
+              final isDesktop =
+                  constraints.maxWidth >= ResponsiveBreakpoints.desktop;
 
               if (isDesktop) {
                 return _buildDesktopLayout();
@@ -185,8 +184,13 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(
-              icon: Icon(Icons.account_balance_wallet), label: 'Finance'),
-          NavigationDestination(icon: Icon(Icons.history), label: 'Transactions'),
+            icon: Icon(Icons.account_balance_wallet),
+            label: 'Finance',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history),
+            label: 'Transactions',
+          ),
           NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
@@ -233,7 +237,11 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.account_balance_wallet, color: AppColors.primary, size: 28),
+          const Icon(
+            Icons.account_balance_wallet,
+            color: AppColors.primary,
+            size: 28,
+          ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,11 +269,18 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.apps, size: 20, color: AppColors.textSecondary),
-                const SizedBox(width: 12),
-                Text('All Modules', style: AppTextStyles.bodyMedium.copyWith(
+                const Icon(
+                  Icons.apps,
+                  size: 20,
                   color: AppColors.textSecondary,
-                )),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'All Modules',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -291,7 +306,13 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
           maxWidth: 236,
         ),
         onSelected: (value) async {
-          if (value == 'signout') {
+          if (value == 'manage_account') {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const AuthSettingsScreen(),
+              ),
+            );
+          } else if (value == 'signout') {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
@@ -316,6 +337,16 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
           }
         },
         itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'manage_account',
+            child: Row(
+              children: [
+                Icon(Icons.manage_accounts, size: 18),
+                SizedBox(width: 12),
+                Text('Manage Account'),
+              ],
+            ),
+          ),
           const PopupMenuItem(
             value: 'signout',
             child: Row(
@@ -379,7 +410,11 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.more_vert, size: 20, color: AppColors.textSecondary),
+            const Icon(
+              Icons.more_vert,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
           ],
         ),
       ),
@@ -396,13 +431,19 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       ),
       child: ListTile(
         dense: true,
-        leading: Icon(icon, size: 20,
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary),
-        title: Text(label,
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-                color: isActive ? AppColors.textPrimary : AppColors.textSecondary)),
+        leading: Icon(
+          icon,
+          size: 20,
+          color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
         onTap: () => setState(() => _currentIndex = index),
       ),
     );
@@ -418,13 +459,19 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       ),
       child: ListTile(
         dense: true,
-        leading: Icon(icon, size: 18,
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary),
-        title: Text(label,
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-                color: isActive ? AppColors.textPrimary : AppColors.textSecondary)),
+        leading: Icon(
+          icon,
+          size: 18,
+          color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
         onTap: () => setState(() => _currentIndex = index),
       ),
     );

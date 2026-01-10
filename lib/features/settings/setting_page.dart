@@ -5,6 +5,7 @@ import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 
 class SettingsPage extends StatefulWidget {
   final String? mode;
@@ -89,6 +90,19 @@ class _SettingsPageState extends State<SettingsPage> {
 
               // Account Section
               _buildSectionHeader('Account'),
+              ListTile(
+                leading: const Icon(Icons.manage_accounts),
+                title: const Text('Manage Account'),
+                subtitle: const Text('Manage your authentication methods'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AuthSettingsScreen(),
+                    ),
+                  );
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.logout, color: Colors.red),
                 title: const Text('Sign Out', style: TextStyle(color: Colors.red)),

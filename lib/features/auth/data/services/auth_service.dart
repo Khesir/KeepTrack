@@ -1,17 +1,22 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/error/failure.dart';
 import 'package:keep_track/core/logging/app_logger.dart';
+import 'package:keep_track/features/auth/data/services/email_password_auth.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 class AuthService {
   final SupabaseClient _supabase;
   GoogleSignIn? _googleSignIn;
+  late final EmailPasswordAuth _emailPasswordAuth;
 
-  AuthService(this._supabase);
+  AuthService(this._supabase) {
+    _emailPasswordAuth = EmailPasswordAuth(_supabase);
+  }
 
   /// Lazy initialize Google Sign-In (only when needed)
   GoogleSignIn get _googleSignInInstance {
@@ -86,23 +91,47 @@ class AuthService {
         await _supabase.auth.signOut();
       }
 
-      // On web, use Supabase OAuth flow (redirect-based)
-      if (kIsWeb) {
-        AppLogger.info('Web platform detected - using Supabase OAuth redirect');
+      // On web or Windows desktop, use Supabase OAuth flow (redirect-based)
+      // Note: google_sign_in doesn't support Windows, so we use OAuth there too
+      final bool isWindowsDesktop = !kIsWeb && Platform.isWindows;
+      final bool useOAuth = kIsWeb || isWindowsDesktop;
+
+      if (useOAuth) {
+        final platform = kIsWeb ? 'Web' : 'Windows Desktop';
+        AppLogger.info('$platform platform detected - using Supabase OAuth redirect');
+
+        // Determine redirect URL based on platform
+        String? redirectUrl;
+        if (kIsWeb) {
+          // Web: Use current URL
+          redirectUrl = Uri.base.toString();
+          AppLogger.info('Web redirect URL: $redirectUrl');
+        } else {
+          // Desktop: Use NULL to enable loopback redirect (http://127.0.0.1:PORT)
+          // Supabase will automatically start a local server and handle the callback
+          // This works with PKCE flow for secure desktop authentication
+          redirectUrl = null;
+          AppLogger.info('Desktop: Using loopback redirect (http://127.0.0.1:PORT)');
+        }
 
         // This will redirect to Google OAuth and back
+        // On desktop with null redirectTo + PKCE, Supabase starts a local server
+        AppLogger.info('Initiating OAuth sign-in...');
         final response = await _supabase.auth.signInWithOAuth(
           OAuthProvider.google,
-          redirectTo: kIsWeb ? Uri.base.toString() : null,
+          redirectTo: redirectUrl,
         );
 
         if (!response) {
+          AppLogger.error('OAuth initiation failed', null, null);
           return Result.error(
             const ServerFailure(message: 'Failed to initiate Google Sign-In'),
           );
         }
 
-        // On web, the redirect happens and the user comes back authenticated
+        AppLogger.info('OAuth initiated successfully - browser should open');
+
+        // On web/Windows, the redirect happens and the user comes back authenticated
         // We need to wait for the auth state to update
         // The auth state listener in AuthController will handle this
         return Result.error(
@@ -110,8 +139,8 @@ class AuthService {
         );
       }
 
-      // On mobile/desktop, use google_sign_in package
-      AppLogger.info('Mobile/Desktop platform - using google_sign_in package');
+      // On mobile (Android/iOS), use google_sign_in package
+      AppLogger.info('Mobile platform - using google_sign_in package');
 
       // Force disconnect to ensure account picker is shown on every sign-in
       // disconnect() fully revokes access, while signOut() might cache the account
@@ -332,5 +361,39 @@ class AuthService {
         ),
       );
     }
+  }
+
+  /// Sign up with email and password (simple, works on all platforms)
+  Future<Result<User>> signUpWithEmail({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    return _emailPasswordAuth.signUpWithEmail(
+      email: email,
+      password: password,
+      displayName: displayName,
+    );
+  }
+
+  /// Sign in with email and password (simple, works on all platforms)
+  Future<Result<User>> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    return _emailPasswordAuth.signInWithEmail(
+      email: email,
+      password: password,
+    );
+  }
+
+  /// Send password reset email
+  Future<Result<void>> resetPassword(String email) async {
+    return _emailPasswordAuth.resetPassword(email);
+  }
+
+  /// Sign in with Magic Link (passwordless - just email, no password!)
+  Future<Result<void>> signInWithMagicLink(String email) async {
+    return _emailPasswordAuth.signInWithMagicLink(email);
   }
 }
