@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/logging/log_viewer_screen.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/responsive/desktop_sidebar.dart';
+import 'package:keep_track/core/ui/responsive/responsive_layout_wrapper.dart';
 import 'package:keep_track/features/finance/presentation/screens/finance_main_screen.dart';
 import 'package:keep_track/features/home/home_screen.dart';
 import 'package:keep_track/features/logs/logs_screen.dart';
@@ -20,17 +23,75 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    FinanceMainScreen(),
-    LogsScreen(),
-    ProfileScreen(moduleType: ModuleType.finance),
-  ];
+  // Navigation items for both mobile and desktop
+  List<ResponsiveNavItem> get _navItems => const [
+        ResponsiveNavItem(
+          label: 'Home',
+          icon: Icons.home,
+          screen: HomeScreen(),
+        ),
+        ResponsiveNavItem(
+          label: 'Finance',
+          icon: Icons.account_balance_wallet,
+          screen: FinanceMainScreen(),
+        ),
+        ResponsiveNavItem(
+          label: 'Transactions',
+          icon: Icons.history,
+          screen: LogsScreen(),
+        ),
+        ResponsiveNavItem(
+          label: 'Profile',
+          icon: Icons.person,
+          screen: ProfileScreen(moduleType: ModuleType.finance),
+        ),
+      ];
 
   @override
   void dispose() {
     _layoutController.dispose();
     super.dispose();
+  }
+
+  void _navigateToModuleSelection() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ModuleSelectionScreen(),
+      ),
+    );
+  }
+
+  List<Widget> _buildActions() {
+    return [
+      // Logging action button
+      IconButton(
+        icon: const Icon(Icons.bug_report),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LogViewerScreen(),
+            ),
+          );
+        },
+        tooltip: 'View Logs',
+      ),
+      if (_layoutController.showSettings)
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () {
+            Navigator.pushNamed(
+              context,
+              '/settings',
+              arguments: {'mode': 'finance'},
+            );
+          },
+          tooltip: 'Settings',
+        ),
+      // Other actions from layout controller
+      ..._layoutController.actions,
+    ];
   }
 
   @override
@@ -40,81 +101,54 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       child: AnimatedBuilder(
         animation: _layoutController,
         builder: (context, child) {
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  // Go back to module selection
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ModuleSelectionScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Back to Module Selection',
-              ),
-              title: Text(_layoutController.title),
-              actions: [
-                // Logging action button
-                IconButton(
-                  icon: const Icon(Icons.bug_report),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LogViewerScreen(),
-                      ),
-                    );
-                  },
-                  tooltip: 'View Logs',
+          return ResponsiveLayoutWrapper(
+            config: ResponsiveLayoutConfig(
+              navItems: _navItems,
+              currentIndex: _currentIndex,
+              onNavIndexChanged: (index) {
+                setState(() => _currentIndex = index);
+              },
+              title: _layoutController.title,
+              actions: _buildActions(),
+              sidebarHeader: const SidebarHeader(
+                title: 'Finance',
+                subtitle: 'Management',
+                leading: Icon(
+                  Icons.account_balance_wallet,
+                  color: AppColors.primary,
+                  size: 28,
                 ),
-                if (_layoutController.showSettings)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/settings',
-                          arguments: {'mode': 'finance'},
-                        );
-                      },
+              ),
+              sidebarFooter: SidebarFooter(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _navigateToModuleSelection,
+                    borderRadius: AppRadius.circularMd,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.apps,
+                            size: 20,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Text(
+                            'All Modules',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                // Other actions from layout controller
-                ..._layoutController.actions,
-              ],
+                ),
+              ),
+              floatingActionButton: null,
             ),
-            body: _screens[_currentIndex],
-            bottomNavigationBar: _layoutController.showBottomNav
-                ? NavigationBar(
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: (index) {
-                      setState(() => _currentIndex = index);
-                    },
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.home),
-                        label: 'Home',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.account_balance_wallet),
-                        label: 'Finance',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.history),
-                        label: 'Transactions',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.person),
-                        label: 'Profile',
-                      ),
-                    ],
-                  )
-                : null,
           );
         },
       ),

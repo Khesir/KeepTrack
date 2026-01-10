@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/logging/log_viewer_screen.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/responsive/desktop_sidebar.dart';
+import 'package:keep_track/core/ui/responsive/responsive_layout_wrapper.dart';
 import 'package:keep_track/features/home/task_home_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
@@ -20,22 +23,85 @@ class TaskModuleScreen extends StatefulWidget {
 class _TaskModuleScreenState extends State<TaskModuleScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
+
   void _changeTab(int index) {
     setState(() => _currentIndex = index);
   }
 
-  final List<Widget> _screens = const [
-    TaskHomeScreen(),
-    TasksTabNew(),
-    ProjectsTab(),
-    PomodoroTab(),
-    ProfileScreen(moduleType: ModuleType.task),
-  ];
+  // Navigation items for both mobile and desktop
+  List<ResponsiveNavItem> get _navItems => const [
+        ResponsiveNavItem(
+          label: 'Home',
+          icon: Icons.home,
+          screen: TaskHomeScreen(),
+        ),
+        ResponsiveNavItem(
+          label: 'Tasks',
+          icon: Icons.task_alt,
+          screen: TasksTabNew(),
+        ),
+        ResponsiveNavItem(
+          label: 'Projects',
+          icon: Icons.folder,
+          screen: ProjectsTab(),
+        ),
+        ResponsiveNavItem(
+          label: 'Pomodoro',
+          icon: Icons.timer,
+          screen: PomodoroTab(),
+        ),
+        ResponsiveNavItem(
+          label: 'Profile',
+          icon: Icons.person,
+          screen: ProfileScreen(moduleType: ModuleType.task),
+        ),
+      ];
 
   @override
   void dispose() {
     _layoutController.dispose();
     super.dispose();
+  }
+
+  void _navigateToModuleSelection() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ModuleSelectionScreen(),
+      ),
+    );
+  }
+
+  List<Widget> _buildActions() {
+    return [
+      // Logging action button
+      IconButton(
+        icon: const Icon(Icons.bug_report),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LogViewerScreen(),
+            ),
+          );
+        },
+        tooltip: 'View Logs',
+      ),
+      if (_layoutController.showSettings)
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () {
+            Navigator.pushNamed(
+              context,
+              '/settings',
+              arguments: {'mode': 'task'},
+            );
+          },
+          tooltip: 'Settings',
+        ),
+      // Other actions from layout controller
+      ..._layoutController.actions,
+    ];
   }
 
   @override
@@ -47,85 +113,53 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
         child: AnimatedBuilder(
           animation: _layoutController,
           builder: (context, child) {
-            return Scaffold(
-              appBar: AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    // Go back to module selection
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ModuleSelectionScreen(),
-                      ),
-                    );
-                  },
-                  tooltip: 'Back to Module Selection',
-                ),
-                title: Text(_layoutController.title),
-                actions: [
-                  // Logging action button
-                  IconButton(
-                    icon: const Icon(Icons.bug_report),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LogViewerScreen(),
-                        ),
-                      );
-                    },
-                    tooltip: 'View Logs',
+            return ResponsiveLayoutWrapper(
+              config: ResponsiveLayoutConfig(
+                navItems: _navItems,
+                currentIndex: _currentIndex,
+                onNavIndexChanged: _changeTab,
+                title: _layoutController.title,
+                actions: _buildActions(),
+                sidebarHeader: const SidebarHeader(
+                  title: 'Tasks',
+                  subtitle: 'Management',
+                  leading: Icon(
+                    Icons.task_alt,
+                    color: AppColors.primary,
+                    size: 28,
                   ),
-                  if (_layoutController.showSettings)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: IconButton(
-                        icon: const Icon(Icons.settings),
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/settings',
-                            arguments: {'mode': 'task'},
-                          );
-                        },
+                ),
+                sidebarFooter: SidebarFooter(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _navigateToModuleSelection,
+                      borderRadius: AppRadius.circularMd,
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.apps,
+                              size: 20,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Text(
+                              'All Modules',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  // Other actions from layout controller
-                  ..._layoutController.actions,
-                ],
+                  ),
+                ),
+                floatingActionButton:
+                    _layoutController.showBottomNav ? null : null,
               ),
-              body: _screens[_currentIndex],
-              bottomNavigationBar: _layoutController.showBottomNav
-                  ? NavigationBar(
-                      selectedIndex: _currentIndex,
-                      onDestinationSelected: (index) {
-                        setState(() => _currentIndex = index);
-                      },
-                      destinations: const [
-                        NavigationDestination(
-                          icon: Icon(Icons.home),
-                          label: 'Home',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.task_alt),
-                          label: 'Tasks',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.folder),
-                          label: 'Projects',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.timer),
-                          label: 'Pomodoro',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.person),
-                          label: 'Profile',
-                        ),
-                      ],
-                    )
-                  : null,
             );
           },
         ),
