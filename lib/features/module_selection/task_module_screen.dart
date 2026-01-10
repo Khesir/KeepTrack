@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:keep_track/core/logging/log_viewer_screen.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
-import 'package:keep_track/core/ui/responsive/desktop_sidebar.dart';
-import 'package:keep_track/core/ui/responsive/responsive_layout_wrapper.dart';
+import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
 import 'package:keep_track/features/home/task_home_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
@@ -28,34 +27,13 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
     setState(() => _currentIndex = index);
   }
 
-  // Navigation items for both mobile and desktop
-  List<ResponsiveNavItem> get _navItems => const [
-        ResponsiveNavItem(
-          label: 'Home',
-          icon: Icons.home,
-          screen: TaskHomeScreen(),
-        ),
-        ResponsiveNavItem(
-          label: 'Tasks',
-          icon: Icons.task_alt,
-          screen: TasksTabNew(),
-        ),
-        ResponsiveNavItem(
-          label: 'Projects',
-          icon: Icons.folder,
-          screen: ProjectsTab(),
-        ),
-        ResponsiveNavItem(
-          label: 'Pomodoro',
-          icon: Icons.timer,
-          screen: PomodoroTab(),
-        ),
-        ResponsiveNavItem(
-          label: 'Profile',
-          icon: Icons.person,
-          screen: ProfileScreen(moduleType: ModuleType.task),
-        ),
-      ];
+  final List<Widget> _screens = const [
+    TaskHomeScreen(),
+    TasksTabNew(),
+    ProjectsTab(),
+    PomodoroTab(),
+    ProfileScreen(moduleType: ModuleType.task),
+  ];
 
   @override
   void dispose() {
@@ -113,56 +91,165 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
         child: AnimatedBuilder(
           animation: _layoutController,
           builder: (context, child) {
-            return ResponsiveLayoutWrapper(
-              config: ResponsiveLayoutConfig(
-                navItems: _navItems,
-                currentIndex: _currentIndex,
-                onNavIndexChanged: _changeTab,
-                title: _layoutController.title,
-                actions: _buildActions(),
-                sidebarHeader: const SidebarHeader(
-                  title: 'Tasks',
-                  subtitle: 'Management',
-                  leading: Icon(
-                    Icons.task_alt,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
-                ),
-                sidebarFooter: SidebarFooter(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _navigateToModuleSelection,
-                      borderRadius: AppRadius.circularMd,
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.sm),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.apps,
-                              size: 20,
-                              color: AppColors.textSecondary,
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Text(
-                              'All Modules',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                floatingActionButton:
-                    _layoutController.showBottomNav ? null : null,
-              ),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isDesktop = constraints.maxWidth >= ResponsiveBreakpoints.desktop;
+
+                if (isDesktop) {
+                  return _buildDesktopLayout();
+                } else {
+                  return _buildMobileLayout();
+                }
+              },
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Scaffold(
+      body: Row(
+        children: [
+          _buildSidebar(),
+          Expanded(
+            child: Column(
+              children: [
+                _buildTopBar(),
+                Expanded(child: _screens[_currentIndex]),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _navigateToModuleSelection,
+        ),
+        title: Text(_layoutController.title),
+        actions: _buildActions(),
+      ),
+      body: _screens[_currentIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: _changeTab,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.task_alt), label: 'Tasks'),
+          NavigationDestination(icon: Icon(Icons.folder), label: 'Projects'),
+          NavigationDestination(icon: Icon(Icons.timer), label: 'Pomodoro'),
+          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar() {
+    return Container(
+      width: 260,
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(right: BorderSide(color: AppColors.border)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.task_alt, color: AppColors.primary, size: 28),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tasks', style: AppTextStyles.h4),
+                    Text('Management', style: AppTextStyles.caption),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildNavItem('Home', Icons.home, 0),
+                _buildNavItem('Tasks', Icons.task_alt, 1),
+                _buildNavItem('Projects', Icons.folder, 2),
+                _buildNavItem('Pomodoro', Icons.timer, 3),
+                _buildNavItem('Profile', Icons.person, 4),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: _navigateToModuleSelection,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.apps, size: 20, color: AppColors.textSecondary),
+                  const SizedBox(width: 12),
+                  Text('All Modules', style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  )),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(String label, IconData icon, int index) {
+    final isActive = _currentIndex == index;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: isActive ? AppColors.secondary : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        dense: true,
+        leading: Icon(icon, size: 20,
+            color: isActive ? AppColors.textPrimary : AppColors.textSecondary),
+        title: Text(label,
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
+                color: isActive ? AppColors.textPrimary : AppColors.textSecondary)),
+        onTap: () => _changeTab(index),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Container(
+      height: 64,
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          Text(_layoutController.title, style: AppTextStyles.h3),
+          const Spacer(),
+          ..._buildActions(),
+        ],
       ),
     );
   }

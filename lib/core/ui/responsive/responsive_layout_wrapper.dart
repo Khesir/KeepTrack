@@ -32,16 +32,21 @@ class ResponsiveNavItem {
   final String label;
   final IconData icon;
   final Widget screen;
+  final List<ResponsiveNavItem>? subItems;
 
   const ResponsiveNavItem({
     required this.label,
     required this.icon,
     required this.screen,
+    this.subItems,
   });
+
+  /// Check if this item has sub-items
+  bool get hasSubItems => subItems != null && subItems!.isNotEmpty;
 }
 
 /// Responsive layout wrapper that switches between mobile and desktop UI
-class ResponsiveLayoutWrapper extends StatelessWidget {
+class ResponsiveLayoutWrapper extends StatefulWidget {
   final ResponsiveLayoutConfig config;
 
   const ResponsiveLayoutWrapper({
@@ -49,6 +54,12 @@ class ResponsiveLayoutWrapper extends StatelessWidget {
     required this.config,
   });
 
+  @override
+  State<ResponsiveLayoutWrapper> createState() =>
+      _ResponsiveLayoutWrapperState();
+}
+
+class _ResponsiveLayoutWrapperState extends State<ResponsiveLayoutWrapper> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -64,27 +75,62 @@ class ResponsiveLayoutWrapper extends StatelessWidget {
     );
   }
 
+  /// Flatten nav items (including sub-items) for index tracking
+  List<ResponsiveNavItem> _flattenNavItems(List<ResponsiveNavItem> items) {
+    final flattened = <ResponsiveNavItem>[];
+    for (final item in items) {
+      flattened.add(item);
+      if (item.hasSubItems) {
+        flattened.addAll(item.subItems!);
+      }
+    }
+    return flattened;
+  }
+
+  /// Convert ResponsiveNavItem to SidebarNavItem with proper nesting
+  List<SidebarNavItem> _buildSidebarNavItems() {
+    var globalIndex = 0;
+
+    return widget.config.navItems.map((item) {
+      final itemIndex = globalIndex++;
+      final isParentActive = itemIndex == widget.config.currentIndex;
+
+      List<SidebarNavItem>? subItems;
+      if (item.hasSubItems) {
+        subItems = item.subItems!.map((subItem) {
+          final subIndex = globalIndex++;
+          return SidebarNavItem(
+            label: subItem.label,
+            icon: subItem.icon,
+            isActive: subIndex == widget.config.currentIndex,
+            onTap: () => widget.config.onNavIndexChanged(subIndex),
+            isSubItem: true,
+          );
+        }).toList();
+      }
+
+      return SidebarNavItem(
+        label: item.label,
+        icon: item.icon,
+        isActive: isParentActive,
+        onTap: () => widget.config.onNavIndexChanged(itemIndex),
+        subItems: subItems,
+      );
+    }).toList();
+  }
+
   /// Build desktop layout with sidebar and navbar
   Widget _buildDesktopLayout(BuildContext context) {
+    final flatItems = _flattenNavItems(widget.config.navItems);
+
     return Scaffold(
       body: Row(
         children: [
           // Sidebar navigation
           DesktopSidebar(
-            header: config.sidebarHeader,
-            footer: config.sidebarFooter,
-            navItems: config.navItems
-                .asMap()
-                .entries
-                .map(
-                  (entry) => SidebarNavItem(
-                    label: entry.value.label,
-                    icon: entry.value.icon,
-                    isActive: entry.key == config.currentIndex,
-                    onTap: () => config.onNavIndexChanged(entry.key),
-                  ),
-                )
-                .toList(),
+            header: widget.config.sidebarHeader,
+            footer: widget.config.sidebarFooter,
+            navItems: _buildSidebarNavItems(),
           ),
 
           // Main content area
@@ -93,20 +139,22 @@ class ResponsiveLayoutWrapper extends StatelessWidget {
               children: [
                 // Top navbar
                 DesktopNavbar(
-                  title: config.title,
-                  actions: config.actions,
+                  title: widget.config.title,
+                  actions: widget.config.actions,
                 ),
 
-                // Content
+                // Content with desktop wrapper
                 Expanded(
-                  child: config.navItems[config.currentIndex].screen,
+                  child: DesktopContentWrapper(
+                    child: flatItems[widget.config.currentIndex].screen,
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
-      floatingActionButton: config.floatingActionButton,
+      floatingActionButton: widget.config.floatingActionButton,
     );
   }
 
@@ -114,17 +162,18 @@ class ResponsiveLayoutWrapper extends StatelessWidget {
   Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: _buildMobileAppBar(context),
-      body: config.navItems[config.currentIndex].screen,
+      body: widget.config.navItems[widget.config.currentIndex].screen,
       bottomNavigationBar: _buildBottomNavigationBar(),
-      floatingActionButton: config.floatingActionButton,
+      floatingActionButton: widget.config.floatingActionButton,
     );
   }
 
   /// Build mobile app bar
   PreferredSizeWidget _buildMobileAppBar(BuildContext context) {
     return AppBar(
-      title: Text(config.title ?? config.navItems[config.currentIndex].label),
-      actions: config.actions,
+      title: Text(widget.config.title ??
+          widget.config.navItems[widget.config.currentIndex].label),
+      actions: widget.config.actions,
     );
   }
 
@@ -140,8 +189,8 @@ class ResponsiveLayoutWrapper extends StatelessWidget {
         ),
       ),
       child: BottomNavigationBar(
-        currentIndex: config.currentIndex,
-        onTap: config.onNavIndexChanged,
+        currentIndex: widget.config.currentIndex,
+        onTap: widget.config.onNavIndexChanged,
         type: BottomNavigationBarType.fixed,
         backgroundColor: AppColors.background,
         selectedItemColor: AppColors.primary,
@@ -150,7 +199,7 @@ class ResponsiveLayoutWrapper extends StatelessWidget {
         unselectedFontSize: 12,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
         elevation: 0,
-        items: config.navItems
+        items: widget.config.navItems
             .map(
               (item) => BottomNavigationBarItem(
                 icon: Icon(item.icon),
@@ -158,6 +207,38 @@ class ResponsiveLayoutWrapper extends StatelessWidget {
               ),
             )
             .toList(),
+      ),
+    );
+  }
+}
+
+/// Desktop content wrapper that provides proper spacing and max-width
+class DesktopContentWrapper extends StatelessWidget {
+  final Widget child;
+  final double maxWidth;
+  final EdgeInsets padding;
+
+  const DesktopContentWrapper({
+    super.key,
+    required this.child,
+    this.maxWidth = 1400,
+    this.padding = const EdgeInsets.all(AppSpacing.lg),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.backgroundSecondary,
+      child: SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Padding(
+              padding: padding,
+              child: child,
+            ),
+          ),
+        ),
       ),
     );
   }

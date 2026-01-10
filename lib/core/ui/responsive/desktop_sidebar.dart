@@ -7,13 +7,20 @@ class SidebarNavItem {
   final IconData icon;
   final VoidCallback onTap;
   final bool isActive;
+  final List<SidebarNavItem>? subItems;
+  final bool isSubItem;
 
   const SidebarNavItem({
     required this.label,
     required this.icon,
     required this.onTap,
     this.isActive = false,
+    this.subItems,
+    this.isSubItem = false,
   });
+
+  /// Check if this item has sub-items
+  bool get hasSubItems => subItems != null && subItems!.isNotEmpty;
 }
 
 /// Desktop sidebar navigation component (shadcn-inspired)
@@ -31,84 +38,108 @@ class DesktopSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 260,
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(
-          right: BorderSide(
-            color: AppColors.border,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header section
-          if (header != null) header!,
-
-          // Navigation items
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              children: [
-                for (final item in navItems) _buildNavItem(item),
-              ],
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          border: Border(
+            right: BorderSide(
+              color: AppColors.border,
+              width: 1,
             ),
           ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header section
+            if (header != null) header!,
 
-          // Footer section
-          if (footer != null) footer!,
-        ],
+            // Navigation items
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.md,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: navItems.map(_buildNavItem).toList(),
+                ),
+              ),
+            ),
+
+            // Footer section
+            if (footer != null) footer!,
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNavItem(SidebarNavItem item) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Material(
-        color: item.isActive ? AppColors.secondary : Colors.transparent,
-        borderRadius: AppRadius.circularMd,
-        child: InkWell(
-          onTap: item.onTap,
-          borderRadius: AppRadius.circularMd,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm + 2,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  item.icon,
-                  size: 20,
-                  color: item.isActive
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Main nav item
+        Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: item.isActive && !item.hasSubItems
+                ? AppColors.secondary
+                : Colors.transparent,
+            borderRadius: AppRadius.circularMd,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: item.onTap,
+              borderRadius: AppRadius.circularMd,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: item.isSubItem ? AppSpacing.xl : AppSpacing.md,
+                  right: AppSpacing.md,
+                  top: AppSpacing.sm + 2,
+                  bottom: AppSpacing.sm + 2,
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    style: AppTextStyles.bodyMedium.copyWith(
+                child: Row(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Icon(
+                      item.icon,
+                      size: item.isSubItem ? 18 : 20,
                       color: item.isActive
                           ? AppColors.textPrimary
                           : AppColors.textSecondary,
-                      fontWeight:
-                          item.isActive ? FontWeight.w500 : FontWeight.w400,
                     ),
-                  ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        item.label,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontSize: item.isSubItem ? 13 : 14,
+                          color: item.isActive
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary,
+                          fontWeight: item.isActive
+                              ? FontWeight.w500
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
+        // Sub-items
+        if (item.hasSubItems)
+          ...item.subItems!.map((subItem) => _buildNavItem(subItem)),
+      ],
     );
   }
 }

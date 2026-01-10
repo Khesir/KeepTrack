@@ -12,6 +12,9 @@ import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart'
 import '../../../../modules/debt/domain/entities/debt.dart';
 import '../../../state/debt_controller.dart';
 
+import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
+
 /// Debts Tab - Tracks Lending (money lent out) and Borrowing (money owed)
 class DebtsTabNew extends StatefulWidget {
   const DebtsTabNew({super.key});
@@ -68,8 +71,11 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 decoration: InputDecoration(
                   labelText: 'Amount',
                   prefixText: currencyFormatter.currencySymbol,
-                  hintText: 'Remaining: ${currencyFormatter.currencySymbol}${debt.remainingAmount.toStringAsFixed(2)}',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  hintText:
+                      'Remaining: ${currencyFormatter.currencySymbol}${debt.remainingAmount.toStringAsFixed(2)}',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
               ),
@@ -83,12 +89,18 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                     value: selectedAccountId,
                     decoration: InputDecoration(
                       labelText: 'Account',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    items: accounts.map((account) => DropdownMenuItem(
-                      value: account.id,
-                      child: Text(account.name),
-                    )).toList(),
+                    items: accounts
+                        .map(
+                          (account) => DropdownMenuItem(
+                            value: account.id,
+                            child: Text(account.name),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) => selectedAccountId = value,
                   );
                 },
@@ -107,12 +119,18 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                     value: selectedCategoryId,
                     decoration: InputDecoration(
                       labelText: 'Category',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    items: filteredCategories.map((category) => DropdownMenuItem(
-                      value: category.id,
-                      child: Text(category.name),
-                    )).toList(),
+                    items: filteredCategories
+                        .map(
+                          (category) => DropdownMenuItem(
+                            value: category.id,
+                            child: Text(category.name),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) => selectedCategoryId = value,
                   );
                 },
@@ -210,172 +228,226 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AsyncStreamBuilder<List<Debt>>(
-        state: _controller,
-        builder: (context, debts) {
-          // Calculate totals
-          final totalLending = debts
-              .where((d) => d.type == DebtType.lending)
-              .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return Scaffold(
+          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          body: AsyncStreamBuilder<List<Debt>>(
+            state: _controller,
+            builder: (context, debts) {
+              // Calculate totals
+              final totalLending = debts
+                  .where((d) => d.type == DebtType.lending)
+                  .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
 
-          final totalBorrowing = debts
-              .where((d) => d.type == DebtType.borrowing)
-              .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
+              final totalBorrowing = debts
+                  .where((d) => d.type == DebtType.borrowing)
+                  .fold<double>(0, (sum, debt) => sum + debt.remainingAmount);
 
-          // Filter debts
-          final filteredDebts = _selectedFilter == 'All'
-              ? debts
-              : debts.where((d) {
-                  switch (_selectedFilter) {
-                    case 'Lending':
-                      return d.type == DebtType.lending;
-                    case 'Borrowing':
-                      return d.type == DebtType.borrowing;
+              // Filter debts
+              final filteredDebts = _selectedFilter == 'All'
+                  ? debts
+                  : debts.where((d) {
+                      switch (_selectedFilter) {
+                        case 'Lending':
+                          return d.type == DebtType.lending;
+                        case 'Borrowing':
+                          return d.type == DebtType.borrowing;
+                        default:
+                          return true;
+                      }
+                    }).toList();
+
+              // Sort debts by status
+              filteredDebts.sort((a, b) {
+                int getStatusPriority(DebtStatus status) {
+                  switch (status) {
+                    case DebtStatus.overdue:
+                      return 0;
+                    case DebtStatus.active:
+                      return 1;
+                    case DebtStatus.settled:
+                      return 2;
                     default:
-                      return true;
+                      return 3;
                   }
-                }).toList();
+                }
 
-          // Sort debts by status: overdue, active, settled, then rest
-          filteredDebts.sort((a, b) {
-            int getStatusPriority(DebtStatus status) {
-              switch (status) {
-                case DebtStatus.overdue:
-                  return 0; // Highest priority
-                case DebtStatus.active:
-                  return 1;
-                case DebtStatus.settled:
-                  return 2;
-                default:
-                  return 3; // Lowest priority
-              }
-            }
-            return getStatusPriority(a.status).compareTo(getStatusPriority(b.status));
-          });
+                return getStatusPriority(
+                  a.status,
+                ).compareTo(getStatusPriority(b.status));
+              });
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Summary Cards Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Lending',
-                        totalLending,
-                        Colors.green,
-                        Icons.arrow_upward,
-                        'Money you lent',
-                      ),
+              return SingleChildScrollView(
+                padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 1400 : double.infinity,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Borrowing',
-                        totalBorrowing,
-                        Colors.red,
-                        Icons.arrow_downward,
-                        'Money you owe',
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        if (isDesktop)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Debts & Lending', style: AppTextStyles.h1),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/debts-management',
+                                  );
+                                },
+                                icon: const Icon(Icons.add, size: 20),
+                                label: const Text('Manage Debts'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (isDesktop) SizedBox(height: AppSpacing.xl),
+
+                        // Summary Cards Row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildSummaryCard(
+                                'Lending',
+                                totalLending,
+                                Colors.green,
+                                Icons.arrow_upward,
+                                'Money you lent',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildSummaryCard(
+                                'Borrowing',
+                                totalBorrowing,
+                                Colors.red,
+                                Icons.arrow_downward,
+                                'Money you owe',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Net Balance Card
+                        _buildNetBalanceCard(totalLending - totalBorrowing),
+                        const SizedBox(height: 24),
+
+                        // Filter Chips
+                        Wrap(
+                          spacing: 2,
+                          runSpacing: 2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _buildFilterChip('All'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('Lending'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('Borrowing'),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${filteredDebts.length} ${filteredDebts.length == 1 ? 'debt' : 'debts'}',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Debts List - Grid on Desktop
+                        if (filteredDebts.isEmpty)
+                          _buildEmptyState()
+                        else if (isDesktop)
+                          ResponsiveGrid(
+                            spacing: AppSpacing.lg,
+                            desktopChildAspectRatio: 1.5,
+                            children: filteredDebts
+                                .map((debt) => _buildDebtCard(debt))
+                                .toList(),
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredDebts.length,
+                            itemBuilder: (context, index) {
+                              final debt = filteredDebts[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildDebtCard(debt),
+                              );
+                            },
+                          ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-
-                // Net Balance Card
-                _buildNetBalanceCard(totalLending - totalBorrowing),
-                const SizedBox(height: 24),
-
-                // Filter Chips
-                Row(
+              );
+            },
+            loadingBuilder: (_) => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            errorBuilder: (context, message) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildFilterChip('All'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Lending'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Borrowing'),
-                    const Spacer(),
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                    const SizedBox(height: 16),
                     Text(
-                      '${filteredDebts.length} ${filteredDebts.length == 1 ? 'debt' : 'debts'}',
+                      'Error loading debts',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _controller.loadDebts(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                // Debts List
-                if (filteredDebts.isEmpty)
-                  _buildEmptyState()
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: filteredDebts.length,
-                    itemBuilder: (context, index) {
-                      final debt = filteredDebts[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildDebtCard(debt),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          );
-        },
-        loadingBuilder: (_) => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: CircularProgressIndicator(),
-          ),
-        ),
-        errorBuilder: (context, message) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading debts',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _controller.loadDebts(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, '/debts-management');
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Manage Debts'),
-      ),
+          floatingActionButton: isDesktop
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/debts-management');
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Manage Debts'),
+                ),
+        );
+      },
     );
   }
 
@@ -573,53 +645,56 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
       child: InkWell(
         onTap: () {
           // Navigate to debt detail
-          // context.push('/finance/debts/${debt.id}');
         },
         child: Container(
           decoration: BoxDecoration(
             border: Border(left: BorderSide(color: color, width: 4)),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
+                // Header - Compact
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         isLending ? Icons.call_made : Icons.call_received,
                         color: color,
-                        size: 24,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             debt.personName,
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             debt.description,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 11,
                               color: Theme.of(
                                 context,
                               ).colorScheme.onSurface.withOpacity(0.6),
                             ),
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -627,17 +702,17 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(debt.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         debt.status.displayName,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: _getStatusColor(debt.status),
                         ),
@@ -645,81 +720,88 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // Amount Info
+                // Amount Info - Compact
                 Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             'Remaining',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               color: Theme.of(
                                 context,
                               ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             NumberFormat.currency(
                               symbol: currencyFormatter.currencySymbol,
-                              decimalDigits: 2,
+                              decimalDigits: 0,
                             ).format(debt.remainingAmount),
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: color,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'Original',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           NumberFormat.currency(
                             symbol: currencyFormatter.currencySymbol,
-                            decimalDigits: 2,
+                            decimalDigits: 0,
                           ).format(debt.originalAmount),
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withOpacity(0.7),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // Progress Bar
+                // Progress Bar - Compact
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Repayment Progress',
+                          'Progress',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withOpacity(0.6),
@@ -728,14 +810,14 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                         Text(
                           '${(progress * 100).toStringAsFixed(0)}%',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: color,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
@@ -747,68 +829,55 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
-                // Details Row
+                // Compact Date Info
                 Row(
                   children: [
                     Icon(
                       Icons.calendar_today,
-                      size: 14,
+                      size: 12,
                       color: Theme.of(
                         context,
                       ).colorScheme.onSurface.withOpacity(0.5),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Started: ${DateFormat('MMM d, yyyy').format(debt.startDate)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                    ),
-                    if (debt.dueDate != null) ...[
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.event,
-                        size: 14,
-                        color: _getDueDateColor(debt.dueDate!, debt.isOverdue),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Due: ${DateFormat('MMM d, yyyy').format(debt.dueDate!)}',
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        debt.dueDate != null
+                            ? 'Due: ${DateFormat('MMM d, yyyy').format(debt.dueDate!)}'
+                            : 'Started: ${DateFormat('MMM d, yyyy').format(debt.startDate)}',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: _getDueDateColor(
-                            debt.dueDate!,
-                            debt.isOverdue,
-                          ),
+                          fontSize: 11,
+                          color: debt.isOverdue
+                              ? Colors.red
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.5),
                           fontWeight: debt.isOverdue
                               ? FontWeight.bold
                               : FontWeight.normal,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () => _showRecordPaymentDialog(debt),
-                  icon: Icon(Icons.add, size: 18, color: color),
-                  label: Text(
-                    'Record Payment',
-                    style: TextStyle(color: color),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: color),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+
+                const SizedBox(height: 12),
+
+                // Action Button - Compact
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showRecordPaymentDialog(debt),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Record', style: TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      side: BorderSide(color: color),
+                      foregroundColor: color,
                     ),
                   ),
                 ),

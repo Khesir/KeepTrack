@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
@@ -46,109 +48,75 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Admin Panel (only visible for admin users)
-            const AdminPanelWidget(),
-
-            // Welcome Section
-            _buildWelcomeSection(),
-            const SizedBox(height: 24),
-
-            // Finance Snapshot
-            _buildFinanceSnapshot(),
-            const SizedBox(height: 24),
-
-            // Quick Actions
-            _buildQuickActions(context),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.transactionCreate);
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Transaction'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  Widget _buildWelcomeSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue[700]!, Colors.blue[500]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(_getGreetingIcon(), color: Colors.white, size: 28),
-              const SizedBox(width: 12),
-              Expanded(
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return Scaffold(
+          backgroundColor: isDesktop
+              ? AppColors.backgroundSecondary
+              : Colors.transparent,
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : AppSpacing.lg),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 1400 : double.infinity,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _getGreeting(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Welcome back!',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
+                    // Admin Panel (only visible for admin users)
+                    const AdminPanelWidget(),
+
+                    // Welcome Section
+                    _buildWelcomeSection(isDesktop),
+                    SizedBox(height: isDesktop ? AppSpacing.xl : AppSpacing.lg),
+
+                    // Desktop: Two-column layout, Mobile: Single column
+                    if (isDesktop)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Left Column - Finance Snapshot
+                          Expanded(
+                            flex: 2,
+                            child: _buildFinanceSnapshot(isDesktop),
+                          ),
+                          const SizedBox(width: AppSpacing.xl),
+                          // Right Column - Quick Actions
+                          Expanded(
+                            flex: 1,
+                            child: _buildQuickActions(context, isDesktop),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      // Mobile: Stack vertically
+                      _buildFinanceSnapshot(isDesktop),
+                      SizedBox(height: AppSpacing.xl),
+                      _buildQuickActions(context, isDesktop),
+                    ],
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Add extra bottom padding to account for FAB
+                    if (!isDesktop) const SizedBox(height: 80),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.today, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  DateTime.now().toString().split(' ')[0],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
+          ),
+          floatingActionButton: isDesktop
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.pushNamed(context, AppRoutes.transactionCreate);
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Transaction'),
+                  backgroundColor: Colors.green,
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -159,7 +127,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     return Icons.nightlight_round;
   }
 
-  Widget _buildFinanceSnapshot() {
+  Widget _buildFinanceSnapshot(bool isDesktop) {
     return AsyncStreamBuilder<List<Account>>(
       state: _accountController,
       loadingBuilder: (_) => Card(
@@ -492,6 +460,8 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     }
   }
 
+  @Deprecated("Unused function")
+  // ignore: unused_element
   Widget _buildLegendItem(Color color, String label) {
     return Builder(
       builder: (context) => Row(
@@ -515,7 +485,83 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildWelcomeSection(bool isDesktop) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [const Color(0xFF6366F1), const Color(0xFF818CF8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(_getGreetingIcon(), color: Colors.white, size: 28),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _getGreeting(),
+                        style: TextStyle(
+                          fontSize: isDesktop ? 28 : 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      const Text(
+                        'Welcome back!',
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.today, color: Colors.white, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, bool isDesktop) {
     final actions = [
       (
         'Add Transaction',
@@ -546,18 +592,21 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Quick Actions',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: isDesktop ? 20 : 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
+          crossAxisCount: isDesktop ? 1 : 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.5,
+          childAspectRatio: isDesktop ? 2.5 : 1.5,
           children: actions
               .map(
                 (action) => _buildQuickActionButton(
@@ -565,6 +614,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                   icon: action.$2,
                   color: action.$3,
                   onTap: action.$4,
+                  isDesktop: isDesktop,
                 ),
               )
               .toList(),
@@ -578,6 +628,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    required bool isDesktop,
   }) {
     return Card(
       elevation: 0,
@@ -591,28 +642,56 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withOpacity(0.2)),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
+          child: isDesktop
+              ? Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: color, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.grey[400],
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: color, size: 28),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
         ),
       ),
     );

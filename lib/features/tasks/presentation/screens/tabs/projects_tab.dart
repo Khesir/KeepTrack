@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/presentation/screens/project_details_screen.dart';
@@ -57,119 +59,179 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Project>>(
-      state: _controller,
-      builder: (context, projects) {
-        final filteredProjects = _filterProjects(projects);
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return AsyncStreamBuilder<List<Project>>(
+          state: _controller,
+          builder: (context, projects) {
+            final filteredProjects = _filterProjects(projects);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Projects',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+            return Scaffold(
+              backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+              body: SingleChildScrollView(
+                padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 1400 : double.infinity,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Projects',
+                              style: isDesktop
+                                  ? AppTextStyles.h1
+                                  : Theme.of(context).textTheme.headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            if (isDesktop)
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.projectManagement,
+                                  );
+                                },
+                                icon: const Icon(Icons.add, size: 20),
+                                label: const Text('Manage Projects'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              )
+                            else
+                              Text(
+                                '${filteredProjects.length} project${filteredProjects.length != 1 ? 's' : ''}',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                          ],
+                        ),
+                        SizedBox(height: isDesktop ? AppSpacing.xl : 12),
+
+                        // Status Filters
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildFilterChip('All', ProjectStatusFilter.all),
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                'Active',
+                                ProjectStatusFilter.active,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                'Postponed',
+                                ProjectStatusFilter.postponed,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildFilterChip(
+                                'Closed',
+                                ProjectStatusFilter.closed,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Empty State or Projects Grid
+                        if (filteredProjects.isEmpty)
+                          _buildEmptyState()
+                        else if (isDesktop)
+                          ResponsiveGrid(
+                            spacing: AppSpacing.lg,
+                            desktopChildAspectRatio: 0.85,
+                            children: filteredProjects
+                                .map((project) => _buildProjectCard(project))
+                                .toList(),
+                          )
+                        else
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 0.85,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                ),
+                            itemCount: filteredProjects.length,
+                            itemBuilder: (context, index) {
+                              final project = filteredProjects[index];
+                              return _buildProjectCard(project);
+                            },
+                          ),
+                      ],
                     ),
                   ),
+                ),
+              ),
+              floatingActionButton: isDesktop
+                  ? null
+                  : FloatingActionButton.extended(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.projectManagement,
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Manage Projects'),
+                    ),
+            );
+          },
+          loadingBuilder: (_) => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          errorBuilder: (context, message) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                  const SizedBox(height: 16),
                   Text(
-                    '${filteredProjects.length} project${filteredProjects.length != 1 ? 's' : ''}',
+                    'Error loading projects',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Theme.of(
                         context,
                       ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _controller.loadProjects(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Status Filters
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildFilterChip('All', ProjectStatusFilter.all),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Active', ProjectStatusFilter.active),
-                    const SizedBox(width: 8),
-                    _buildFilterChip(
-                      'Postponed',
-                      ProjectStatusFilter.postponed,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Closed', ProjectStatusFilter.closed),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Empty State or Projects Grid
-              if (filteredProjects.isEmpty)
-                _buildEmptyState()
-              else
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.85,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  itemCount: filteredProjects.length,
-                  itemBuilder: (context, index) {
-                    final project = filteredProjects[index];
-                    return _buildProjectCard(project);
-                  },
-                ),
-            ],
+            ),
           ),
         );
       },
-      loadingBuilder: (_) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
-        ),
-      ),
-      errorBuilder: (context, message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading projects',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => _controller.loadProjects(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

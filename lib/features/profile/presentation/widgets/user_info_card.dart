@@ -34,8 +34,9 @@ class _UserInfoCardState extends State<UserInfoCard> {
               CircleAvatar(
                 radius: 35,
                 backgroundImage: NetworkImage(user!.photoUrl!),
-                backgroundColor:
-                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withOpacity(0.1),
               )
             else
               Container(
@@ -52,11 +53,7 @@ class _UserInfoCardState extends State<UserInfoCard> {
                   ),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.person,
-                  size: 40,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.person, size: 40, color: Colors.white),
               ),
             const SizedBox(width: 16),
 
@@ -77,7 +74,9 @@ class _UserInfoCardState extends State<UserInfoCard> {
                     user?.email ?? 'No email',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -113,7 +112,7 @@ class _UserInfoCardState extends State<UserInfoCard> {
                         ),
                       ),
                       if (user?.isAdmin ?? false) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -121,7 +120,10 @@ class _UserInfoCardState extends State<UserInfoCard> {
                           ),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.deepPurple[400]!, Colors.deepPurple[600]!],
+                              colors: [
+                                Colors.deepPurple[400]!,
+                                Colors.deepPurple[600]!,
+                              ],
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),

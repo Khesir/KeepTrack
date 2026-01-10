@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
@@ -10,6 +11,9 @@ import 'package:keep_track/features/tasks/presentation/state/task_controller.dar
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 
 import '../module_selection/task_module_screen.dart';
+
+import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 
 /// Task-focused Home Screen for Task Management Module
 class TaskHomeScreen extends ScopedScreen {
@@ -53,54 +57,125 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWelcomeSection(),
-            const SizedBox(height: 24),
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return Scaffold(
+          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 1400 : double.infinity,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header on Desktop
+                    if (isDesktop)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Task Dashboard', style: AppTextStyles.h1),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.taskCreate,
+                              );
+                            },
+                            icon: const Icon(Icons.add, size: 20),
+                            label: const Text('Add Task'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (isDesktop) SizedBox(height: AppSpacing.xl),
 
-            // Task Snapshot
-            _buildTaskSnapshot(),
-            const SizedBox(height: 24),
+                    // Welcome Section
+                    _buildWelcomeSection(isDesktop),
+                    SizedBox(height: isDesktop ? AppSpacing.xl : 24),
 
-            // Current Tasks List
-            _buildCurrentTasks(),
-            const SizedBox(height: 24),
+                    // Desktop: Two-column layout
+                    if (isDesktop)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Left Column - Task Snapshot & Current Tasks
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                _buildTaskSnapshot(),
+                                const SizedBox(height: AppSpacing.xl),
+                                _buildCurrentTasks(),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xl),
+                          // Right Column - Projects & Quick Actions
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              children: [
+                                _buildProjectOverview(),
+                                const SizedBox(height: AppSpacing.xl),
+                                _buildQuickActions(context, isDesktop),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      // Mobile: Stack vertically
+                      _buildTaskSnapshot(),
+                      const SizedBox(height: 24),
+                      _buildCurrentTasks(),
+                      const SizedBox(height: 24),
+                      _buildProjectOverview(),
+                      const SizedBox(height: 24),
+                      _buildQuickActions(context, isDesktop),
+                    ],
 
-            // Project Overview
-            _buildProjectOverview(),
-            const SizedBox(height: 24),
-
-            // Quick Actions
-            _buildQuickActions(context),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.taskCreate);
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Task'),
-        backgroundColor: Colors.blue,
-      ),
+                    const SizedBox(height: 24),
+                    // Extra bottom padding for mobile FAB
+                    if (!isDesktop) const SizedBox(height: 80),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          floatingActionButton: isDesktop
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.pushNamed(context, AppRoutes.taskCreate);
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Task'),
+                  backgroundColor: Colors.blue,
+                ),
+        );
+      },
     );
   }
 
-  Widget _buildWelcomeSection() {
+  Widget _buildWelcomeSection(bool isDesktop) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isDesktop ? 24 : 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.blue[700]!, Colors.blue[500]!],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.blue.withOpacity(0.3),
@@ -114,7 +189,11 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
         children: [
           Row(
             children: [
-              Icon(_getGreetingIcon(), color: Colors.white, size: 28),
+              Icon(
+                _getGreetingIcon(),
+                color: Colors.white,
+                size: isDesktop ? 32 : 28,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -122,9 +201,9 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                   children: [
                     Text(
                       _getGreeting(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 24,
+                        fontSize: isDesktop ? 28 : 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -145,11 +224,12 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.today, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  DateTime.now().toString().split(' ')[0],
+                  DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
@@ -159,6 +239,115 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, bool isDesktop) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: TextStyle(
+            fontSize: isDesktop ? 20 : 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: isDesktop ? 16 : 12),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: isDesktop ? 1 : 2,
+          childAspectRatio: isDesktop ? 3 : 1.2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          children: [
+            _buildActionCard(
+              'New Task',
+              Icons.add_task,
+              Colors.blue,
+              () => Navigator.pushNamed(context, AppRoutes.taskCreate),
+              isDesktop,
+            ),
+            _buildActionCard('View Projects', Icons.folder, Colors.purple, () {
+              TaskModuleInherited.of(context)?.changeTab(2);
+            }, isDesktop),
+            _buildActionCard(
+              'Manage Tasks',
+              Icons.settings,
+              Colors.orange,
+              () => Navigator.pushNamed(context, AppRoutes.taskManagement),
+              isDesktop,
+            ),
+            _buildActionCard(
+              'Manage Projects',
+              Icons.folder_open,
+              Colors.teal,
+              () => Navigator.pushNamed(context, AppRoutes.projectManagement),
+              isDesktop,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+    bool isDesktop,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: isDesktop
+            ? Row(
+                children: [
+                  Icon(icon, color: color, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey[400],
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: color, size: 32),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -297,99 +486,6 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
           const SizedBox(height: 4),
           Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'New Task',
-                Icons.add_task,
-                Colors.blue,
-                () => Navigator.pushNamed(context, AppRoutes.taskCreate),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                'View Projects',
-                Icons.folder,
-                Colors.purple,
-                () {
-                  TaskModuleInherited.of(context)?.changeTab(2);
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Manage Tasks',
-                Icons.settings,
-                Colors.orange,
-                () => Navigator.pushNamed(context, AppRoutes.taskManagement),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                'Manage Projects',
-                Icons.folder_open,
-                Colors.teal,
-                () => Navigator.pushNamed(context, AppRoutes.projectManagement),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

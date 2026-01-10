@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
@@ -78,48 +80,97 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Task>>(
-      state: _controller,
-      builder: (context, tasks) {
-        final filteredTasks = _filterTasks(tasks);
-        final sortedTasks = _sortTasksByPriority(filteredTasks);
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return AsyncStreamBuilder<List<Task>>(
+          state: _controller,
+          builder: (context, tasks) {
+            final filteredTasks = _filterTasks(tasks);
+            final sortedTasks = _sortTasksByPriority(filteredTasks);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Summary Card
-              _buildSummaryCard(tasks),
-              const SizedBox(height: 16),
+            return Scaffold(
+              backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+              body: SingleChildScrollView(
+                padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 1400 : double.infinity,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header on Desktop
+                        if (isDesktop)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Tasks', style: AppTextStyles.h1),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.taskCreate,
+                                  );
+                                },
+                                icon: const Icon(Icons.add, size: 20),
+                                label: const Text('New Task'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (isDesktop) SizedBox(height: AppSpacing.xl),
 
-              // View Mode Selector
-              _buildViewModeSelector(),
-              const SizedBox(height: 12),
+                        // Summary Card
+                        _buildSummaryCard(tasks),
+                        const SizedBox(height: 16),
 
-              // Horizontal Date Picker
-              _buildDatePicker(),
-              const SizedBox(height: 16),
+                        // View Mode Selector
+                        _buildViewModeSelector(),
+                        const SizedBox(height: 12),
 
-              // Filters Row
-              _buildFiltersSection(),
-              const SizedBox(height: 16),
+                        // Horizontal Date Picker
+                        _buildDatePicker(),
+                        const SizedBox(height: 16),
 
-              // Task List
-              if (sortedTasks.isEmpty)
-                _buildEmptyState()
-              else
-                _buildTaskList(sortedTasks, tasks),
-            ],
+                        // Filters Row
+                        _buildFiltersSection(),
+                        const SizedBox(height: 16),
+
+                        // Task List
+                        if (sortedTasks.isEmpty)
+                          _buildEmptyState()
+                        else
+                          _buildTaskList(sortedTasks, tasks),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              floatingActionButton: isDesktop
+                  ? null
+                  : FloatingActionButton.extended(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.taskCreate);
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('New Task'),
+                    ),
+            );
+          },
+          loadingBuilder: (_) => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(),
+            ),
           ),
         );
       },
-      loadingBuilder: (_) => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
-        ),
-      ),
     );
   }
 

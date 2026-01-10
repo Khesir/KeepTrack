@@ -10,16 +10,16 @@ import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dar
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 
+import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
+
 enum ProjectTaskFilter { all, todo, inProgress, completed, cancelled }
 
 /// Project Details Screen - Shows project info, metadata, and tasks
 class ProjectDetailsScreen extends ScopedScreen {
   final Project project;
 
-  const ProjectDetailsScreen({
-    super.key,
-    required this.project,
-  });
+  const ProjectDetailsScreen({super.key, required this.project});
 
   @override
   State<ProjectDetailsScreen> createState() => _ProjectDetailsScreenState();
@@ -41,10 +41,7 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
 
   @override
   void onReady() {
-    configureLayout(
-      title: widget.project.name,
-      showBottomNav: false,
-    );
+    configureLayout(title: widget.project.name, showBottomNav: false);
     _taskController.loadTasks();
     _projectController.loadProjects();
   }
@@ -64,9 +61,11 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
   // Get all tasks that belong to this project, including all subtasks recursively
   List<Task> _getAllProjectTasks(List<Task> allTasks) {
     // Get direct project tasks (tasks with projectId set)
-    final directProjectTasks = allTasks.where((task) =>
-      task.projectId == widget.project.id && !task.isArchived
-    ).toList();
+    final directProjectTasks = allTasks
+        .where(
+          (task) => task.projectId == widget.project.id && !task.isArchived,
+        )
+        .toList();
 
     // Recursively collect all subtasks
     final Set<String> projectTaskIds = {};
@@ -78,7 +77,9 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
         allProjectTasks.add(task);
 
         // Find and add all subtasks
-        final subtasks = allTasks.where((t) => t.parentTaskId == task.id).toList();
+        final subtasks = allTasks
+            .where((t) => t.parentTaskId == task.id)
+            .toList();
         for (final subtask in subtasks) {
           collectTasksRecursively(subtask);
         }
@@ -129,8 +130,9 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
         TaskPriority.low: 3,
       };
 
-      final priorityCompare = priorityOrder[a.priority]!
-          .compareTo(priorityOrder[b.priority]!);
+      final priorityCompare = priorityOrder[a.priority]!.compareTo(
+        priorityOrder[b.priority]!,
+      );
       if (priorityCompare != 0) return priorityCompare;
 
       if (a.dueDate != null && b.dueDate != null) {
@@ -173,98 +175,157 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Project>>(
-      state: _projectController,
-      builder: (context, projects) {
-        // Find the current project from the stream by ID
-        final currentProject = projects.firstWhere(
-          (p) => p.id == widget.project.id,
-          orElse: () => widget.project, // Fallback to original if not found
-        );
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return AsyncStreamBuilder<List<Project>>(
+          state: _projectController,
+          builder: (context, projects) {
+            final currentProject = projects.firstWhere(
+              (p) => p.id == widget.project.id,
+              orElse: () => widget.project,
+            );
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(currentProject.name),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
+            return Scaffold(
+              backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+              appBar: AppBar(
+                title: Text(currentProject.name),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                actions: isDesktop
+                    ? [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.taskCreate,
+                              );
+                            },
+                            icon: const Icon(Icons.add, size: 20),
+                            label: const Text('Add Task'),
+                          ),
+                        ),
+                      ]
+                    : null,
+              ),
+              body: SingleChildScrollView(
+                padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 1400 : double.infinity,
+                    ),
+                    child: isDesktop
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left Column - Project Info
+                              Expanded(
+                                flex: 1,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildProjectHeader(
+                                      currentProject,
+                                      isDesktop,
+                                    ),
+                                    const SizedBox(height: AppSpacing.xl),
+                                    _buildMetadataSection(currentProject),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xl),
+                              // Right Column - Tasks
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildTaskFilters(),
+                                    const SizedBox(height: 16),
+                                    _buildTasksList(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildProjectHeader(currentProject, isDesktop),
+                              const SizedBox(height: 16),
+                              _buildMetadataSection(currentProject),
+                              const SizedBox(height: 24),
+                              _buildTaskFilters(),
+                              const SizedBox(height: 16),
+                              _buildTasksList(),
+                              // Extra padding for FAB on mobile
+                              const SizedBox(height: 80),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              floatingActionButton: isDesktop
+                  ? null
+                  : FloatingActionButton.extended(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.taskCreate);
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Task'),
+                    ),
+            );
+          },
+          loadingBuilder: (_) =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+          errorBuilder: (context, message) => Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error loading project: $message'),
+                ],
+              ),
             ),
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Project Header
-                _buildProjectHeader(currentProject),
-                const SizedBox(height: 16),
-
-                // Project Metadata
-                _buildMetadataSection(currentProject),
-                const SizedBox(height: 24),
-
-                // Task Filters
-                _buildTaskFilters(),
-                const SizedBox(height: 16),
-
-                // Tasks List
-                _buildTasksList(),
-              ],
-            ),
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              // TODO: Navigate to create task with this project pre-selected
-              Navigator.pushNamed(context, AppRoutes.taskCreate);
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Add Task'),
           ),
         );
       },
-      loadingBuilder: (_) => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      errorBuilder: (context, message) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Error loading project: $message'),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _buildProjectHeader(Project project) {
+  Widget _buildProjectHeader(Project project, bool isDesktop) {
     final statusColor = project.status == ProjectStatus.active
         ? Colors.green
         : project.status == ProjectStatus.postponed
-            ? Colors.orange
-            : Colors.grey;
+        ? Colors.orange
+        : Colors.grey;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isDesktop ? 24 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
             project.color != null
-                ? Color(int.parse(project.color!.replaceFirst('#', '0xff')))
-                    .withOpacity(0.7)
+                ? Color(
+                    int.parse(project.color!.replaceFirst('#', '0xff')),
+                  ).withOpacity(0.7)
                 : Colors.blue[700]!,
             project.color != null
-                ? Color(int.parse(project.color!.replaceFirst('#', '0xff')))
-                    .withOpacity(0.5)
+                ? Color(
+                    int.parse(project.color!.replaceFirst('#', '0xff')),
+                  ).withOpacity(0.5)
                 : Colors.blue[500]!,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,15 +335,18 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
               Expanded(
                 child: Text(
                   project.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: isDesktop ? 28 : 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
@@ -317,92 +381,142 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
   Widget _buildMetadataSection(Project project) {
     final hasMetadata = project.metadata.isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Project Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit, size: 20),
-              onPressed: () {
-                _showMetadataEditor(project);
-              },
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
         ),
-        const SizedBox(height: 8),
-        if (hasMetadata)
-          ...project.metadata.entries.map((entry) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Project Information',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit, size: 20),
+                onPressed: () {
+                  _showMetadataEditor(project);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (hasMetadata)
+            ...project.metadata.entries.map((entry) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withOpacity(0.2),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _getMetadataIcon(entry.key),
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          entry.key,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          entry.value,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                child: Row(
+                  children: [
+                    Icon(
+                      _getMetadataIcon(entry.key),
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                  ),
-                  if (_isUrl(entry.value))
-                    IconButton(
-                      icon: const Icon(Icons.open_in_new, size: 18),
-                      onPressed: () {
-                        // TODO: Open URL in browser
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.key,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            entry.value,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                ],
+                    if (_isUrl(entry.value))
+                      IconButton(
+                        icon: const Icon(Icons.open_in_new, size: 18),
+                        onPressed: () {
+                          // TODO: Open URL in browser
+                        },
+                      ),
+                  ],
+                ),
+              );
+            }).toList()
+          else
+            Text(
+              'No additional information. Tap edit to add project links, ERD, documentation, etc.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                fontStyle: FontStyle.italic,
               ),
-            );
-          }).toList()
-        else
-          Text(
-            'No additional information. Tap edit to add project links, ERD, documentation, etc.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              fontStyle: FontStyle.italic,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskFilters() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tasks',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip('All', ProjectTaskFilter.all),
+                const SizedBox(width: 8),
+                _buildFilterChip('To-do', ProjectTaskFilter.todo),
+                const SizedBox(width: 8),
+                _buildFilterChip('In Progress', ProjectTaskFilter.inProgress),
+                const SizedBox(width: 8),
+                _buildFilterChip('Completed', ProjectTaskFilter.completed),
+                const SizedBox(width: 8),
+                _buildFilterChip('Cancelled', ProjectTaskFilter.cancelled),
+              ],
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -453,38 +567,6 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
     }
   }
 
-  Widget _buildTaskFilters() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Tasks',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildFilterChip('All', ProjectTaskFilter.all),
-              const SizedBox(width: 8),
-              _buildFilterChip('To-do', ProjectTaskFilter.todo),
-              const SizedBox(width: 8),
-              _buildFilterChip('In Progress', ProjectTaskFilter.inProgress),
-              const SizedBox(width: 8),
-              _buildFilterChip('Completed', ProjectTaskFilter.completed),
-              const SizedBox(width: 8),
-              _buildFilterChip('Cancelled', ProjectTaskFilter.cancelled),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildFilterChip(String label, ProjectTaskFilter filter) {
     final isSelected = _taskFilter == filter;
     return FilterChip(
@@ -520,14 +602,18 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                   Icon(
                     Icons.task_alt,
                     size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.3),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No tasks found',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -561,24 +647,32 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
         Container(
           margin: EdgeInsets.only(bottom: 8, left: depth * 24.0),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withOpacity(0.3 - (depth * 0.05)),
+            color: Theme.of(
+              context,
+            ).colorScheme.surface.withOpacity(0.3 - (depth * 0.05)),
             borderRadius: BorderRadius.circular(8),
-            border: depth > 0 ? Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-            ) : null,
+            border: depth > 0
+                ? Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withOpacity(0.2),
+                  )
+                : null,
           ),
           child: InkWell(
-            onTap: subtaskCount > 0 ? () {
-              setState(() {
-                if (task.id != null) {
-                  if (isExpanded) {
-                    _expandedTaskIds.remove(task.id);
-                  } else {
-                    _expandedTaskIds.add(task.id!);
+            onTap: subtaskCount > 0
+                ? () {
+                    setState(() {
+                      if (task.id != null) {
+                        if (isExpanded) {
+                          _expandedTaskIds.remove(task.id);
+                        } else {
+                          _expandedTaskIds.add(task.id!);
+                        }
+                      }
+                    });
                   }
-                }
-              });
-            } : null,
+                : null,
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -615,7 +709,9 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                           task.title,
                           style: TextStyle(
                             fontSize: depth > 0 ? 14 : 15,
-                            fontWeight: depth > 0 ? FontWeight.w500 : FontWeight.w600,
+                            fontWeight: depth > 0
+                                ? FontWeight.w500
+                                : FontWeight.w600,
                             decoration: task.isCompleted
                                 ? TextDecoration.lineThrough
                                 : null,
@@ -627,7 +723,8 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                             task.description!,
                             style: TextStyle(
                               fontSize: depth > 0 ? 11 : 12,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(depth > 0 ? 0.5 : 0.6),
+                              color: Theme.of(context).colorScheme.onSurface
+                                  .withOpacity(depth > 0 ? 0.5 : 0.6),
                             ),
                             maxLines: depth > 0 ? 1 : 2,
                             overflow: TextOverflow.ellipsis,
@@ -651,9 +748,13 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                             ),
                             _buildTaskBadge(
                               task.dueDate != null
-                                  ? DateFormat('MMM d, h:mm a').format(task.dueDate!)
+                                  ? DateFormat(
+                                      'MMM d, h:mm a',
+                                    ).format(task.dueDate!)
                                   : 'No date',
-                              task.dueDate != null ? Colors.grey[700]! : Colors.grey[400]!,
+                              task.dueDate != null
+                                  ? Colors.grey[700]!
+                                  : Colors.grey[400]!,
                               Icons.calendar_today,
                             ),
                             if (subtaskCount > 0)
@@ -672,7 +773,9 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                   if (subtaskCount > 0)
                     Icon(
                       isExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                 ],
               ),
@@ -682,7 +785,9 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
 
         // Subtasks (shown when expanded) - RECURSIVE
         if (isExpanded && subtaskCount > 0)
-          ...subtasks.map((subtask) => _buildTaskItem(subtask, allTasks, depth: depth + 1)),
+          ...subtasks.map(
+            (subtask) => _buildTaskItem(subtask, allTasks, depth: depth + 1),
+          ),
       ],
     );
   }
@@ -719,10 +824,7 @@ class _MetadataEditorDialog extends StatefulWidget {
   final Project project;
   final Future<bool> Function(Map<String, String>) onSave;
 
-  const _MetadataEditorDialog({
-    required this.project,
-    required this.onSave,
-  });
+  const _MetadataEditorDialog({required this.project, required this.onSave});
 
   @override
   State<_MetadataEditorDialog> createState() => _MetadataEditorDialogState();
@@ -812,10 +914,7 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
               children: [
                 const Text(
                   'Edit Project Information',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -837,10 +936,7 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
             if (_metadata.isNotEmpty) ...[
               const Text(
                 'Current Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
               Flexible(
@@ -859,10 +955,7 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
             // Add new entry form
             const Text(
               'Add New Information',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             Form(
@@ -871,7 +964,8 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
                 children: [
                   TextFormField(
                     decoration: const InputDecoration(
-                      labelText: 'Label (e.g., Project Link, ERD, Documentation)',
+                      labelText:
+                          'Label (e.g., Project Link, ERD, Documentation)',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.label),
                     ),
@@ -917,7 +1011,9 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: _isSaving ? null : () => Navigator.pop(context, false),
+                  onPressed: _isSaving
+                      ? null
+                      : () => Navigator.pop(context, false),
                   child: const Text('Cancel'),
                 ),
                 const SizedBox(width: 12),
@@ -929,7 +1025,9 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Text('Save Changes'),
@@ -952,16 +1050,9 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
         ),
         title: Text(
           key,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
-        subtitle: Text(
-          value,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+        subtitle: Text(value, maxLines: 2, overflow: TextOverflow.ellipsis),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -9,6 +9,8 @@ import 'package:keep_track/features/finance/modules/finance_category/domain/enti
 import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
+import '../../../../../../core/theme/app_theme.dart';
+import '../../../../../../core/ui/responsive/desktop_aware_screen.dart';
 import '../../../../modules/planned_payment/domain/entities/payment_enums.dart';
 import '../../../../modules/planned_payment/domain/entities/planned_payment.dart';
 import '../../../state/planned_payment_controller.dart';
@@ -64,7 +66,9 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                 decoration: InputDecoration(
                   labelText: 'Amount',
                   prefixText: '₱',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
               ),
@@ -78,12 +82,18 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                     value: selectedAccountId,
                     decoration: InputDecoration(
                       labelText: 'Account',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    items: accounts.map((account) => DropdownMenuItem(
-                      value: account.id,
-                      child: Text(account.name),
-                    )).toList(),
+                    items: accounts
+                        .map(
+                          (account) => DropdownMenuItem(
+                            value: account.id,
+                            child: Text(account.name),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) => selectedAccountId = value,
                   );
                 },
@@ -102,12 +112,18 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                     value: selectedCategoryId,
                     decoration: InputDecoration(
                       labelText: 'Category',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    items: expenseCategories.map((category) => DropdownMenuItem(
-                      value: category.id,
-                      child: Text(category.name),
-                    )).toList(),
+                    items: expenseCategories
+                        .map(
+                          (category) => DropdownMenuItem(
+                            value: category.id,
+                            child: Text(category.name),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) => selectedCategoryId = value,
                   );
                 },
@@ -119,7 +135,11 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.receipt_long, size: 16, color: Theme.of(dialogContext).colorScheme.primary),
+                  Icon(
+                    Icons.receipt_long,
+                    size: 16,
+                    color: Theme.of(dialogContext).colorScheme.primary,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Additional Fees (Optional)',
@@ -136,7 +156,9 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                   labelText: 'Fee Amount',
                   prefixText: '₱',
                   helperText: 'Tax, service charge, etc.',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
               ),
@@ -148,7 +170,9 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                 decoration: InputDecoration(
                   labelText: 'Fee Description',
                   hintText: 'e.g., Tax, Service Charge',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -185,7 +209,8 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
 
               // Parse fee amount
               final fee = double.tryParse(feeController.text) ?? 0.0;
-              final feeDescription = feeDescriptionController.text.trim().isEmpty
+              final feeDescription =
+                  feeDescriptionController.text.trim().isEmpty
                   ? null
                   : feeDescriptionController.text.trim();
 
@@ -282,164 +307,220 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to skip payment: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to skip payment: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AsyncStreamBuilder<List<PlannedPayment>>(
-        state: _controller,
-        builder: (context, payments) {
-          // Calculate monthly total
-          final monthlyTotal = payments
-              .where((p) => p.status == PaymentStatus.active)
-              .fold<double>(0, (sum, payment) => sum + payment.amount);
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return Scaffold(
+          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          body: AsyncStreamBuilder<List<PlannedPayment>>(
+            state: _controller,
+            builder: (context, payments) {
+              // Calculate monthly total
+              final monthlyTotal = payments
+                  .where((p) => p.status == PaymentStatus.active)
+                  .fold<double>(0, (sum, payment) => sum + payment.amount);
 
-          // Get upcoming payments (next 7 days)
-          final upcomingPayments = payments
-              .where((p) => p.isUpcoming && p.status == PaymentStatus.active)
-              .toList();
+              // Get upcoming payments (next 7 days)
+              final upcomingPayments = payments
+                  .where(
+                    (p) => p.isUpcoming && p.status == PaymentStatus.active,
+                  )
+                  .toList();
 
-          // Filter payments
-          final filteredPayments = _getFilteredPayments(
-            payments,
-            upcomingPayments,
-          );
+              // Filter payments
+              final filteredPayments = _getFilteredPayments(
+                payments,
+                upcomingPayments,
+              );
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Summary Cards Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Monthly Total',
-                        monthlyTotal,
-                        Colors.purple,
-                        Icons.calendar_month,
-                        '${payments.where((p) => p.status == PaymentStatus.active).length} active payments',
-                      ),
+              return SingleChildScrollView(
+                padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 1400 : double.infinity,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Upcoming',
-                        upcomingPayments.fold<double>(
-                          0,
-                          (sum, p) => sum + p.amount,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header
+                        if (isDesktop)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Planned Payments', style: AppTextStyles.h1),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/planned-payments-management',
+                                  );
+                                },
+                                icon: const Icon(Icons.add, size: 20),
+                                label: const Text('Manage Payments'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (isDesktop) SizedBox(height: AppSpacing.xl),
+
+                        // Summary Cards Row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildSummaryCard(
+                                'Monthly Total',
+                                monthlyTotal,
+                                Colors.purple,
+                                Icons.calendar_month,
+                                '${payments.where((p) => p.status == PaymentStatus.active).length} active payments',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildSummaryCard(
+                                'Upcoming',
+                                upcomingPayments.fold<double>(
+                                  0,
+                                  (sum, p) => sum + p.amount,
+                                ),
+                                Colors.orange,
+                                Icons.notifications_active,
+                                '${upcomingPayments.length} in next 7 days',
+                              ),
+                            ),
+                          ],
                         ),
-                        Colors.orange,
-                        Icons.notifications_active,
-                        '${upcomingPayments.length} in next 7 days',
-                      ),
+                        const SizedBox(height: 24),
+
+                        // Upcoming Payments Alert
+                        if (upcomingPayments.isNotEmpty) ...[
+                          _buildUpcomingAlert(upcomingPayments),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Filter Chips
+                        Wrap(
+                          spacing: 2,
+                          runSpacing: 2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _buildFilterChip('All'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('Active'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('Upcoming'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('Paused'),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${filteredPayments.length} ${filteredPayments.length == 1 ? 'payment' : 'payments'}',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Payments List - Grid on Desktop
+                        if (filteredPayments.isEmpty)
+                          _buildEmptyState()
+                        else if (isDesktop)
+                          ResponsiveGrid(
+                            spacing: AppSpacing.lg,
+                            desktopChildAspectRatio: 1.4,
+                            children: filteredPayments
+                                .map((payment) => _buildPaymentCard(payment))
+                                .toList(),
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredPayments.length,
+                            itemBuilder: (context, index) {
+                              final payment = filteredPayments[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildPaymentCard(payment),
+                              );
+                            },
+                          ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-
-                // Upcoming Payments Alert
-                if (upcomingPayments.isNotEmpty) ...[
-                  _buildUpcomingAlert(upcomingPayments),
-                  const SizedBox(height: 24),
-                ],
-
-                // Filter Chips
-                Row(
+              );
+            },
+            loadingBuilder: (_) => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            errorBuilder: (context, message) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildFilterChip('All'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Active'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Upcoming'),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Paused'),
-                    const Spacer(),
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                    const SizedBox(height: 16),
                     Text(
-                      '${filteredPayments.length} ${filteredPayments.length == 1 ? 'payment' : 'payments'}',
+                      'Error loading planned payments',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _controller.loadPlannedPayments(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                // Payments List
-                if (filteredPayments.isEmpty)
-                  _buildEmptyState()
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: filteredPayments.length,
-                    itemBuilder: (context, index) {
-                      final payment = filteredPayments[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildPaymentCard(payment),
-                      );
-                    },
-                  ),
-              ],
+              ),
             ),
-          );
-        },
-        loadingBuilder: (_) => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: CircularProgressIndicator(),
           ),
-        ),
-        errorBuilder: (context, message) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                const SizedBox(height: 16),
-                Text(
-                  'Error loading planned payments',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(
+          floatingActionButton: isDesktop
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.pushNamed(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
-                  ),
+                      '/planned-payments-management',
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Manage Payments'),
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _controller.loadPlannedPayments(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, '/planned-payments-management');
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Manage Payments'),
-      ),
+        );
+      },
     );
   }
 
@@ -653,7 +734,6 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
       child: InkWell(
         onTap: () {
           // Navigate to payment detail
-          // context.push('/finance/planned-payments/${payment.id}');
         },
         child: Container(
           decoration: BoxDecoration(
@@ -662,62 +742,68 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
+                // Header - Compact
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: payment.category.color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         payment.category.icon,
                         color: payment.category.color,
-                        size: 24,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             payment.name,
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             payment.payee,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 11,
                               color: Theme.of(
                                 context,
                               ).colorScheme.onSurface.withOpacity(0.6),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(payment.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         payment.status.displayName,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: _getStatusColor(payment.status),
                         ),
@@ -725,58 +811,60 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // Amount and Next Payment
+                // Amount and Next Payment - Compact
                 Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             'Amount',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               color: Theme.of(
                                 context,
                               ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             NumberFormat.currency(
                               symbol: currencyFormatter.currencySymbol,
-                              decimalDigits: 2,
+                              decimalDigits: 0,
                             ).format(payment.amount),
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: payment.category.color,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Next Payment',
+                          'Next',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
-                          DateFormat(
-                            'MMM d, yyyy',
-                          ).format(payment.nextPaymentDate),
+                          DateFormat('MMM d').format(payment.nextPaymentDate),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: isOverdue
                                 ? Colors.red
@@ -789,9 +877,9 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                           Text(
                             isOverdue
                                 ? 'Overdue!'
-                                : 'In ${daysUntilPayment.abs()} ${daysUntilPayment.abs() == 1 ? 'day' : 'days'}',
+                                : '${daysUntilPayment.abs()}d',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               color: isOverdue ? Colors.red : Colors.orange,
                               fontWeight: FontWeight.bold,
                             ),
@@ -800,166 +888,85 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
-                // Frequency and Account
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.repeat, size: 14, color: Colors.blue[700]),
-                          const SizedBox(width: 4),
-                          Text(
-                            payment.frequency.displayName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (payment.accountId != null) ...[
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.account_balance_wallet,
-                        size: 14,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
-                      ),
+                // Frequency Badge - Compact
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.repeat, size: 12, color: Colors.blue[700]),
                       const SizedBox(width: 4),
                       Text(
-                        'Account linked',
+                        payment.frequency.displayName,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-
-                // Last Payment
-                if (payment.lastPaymentDate != null) ...[
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        size: 14,
-                        color: Colors.green[600],
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Last paid: ${DateFormat('MMM d, yyyy').format(payment.lastPaymentDate!)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.5),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[700],
                         ),
                       ),
                     ],
                   ),
-                ],
-                const SizedBox(height: 16),
+                ),
 
-                // Action Buttons Row
-                Row(
+                const SizedBox(height: 12),
+
+                // Action Buttons - Compact & Stacked
+                Column(
                   children: [
-                    Expanded(
+                    SizedBox(
+                      width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: payment.status == PaymentStatus.active
                             ? () => _showRecordPaymentDialog(payment)
-                            : null, // Disabled when not active
-                        icon: Icon(
-                          Icons.add,
-                          size: 18,
-                          color: payment.status == PaymentStatus.active
+                            : null,
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text(
+                          'Record',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          side: BorderSide(
+                            color: payment.status == PaymentStatus.active
+                                ? Colors.blue
+                                : Colors.grey,
+                          ),
+                          foregroundColor:
+                              payment.status == PaymentStatus.active
                               ? Colors.blue
                               : Colors.grey,
                         ),
-                        label: Text(
-                          'Record Payment',
-                          style: TextStyle(
-                            color: payment.status == PaymentStatus.active
-                                ? Colors.blue
-                                : Colors.grey,
+                      ),
+                    ),
+                    if (payment.status == PaymentStatus.active &&
+                        payment.frequency != PaymentFrequency.oneTime) ...[
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _skipPlannedPayment(payment),
+                          icon: const Icon(Icons.skip_next, size: 16),
+                          label: const Text(
+                            'Skip',
+                            style: TextStyle(fontSize: 12),
                           ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: payment.status == PaymentStatus.active
-                                ? Colors.blue
-                                : Colors.grey,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            side: BorderSide(color: Colors.orange),
+                            foregroundColor: Colors.orange,
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: payment.status == PaymentStatus.active &&
-                                payment.frequency != PaymentFrequency.oneTime
-                            ? () => _skipPlannedPayment(payment)
-                            : null, // Disabled when not active or is one-time
-                        icon: Icon(
-                          Icons.skip_next,
-                          size: 18,
-                          color: payment.status == PaymentStatus.active &&
-                                  payment.frequency != PaymentFrequency.oneTime
-                              ? Colors.orange
-                              : Colors.grey,
-                        ),
-                        label: Text(
-                          'Skip',
-                          style: TextStyle(
-                            color: payment.status == PaymentStatus.active &&
-                                    payment.frequency != PaymentFrequency.oneTime
-                                ? Colors.orange
-                                : Colors.grey,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: payment.status == PaymentStatus.active &&
-                                    payment.frequency != PaymentFrequency.oneTime
-                                ? Colors.orange
-                                : Colors.grey,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ],
