@@ -14,22 +14,22 @@ class AppConfigurationTaskPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const SizedBox(height: 8),
-          _buildSection(context, 'Task Management', [
+          _buildSection(context, 'Quick Actions', [
             _buildTile(
               context,
-              icon: Icons.task_alt,
-              title: 'Manage Tasks',
-              subtitle: 'Add, edit, and delete tasks',
+              icon: Icons.add_task,
+              title: 'Create Task',
+              subtitle: 'Add a new task',
               color: Colors.blue,
-              onTap: () => Navigator.pushNamed(context, '/task-management'),
+              onTap: () => Navigator.pushNamed(context, '/task-create'),
             ),
             _buildTile(
               context,
-              icon: Icons.folder,
-              title: 'Manage Projects',
-              subtitle: 'Create and organize projects',
+              icon: Icons.create_new_folder,
+              title: 'Create Project',
+              subtitle: 'Add a new project',
               color: Colors.purple,
-              onTap: () => Navigator.pushNamed(context, '/project-management'),
+              onTap: () => Navigator.pushNamed(context, '/project-create'),
             ),
           ]),
         ],

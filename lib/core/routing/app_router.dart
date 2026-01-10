@@ -11,6 +11,8 @@ import 'package:keep_track/features/settings/subpages/app_configuration_finance_
 import 'package:keep_track/features/settings/subpages/app_configuration_task_page.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/project_management_screen.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/task_management_screen.dart';
+import 'package:keep_track/features/tasks/presentation/screens/create_task_page.dart';
+import 'package:keep_track/features/tasks/presentation/screens/create_project_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
@@ -42,13 +44,12 @@ class AppRoutes {
 
   // Tasks
   static const String taskDetail = '/tasks/detail';
-  static const String taskCreate = '/tasks/create';
+  static const String taskCreate = '/task-create';
 
   // Projects
   static const String projectList = '/projects';
   static const String projectDetail = '/projects/detail';
-  // Note: projectCreate not implemented - uses dialog in ProjectListScreen
-  // static const String projectCreate = '/projects/create';
+  static const String projectCreate = '/project-create';
 
   // Budget
   static const String budgetList = '/budget';
@@ -104,9 +105,13 @@ class AppRouter {
 
       // Tasks
       case AppRoutes.taskCreate:
-        // Redirect to task management screen for task creation
         return MaterialPageRoute(
-          builder: (_) => const TaskManagementScreen(),
+          builder: (_) => const CreateTaskPage(),
+          settings: settings,
+        );
+      case AppRoutes.projectCreate:
+        return MaterialPageRoute(
+          builder: (_) => const CreateProjectPage(),
           settings: settings,
         );
       case AppRoutes.taskManagement:

@@ -16,7 +16,12 @@ import 'modules/projects/data/datasources/supabase/project_datasource_supabase.d
 import 'modules/projects/data/datasources/project_datasource.dart';
 import 'modules/projects/data/repositories/project_repository_impl.dart';
 import 'modules/projects/domain/repositories/project_repository.dart';
+import 'modules/pomodoro/data/datasources/pomodoro_session_datasource.dart';
+import 'modules/pomodoro/data/datasources/supabase/pomodoro_session_datasource_supabase.dart';
+import 'modules/pomodoro/data/repositories/pomodoro_session_repository_impl.dart';
+import 'modules/pomodoro/domain/repositories/pomodoro_session_repository.dart';
 import 'presentation/state/project_controller.dart';
+import 'presentation/state/pomodoro_session_controller.dart';
 
 /// Setup task management dependencies
 void setupTasksDependencies() {
@@ -55,5 +60,24 @@ void setupTasksDependencies() {
   locator.registerFactory<TaskActivityController>(() {
     final repo = locator.get<TaskRepository>();
     return TaskActivityController(repo);
+  });
+
+  // Pomodoro data sources
+  locator.registerFactory<PomodoroSessionDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    return PomodoroSessionDataSourceSupabase(supabaseService);
+  });
+
+  // Pomodoro repositories
+  locator.registerFactory<PomodoroSessionRepository>(() {
+    final dataSource = locator.get<PomodoroSessionDataSource>();
+    return PomodoroSessionRepositoryImpl(dataSource);
+  });
+
+  // Pomodoro controllers
+  locator.registerFactory<PomodoroSessionController>(() {
+    final repo = locator.get<PomodoroSessionRepository>();
+    final supabaseService = locator.get<SupabaseService>();
+    return PomodoroSessionController(repo, supabaseService.userId!);
   });
 }

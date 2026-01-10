@@ -12,6 +12,8 @@ import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dar
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/widgets/task_management_dialog.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
+import 'package:keep_track/features/tasks/presentation/screens/task_details_page.dart';
+import 'package:keep_track/features/tasks/presentation/screens/create_task_page.dart';
 
 enum DateViewMode { daily, weekly, monthly }
 
@@ -109,9 +111,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
               floatingActionButton: isDesktop
                   ? null
                   : FloatingActionButton.extended(
-                      onPressed: () {
-                        Navigator.pushNamed(context, AppRoutes.taskCreate);
-                      },
+                      onPressed: _handleCreateTask,
                       icon: const Icon(Icons.add),
                       label: const Text('New Task'),
                     ),
@@ -143,9 +143,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                 children: [
                   Text('Tasks', style: AppTextStyles.h1),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pushNamed(context, AppRoutes.taskCreate);
-                    },
+                    onPressed: _handleCreateTask,
                     icon: const Icon(Icons.add, size: 20),
                     label: const Text('New Task'),
                     style: ElevatedButton.styleFrom(
@@ -1090,7 +1088,18 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
           child: InkWell(
             onTap: () {
               setState(() => _selectedTaskForDrawer = task);
-              _showTaskDrawer(task, allTasks);
+              // Check if desktop or mobile
+              final isDesktop = MediaQuery.of(context).size.width >= 600;
+              if (isDesktop) {
+                _showTaskDrawer(task, allTasks);
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TaskDetailsPage(task: task),
+                  ),
+                );
+              }
             },
             borderRadius: BorderRadius.circular(8),
             child: Padding(
@@ -1312,6 +1321,157 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
             }
           }
         },
+      ),
+    );
+  }
+
+  void _showCreateSubtaskDialog(Task parentTask) {
+    showDialog(
+      context: context,
+      builder: (context) => TaskManagementDialog(
+        userId: _supabaseService.userId!,
+        parentTaskId: parentTask.id,
+        onSave: (newTask) async {
+          try {
+            await _controller.createTask(newTask);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Subtask created successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: ${e.toString()}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  void _handleCreateTask() {
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+
+    if (isDesktop) {
+      // Show dialog with "View Full Page" option on desktop
+      _showCreateTaskDialog();
+    } else {
+      // Navigate directly to full page on mobile
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CreateTaskPage(),
+        ),
+      );
+    }
+  }
+
+  void _showCreateTaskDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 600,
+          constraints: const BoxConstraints(maxHeight: 700),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Create Task',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: TaskManagementDialog(
+                    userId: _supabaseService.userId!,
+                    onSave: (newTask) async {
+                      try {
+                        await _controller.createTask(newTask);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Task created successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ),
+
+              // Footer with "View Full Page" button
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.open_in_full),
+                    label: const Text('View Full Page'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreateTaskPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1653,6 +1813,57 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                    ),
+
+                    // Action Buttons
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border(
+                          top: BorderSide(
+                            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.add),
+                              label: const Text('Create Subtask'),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showCreateSubtaskDialog(task);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.open_in_full),
+                              label: const Text('View Full Page'),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TaskDetailsPage(task: task),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
