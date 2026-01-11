@@ -10,7 +10,7 @@ import 'package:keep_track/features/auth/presentation/state/auth_controller.dart
 import 'package:keep_track/features/home/task_home_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
-import 'package:keep_track/features/tasks/presentation/screens/tabs/tasks_tab_new.dart';
+import 'package:keep_track/features/tasks/presentation/screens/tabs/task/tasks_tab_new.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/projects_tab.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/pomodoro_tab.dart';
 

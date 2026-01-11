@@ -9,11 +9,13 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
-import 'package:keep_track/features/tasks/presentation/screens/configuration/widgets/task_management_dialog.dart';
+import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
+import 'package:keep_track/features/tasks/presentation/screens/tabs/task/components/task_management_dialog.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-import 'package:keep_track/features/tasks/presentation/screens/task_details_page.dart';
-import 'package:keep_track/features/tasks/presentation/screens/create_task_page.dart';
+import 'package:keep_track/features/tasks/presentation/screens/tabs/task/task_details_page.dart';
+import 'package:keep_track/features/tasks/presentation/screens/tabs/task/create_task_page.dart';
 
 enum DateViewMode { daily, weekly, monthly }
 
@@ -32,6 +34,7 @@ class TasksTabNew extends ScopedScreen {
 class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
     with AppLayoutControlled {
   late final TaskController _controller;
+  late final ProjectController _projectController;
   late final SupabaseService _supabaseService;
   late ScrollController _dateScrollController;
 
@@ -45,8 +48,12 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
   @override
   void registerServices() {
     _controller = locator.get<TaskController>();
+    _projectController = locator.get<ProjectController>();
     _supabaseService = locator.get<SupabaseService>();
     _dateScrollController = ScrollController();
+
+    // Load active projects
+    _projectController.loadActiveProjects();
 
     // Scroll to center on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,7 +118,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
               floatingActionButton: isDesktop
                   ? null
                   : FloatingActionButton.extended(
-                      onPressed: _handleCreateTask,
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.taskCreate);
+                      },
                       icon: const Icon(Icons.add),
                       label: const Text('New Task'),
                     ),
@@ -137,26 +146,6 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Tasks', style: AppTextStyles.h1),
-                  ElevatedButton.icon(
-                    onPressed: _handleCreateTask,
-                    icon: const Icon(Icons.add, size: 20),
-                    label: const Text('New Task'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: AppSpacing.xl),
-
               // View Mode Selector
               _buildViewModeSelector(),
               const SizedBox(height: 12),
@@ -257,9 +246,25 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Task Overview',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Task Overview',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton.icon(
+              onPressed: _handleCreateTask,
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('New Task'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
@@ -1272,89 +1277,268 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
   }
 
   void _showTaskEditDialog(Task task) {
-    showDialog(
-      context: context,
-      builder: (context) => TaskManagementDialog(
-        task: task,
-        userId: _supabaseService.userId!,
-        onSave: (updatedTask) async {
-          try {
-            await _controller.updateTask(updatedTask);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Task updated successfully'),
-                  backgroundColor: Colors.green,
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+
+    if (isDesktop) {
+      // Desktop: Use Dialog wrapper with content mode
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          child: Container(
+            width: 600,
+            constraints: const BoxConstraints(maxHeight: 700),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[300]!),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Edit Task',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error: ${e.toString()}'),
-                  backgroundColor: Colors.red,
+
+                // Content
+                Expanded(
+                  child: TaskManagementDialog(
+                    task: task,
+                    userId: _supabaseService.userId!,
+                    useDialogContent: true,
+                    onSave: (updatedTask) async {
+                      try {
+                        await _controller.updateTask(updatedTask);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Task updated successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    onDelete: () async {
+                      try {
+                        await _controller.deleteTask(task.id!);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Task deleted successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
                 ),
-              );
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      // Mobile: Use AlertDialog mode
+      showDialog(
+        context: context,
+        builder: (context) => TaskManagementDialog(
+          task: task,
+          userId: _supabaseService.userId!,
+          onSave: (updatedTask) async {
+            try {
+              await _controller.updateTask(updatedTask);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Task updated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
-          }
-        },
-        onDelete: () async {
-          try {
-            await _controller.deleteTask(task.id!);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Task deleted successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+          },
+          onDelete: () async {
+            try {
+              await _controller.deleteTask(task.id!);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Task deleted successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error: ${e.toString()}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
-        },
-      ),
-    );
+          },
+        ),
+      );
+    }
   }
 
   void _showCreateSubtaskDialog(Task parentTask) {
-    showDialog(
-      context: context,
-      builder: (context) => TaskManagementDialog(
-        userId: _supabaseService.userId!,
-        parentTaskId: parentTask.id,
-        onSave: (newTask) async {
-          try {
-            await _controller.createTask(newTask);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Subtask created successfully'),
-                  backgroundColor: Colors.green,
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+
+    if (isDesktop) {
+      // Desktop: Use Dialog wrapper with content mode
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          child: Container(
+            width: 600,
+            constraints: const BoxConstraints(maxHeight: 700),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[300]!),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Create Subtask',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error: ${e.toString()}'),
-                  backgroundColor: Colors.red,
+
+                // Content
+                Expanded(
+                  child: TaskManagementDialog(
+                    userId: _supabaseService.userId!,
+                    parentTaskId: parentTask.id,
+                    useDialogContent: true,
+                    onSave: (newTask) async {
+                      try {
+                        await _controller.createTask(newTask);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Subtask created successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
                 ),
-              );
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      // Mobile: Use AlertDialog mode
+      showDialog(
+        context: context,
+        builder: (context) => TaskManagementDialog(
+          userId: _supabaseService.userId!,
+          parentTaskId: parentTask.id,
+          onSave: (newTask) async {
+            try {
+              await _controller.createTask(newTask);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Subtask created successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
-          }
-        },
-      ),
-    );
+          },
+        ),
+      );
+    }
   }
 
   void _handleCreateTask() {
@@ -1375,97 +1559,108 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
   void _showCreateTaskDialog() {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          width: 600,
-          constraints: const BoxConstraints(maxHeight: 700),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-                ),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Create Task',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+      builder: (context) => AsyncStreamBuilder<List<Project>>(
+        state: _projectController,
+        builder: (context, projects) {
+          // Filter to only active projects
+          final activeProjects = projects
+              .where((p) => p.status == ProjectStatus.active && !p.isArchived)
+              .toList();
+
+          return Dialog(
+            child: Container(
+              width: 600,
+              constraints: const BoxConstraints(maxHeight: 700),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey[300]!),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: TaskManagementDialog(
-                    userId: _supabaseService.userId!,
-                    onSave: (newTask) async {
-                      try {
-                        await _controller.createTask(newTask);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Task created successfully'),
-                              backgroundColor: Colors.green,
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Create Task',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
-                          );
-                          Navigator.pop(context);
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: ${e.toString()}'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                ),
-              ),
-
-              // Footer with "View Full Page" button
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: Colors.grey[300]!)),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.open_in_full),
-                    label: const Text('View Full Page'),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CreateTaskPage(),
+                          ),
                         ),
-                      );
-                    },
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+
+                  // Content
+                  Expanded(
+                    child: TaskManagementDialog(
+                      userId: _supabaseService.userId!,
+                      projects: activeProjects,
+                      useDialogContent: true,
+                      onSave: (newTask) async {
+                        try {
+                          await _controller.createTask(newTask);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Task created successfully'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            Navigator.pop(context);
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+
+                  // Footer with "View Full Page" button
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: Colors.grey[300]!)),
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.open_in_full),
+                        label: const Text('View Full Page'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CreateTaskPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1478,7 +1673,6 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 300),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        // Slide from right to left animation
         const begin = Offset(1.0, 0.0);
         const end = Offset.zero;
         const curve = Curves.easeInOut;
@@ -1506,530 +1700,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                 width: MediaQuery.of(context).size.width > 600
                     ? 500
                     : MediaQuery.of(context).size.width * 0.85,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                ),
-                child: AsyncStreamBuilder<List<Task>>(
-                  state: _controller,
-                  builder: (context, tasks) {
-                    // Find the current task by ID to get latest data
-                    final currentTask = tasks.firstWhere(
-                      (t) => t.id == task.id,
-                      orElse: () => task,
-                    );
-                    final subtasks = tasks
-                        .where((t) => t.parentTaskId == currentTask.id)
-                        .toList();
-                    final isOverdue =
-                        currentTask.dueDate != null &&
-                        currentTask.dueDate!.isBefore(DateTime.now()) &&
-                        !currentTask.isCompleted;
-
-                    return Column(
-                      children: [
-                        // Header
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.outline.withOpacity(0.2),
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Task Details',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  _showTaskEditDialog(currentTask);
-                                },
-                                tooltip: 'Edit Task',
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Content
-                        Expanded(
-                          child: ListView(
-                            padding: const EdgeInsets.all(16),
-                            children: [
-                              // Task Title
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: currentTask.isCompleted,
-                                    onChanged: (value) async {
-                                      if (value != null) {
-                                        final updatedTask = currentTask
-                                            .copyWith(
-                                              status: value
-                                                  ? TaskStatus.completed
-                                                  : TaskStatus.todo,
-                                              completedAt: value
-                                                  ? DateTime.now()
-                                                  : null,
-                                            );
-                                        await _controller.updateTask(
-                                          updatedTask,
-                                        );
-                                      }
-                                    },
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      currentTask.title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            decoration: currentTask.isCompleted
-                                                ? TextDecoration.lineThrough
-                                                : null,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Overdue Badge
-                              if (isOverdue) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.red.withOpacity(0.5),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: const [
-                                      Icon(
-                                        Icons.warning_amber_rounded,
-                                        color: Colors.red,
-                                        size: 20,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'OVERDUE',
-                                        style: TextStyle(
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-
-                              // Priority - Editable
-                              _buildEditableDetailSection(
-                                'Priority',
-                                Icons.flag,
-                                DropdownButton<TaskPriority>(
-                                  value: currentTask.priority,
-                                  isExpanded: true,
-                                  underline: const SizedBox(),
-                                  items: TaskPriority.values.map((priority) {
-                                    return DropdownMenuItem(
-                                      value: priority,
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.flag,
-                                            color: _getPriorityColor(priority),
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            priority.displayName,
-                                            style: TextStyle(
-                                              color: _getPriorityColor(
-                                                priority,
-                                              ),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (newPriority) async {
-                                    if (newPriority != null) {
-                                      final updatedTask = currentTask.copyWith(
-                                        priority: newPriority,
-                                      );
-                                      await _controller.updateTask(updatedTask);
-                                    }
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Status - Editable
-                              _buildEditableDetailSection(
-                                'Status',
-                                Icons.circle,
-                                DropdownButton<TaskStatus>(
-                                  value: currentTask.status,
-                                  isExpanded: true,
-                                  underline: const SizedBox(),
-                                  items: TaskStatus.values.map((status) {
-                                    return DropdownMenuItem(
-                                      value: status,
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.circle,
-                                            color: _getStatusColor(status),
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            status.displayName,
-                                            style: TextStyle(
-                                              color: _getStatusColor(status),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (newStatus) async {
-                                    if (newStatus != null) {
-                                      final updatedTask = currentTask.copyWith(
-                                        status: newStatus,
-                                        completedAt:
-                                            newStatus == TaskStatus.completed
-                                            ? DateTime.now()
-                                            : null,
-                                      );
-                                      await _controller.updateTask(updatedTask);
-                                    }
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Due Date - Editable
-                              _buildEditableDetailSection(
-                                'Due Date',
-                                Icons.calendar_today,
-                                InkWell(
-                                  onTap: () async {
-                                    final date = await showDatePicker(
-                                      context: context,
-                                      initialDate:
-                                          currentTask.dueDate ?? DateTime.now(),
-                                      firstDate: DateTime(2020),
-                                      lastDate: DateTime(2030),
-                                    );
-                                    if (date != null) {
-                                      final time = await showTimePicker(
-                                        context: context,
-                                        initialTime: TimeOfDay.fromDateTime(
-                                          currentTask.dueDate ?? DateTime.now(),
-                                        ),
-                                      );
-                                      if (time != null) {
-                                        final newDueDate = DateTime(
-                                          date.year,
-                                          date.month,
-                                          date.day,
-                                          time.hour,
-                                          time.minute,
-                                        );
-                                        final updatedTask = currentTask
-                                            .copyWith(dueDate: newDueDate);
-                                        await _controller.updateTask(
-                                          updatedTask,
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            currentTask.dueDate != null
-                                                ? DateFormat(
-                                                    'EEEE, MMMM d, y - h:mm a',
-                                                  ).format(currentTask.dueDate!)
-                                                : 'No due date set - Click to add',
-                                            style: TextStyle(
-                                              color:
-                                                  currentTask.dueDate != null &&
-                                                      isOverdue
-                                                  ? Colors.red
-                                                  : currentTask.dueDate == null
-                                                  ? Colors.grey[500]
-                                                  : null,
-                                              fontWeight:
-                                                  currentTask.dueDate != null &&
-                                                      isOverdue
-                                                  ? FontWeight.w600
-                                                  : null,
-                                            ),
-                                          ),
-                                        ),
-                                        const Icon(Icons.edit, size: 16),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Description
-                              _buildDetailSection(
-                                'Description',
-                                Icons.subject,
-                                Text(
-                                  currentTask.description ?? 'No description',
-                                  style: TextStyle(
-                                    color: currentTask.description == null
-                                        ? Colors.grey[500]
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Created Date
-                              _buildDetailSection(
-                                'Created',
-                                Icons.add_circle_outline,
-                                Text(
-                                  currentTask.createdAt != null
-                                      ? DateFormat(
-                                          'MMMM d, y - h:mm a',
-                                        ).format(currentTask.createdAt!)
-                                      : 'Unknown',
-                                  style: TextStyle(
-                                    color: currentTask.createdAt == null
-                                        ? Colors.grey[500]
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Completed Date
-                              _buildDetailSection(
-                                'Completed',
-                                Icons.check_circle,
-                                Text(
-                                  currentTask.completedAt != null
-                                      ? DateFormat(
-                                          'MMMM d, y - h:mm a',
-                                        ).format(currentTask.completedAt!)
-                                      : 'Not completed',
-                                  style: TextStyle(
-                                    color: currentTask.completedAt == null
-                                        ? Colors.grey[500]
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Tags
-                              _buildDetailSection(
-                                'Tags',
-                                Icons.label,
-                                currentTask.tags.isNotEmpty
-                                    ? Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: currentTask.tags
-                                            .map(
-                                              (tag) => Chip(
-                                                label: Text(
-                                                  tag,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                                backgroundColor: Colors.blue
-                                                    .withOpacity(0.1),
-                                              ),
-                                            )
-                                            .toList(),
-                                      )
-                                    : Text(
-                                        'No tags',
-                                        style: TextStyle(
-                                          color: Colors.grey[500],
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Subtasks - Always shown
-                              Text(
-                                'Subtasks (${subtasks.length})',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (subtasks.isEmpty)
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest
-                                        .withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'No subtasks yet',
-                                      style: TextStyle(color: Colors.grey[500]),
-                                    ),
-                                  ),
-                                )
-                              else
-                                ...subtasks.map(
-                                  (subtask) => Card(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    child: ListTile(
-                                      leading: Checkbox(
-                                        value: subtask.isCompleted,
-                                        onChanged: (value) async {
-                                          if (value != null) {
-                                            final updated = subtask.copyWith(
-                                              status: value
-                                                  ? TaskStatus.completed
-                                                  : TaskStatus.todo,
-                                              completedAt: value
-                                                  ? DateTime.now()
-                                                  : null,
-                                            );
-                                            await _controller.updateTask(
-                                              updated,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                      title: Text(
-                                        subtask.title,
-                                        style: TextStyle(
-                                          decoration: subtask.isCompleted
-                                              ? TextDecoration.lineThrough
-                                              : null,
-                                        ),
-                                      ),
-                                      subtitle: subtask.description != null
-                                          ? Text(subtask.description!)
-                                          : null,
-                                      trailing: Icon(
-                                        Icons.circle,
-                                        color: _getStatusColor(subtask.status),
-                                        size: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-
-                        // Action Buttons
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            border: Border(
-                              top: BorderSide(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.outline.withOpacity(0.2),
-                              ),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Create Subtask'),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _showCreateSubtaskDialog(currentTask);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.open_in_full),
-                                  label: const Text('View Full Page'),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            TaskDetailsPage(task: currentTask),
-                                      ),
-                                    );
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                child: TaskDetailsPage(task: task, isDrawerMode: true),
               ),
             ),
           ),

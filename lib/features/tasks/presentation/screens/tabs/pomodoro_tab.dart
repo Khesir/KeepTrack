@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -916,26 +917,147 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
         break;
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Container(
-          width: 4,
-          height: 40,
-          decoration: BoxDecoration(
-            color: priorityColor,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        title: Text(task.title),
-        subtitle: task.description != null ? Text(task.description!) : null,
-        trailing: session != null
-            ? IconButton(
+    final isOverdue =
+        task.dueDate != null &&
+        task.dueDate!.isBefore(DateTime.now()) &&
+        !task.isCompleted;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isOverdue
+            ? Colors.red.withOpacity(0.05)
+            : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: isOverdue
+            ? Border.all(color: Colors.red.withOpacity(0.3), width: 1.5)
+            : Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+              ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            // Priority indicator
+            Container(
+              width: 4,
+              height: 50,
+              decoration: BoxDecoration(
+                color: priorityColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Checkbox
+            Checkbox(
+              value: task.isCompleted,
+              onChanged: (value) async {
+                if (value != null) {
+                  final updatedTask = task.copyWith(
+                    status: value ? TaskStatus.completed : TaskStatus.todo,
+                    completedAt: value ? DateTime.now() : null,
+                  );
+                  await _taskController.updateTask(updatedTask);
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+
+            // Task info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      decoration: task.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                  if (task.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      task.description!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      if (isOverdue)
+                        _buildTaskBadge(
+                          'OVERDUE',
+                          Colors.red,
+                          Icons.warning_amber_rounded,
+                        ),
+                      _buildTaskBadge(
+                        task.priority.displayName,
+                        priorityColor,
+                        Icons.flag,
+                      ),
+                      if (task.dueDate != null)
+                        _buildTaskBadge(
+                          DateFormat('MMM d, h:mm a').format(task.dueDate!),
+                          isOverdue ? Colors.red : Colors.grey[700]!,
+                          Icons.calendar_today,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Action button
+            if (session != null)
+              IconButton(
                 icon: const Icon(Icons.add_task),
                 onPressed: () => _controller.addClearedTask(task.id!),
                 tooltip: 'Mark as cleared',
-              )
-            : null,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskBadge(String label, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

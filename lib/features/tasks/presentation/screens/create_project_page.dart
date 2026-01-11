@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/widgets/project_management_dialog.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
@@ -26,9 +25,7 @@ class _CreateProjectPageState extends State<CreateProjectPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Project'),
-      ),
+      appBar: AppBar(title: const Text('Create Project')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),

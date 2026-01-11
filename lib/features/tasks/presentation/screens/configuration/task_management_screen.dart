@@ -10,7 +10,7 @@ import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart'
 
 import '../../state/project_controller.dart';
 import '../../state/task_controller.dart';
-import 'widgets/task_management_dialog.dart';
+import '../tabs/task/components/task_management_dialog.dart';
 
 enum StatusFilter { all, todo, inProgress, completed, cancelled }
 

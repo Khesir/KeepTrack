@@ -8,7 +8,6 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
-import 'package:keep_track/features/tasks/presentation/screens/project_details_screen.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 
 enum ProjectStatusFilter { all, active, postponed, closed }
@@ -79,15 +78,62 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Header
+                        if (!isDesktop)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Projects',
+                                style: isDesktop
+                                    ? AppTextStyles.h1
+                                    : Theme.of(
+                                        context,
+                                      ).textTheme.headlineSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                              ),
+
+                              Text(
+                                '${filteredProjects.length} project${filteredProjects.length != 1 ? 's' : ''}',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        SizedBox(height: isDesktop ? AppSpacing.xl : 12),
+
+                        // Status Filters
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Projects',
-                              style: isDesktop
-                                  ? AppTextStyles.h1
-                                  : Theme.of(context).textTheme.headlineSmall
-                                        ?.copyWith(fontWeight: FontWeight.bold),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _buildFilterChip(
+                                    'All',
+                                    ProjectStatusFilter.all,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip(
+                                    'Active',
+                                    ProjectStatusFilter.active,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip(
+                                    'Postponed',
+                                    ProjectStatusFilter.postponed,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildFilterChip(
+                                    'Closed',
+                                    ProjectStatusFilter.closed,
+                                  ),
+                                ],
+                              ),
                             ),
                             if (isDesktop)
                               ElevatedButton.icon(
@@ -105,43 +151,8 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
                                     vertical: 12,
                                   ),
                                 ),
-                              )
-                            else
-                              Text(
-                                '${filteredProjects.length} project${filteredProjects.length != 1 ? 's' : ''}',
-                                style: TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
-                                ),
                               ),
                           ],
-                        ),
-                        SizedBox(height: isDesktop ? AppSpacing.xl : 12),
-
-                        // Status Filters
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              _buildFilterChip('All', ProjectStatusFilter.all),
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                'Active',
-                                ProjectStatusFilter.active,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                'Postponed',
-                                ProjectStatusFilter.postponed,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildFilterChip(
-                                'Closed',
-                                ProjectStatusFilter.closed,
-                              ),
-                            ],
-                          ),
                         ),
                         const SizedBox(height: 16),
 

@@ -11,7 +11,7 @@ import 'package:keep_track/features/settings/subpages/app_configuration_finance_
 import 'package:keep_track/features/settings/subpages/app_configuration_task_page.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/project_management_screen.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/task_management_screen.dart';
-import 'package:keep_track/features/tasks/presentation/screens/create_task_page.dart';
+import 'package:keep_track/features/tasks/presentation/screens/tabs/task/create_task_page.dart';
 import 'package:keep_track/features/tasks/presentation/screens/create_project_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
@@ -31,6 +31,7 @@ import '../../features/tasks/modules/tasks/domain/entities/task.dart';
 import '../../features/tasks/presentation/screens/project_details_screen.dart';
 
 import '../../features/tasks/modules/projects/domain/entities/project.dart';
+import '../../features/tasks/presentation/screens/tabs/task/create_task_route_page.dart';
 
 /// App routes
 class AppRoutes {
@@ -106,7 +107,7 @@ class AppRouter {
       // Tasks
       case AppRoutes.taskCreate:
         return MaterialPageRoute(
-          builder: (_) => const CreateTaskPage(),
+          builder: (_) => const CreateTaskRoutePage(),
           settings: settings,
         );
       case AppRoutes.projectCreate:

@@ -148,7 +148,6 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
         ),
       ),
       builder: (context, accounts) {
-        // Calculate total balance across all accounts
         final totalBalance = accounts.fold<double>(
           0.0,
           (sum, account) => sum + account.balance,
@@ -168,7 +167,6 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
           errorBuilder: (context, message) =>
               _buildFinanceCard(totalBalance, accounts.length, []),
           builder: (context, budgets) {
-            // Get all active budgets, sorted by month descending
             final activeBudgets =
                 budgets.where((b) => b.status == BudgetStatus.active).toList()
                   ..sort((a, b) => b.month.compareTo(a.month));
@@ -399,16 +397,23 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                 ],
               ),
               const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: percentage,
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation(
-                  isOverBudget && budget.budgetType == BudgetType.expense
-                      ? Colors.red
-                      : color,
-                ),
-                minHeight: 6,
-                borderRadius: BorderRadius.circular(3),
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutCubic,
+                tween: Tween<double>(begin: 0, end: percentage),
+                builder: (context, value, child) {
+                  return LinearProgressIndicator(
+                    value: value,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation(
+                      isOverBudget && budget.budgetType == BudgetType.expense
+                          ? Colors.red
+                          : color,
+                    ),
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                  );
+                },
               ),
               const SizedBox(height: 6),
               Row(
