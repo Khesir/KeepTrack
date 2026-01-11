@@ -116,7 +116,7 @@ class _BalanceGraphState extends State<BalanceGraph> {
 
     // Calculate percentage change
     final percentageChange = balanceData.length >= 2
-        ? ((balanceData.last - balanceData.first) / balanceData.first * 100)
+        ? ((balanceData.last.balance - balanceData.first.balance) / balanceData.first.balance * 100)
         : 0.0;
 
     return Card(
@@ -251,16 +251,7 @@ class _BalanceGraphState extends State<BalanceGraph> {
 
             // Simple line chart
             if (balanceData.isNotEmpty)
-              SizedBox(
-                height: 200,
-                child: CustomPaint(
-                  size: Size(MediaQuery.of(context).size.width - 80, 200),
-                  painter: LineChartPainter(
-                    balanceData,
-                    primaryColor: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              )
+              _buildInteractiveChart(context, balanceData)
             else
               Container(
                 height: 200,
@@ -293,6 +284,57 @@ class _BalanceGraphState extends State<BalanceGraph> {
         color: Colors.grey[600],
       );
 
+  Widget _buildInteractiveChart(BuildContext context, List<BalanceDataPoint> balanceData) {
+    final chartWidth = MediaQuery.of(context).size.width - 80;
+    final chartHeight = 200.0;
+    final painter = LineChartPainter(
+      balanceData,
+      primaryColor: Theme.of(context).colorScheme.primary,
+    );
+
+    return SizedBox(
+      height: chartHeight,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final points = painter.getPoints(Size(chartWidth, chartHeight));
+
+          return Stack(
+            children: [
+              // The chart itself
+              CustomPaint(
+                size: Size(chartWidth, chartHeight),
+                painter: painter,
+              ),
+              // Tooltip overlays for each node
+              ...List.generate(balanceData.length, (index) {
+                if (index >= points.length) return const SizedBox();
+
+                final point = points[index];
+                final dataPoint = balanceData[index];
+
+                return Positioned(
+                  left: point.dx - 8,
+                  top: point.dy - 8,
+                  child: Tooltip(
+                    message: '${DateFormat('MMM d, y').format(dataPoint.date)}\n₱${NumberFormat('#,##0.00').format(dataPoint.balance)}',
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.transparent,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   double _getCurrentBalance(List<Account> accounts) {
     if (_selectedAccountId == null) {
       // All accounts
@@ -307,7 +349,7 @@ class _BalanceGraphState extends State<BalanceGraph> {
     }
   }
 
-  List<double> _calculateBalanceTrend(
+  List<BalanceDataPoint> _calculateBalanceTrend(
     List<Account> accounts,
     List<Transaction> transactions,
   ) {
@@ -334,7 +376,7 @@ class _BalanceGraphState extends State<BalanceGraph> {
     relevantTransactions.sort((a, b) => a.date.compareTo(b.date));
 
     // Calculate balance at each data point
-    final balanceHistory = <double>[];
+    final balanceHistory = <BalanceDataPoint>[];
 
     for (int i = dataPoints - 1; i >= 0; i--) {
       final targetDate = now.subtract(Duration(days: (i * daysToShow ~/ dataPoints)));
@@ -359,20 +401,33 @@ class _BalanceGraphState extends State<BalanceGraph> {
       }
 
       // Ensure balance is never negative in history
-      balanceHistory.add(balanceAtDate < 0 ? 0 : balanceAtDate);
+      balanceHistory.add(BalanceDataPoint(
+        date: targetDate,
+        balance: balanceAtDate < 0 ? 0 : balanceAtDate,
+      ));
     }
 
     // If no variation, add slight variation for better visualization
-    if (balanceHistory.every((b) => b == balanceHistory.first)) {
-      return balanceHistory.map((b) => b > 0 ? b : 1000.0).toList();
+    if (balanceHistory.every((b) => b.balance == balanceHistory.first.balance)) {
+      return balanceHistory.map((b) => BalanceDataPoint(
+        date: b.date,
+        balance: b.balance > 0 ? b.balance : 1000.0,
+      )).toList();
     }
 
     return balanceHistory;
   }
 }
 
+class BalanceDataPoint {
+  final DateTime date;
+  final double balance;
+
+  BalanceDataPoint({required this.date, required this.balance});
+}
+
 class LineChartPainter extends CustomPainter {
-  final List<double> data;
+  final List<BalanceDataPoint> data;
   final Color primaryColor;
 
   LineChartPainter(this.data, {required this.primaryColor});
@@ -382,8 +437,9 @@ class LineChartPainter extends CustomPainter {
     if (data.isEmpty) return;
 
     // Find min and max for scaling
-    final minValue = data.reduce((a, b) => a < b ? a : b);
-    final maxValue = data.reduce((a, b) => a > b ? a : b);
+    final balances = data.map((d) => d.balance).toList();
+    final minValue = balances.reduce((a, b) => a < b ? a : b);
+    final maxValue = balances.reduce((a, b) => a > b ? a : b);
     final range = maxValue - minValue;
 
     // Create points for the line
@@ -392,7 +448,7 @@ class LineChartPainter extends CustomPainter {
 
     for (int i = 0; i < data.length; i++) {
       final x = i * stepX;
-      final normalizedValue = range > 0 ? (data[i] - minValue) / range : 0.5;
+      final normalizedValue = range > 0 ? (data[i].balance - minValue) / range : 0.5;
       final y = size.height - (normalizedValue * size.height * 0.9) - (size.height * 0.05);
       points.add(Offset(x, y));
     }
@@ -456,6 +512,28 @@ class LineChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(LineChartPainter oldDelegate) {
-    return oldDelegate.data != data;
+    return oldDelegate.data != data || oldDelegate.primaryColor != primaryColor;
+  }
+
+  // Helper method to get point positions for tooltips
+  List<Offset> getPoints(Size size) {
+    if (data.isEmpty) return [];
+
+    final balances = data.map((d) => d.balance).toList();
+    final minValue = balances.reduce((a, b) => a < b ? a : b);
+    final maxValue = balances.reduce((a, b) => a > b ? a : b);
+    final range = maxValue - minValue;
+
+    final points = <Offset>[];
+    final stepX = size.width / (data.length - 1);
+
+    for (int i = 0; i < data.length; i++) {
+      final x = i * stepX;
+      final normalizedValue = range > 0 ? (data[i].balance - minValue) / range : 0.5;
+      final y = size.height - (normalizedValue * size.height * 0.9) - (size.height * 0.05);
+      points.add(Offset(x, y));
+    }
+
+    return points;
   }
 }

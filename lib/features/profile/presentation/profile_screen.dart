@@ -3,7 +3,7 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/profile/presentation/widgets/user_info_card.dart';
 import 'package:keep_track/features/profile/presentation/widgets/balance_graph.dart';
-import 'package:keep_track/features/profile/presentation/widgets/task_stats_card.dart';
+import 'package:keep_track/features/profile/presentation/widgets/contribution_card.dart';
 
 enum ModuleType { finance, task }
 
@@ -54,15 +54,15 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen>
             const SizedBox(height: 12),
             const BalanceGraph(),
           ] else if (widget.moduleType == ModuleType.task) ...[
-            // Task Stats for Task Module
+            // Contribution Graph for Task Module
             Text(
-              'Task Statistics',
+              'Your Contributions',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
             ),
             const SizedBox(height: 12),
-            const TaskStatsCard(),
+            const ContributionCard(),
           ],
           const SizedBox(height: 24),
         ],

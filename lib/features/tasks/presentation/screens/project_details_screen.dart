@@ -7,8 +7,10 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomodoro_session.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
+import 'package:keep_track/features/tasks/presentation/state/pomodoro_session_controller.dart';
 
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
@@ -29,6 +31,7 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
     with AppLayoutControlled {
   late final TaskController _taskController;
   late final ProjectController _projectController;
+  late final PomodoroSessionController _pomodoroController;
 
   ProjectTaskFilter _taskFilter = ProjectTaskFilter.all;
   final Set<String> _expandedTaskIds = {};
@@ -37,6 +40,7 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
   void registerServices() {
     _taskController = locator.get<TaskController>();
     _projectController = locator.get<ProjectController>();
+    _pomodoroController = locator.get<PomodoroSessionController>();
   }
 
   @override
@@ -173,6 +177,33 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
     }
   }
 
+  /// Get all completed pomodoro sessions for this project
+  List<PomodoroSession> _getProjectSessions(List<PomodoroSession> allSessions) {
+    return allSessions
+        .where(
+          (session) =>
+              session.projectId == widget.project.id &&
+              session.status == PomodoroSessionStatus.completed &&
+              session.type == PomodoroSessionType.pomodoro,
+        )
+        .toList()
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt)); // Most recent first
+  }
+
+  /// Calculate total minutes invested in this project from completed pomodoro sessions
+  int _calculateTotalMinutes(List<PomodoroSession> sessions) {
+    final projectSessions = _getProjectSessions(sessions);
+    if (projectSessions.isEmpty) return 0;
+
+    final totalSeconds = projectSessions.fold<int>(0, (sum, session) {
+      // Use absolute value to handle sessions where startedAt was adjusted during pause/resume
+      final elapsed = session.elapsedSeconds.abs();
+      return sum + elapsed;
+    });
+
+    return (totalSeconds / 60).round();
+  }
+
   @override
   Widget build(BuildContext context) {
     return DesktopAwareScreen(
@@ -193,23 +224,6 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.pop(context),
                 ),
-                actions: isDesktop
-                    ? [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.taskCreate,
-                              );
-                            },
-                            icon: const Icon(Icons.add, size: 20),
-                            label: const Text('Add Task'),
-                          ),
-                        ),
-                      ]
-                    : null,
               ),
               body: SingleChildScrollView(
                 padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
@@ -225,16 +239,47 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                               // Left Column - Project Info
                               Expanded(
                                 flex: 1,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildProjectHeader(
-                                      currentProject,
-                                      isDesktop,
-                                    ),
-                                    const SizedBox(height: AppSpacing.xl),
-                                    _buildMetadataSection(currentProject),
-                                  ],
+                                child: FutureBuilder<List<PomodoroSession>>(
+                                  future: _pomodoroController.getSessions(),
+                                  builder: (context, snapshot) {
+                                    final sessions = snapshot.data ?? [];
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _buildProjectHeader(
+                                          currentProject,
+                                          isDesktop,
+                                        ),
+                                        const SizedBox(height: AppSpacing.sm),
+
+                                        Row(
+                                          children: [
+                                            ElevatedButton.icon(
+                                              onPressed: () {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  AppRoutes.taskCreate,
+                                                );
+                                              },
+                                              icon: const Icon(
+                                                Icons.add,
+                                                size: 20,
+                                              ),
+                                              label: const Text('Add Task'),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: AppSpacing.xl),
+                                        _buildMetadataSection(
+                                          currentProject,
+                                          sessions,
+                                        ),
+                                        const SizedBox(height: AppSpacing.xl),
+                                        _buildSessionHistorySection(sessions),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.xl),
@@ -252,19 +297,33 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                               ),
                             ],
                           )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildProjectHeader(currentProject, isDesktop),
-                              const SizedBox(height: 16),
-                              _buildMetadataSection(currentProject),
-                              const SizedBox(height: 24),
-                              _buildTaskFilters(),
-                              const SizedBox(height: 16),
-                              _buildTasksList(),
-                              // Extra padding for FAB on mobile
-                              const SizedBox(height: 80),
-                            ],
+                        : FutureBuilder<List<PomodoroSession>>(
+                            future: _pomodoroController.getSessions(),
+                            builder: (context, snapshot) {
+                              final sessions = snapshot.data ?? [];
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildProjectHeader(
+                                    currentProject,
+                                    isDesktop,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildMetadataSection(
+                                    currentProject,
+                                    sessions,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildSessionHistorySection(sessions),
+                                  const SizedBox(height: 24),
+                                  _buildTaskFilters(),
+                                  const SizedBox(height: 16),
+                                  _buildTasksList(),
+                                  // Extra padding for FAB on mobile
+                                  const SizedBox(height: 80),
+                                ],
+                              );
+                            },
                           ),
                   ),
                 ),
@@ -378,8 +437,15 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
     );
   }
 
-  Widget _buildMetadataSection(Project project) {
+  Widget _buildMetadataSection(
+    Project project,
+    List<PomodoroSession> sessions,
+  ) {
     final hasMetadata = project.metadata.isNotEmpty;
+    final projectSessions = _getProjectSessions(sessions);
+    final totalMinutes = _calculateTotalMinutes(sessions);
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -409,6 +475,70 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
             ],
           ),
           const SizedBox(height: 12),
+          // Time Invested
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.access_time,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Time Invested',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        projectSessions.isEmpty
+                            ? 'No sessions yet'
+                            : hours > 0
+                            ? '$hours hr $minutes min'
+                            : '$minutes min',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (projectSessions.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${projectSessions.length} session${projectSessions.length > 1 ? 's' : ''} completed',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (hasMetadata) const SizedBox(height: 8),
           if (hasMetadata)
             ...project.metadata.entries.map((entry) {
               return Container(
@@ -481,9 +611,11 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
     );
   }
 
-  Widget _buildTaskFilters() {
+  Widget _buildSessionHistorySection(List<PomodoroSession> allSessions) {
+    final projectSessions = _getProjectSessions(allSessions);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -491,6 +623,208 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
           color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
         ),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Session History',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${projectSessions.length} sessions',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (projectSessions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.timer_off,
+                    size: 48,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No pomodoro sessions yet',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: projectSessions.length > 10
+                  ? 10
+                  : projectSessions.length,
+              itemBuilder: (context, index) {
+                final session = projectSessions[index];
+                return _buildSessionItem(session);
+              },
+            ),
+          if (projectSessions.length > 10)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: Text(
+                  '+ ${projectSessions.length - 10} more sessions',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionItem(PomodoroSession session) {
+    // Use absolute value to handle sessions where startedAt was adjusted during pause/resume
+    final duration = session.elapsedSeconds.abs() ~/ 60;
+    final sessionDate = session.startedAt;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.check_circle,
+              size: 20,
+              color: Colors.green,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 12,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$duration min',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(
+                      Icons.calendar_today,
+                      size: 12,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      DateFormat('MMM d, h:mm a').format(sessionDate),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+                if (session.tasksCleared.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.task_alt,
+                        size: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${session.tasksCleared.length} task${session.tasksCleared.length > 1 ? 's' : ''} cleared',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskFilters() {
+    return Container(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

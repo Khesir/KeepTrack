@@ -13,6 +13,8 @@ class PomodoroSession {
   final PomodoroSessionStatus status;
   final List<String> tasksCleared;
 
+  final DateTime? createdAt; // Optional - Supabase auto-generates
+  final DateTime? updatedAt; // Optional - Supabase auto-generates
   PomodoroSession({
     this.id,
     required this.userId,
@@ -26,6 +28,9 @@ class PomodoroSession {
     this.elapsedSecondsBeforePause = 0,
     required this.status,
     this.tasksCleared = const [],
+
+    this.createdAt,
+    this.updatedAt,
   }) : title = title ?? _getDefaultTitle(type);
 
   static String _getDefaultTitle(PomodoroSessionType type) {
@@ -52,6 +57,9 @@ class PomodoroSession {
     int? elapsedSecondsBeforePause,
     PomodoroSessionStatus? status,
     List<String>? tasksCleared,
+
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return PomodoroSession(
       id: id ?? this.id,
@@ -67,6 +75,8 @@ class PomodoroSession {
           elapsedSecondsBeforePause ?? this.elapsedSecondsBeforePause,
       status: status ?? this.status,
       tasksCleared: tasksCleared ?? this.tasksCleared,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 

@@ -15,6 +15,8 @@ class PomodoroSessionModel extends PomodoroSession {
     super.elapsedSecondsBeforePause = 0,
     required super.status,
     super.tasksCleared,
+    super.createdAt,
+    super.updatedAt,
   });
 
   /// Create from entity
@@ -32,6 +34,8 @@ class PomodoroSessionModel extends PomodoroSession {
       elapsedSecondsBeforePause: session.elapsedSecondsBeforePause,
       status: session.status,
       tasksCleared: session.tasksCleared,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
     );
   }
 
@@ -55,7 +59,9 @@ class PomodoroSessionModel extends PomodoroSession {
 
   /// Create from JSON (database response)
   factory PomodoroSessionModel.fromJson(Map<String, dynamic> json) {
-    final type = PomodoroSessionTypeExtension.fromString(json['type'] ?? 'pomodoro');
+    final type = PomodoroSessionTypeExtension.fromString(
+      json['type'] ?? 'pomodoro',
+    );
     return PomodoroSessionModel(
       id: json['id']?.toString(),
       userId: json['user_id']?.toString() ?? '',
@@ -73,11 +79,20 @@ class PomodoroSessionModel extends PomodoroSession {
           ? DateTime.parse(json['paused_at']).toLocal()
           : null,
       elapsedSecondsBeforePause: json['elapsed_seconds_before_pause'] ?? 0,
-      status: PomodoroSessionStatusExtension.fromString(json['status'] ?? 'running'),
-      tasksCleared: (json['tasks_cleared'] as List<dynamic>?)
+      status: PomodoroSessionStatusExtension.fromString(
+        json['status'] ?? 'running',
+      ),
+      tasksCleared:
+          (json['tasks_cleared'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
 
@@ -96,6 +111,8 @@ class PomodoroSessionModel extends PomodoroSession {
       elapsedSecondsBeforePause: elapsedSecondsBeforePause,
       status: status,
       tasksCleared: tasksCleared,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 }

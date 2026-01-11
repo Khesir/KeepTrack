@@ -272,6 +272,52 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
     );
   }
 
+  void _showAddTagDialog(Task task) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Tag'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Tag name',
+            hintText: 'Enter tag name',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final tagName = controller.text.trim();
+              if (tagName.isNotEmpty) {
+                if (!task.tags.contains(tagName)) {
+                  final updatedTask = task.copyWith(
+                    tags: [...task.tags, tagName],
+                  );
+                  await _controller.updateTask(updatedTask);
+                }
+                if (mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _removeTag(Task task, String tag) async {
+    final updatedTask = task.copyWith(
+      tags: task.tags.where((t) => t != tag).toList(),
+    );
+    await _controller.updateTask(updatedTask);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AsyncStreamBuilder<List<Task>>(
@@ -483,6 +529,95 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Project - Editable
+                  AsyncStreamBuilder<List<Project>>(
+                    state: _projectController,
+                    builder: (context, projects) {
+                      final activeProjects = projects
+                          .where(
+                            (p) =>
+                                p.status == ProjectStatus.active &&
+                                !p.isArchived,
+                          )
+                          .toList();
+                      final currentProject = task.projectId != null
+                          ? projects.firstWhere(
+                              (p) => p.id == task.projectId,
+                              orElse: () => projects.first,
+                            )
+                          : null;
+
+                      return _buildEditableDetailSection(
+                        'Project',
+                        Icons.folder,
+                        DropdownButton<String?>(
+                          value: task.projectId,
+                          isExpanded: true,
+                          underline: const SizedBox(),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.remove_circle_outline,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'No Project',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ...activeProjects.map((project) {
+                              final projectColor = project.color != null
+                                  ? Color(int.parse(
+                                      project.color!.replaceFirst('#', '0xff')))
+                                  : Colors.blue[700]!;
+
+                              return DropdownMenuItem<String?>(
+                                value: project.id,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.folder,
+                                      color: projectColor,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        project.name,
+                                        style: TextStyle(
+                                          color: projectColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: (newProjectId) async {
+                            final updatedTask = task.copyWith(
+                              projectId: newProjectId,
+                            );
+                            await _controller.updateTask(updatedTask);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
                   // Due Date - Editable
                   _buildEditableDetailSection(
                     'Due Date',
@@ -608,12 +743,15 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Tags
-                  _buildDetailSection(
+                  // Tags - Editable
+                  _buildEditableDetailSection(
                     'Tags',
                     Icons.label,
-                    task.tags.isNotEmpty
-                        ? Wrap(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (task.tags.isNotEmpty)
+                          Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: task.tags
@@ -626,14 +764,31 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                                     backgroundColor: Colors.blue.withOpacity(
                                       0.1,
                                     ),
+                                    deleteIcon: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                    ),
+                                    onDeleted: () => _removeTag(task, tag),
                                   ),
                                 )
                                 .toList(),
-                          )
-                        : Text(
-                            'No tags',
-                            style: TextStyle(color: Colors.grey[500]),
                           ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: () => _showAddTagDialog(task),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: Text(
+                            task.tags.isEmpty ? 'Add Tag' : 'Add Another Tag',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
 

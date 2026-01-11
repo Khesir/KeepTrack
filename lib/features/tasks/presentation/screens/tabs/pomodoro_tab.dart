@@ -15,6 +15,8 @@ import 'package:keep_track/features/tasks/presentation/state/pomodoro_session_co
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 
+import '../../../../../core/state/stream_state.dart';
+
 /// Pomodoro Session Tab - Focus timer with session tracking
 class PomodoroTab extends ScopedScreen {
   const PomodoroTab({super.key});
@@ -31,6 +33,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
 
   PomodoroSettings _settings = const PomodoroSettings();
   int _selectedTabIndex = 0; // 0 = Sessions, 1 = Tasks
+  Key _sessionsKey = UniqueKey(); // Force rebuild of sessions list
 
   @override
   void registerServices() {
@@ -44,6 +47,27 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     configureLayout(title: 'Pomodoro', showBottomNav: true);
     _taskController.loadTasks();
     _controller.loadActiveSession();
+
+    // Listen to controller state changes to refresh sessions list
+    // Only refresh when session is completed/created, not on timer ticks
+    PomodoroSession? lastSession;
+    _controller.stream.listen((state) {
+      if (state is AsyncData<PomodoroSessionState>) {
+        final currentSession = state.data.currentSession;
+
+        // Only refresh if session changed (completed, created, or cancelled)
+        // Not on timer ticks (when session is same but time changed)
+        if (lastSession?.id != currentSession?.id ||
+            lastSession?.status != currentSession?.status) {
+          if (mounted) {
+            setState(() {
+              _sessionsKey = UniqueKey(); // Refresh sessions list
+            });
+          }
+        }
+        lastSession = currentSession;
+      }
+    });
   }
 
   @override
@@ -69,33 +93,36 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1400),
+          constraints: const BoxConstraints(maxWidth: 1600),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Top Row - Timer and Sessions
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left side - Timer (1/2)
-                  Expanded(child: _buildTimerCard()),
-                  const SizedBox(width: AppSpacing.xl),
-                  // Right side - Sessions (1/2)
-                  Expanded(child: _buildSessionsCard()),
-                ],
+              // Top Row - Timer (full width, prominent)
+              _buildTimerCard(),
+              const SizedBox(height: AppSpacing.xl),
+
+              // Middle Row - Cleared Tasks (full width)
+              SizedBox(
+                height: 350,
+                child: _buildClearedTasksCard(),
               ),
               const SizedBox(height: AppSpacing.xl),
-              // Bottom Row - Cleared Tasks and Available Tasks
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left side - Cleared Tasks (1/2)
-                  Expanded(child: _buildClearedTasksCard()),
-                  const SizedBox(width: AppSpacing.xl),
-                  // Right side - Available Tasks (1/2)
-                  Expanded(child: _buildAvailableTasksCard()),
-                ],
+
+              // Bottom Row - Sessions and Available Tasks (equal split)
+              SizedBox(
+                height: 500,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Left side - Sessions History
+                    Expanded(child: _buildSessionsCard()),
+                    const SizedBox(width: AppSpacing.xl),
+                    // Right side - Available Tasks
+                    Expanded(child: _buildAvailableTasksCard()),
+                  ],
+                ),
               ),
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
@@ -121,25 +148,38 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
 
   Widget _buildAvailableTasksCard() {
     return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.task_alt, size: 20),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.task_alt,
+                    size: 24,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Text(
                   'Available Tasks',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            SizedBox(height: 400, child: _buildTasksTab()),
+            const SizedBox(height: 16),
+            Expanded(child: _buildTasksTab()),
           ],
         ),
       ),
@@ -148,25 +188,38 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
 
   Widget _buildSessionsCard() {
     return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.history, size: 20),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.history,
+                    size: 24,
+                    color: Colors.purple,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Text(
                   'Session History',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            SizedBox(height: 400, child: _buildSessionsTab()),
+            const SizedBox(height: 16),
+            Expanded(child: _buildSessionsTab()),
           ],
         ),
       ),
@@ -181,53 +234,113 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
         final isRunning = state.isRunning;
         final isComplete = state.isComplete;
 
+        Color sessionColor = Colors.blue;
+        if (session != null) {
+          switch (session.type) {
+            case PomodoroSessionType.pomodoro:
+              sessionColor = Colors.red;
+              break;
+            case PomodoroSessionType.shortBreak:
+              sessionColor = Colors.green;
+              break;
+            case PomodoroSessionType.longBreak:
+              sessionColor = Colors.blue;
+              break;
+          }
+        }
+
         return Card(
-          elevation: 4,
+          elevation: 8,
+          shadowColor: session != null ? sessionColor.withOpacity(0.3) : null,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              children: [
-                // Header with settings (only on mobile since desktop has it in top bar)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Focus Timer',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.settings),
-                      onPressed: _showSettingsDialog,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                // Timer display
-                _buildTimerDisplay(session, isRunning),
-
-                const SizedBox(height: 32),
-
-                // Session type selector
-                if (session == null || !isRunning)
-                  _buildSessionTypeSelector()
-                else
-                  Text(
-                    session.type.displayName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: session != null
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        sessionColor.withOpacity(0.05),
+                        Colors.transparent,
+                      ],
+                    )
+                  : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  // Header with settings
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Focus Timer',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.settings),
+                        onPressed: _showSettingsDialog,
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 24),
 
-                const SizedBox(height: 24),
+                  // Session title if exists
+                  if (session != null) ...[
+                    Text(
+                      session.title,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: sessionColor,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
-                // Control buttons
-                _buildControlButtons(session, isRunning, isComplete),
-              ],
+                  // Timer display
+                  _buildTimerDisplay(session, isRunning, sessionColor),
+
+                  const SizedBox(height: 32),
+
+                  // Session type selector or display
+                  if (session == null || !isRunning)
+                    _buildSessionTypeSelector()
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: sessionColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: sessionColor.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        session.type.displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: sessionColor,
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 24),
+
+                  // Control buttons
+                  _buildControlButtons(session, isRunning, isComplete),
+                ],
+              ),
             ),
           ),
         );
@@ -235,7 +348,11 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     );
   }
 
-  Widget _buildTimerDisplay(PomodoroSession? session, bool isRunning) {
+  Widget _buildTimerDisplay(
+    PomodoroSession? session,
+    bool isRunning,
+    Color sessionColor,
+  ) {
     int remainingSeconds = 0;
     double progress = 0.0;
 
@@ -248,15 +365,19 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     final seconds = remainingSeconds % 60;
 
     return SizedBox(
-      width: 280,
-      height: 280,
+      width: 300,
+      height: 300,
       child: Stack(
         alignment: Alignment.center,
         children: [
           // Progress circle
           CustomPaint(
-            size: const Size(280, 280),
-            painter: TimerPainter(progress: progress, isRunning: isRunning),
+            size: const Size(300, 300),
+            painter: TimerPainter(
+              progress: progress,
+              isRunning: isRunning,
+              color: sessionColor,
+            ),
           ),
           // Time text
           Column(
@@ -266,22 +387,39 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                 '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 64,
+                  fontSize: 72,
+                  color: session != null ? sessionColor : null,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               if (session != null)
-                Text(
-                  isRunning
-                      ? 'In Progress'
-                      : session.status == PomodoroSessionStatus.paused
-                      ? 'Paused'
-                      : 'Stopped',
-                  style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
-                    fontSize: 16,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isRunning
+                        ? sessionColor.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isRunning
+                          ? sessionColor.withOpacity(0.3)
+                          : Colors.orange.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    isRunning
+                        ? 'In Progress'
+                        : session.status == PomodoroSessionStatus.paused
+                        ? 'Paused'
+                        : 'Stopped',
+                    style: TextStyle(
+                      color: isRunning ? sessionColor : Colors.orange,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
             ],
@@ -519,34 +657,59 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
         }
 
         return Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.check_circle_outline, size: 20),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_outline,
+                        size: 24,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
                       'Tasks Cleared',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      '${session.tasksCleared.length}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
                         color: Colors.green,
-                        fontWeight: FontWeight.bold,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${session.tasksCleared.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 400, // match AvailableTasksCard
+                const SizedBox(height: 16),
+                Expanded(
                   child: AsyncStreamBuilder<List<Task>>(
                     state: _taskController,
                     builder: (context, tasks) {
@@ -583,7 +746,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                         itemCount: clearedTasks.length,
                         itemBuilder: (context, index) {
                           final task = clearedTasks[index];
-                          return _buildClearedTaskItem(task);
+                          return _buildClearedTaskItem(task, session);
                         },
                       );
                     },
@@ -597,20 +760,39 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     );
   }
 
-  Widget _buildClearedTaskItem(Task task) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+  Widget _buildClearedTaskItem(Task task, PomodoroSession session) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.withOpacity(0.3), width: 1.5),
+        color: Colors.green.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.4), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 24),
-            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,16 +800,16 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                   Text(
                     task.title,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   if (task.description != null) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       task.description!,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Theme.of(
                           context,
                         ).colorScheme.onSurface.withOpacity(0.6),
@@ -644,6 +826,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
               onPressed: () => _controller.removeClearedTask(task.id!),
               tooltip: 'Remove from cleared',
               color: Colors.red[400],
+              iconSize: 28,
             ),
           ],
         ),
@@ -744,6 +927,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
 
   Widget _buildSessionsTab() {
     return FutureBuilder<List<PomodoroSession>>(
+      key: _sessionsKey, // Force rebuild when key changes
       future: _controller.getSessions(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -827,16 +1011,37 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: typeColor.withOpacity(0.2),
-          child: Icon(Icons.timer, color: typeColor, size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: typeColor.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.timer, color: typeColor, size: 24),
         ),
-        title: Text(session.title),
-        subtitle: Text(
-          '${_formatDateTime(session.startedAt)} • ${session.durationSeconds ~/ 60} min',
+        title: Text(
+          session.title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
-        trailing: Icon(statusIcon, color: statusColor, size: 20),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            '${_formatDateTime(session.startedAt)} • ${session.durationSeconds ~/ 60} min',
+            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+          ),
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(statusIcon, color: statusColor, size: 22),
+        ),
       ),
     );
   }
@@ -923,17 +1128,27 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
         !task.isCompleted;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isOverdue
             ? Colors.red.withOpacity(0.05)
             : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: isOverdue
-            ? Border.all(color: Colors.red.withOpacity(0.3), width: 1.5)
+            ? Border.all(color: Colors.red.withOpacity(0.4), width: 2)
             : Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                width: 1.5,
               ),
+        boxShadow: [
+          BoxShadow(
+            color: isOverdue
+                ? Colors.red.withOpacity(0.1)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -960,6 +1175,21 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                     completedAt: value ? DateTime.now() : null,
                   );
                   await _taskController.updateTask(updatedTask);
+
+                  // If marking as completed and there's an active session, add to cleared tasks
+                  if (value && session != null && task.id != null) {
+                    await _controller.addClearedTask(task.id!);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${task.title} completed and cleared!'),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
                 }
               },
             ),
@@ -1024,11 +1254,28 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
 
             // Action button
             if (session != null)
-              IconButton(
-                icon: const Icon(Icons.add_task),
-                onPressed: () => _controller.addClearedTask(task.id!),
-                tooltip: 'Mark as cleared',
-                color: Theme.of(context).colorScheme.primary,
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.add_task),
+                  onPressed: () {
+                    _controller.addClearedTask(task.id!);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${task.title} cleared!'),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  tooltip: 'Mark as cleared',
+                  color: Theme.of(context).colorScheme.primary,
+                  iconSize: 28,
+                ),
               ),
           ],
         ),
@@ -1481,8 +1728,13 @@ class _SessionStartSheetState extends State<_SessionStartSheet> {
 class TimerPainter extends CustomPainter {
   final double progress;
   final bool isRunning;
+  final Color color;
 
-  TimerPainter({required this.progress, required this.isRunning});
+  TimerPainter({
+    required this.progress,
+    required this.isRunning,
+    required this.color,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1491,21 +1743,37 @@ class TimerPainter extends CustomPainter {
 
     // Background circle
     final bgPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.2)
+      ..color = Colors.grey.withOpacity(0.15)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12;
+      ..strokeWidth = 16;
 
-    canvas.drawCircle(center, radius - 6, bgPaint);
+    canvas.drawCircle(center, radius - 8, bgPaint);
 
-    // Progress arc
+    // Progress arc with gradient effect
     final progressPaint = Paint()
-      ..color = isRunning ? Colors.blue : Colors.orange
+      ..color = isRunning ? color : Colors.orange
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12
+      ..strokeWidth = 16
       ..strokeCap = StrokeCap.round;
 
+    // Draw shadow/glow effect
+    final shadowPaint = Paint()
+      ..color = (isRunning ? color : Colors.orange).withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 20
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - 6),
+      Rect.fromCircle(center: center, radius: radius - 8),
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      shadowPaint,
+    );
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - 8),
       -math.pi / 2,
       2 * math.pi * progress,
       false,
@@ -1516,7 +1784,8 @@ class TimerPainter extends CustomPainter {
   @override
   bool shouldRepaint(TimerPainter oldDelegate) {
     return oldDelegate.progress != progress ||
-        oldDelegate.isRunning != isRunning;
+        oldDelegate.isRunning != isRunning ||
+        oldDelegate.color != color;
   }
 }
 
