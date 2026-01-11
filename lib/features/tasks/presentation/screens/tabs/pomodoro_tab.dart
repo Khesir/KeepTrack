@@ -4,16 +4,15 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomodoro_session.dart';
-import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomodoro_settings.dart'
-    hide PomodoroSessionType;
+import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomodoro_settings.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/presentation/state/pomodoro_session_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
 /// Pomodoro Session Tab - Focus timer with session tracking
 class PomodoroTab extends ScopedScreen {
@@ -28,14 +27,12 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
   late final PomodoroSessionController _controller;
   late final TaskController _taskController;
   late final ProjectController _projectController;
-  late final SupabaseService _supabaseService;
 
   PomodoroSettings _settings = const PomodoroSettings();
   int _selectedTabIndex = 0; // 0 = Sessions, 1 = Tasks
 
   @override
   void registerServices() {
-    _supabaseService = locator.get<SupabaseService>();
     _controller = locator.get<PomodoroSessionController>();
     _taskController = locator.get<TaskController>();
     _projectController = locator.get<ProjectController>();
@@ -45,53 +42,59 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
   void onReady() {
     configureLayout(title: 'Pomodoro', showBottomNav: true);
     _taskController.loadTasks();
-    _controller
-        .loadActiveSession(); // Load active/paused session when page loads
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
+    _controller.loadActiveSession();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width >= 900;
-
-    return Scaffold(
-      backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
-      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
-      floatingActionButton: !isDesktop
-          ? FloatingActionButton(
-              onPressed: _showSettingsDialog,
-              child: const Icon(Icons.settings),
-            )
-          : null,
+    return DesktopAwareScreen(
+      builder: (context, isDesktop) {
+        return Scaffold(
+          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+          floatingActionButton: !isDesktop
+              ? FloatingActionButton(
+                  onPressed: _showSettingsDialog,
+                  child: const Icon(Icons.settings),
+                )
+              : null,
+        );
+      },
     );
   }
 
   Widget _buildDesktopLayout() {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1400),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Row(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left side - Timer (1/2)
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildTimerCard(),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildClearedTasksCard(),
-                  ],
-                ),
+              // Top Row - Timer and Sessions
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left side - Timer (1/2)
+                  Expanded(child: _buildTimerCard()),
+                  const SizedBox(width: AppSpacing.xl),
+                  // Right side - Sessions (1/2)
+                  Expanded(child: _buildSessionsCard()),
+                ],
               ),
-              const SizedBox(width: AppSpacing.xl),
-              // Right side - Sessions/Tasks tabs (1/2)
-              Expanded(child: _buildTabsSection()),
+              const SizedBox(height: AppSpacing.xl),
+              // Bottom Row - Cleared Tasks and Available Tasks
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left side - Cleared Tasks (1/2)
+                  Expanded(child: _buildClearedTasksCard()),
+                  const SizedBox(width: AppSpacing.xl),
+                  // Right side - Available Tasks (1/2)
+                  Expanded(child: _buildAvailableTasksCard()),
+                ],
+              ),
             ],
           ),
         ),
@@ -115,6 +118,60 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     );
   }
 
+  Widget _buildAvailableTasksCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.task_alt, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Available Tasks',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(height: 400, child: _buildTasksTab()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.history, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Session History',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(height: 400, child: _buildSessionsTab()),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTimerCard() {
     return AsyncStreamBuilder<PomodoroSessionState>(
       state: _controller,
@@ -132,7 +189,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
             padding: const EdgeInsets.all(32),
             child: Column(
               children: [
-                // Header with settings
+                // Header with settings (only on mobile since desktop has it in top bar)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -287,7 +344,6 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
         ],
       ),
       onPressed: () {
-        // Show project selector for pomodoro type, otherwise start directly
         if (type == PomodoroSessionType.pomodoro) {
           _showProjectSelectorDialog(type);
         } else {
@@ -321,6 +377,77 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
       return const SizedBox();
     }
 
+    // Check if mobile for responsive layout
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    if (isMobile) {
+      // Mobile: Stack buttons vertically
+      return Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: isRunning
+                ? ElevatedButton.icon(
+                    onPressed: _controller.pauseSession,
+                    icon: const Icon(Icons.pause),
+                    label: const Text('Pause'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () => _controller.resumeSession(session),
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Resume'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showCompleteDialog(session),
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('Complete'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _controller.cancelSession,
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('Cancel'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    foregroundColor: Colors.red,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Desktop: Horizontal layout
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -370,8 +497,24 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
       state: _controller,
       builder: (context, state) {
         final session = state.currentSession;
+
+        // If there's no session, show a friendly message
         if (session == null) {
-          return const SizedBox();
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                height: 400,
+                child: Center(
+                  child: Text(
+                    'Create a session to start clearing tasks!',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+          );
         }
 
         return Card(
@@ -400,11 +543,22 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                     ),
                   ],
                 ),
-                if (session.tasksCleared.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  AsyncStreamBuilder<List<Task>>(
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 400, // match AvailableTasksCard
+                  child: AsyncStreamBuilder<List<Task>>(
                     state: _taskController,
                     builder: (context, tasks) {
+                      if (tasks.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No tasks available. Add some to start!',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+
                       final clearedTasks = tasks
                           .where(
                             (t) =>
@@ -413,9 +567,18 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                           )
                           .toList();
 
+                      if (clearedTasks.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No tasks cleared yet.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+
                       return ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
+                        physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: clearedTasks.length,
                         itemBuilder: (context, index) {
                           final task = clearedTasks[index];
@@ -424,12 +587,66 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                       );
                     },
                   ),
-                ],
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildClearedTaskItem(Task task) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.withOpacity(0.3), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (task.description != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      task.description!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline),
+              onPressed: () => _controller.removeClearedTask(task.id!),
+              tooltip: 'Remove from cleared',
+              color: Colors.red[400],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -513,7 +730,8 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
           ),
 
           // Tab content
-          Expanded(
+          SizedBox(
+            height: 400, // Fixed height for the tab content
             child: _selectedTabIndex == 0
                 ? _buildSessionsTab()
                 : _buildTasksTab(),
@@ -682,284 +900,42 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
   }
 
   Widget _buildTaskItem(Task task, PomodoroSession? session) {
-    final isOverdue =
-        task.dueDate != null &&
-        task.dueDate!.isBefore(DateTime.now()) &&
-        !task.isCompleted;
+    Color priorityColor;
+    switch (task.priority) {
+      case TaskPriority.urgent:
+        priorityColor = Colors.red[700]!;
+        break;
+      case TaskPriority.high:
+        priorityColor = Colors.orange[700]!;
+        break;
+      case TaskPriority.medium:
+        priorityColor = Colors.blue[700]!;
+        break;
+      case TaskPriority.low:
+        priorityColor = Colors.grey[700]!;
+        break;
+    }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isOverdue
-            ? Colors.red.withOpacity(0.05)
-            : Theme.of(context).colorScheme.surface.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: isOverdue
-            ? Border.all(color: Colors.red.withOpacity(0.5), width: 1.5)
-            : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            // Priority indicator
-            Container(
-              width: 4,
-              height: 50,
-              decoration: BoxDecoration(
-                color: _getPriorityColor(task.priority),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Checkbox
-            Checkbox(
-              value: task.isCompleted,
-              onChanged: session != null
-                  ? (value) async {
-                      if (value != null) {
-                        final updated = task.copyWith(
-                          status: value
-                              ? TaskStatus.completed
-                              : TaskStatus.todo,
-                          completedAt: value ? DateTime.now() : null,
-                        );
-                        await _taskController.updateTask(updated);
-                      }
-                    }
-                  : null,
-            ),
-            const SizedBox(width: 8),
-
-            // Task info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      decoration: task.isCompleted
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                  if (task.description != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      task.description!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      if (isOverdue)
-                        _buildTaskBadge(
-                          'OVERDUE',
-                          Colors.red,
-                          Icons.warning_amber_rounded,
-                        ),
-                      _buildTaskBadge(
-                        task.priority.displayName,
-                        _getPriorityColor(task.priority),
-                        Icons.flag,
-                      ),
-                      _buildTaskBadge(
-                        task.status.displayName,
-                        _getStatusColor(task.status),
-                        Icons.circle,
-                      ),
-                      if (task.dueDate != null)
-                        _buildTaskBadge(
-                          _formatDateTime(task.dueDate!),
-                          isOverdue ? Colors.red : Colors.grey[700]!,
-                          Icons.calendar_today,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Add to cleared button (only if session is active)
-            if (session != null)
-              IconButton(
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Container(
+          width: 4,
+          height: 40,
+          decoration: BoxDecoration(
+            color: priorityColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        title: Text(task.title),
+        subtitle: task.description != null ? Text(task.description!) : null,
+        trailing: session != null
+            ? IconButton(
                 icon: const Icon(Icons.add_task),
                 onPressed: () => _controller.addClearedTask(task.id!),
                 tooltip: 'Mark as cleared',
-                color: Theme.of(context).colorScheme.primary,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTaskBadge(String label, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getPriorityColor(TaskPriority priority) {
-    switch (priority) {
-      case TaskPriority.urgent:
-        return Colors.red[700]!;
-      case TaskPriority.high:
-        return Colors.orange[700]!;
-      case TaskPriority.medium:
-        return Colors.blue[700]!;
-      case TaskPriority.low:
-        return Colors.grey[700]!;
-    }
-  }
-
-  Color _getStatusColor(TaskStatus status) {
-    switch (status) {
-      case TaskStatus.todo:
-        return Colors.grey[600]!;
-      case TaskStatus.inProgress:
-        return Colors.blue[600]!;
-      case TaskStatus.completed:
-        return Colors.green[600]!;
-      case TaskStatus.cancelled:
-        return Colors.orange[600]!;
-    }
-  }
-
-  Widget _buildClearedTaskItem(Task task) {
-    final isOverdue =
-        task.dueDate != null &&
-        task.dueDate!.isBefore(DateTime.now()) &&
-        !task.isCompleted;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.withOpacity(0.3), width: 1.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            // Priority indicator
-            Container(
-              width: 4,
-              height: 50,
-              decoration: BoxDecoration(
-                color: _getPriorityColor(task.priority),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Check icon (instead of checkbox)
-            const Icon(Icons.check_circle, color: Colors.green, size: 24),
-            const SizedBox(width: 8),
-
-            // Task info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (task.description != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      task.description!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      if (isOverdue)
-                        _buildTaskBadge(
-                          'OVERDUE',
-                          Colors.red,
-                          Icons.warning_amber_rounded,
-                        ),
-                      _buildTaskBadge(
-                        task.priority.displayName,
-                        _getPriorityColor(task.priority),
-                        Icons.flag,
-                      ),
-                      _buildTaskBadge(
-                        task.status.displayName,
-                        _getStatusColor(task.status),
-                        Icons.circle,
-                      ),
-                      if (task.dueDate != null)
-                        _buildTaskBadge(
-                          _formatDateTime(task.dueDate!),
-                          isOverdue ? Colors.red : Colors.grey[700]!,
-                          Icons.calendar_today,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Remove button
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline),
-              onPressed: () => _controller.removeClearedTask(task.id!),
-              tooltip: 'Remove from cleared',
-              color: Colors.red[400],
-            ),
-          ],
-        ),
+              )
+            : null,
       ),
     );
   }
@@ -1008,15 +984,24 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     final titleController = TextEditingController();
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    // For mobile, show full screen route
+    // For mobile, show full screen bottom sheet
     if (isMobile) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => _SessionStartScreen(
-            type: type,
-            controller: _controller,
-            projectController: _projectController,
-          ),
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return _SessionStartSheet(
+              type: type,
+              controller: _controller,
+              projectController: _projectController,
+              scrollController: scrollController,
+            );
+          },
         ),
       );
       return;
@@ -1033,7 +1018,6 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title field
               TextField(
                 controller: titleController,
                 decoration: InputDecoration(
@@ -1051,7 +1035,6 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
-              // Project list
               Flexible(
                 child: AsyncStreamBuilder<List<Project>>(
                   state: _projectController,
@@ -1066,7 +1049,6 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // No project option
                         ListTile(
                           leading: const Icon(Icons.timer),
                           title: const Text('No Project'),
@@ -1083,7 +1065,6 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                           },
                         ),
                         const Divider(),
-                        // Project list
                         if (activeProjects.isEmpty)
                           const Padding(
                             padding: EdgeInsets.all(16.0),
@@ -1096,8 +1077,6 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                               itemCount: activeProjects.length,
                               itemBuilder: (context, index) {
                                 final project = activeProjects[index];
-
-                                // Parse color - remove # if present
                                 Color projectColor = Colors.blue;
                                 if (project.color != null) {
                                   try {
@@ -1109,7 +1088,6 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                                       int.parse('0xFF$colorStr'),
                                     );
                                   } catch (e) {
-                                    // Fallback to blue if parsing fails
                                     projectColor = Colors.blue;
                                   }
                                 }
@@ -1187,23 +1165,25 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
   }
 }
 
-/// Mobile full-screen session start widget
-class _SessionStartScreen extends StatefulWidget {
+/// Mobile bottom sheet for session start
+class _SessionStartSheet extends StatefulWidget {
   final PomodoroSessionType type;
   final PomodoroSessionController controller;
   final ProjectController projectController;
+  final ScrollController scrollController;
 
-  const _SessionStartScreen({
+  const _SessionStartSheet({
     required this.type,
     required this.controller,
     required this.projectController,
+    required this.scrollController,
   });
 
   @override
-  State<_SessionStartScreen> createState() => _SessionStartScreenState();
+  State<_SessionStartSheet> createState() => _SessionStartSheetState();
 }
 
-class _SessionStartScreenState extends State<_SessionStartScreen> {
+class _SessionStartSheetState extends State<_SessionStartSheet> {
   final _titleController = TextEditingController();
   String? _selectedProjectId;
 
@@ -1215,141 +1195,161 @@ class _SessionStartScreenState extends State<_SessionStartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Start ${widget.type.displayName}'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              final title = _titleController.text.trim();
-              Navigator.pop(context);
-              widget.controller.startSession(
-                widget.type,
-                projectId: _selectedProjectId,
-                title: title.isEmpty ? null : title,
-              );
-            },
-            child: const Text(
-              'START',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Start ${widget.type.displayName}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final title = _titleController.text.trim();
+                    Navigator.pop(context);
+                    widget.controller.startSession(
+                      widget.type,
+                      projectId: _selectedProjectId,
+                      title: title.isEmpty ? null : title,
+                    );
+                  },
+                  child: const Text(
+                    'START',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+
+          // Content
+          Expanded(
+            child: ListView(
+              controller: widget.scrollController,
+              padding: const EdgeInsets.all(16),
+              children: [
+                TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Session Title (Optional)',
+                    hintText: 'Leave empty for default title',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    prefixIcon: const Icon(Icons.edit),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Select Project (Optional)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+
+                // No project option
+                ListTile(
+                  leading: const Icon(Icons.timer),
+                  title: const Text('No Project'),
+                  subtitle: const Text('Start without project tracking'),
+                  trailing: _selectedProjectId == null
+                      ? const Icon(Icons.check, color: Colors.green)
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedProjectId = null;
+                    });
+                  },
+                ),
+                const Divider(),
+
+                // Projects
+                AsyncStreamBuilder<List<Project>>(
+                  state: widget.projectController,
+                  builder: (context, projects) {
+                    final activeProjects = projects
+                        .where(
+                          (p) =>
+                              p.status == ProjectStatus.active && !p.isArchived,
+                        )
+                        .toList();
+
+                    if (activeProjects.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: Text('No active projects')),
+                      );
+                    }
+
+                    return Column(
+                      children: activeProjects.map((project) {
+                        Color projectColor = Colors.blue;
+                        if (project.color != null) {
+                          try {
+                            final colorStr = project.color!.replaceAll('#', '');
+                            projectColor = Color(int.parse('0xFF$colorStr'));
+                          } catch (e) {
+                            projectColor = Colors.blue;
+                          }
+                        }
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: projectColor,
+                            child: Text(
+                              project.name[0].toUpperCase(),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          title: Text(project.name),
+                          subtitle: project.description != null
+                              ? Text(project.description!)
+                              : null,
+                          trailing: _selectedProjectId == project.id
+                              ? const Icon(Icons.check, color: Colors.green)
+                              : null,
+                          onTap: () {
+                            setState(() {
+                              _selectedProjectId = project.id;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    );
+                  },
+                  loadingBuilder: (_) =>
+                      const Center(child: CircularProgressIndicator()),
+                  errorBuilder: (context, message) =>
+                      Center(child: Text('Error loading projects: $message')),
+                ),
+              ],
             ),
           ),
         ],
-      ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Title field
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Session Title (Optional)',
-                  hintText: 'Leave empty for default title',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.edit),
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                'Select Project (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Project list
-            Expanded(
-              child: AsyncStreamBuilder<List<Project>>(
-                state: widget.projectController,
-                builder: (context, projects) {
-                  final activeProjects = projects
-                      .where(
-                        (p) =>
-                            p.status == ProjectStatus.active && !p.isArchived,
-                      )
-                      .toList();
-
-                  return ListView(
-                    children: [
-                      // No project option
-                      ListTile(
-                        leading: const Icon(Icons.timer),
-                        title: const Text('No Project'),
-                        subtitle: const Text('Start without project tracking'),
-                        trailing: _selectedProjectId == null
-                            ? const Icon(Icons.check, color: Colors.green)
-                            : null,
-                        onTap: () {
-                          setState(() {
-                            _selectedProjectId = null;
-                          });
-                        },
-                      ),
-                      const Divider(),
-                      // Project list
-                      if (activeProjects.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Center(child: Text('No active projects')),
-                        )
-                      else
-                        ...activeProjects.map((project) {
-                          // Parse color - remove # if present
-                          Color projectColor = Colors.blue;
-                          if (project.color != null) {
-                            try {
-                              final colorStr = project.color!.replaceAll(
-                                '#',
-                                '',
-                              );
-                              projectColor = Color(int.parse('0xFF$colorStr'));
-                            } catch (e) {
-                              projectColor = Colors.blue;
-                            }
-                          }
-
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: projectColor,
-                              child: Text(
-                                project.name[0].toUpperCase(),
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            title: Text(project.name),
-                            subtitle: project.description != null
-                                ? Text(project.description!)
-                                : null,
-                            trailing: _selectedProjectId == project.id
-                                ? const Icon(Icons.check, color: Colors.green)
-                                : null,
-                            onTap: () {
-                              setState(() {
-                                _selectedProjectId = project.id;
-                              });
-                            },
-                          );
-                        }),
-                    ],
-                  );
-                },
-                loadingBuilder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-                errorBuilder: (context, message) =>
-                    Center(child: Text('Error loading projects: $message')),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

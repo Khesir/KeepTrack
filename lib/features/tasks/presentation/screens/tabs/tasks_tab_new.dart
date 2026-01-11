@@ -56,7 +56,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
 
   @override
   void onReady() {
-    configureLayout(title: 'Home', showBottomNav: true);
+    configureLayout(title: 'Tasks', showBottomNav: true);
   }
 
   @override
@@ -1367,9 +1367,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
       // Navigate directly to full page on mobile
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const CreateTaskPage(),
-        ),
+        MaterialPageRoute(builder: (context) => const CreateTaskPage()),
       );
     }
   }
@@ -1388,9 +1386,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey[300]!),
-                  ),
+                  border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
                 ),
                 child: Row(
                   children: [
@@ -1448,9 +1444,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Colors.grey[300]!),
-                  ),
+                  border: Border(top: BorderSide(color: Colors.grey[300]!)),
                 ),
                 child: SizedBox(
                   width: double.infinity,
@@ -1526,7 +1520,8 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                     final subtasks = tasks
                         .where((t) => t.parentTaskId == currentTask.id)
                         .toList();
-                    final isOverdue = currentTask.dueDate != null &&
+                    final isOverdue =
+                        currentTask.dueDate != null &&
                         currentTask.dueDate!.isBefore(DateTime.now()) &&
                         !currentTask.isCompleted;
 
@@ -1539,10 +1534,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                             color: Theme.of(context).colorScheme.surface,
                             border: Border(
                               bottom: BorderSide(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outline
-                                    .withOpacity(0.2),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outline.withOpacity(0.2),
                               ),
                             ),
                           ),
@@ -1551,9 +1545,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                               Expanded(
                                 child: Text(
                                   'Task Details',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
+                                  style: Theme.of(context).textTheme.titleLarge
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -1585,16 +1577,18 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                     value: currentTask.isCompleted,
                                     onChanged: (value) async {
                                       if (value != null) {
-                                        final updatedTask =
-                                            currentTask.copyWith(
-                                          status: value
-                                              ? TaskStatus.completed
-                                              : TaskStatus.todo,
-                                          completedAt: value
-                                              ? DateTime.now()
-                                              : null,
+                                        final updatedTask = currentTask
+                                            .copyWith(
+                                              status: value
+                                                  ? TaskStatus.completed
+                                                  : TaskStatus.todo,
+                                              completedAt: value
+                                                  ? DateTime.now()
+                                                  : null,
+                                            );
+                                        await _controller.updateTask(
+                                          updatedTask,
                                         );
-                                        await _controller.updateTask(updatedTask);
                                       }
                                     },
                                   ),
@@ -1616,37 +1610,37 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                               ),
                               const SizedBox(height: 16),
 
-                          // Overdue Badge
-                          if (isOverdue) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.red.withOpacity(0.5),
-                                ),
-                              ),
-                              child: Row(
-                                children: const [
-                                  Icon(
-                                    Icons.warning_amber_rounded,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'OVERDUE',
-                                    style: TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.bold,
+                              // Overdue Badge
+                              if (isOverdue) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.red.withOpacity(0.5),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
+                                  child: Row(
+                                    children: const [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'OVERDUE',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
 
                               // Priority - Editable
                               _buildEditableDetailSection(
@@ -1670,7 +1664,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                           Text(
                                             priority.displayName,
                                             style: TextStyle(
-                                              color: _getPriorityColor(priority),
+                                              color: _getPriorityColor(
+                                                priority,
+                                              ),
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -1726,8 +1722,8 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                         status: newStatus,
                                         completedAt:
                                             newStatus == TaskStatus.completed
-                                                ? DateTime.now()
-                                                : null,
+                                            ? DateTime.now()
+                                            : null,
                                       );
                                       await _controller.updateTask(updatedTask);
                                     }
@@ -1764,10 +1760,11 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                           time.hour,
                                           time.minute,
                                         );
-                                        final updatedTask = currentTask.copyWith(
-                                          dueDate: newDueDate,
+                                        final updatedTask = currentTask
+                                            .copyWith(dueDate: newDueDate);
+                                        await _controller.updateTask(
+                                          updatedTask,
                                         );
-                                        await _controller.updateTask(updatedTask);
                                       }
                                     }
                                   },
@@ -1777,9 +1774,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.surfaceContainerHighest,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
@@ -1788,21 +1785,22 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                           child: Text(
                                             currentTask.dueDate != null
                                                 ? DateFormat(
-                                                        'EEEE, MMMM d, y - h:mm a')
-                                                    .format(currentTask.dueDate!)
+                                                    'EEEE, MMMM d, y - h:mm a',
+                                                  ).format(currentTask.dueDate!)
                                                 : 'No due date set - Click to add',
                                             style: TextStyle(
-                                              color: currentTask.dueDate != null &&
+                                              color:
+                                                  currentTask.dueDate != null &&
                                                       isOverdue
                                                   ? Colors.red
                                                   : currentTask.dueDate == null
-                                                      ? Colors.grey[500]
-                                                      : null,
+                                                  ? Colors.grey[500]
+                                                  : null,
                                               fontWeight:
                                                   currentTask.dueDate != null &&
-                                                          isOverdue
-                                                      ? FontWeight.w600
-                                                      : null,
+                                                      isOverdue
+                                                  ? FontWeight.w600
+                                                  : null,
                                             ),
                                           ),
                                         ),
@@ -1835,8 +1833,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                 Icons.add_circle_outline,
                                 Text(
                                   currentTask.createdAt != null
-                                      ? DateFormat('MMMM d, y - h:mm a')
-                                          .format(currentTask.createdAt!)
+                                      ? DateFormat(
+                                          'MMMM d, y - h:mm a',
+                                        ).format(currentTask.createdAt!)
                                       : 'Unknown',
                                   style: TextStyle(
                                     color: currentTask.createdAt == null
@@ -1853,8 +1852,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                 Icons.check_circle,
                                 Text(
                                   currentTask.completedAt != null
-                                      ? DateFormat('MMMM d, y - h:mm a')
-                                          .format(currentTask.completedAt!)
+                                      ? DateFormat(
+                                          'MMMM d, y - h:mm a',
+                                        ).format(currentTask.completedAt!)
                                       : 'Not completed',
                                   style: TextStyle(
                                     color: currentTask.completedAt == null
@@ -1879,17 +1879,20 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                                 label: Text(
                                                   tag,
                                                   style: const TextStyle(
-                                                      fontSize: 12),
+                                                    fontSize: 12,
+                                                  ),
                                                 ),
-                                                backgroundColor:
-                                                    Colors.blue.withOpacity(0.1),
+                                                backgroundColor: Colors.blue
+                                                    .withOpacity(0.1),
                                               ),
                                             )
                                             .toList(),
                                       )
                                     : Text(
                                         'No tags',
-                                        style: TextStyle(color: Colors.grey[500]),
+                                        style: TextStyle(
+                                          color: Colors.grey[500],
+                                        ),
                                       ),
                               ),
                               const SizedBox(height: 16),
@@ -1933,10 +1936,13 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                               status: value
                                                   ? TaskStatus.completed
                                                   : TaskStatus.todo,
-                                              completedAt:
-                                                  value ? DateTime.now() : null,
+                                              completedAt: value
+                                                  ? DateTime.now()
+                                                  : null,
                                             );
-                                            await _controller.updateTask(updated);
+                                            await _controller.updateTask(
+                                              updated,
+                                            );
                                           }
                                         },
                                       ),
@@ -1970,10 +1976,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                             color: Theme.of(context).colorScheme.surface,
                             border: Border(
                               top: BorderSide(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outline
-                                    .withOpacity(0.2),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outline.withOpacity(0.2),
                               ),
                             ),
                           ),
@@ -1989,8 +1994,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                     _showCreateSubtaskDialog(currentTask);
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -2011,8 +2017,9 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
                                     );
                                   },
                                   style: OutlinedButton.styleFrom(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -2055,7 +2062,11 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
     );
   }
 
-  Widget _buildEditableDetailSection(String title, IconData icon, Widget content) {
+  Widget _buildEditableDetailSection(
+    String title,
+    IconData icon,
+    Widget content,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

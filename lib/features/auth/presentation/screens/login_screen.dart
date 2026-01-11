@@ -174,10 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Your personal productivity hub',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 48),
                 _buildAuthForm(),
@@ -196,21 +193,13 @@ class _LoginScreenState extends State<LoginScreen> {
         // Title
         Text(
           _isSignUp ? 'Create Account' : 'Welcome Back',
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
-          _isSignUp
-              ? 'Sign up to get started'
-              : 'Sign in to your account',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          _isSignUp ? 'Sign up to get started' : 'Sign in to your account',
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
@@ -266,64 +255,60 @@ class _LoginScreenState extends State<LoginScreen> {
 
         const SizedBox(height: 24),
 
-        // Dev mode features - Always show on desktop (Windows, macOS, Linux)
-        FutureBuilder<bool>(
-          future: _shouldShowDevMode(),
-          builder: (context, snapshot) {
-            if (snapshot.hasData && snapshot.data == true) {
-              return Column(
-                children: [
-                  _buildAdminSignInButton(),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Colors.orange.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.code,
-                          size: 14,
-                          color: Colors.orange[700],
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Dev Mode',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.orange[700],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-
+        // // Dev mode features - Always show on desktop (Windows, macOS, Linux)
+        // FutureBuilder<bool>(
+        //   future: _shouldShowDevMode(),
+        //   builder: (context, snapshot) {
+        //     if (snapshot.hasData && snapshot.data == true) {
+        //       return Column(
+        //         children: [
+        //           _buildAdminSignInButton(),
+        //           const SizedBox(height: 16),
+        //           Container(
+        //             padding: const EdgeInsets.symmetric(
+        //               horizontal: 12,
+        //               vertical: 8,
+        //             ),
+        //             decoration: BoxDecoration(
+        //               color: Colors.orange.withOpacity(0.1),
+        //               borderRadius: BorderRadius.circular(6),
+        //               border: Border.all(
+        //                 color: Colors.orange.withOpacity(0.3),
+        //               ),
+        //             ),
+        //             child: Row(
+        //               mainAxisSize: MainAxisSize.min,
+        //               children: [
+        //                 Icon(
+        //                   Icons.code,
+        //                   size: 14,
+        //                   color: Colors.orange[700],
+        //                 ),
+        //                 const SizedBox(width: 6),
+        //                 Text(
+        //                   'Dev Mode',
+        //                   style: TextStyle(
+        //                     fontSize: 11,
+        //                     color: Colors.orange[700],
+        //                     fontWeight: FontWeight.w600,
+        //                   ),
+        //                 ),
+        //               ],
+        //             ),
+        //           ),
+        //         ],
+        //       );
+        //     }
+        //     return const SizedBox.shrink();
+        //   },
+        // ),
         const SizedBox(height: 24),
 
         // Terms
         Text(
           'By continuing, you agree to our Terms & Privacy Policy',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
         ),
       ],
     );
@@ -371,9 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: InputDecoration(
             labelText: 'Email',
             prefixIcon: const Icon(Icons.email),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 12),
@@ -383,9 +366,7 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: InputDecoration(
             labelText: 'Password',
             prefixIcon: const Icon(Icons.lock),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -417,10 +398,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: Text(
             _isSignUp ? 'Create Account' : 'Sign In',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: 12),
@@ -455,11 +433,7 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Google logo - using icon fallback for now
-              Icon(
-                Icons.login,
-                size: 24,
-                color: GCashColors.primary,
-              ),
+              Icon(Icons.login, size: 24, color: GCashColors.primary),
               const SizedBox(width: 12),
               const Text(
                 'Sign in with Google',
@@ -553,10 +527,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 16),
           const Text(
             'Signing in...',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 24),
           // Cancel button
@@ -567,10 +538,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             child: const Text(
               'Cancel',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -585,11 +553,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
             Text(
               'Sign-in Failed',
@@ -603,10 +567,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
