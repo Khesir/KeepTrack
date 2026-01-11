@@ -6,7 +6,7 @@
 #define MyAppVersion "7.2"
 #define MyAppPublisher "Khesir"
 #define MyAppURL "https://khesir.com"
-#define MyAppExeName "Keep Track.exe"
+#define MyAppExeName "keep_track.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
