@@ -1,72 +1,111 @@
-/// Pomodoro Session entity - Pure domain model
+// Pomodoro Session entity - Pure domain model
 class PomodoroSession {
   final String? id;
   final String userId;
+  final String? projectId;
+  final String title;
   final PomodoroSessionType type;
   final int durationSeconds;
   final DateTime startedAt;
   final DateTime? endedAt;
+  final DateTime? pausedAt;
+  final int elapsedSecondsBeforePause;
   final PomodoroSessionStatus status;
-  final List<String> tasksCleared; // Task UUIDs completed during session
+  final List<String> tasksCleared;
 
   PomodoroSession({
     this.id,
     required this.userId,
+    this.projectId,
+    String? title,
     required this.type,
     required this.durationSeconds,
     required this.startedAt,
     this.endedAt,
+    this.pausedAt,
+    this.elapsedSecondsBeforePause = 0,
     required this.status,
     this.tasksCleared = const [],
-  });
+  }) : title = title ?? _getDefaultTitle(type);
 
-  /// Copy with method for immutability
+  static String _getDefaultTitle(PomodoroSessionType type) {
+    switch (type) {
+      case PomodoroSessionType.pomodoro:
+        return 'Pomodoro Session';
+      case PomodoroSessionType.shortBreak:
+        return 'Short Break';
+      case PomodoroSessionType.longBreak:
+        return 'Long Break';
+    }
+  }
+
   PomodoroSession copyWith({
     String? id,
     String? userId,
+    String? projectId,
+    String? title,
     PomodoroSessionType? type,
     int? durationSeconds,
     DateTime? startedAt,
     DateTime? endedAt,
+    DateTime? pausedAt,
+    int? elapsedSecondsBeforePause,
     PomodoroSessionStatus? status,
     List<String>? tasksCleared,
   }) {
     return PomodoroSession(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      projectId: projectId ?? this.projectId,
+      title: title ?? this.title,
       type: type ?? this.type,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       startedAt: startedAt ?? this.startedAt,
       endedAt: endedAt ?? this.endedAt,
+      pausedAt: pausedAt ?? this.pausedAt,
+      elapsedSecondsBeforePause:
+          elapsedSecondsBeforePause ?? this.elapsedSecondsBeforePause,
       status: status ?? this.status,
       tasksCleared: tasksCleared ?? this.tasksCleared,
     );
   }
 
-  /// Check if session is currently running
-  bool get isRunning => status == PomodoroSessionStatus.running && endedAt == null;
+  bool get isRunning =>
+      status == PomodoroSessionStatus.running && endedAt == null;
 
   /// Get elapsed seconds based on current time
+  /// FIXED: Proper time calculation for running, paused, and completed states
   int get elapsedSeconds {
+    // If session has ended, calculate total elapsed time
     if (endedAt != null) {
       return endedAt!.difference(startedAt).inSeconds;
     }
-    return DateTime.now().difference(startedAt).inSeconds;
+
+    // If paused, return the elapsed time at pause
+    if (status == PomodoroSessionStatus.paused) {
+      return elapsedSecondsBeforePause;
+    }
+
+    // If running, calculate current elapsed time from startedAt
+    // When we resume from pause, startedAt is already adjusted to account for
+    // the previous elapsed time, so we just calculate from startedAt
+    final now = DateTime.now();
+    final currentElapsed = now.difference(startedAt).inSeconds;
+
+    // Ensure non-negative (handles clock skew/timezone issues)
+    return currentElapsed > 0 ? currentElapsed : 0;
   }
 
-  /// Get remaining seconds
   int get remainingSeconds {
     final elapsed = elapsedSeconds;
-    return durationSeconds - elapsed > 0 ? durationSeconds - elapsed : 0;
+    final remaining = durationSeconds - elapsed;
+    return remaining > 0 ? remaining : 0;
   }
 
-  /// Check if session is completed
   bool get isCompleted => status == PomodoroSessionStatus.completed;
 
-  /// Check if session is canceled
   bool get isCanceled => status == PomodoroSessionStatus.canceled;
 
-  /// Get progress percentage (0.0 to 1.0)
   double get progress {
     if (durationSeconds == 0) return 1.0;
     final elapsed = elapsedSeconds;
@@ -75,21 +114,10 @@ class PomodoroSession {
   }
 }
 
-/// Pomodoro session type
-enum PomodoroSessionType {
-  pomodoro,
-  shortBreak,
-  longBreak,
-}
+enum PomodoroSessionType { pomodoro, shortBreak, longBreak }
 
-/// Pomodoro session status
-enum PomodoroSessionStatus {
-  running,
-  completed,
-  canceled,
-}
+enum PomodoroSessionStatus { running, paused, completed, canceled }
 
-/// Extension for string conversion
 extension PomodoroSessionTypeExtension on PomodoroSessionType {
   String get name {
     switch (this) {
@@ -132,6 +160,8 @@ extension PomodoroSessionStatusExtension on PomodoroSessionStatus {
     switch (this) {
       case PomodoroSessionStatus.running:
         return 'running';
+      case PomodoroSessionStatus.paused:
+        return 'paused';
       case PomodoroSessionStatus.completed:
         return 'completed';
       case PomodoroSessionStatus.canceled:
@@ -143,6 +173,8 @@ extension PomodoroSessionStatusExtension on PomodoroSessionStatus {
     switch (value) {
       case 'running':
         return PomodoroSessionStatus.running;
+      case 'paused':
+        return PomodoroSessionStatus.paused;
       case 'completed':
         return PomodoroSessionStatus.completed;
       case 'canceled':

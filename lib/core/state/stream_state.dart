@@ -78,10 +78,14 @@ extension AsyncStateExtension<T> on StreamState<AsyncState<T>> {
     } on Failure catch (failure) {
       emit(AsyncError(failure.message, failure));
     } catch (e, stackTrace) {
+      // Log unexpected errors for debugging
+      print('StreamState unexpected error: $e');
+      print('Stack trace: $stackTrace');
+
       // fallback for truly unknown errors
       emit(
         AsyncError(
-          'Unexpected error',
+          'Unexpected error: ${e.toString()}',
           UnknownFailure(
             message: e.toString(),
             originalError: e,

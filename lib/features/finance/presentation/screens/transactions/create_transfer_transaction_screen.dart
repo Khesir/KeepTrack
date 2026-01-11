@@ -281,7 +281,6 @@ class _CreateTransferTransactionScreenState
               },
             ),
             const SizedBox(height: 24),
-
             // From Account Selector
             AsyncStreamBuilder<List<Account>>(
               state: _accountController,
@@ -325,14 +324,17 @@ class _CreateTransferTransactionScreenState
                         (account) => DropdownMenuItem(
                           value: account.id,
                           child: Row(
+                            mainAxisSize: MainAxisSize.min, // ADD THIS
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
+                              Flexible(
+                                // CHANGE FROM Expanded TO Flexible
                                 child: Text(
                                   account.name,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8), // ADD SPACING
                               Text(
                                 '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
                                 style: TextStyle(
@@ -386,14 +388,17 @@ class _CreateTransferTransactionScreenState
                         (account) => DropdownMenuItem(
                           value: account.id,
                           child: Row(
+                            mainAxisSize: MainAxisSize.min, // ADD THIS
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
+                              Flexible(
+                                // CHANGE FROM Expanded TO Flexible
                                 child: Text(
                                   account.name,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              const SizedBox(width: 8), // ADD SPACING
                               Text(
                                 '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
                                 style: TextStyle(

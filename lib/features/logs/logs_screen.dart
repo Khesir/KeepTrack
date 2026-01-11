@@ -392,15 +392,75 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: () {
-            // Navigate to transaction detail
-          },
+      child: Dismissible(
+        key: Key(transaction.id!),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.delete, color: Colors.white, size: 32),
+              SizedBox(height: 4),
+              Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        confirmDismiss: (direction) async {
+          return await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete Transaction'),
+              content: const Text(
+                'Are you sure you want to delete this transaction? This will update your wallet balance.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+        },
+        onDismissed: (direction) async {
+          await _controller.deleteTransaction(transaction.id!);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Transaction deleted and balance updated'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        child: Material(
+          color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
+          child: InkWell(
+            onTap: () {
+              _showEditTransactionDialog(transaction, category);
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
@@ -526,6 +586,69 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
           ),
         ),
       ),
+    ),
+    );
+  }
+
+  void _showEditTransactionDialog(
+    Transaction transaction,
+    FinanceCategory? category,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => _EditTransactionDialog(
+        transaction: transaction,
+        currentCategory: category,
+        categories: _categoriesMap.values.toList(),
+        onSave: (updatedTransaction) async {
+          await _controller.updateTransaction(updatedTransaction);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Transaction updated and balance recalculated'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        onDelete: () async {
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete Transaction'),
+              content: const Text(
+                'Are you sure you want to delete this transaction?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmed == true) {
+            await _controller.deleteTransaction(transaction.id!);
+            if (mounted) {
+              Navigator.of(context).pop(); // Close edit dialog
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Transaction deleted and balance updated'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          }
+        },
+      ),
     );
   }
 
@@ -553,5 +676,390 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
 
   String _formatDateTime(DateTime date) {
     return DateFormat('MMM d, y • h:mm a').format(date);
+  }
+}
+
+// Edit Transaction Dialog Widget
+class _EditTransactionDialog extends StatefulWidget {
+  final Transaction transaction;
+  final FinanceCategory? currentCategory;
+  final List<FinanceCategory> categories;
+  final Function(Transaction) onSave;
+  final VoidCallback onDelete;
+
+  const _EditTransactionDialog({
+    required this.transaction,
+    required this.currentCategory,
+    required this.categories,
+    required this.onSave,
+    required this.onDelete,
+  });
+
+  @override
+  State<_EditTransactionDialog> createState() => _EditTransactionDialogState();
+}
+
+class _EditTransactionDialogState extends State<_EditTransactionDialog> {
+  late TextEditingController _descriptionController;
+  late TextEditingController _amountController;
+  late TextEditingController _feeController;
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
+  late TransactionType _selectedType;
+  FinanceCategory? _selectedCategory;
+  bool _hasFee = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _descriptionController = TextEditingController(
+      text: widget.transaction.description ?? '',
+    );
+    _amountController = TextEditingController(
+      text: widget.transaction.amount.toStringAsFixed(2),
+    );
+    _feeController = TextEditingController(
+      text: widget.transaction.fee.toStringAsFixed(2),
+    );
+    _selectedDate = widget.transaction.date;
+    _selectedTime = TimeOfDay.fromDateTime(widget.transaction.date);
+    _selectedType = widget.transaction.type;
+    _selectedCategory = widget.currentCategory;
+    _hasFee = widget.transaction.hasFee;
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _amountController.dispose();
+    _feeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date != null) {
+      setState(() => _selectedDate = date);
+    }
+  }
+
+  Future<void> _selectTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+    );
+    if (time != null) {
+      setState(() => _selectedTime = time);
+    }
+  }
+
+  void _save() {
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
+    final fee = _hasFee ? (double.tryParse(_feeController.text) ?? 0.0) : 0.0;
+
+    final updatedDate = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+
+    final updatedTransaction = widget.transaction.copyWith(
+      description: _descriptionController.text.isEmpty
+          ? null
+          : _descriptionController.text,
+      amount: amount,
+      fee: fee,
+      date: updatedDate,
+      type: _selectedType,
+      financeCategoryId: _selectedCategory?.id,
+    );
+
+    widget.onSave(updatedTransaction);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: 500,
+        constraints: const BoxConstraints(maxHeight: 700),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.edit,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Edit Transaction',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Transaction Type
+                    Text(
+                      'Type',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<TransactionType>(
+                      segments: const [
+                        ButtonSegment(
+                          value: TransactionType.income,
+                          label: Text('Income'),
+                          icon: Icon(Icons.arrow_downward),
+                        ),
+                        ButtonSegment(
+                          value: TransactionType.expense,
+                          label: Text('Expense'),
+                          icon: Icon(Icons.arrow_upward),
+                        ),
+                      ],
+                      selected: {_selectedType},
+                      onSelectionChanged: (Set<TransactionType> newSelection) {
+                        setState(() => _selectedType = newSelection.first);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Category
+                    Text(
+                      'Category',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<FinanceCategory>(
+                      value: _selectedCategory,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: widget.categories.map((category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Row(
+                            children: [
+                              Icon(category.type.icon, size: 20),
+                              const SizedBox(width: 8),
+                              Text(category.name),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedCategory = value);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Description
+                    Text(
+                      'Description (Optional)',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter description',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Amount
+                    Text(
+                      'Amount',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _amountController,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        prefixText: currencyFormatter.currencySymbol,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Fee
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _hasFee,
+                          onChanged: (value) {
+                            setState(() => _hasFee = value ?? false);
+                          },
+                        ),
+                        Text(
+                          'Has Fee',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ],
+                    ),
+                    if (_hasFee) ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _feeController,
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          labelText: 'Fee Amount',
+                          prefixText: currencyFormatter.currencySymbol,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+
+                    // Date
+                    Text(
+                      'Date',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _selectDate,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today, size: 20),
+                            const SizedBox(width: 12),
+                            Text(DateFormat('EEEE, MMMM d, y').format(_selectedDate)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Time
+                    Text(
+                      'Time',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _selectTime,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.access_time, size: 20),
+                            const SizedBox(width: 12),
+                            Text(_selectedTime.format(context)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Actions
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey[300]!),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Delete button
+                  OutlinedButton.icon(
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete, size: 20),
+                    label: const Text('Delete'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                  const Spacer(),
+                  // Cancel button
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  // Save button
+                  ElevatedButton(
+                    onPressed: _save,
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

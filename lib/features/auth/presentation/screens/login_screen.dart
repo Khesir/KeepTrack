@@ -266,11 +266,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
         const SizedBox(height: 24),
 
-        // Dev mode features
-        FutureBuilder<String?>(
-          future: _getDevModeStatus(),
+        // Dev mode features - Always show on desktop (Windows, macOS, Linux)
+        FutureBuilder<bool>(
+          future: _shouldShowDevMode(),
           builder: (context, snapshot) {
-            if (snapshot.hasData && snapshot.data == 'true') {
+            if (snapshot.hasData && snapshot.data == true) {
               return Column(
                 children: [
                   _buildAdminSignInButton(),
@@ -631,11 +631,20 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Future<String?> _getDevModeStatus() async {
+  Future<bool> _shouldShowDevMode() async {
     try {
-      return dotenv.env['DEV_BYPASS'];
+      // Always show dev mode on desktop platforms (Windows, macOS, Linux)
+      final platform = Theme.of(context).platform;
+      if (platform == TargetPlatform.windows ||
+          platform == TargetPlatform.macOS ||
+          platform == TargetPlatform.linux) {
+        return true;
+      }
+
+      // For mobile/web, check env variable
+      return dotenv.env['DEV_BYPASS'] == 'true';
     } catch (e) {
-      return null;
+      return false;
     }
   }
 }

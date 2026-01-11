@@ -40,6 +40,9 @@ import 'migrations/036_add_transfer_transaction_trigger.dart';
 import 'migrations/037_update_planned_payment_rpcs.dart';
 import 'migrations/038_add_project_status_and_metadata.dart';
 import 'migrations/039_create_pomodoro_sessions_table.dart';
+import 'migrations/040_add_pomodoro_session_pause_and_project.dart';
+import 'migrations/041_cleanup_stale_pomodoro_sessions.dart';
+import 'migrations/042_add_pomodoro_session_title.dart';
 
 /// Manages database migrations
 ///
@@ -291,6 +294,9 @@ class MigrationManager {
     Migration037UpdatePlannedPaymentRpcs(),
     Migration038AddProjectStatusAndMetadata(),
     Migration039CreatePomodoroSessionsTable(),
+    Migration040AddPomodoroSessionPauseAndProject(),
+    Migration041CleanupStalePomodoroSessions(),
+    Migration042AddPomodoroSessionTitle(),
     // Add new migrations here:
   ];
 

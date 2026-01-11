@@ -32,13 +32,15 @@ class PomodoroSessionDataSourceSupabase implements PomodoroSessionDataSource {
         .from(tableName)
         .select()
         .eq('user_id', userId)
-        .eq('status', 'running')
+        .inFilter('status', ['running', 'paused']) // Include both running and paused
         .isFilter('ended_at', null)
-        .maybeSingle();
+        .order('started_at', ascending: false)
+        .limit(1);
 
-    return response != null
-        ? PomodoroSessionModel.fromJson(response as Map<String, dynamic>)
-        : null;
+    if (response is List && response.isNotEmpty) {
+      return PomodoroSessionModel.fromJson(response.first as Map<String, dynamic>);
+    }
+    return null;
   }
 
   @override

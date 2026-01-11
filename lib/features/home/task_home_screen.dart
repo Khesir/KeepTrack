@@ -18,7 +18,7 @@ import '../module_selection/task_module_screen.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 
-enum TaskTimeFilter { current, week, month }
+enum TaskTimeFilter { current, week, month, noDate }
 enum TaskSortOption { priority, dueDate, status }
 
 /// Task-focused Home Screen for Task Management Module
@@ -524,6 +524,10 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
           if (t.dueDate == null) return false;
           return t.dueDate!.isAfter(today) && t.dueDate!.isBefore(monthEnd);
         }).toList();
+      case TaskTimeFilter.noDate:
+        return tasks
+            .where((t) => t.dueDate == null && !t.isArchived && !t.isCompleted)
+            .toList();
     }
   }
 
@@ -609,6 +613,10 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                     DropdownMenuItem(
                       value: TaskTimeFilter.month,
                       child: Text('This Month'),
+                    ),
+                    DropdownMenuItem(
+                      value: TaskTimeFilter.noDate,
+                      child: Text('No Date'),
                     ),
                   ],
                   onChanged: (value) {

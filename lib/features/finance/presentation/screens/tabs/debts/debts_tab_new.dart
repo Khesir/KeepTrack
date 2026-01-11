@@ -374,7 +374,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                         else if (isDesktop)
                           ResponsiveGrid(
                             spacing: AppSpacing.lg,
-                            desktopChildAspectRatio: 1.5,
+                            desktopChildAspectRatio: 1.2,
                             children: filteredDebts
                                 .map((debt) => _buildDebtCard(debt))
                                 .toList(),

@@ -444,7 +444,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                         else if (isDesktop)
                           ResponsiveGrid(
                             spacing: AppSpacing.lg,
-                            desktopChildAspectRatio: 1.4,
+                            desktopChildAspectRatio: 1.1,
                             children: filteredPayments
                                 .map((payment) => _buildPaymentCard(payment))
                                 .toList(),
