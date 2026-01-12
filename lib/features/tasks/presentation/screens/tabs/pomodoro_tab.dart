@@ -75,7 +75,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
         return Scaffold(
-          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
           body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
           floatingActionButton: !isDesktop
               ? FloatingActionButton(

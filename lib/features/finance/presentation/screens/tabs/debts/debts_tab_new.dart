@@ -231,7 +231,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
         return Scaffold(
-          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
           body: AsyncStreamBuilder<List<Debt>>(
             state: _controller,
             builder: (context, debts) {

@@ -30,8 +30,12 @@ class _AccountsTabNewState extends State<AccountsTabNew> {
   Widget build(BuildContext context) {
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        final desktopBg = isDark ? const Color(0xFF09090B) : AppColors.backgroundSecondary;
+
         return Scaffold(
-          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          backgroundColor: isDesktop ? desktopBg : null,
           body: AsyncStreamBuilder<List<Account>>(
             state: _controller,
             builder: (context, accounts) {

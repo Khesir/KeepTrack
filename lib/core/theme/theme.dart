@@ -84,8 +84,8 @@ class AppTheme {
         textColor: AppColors.textPrimary,
       ),
 
-      dividerTheme: const DividerThemeData(
-        color: AppColors.divider,
+      dividerTheme: DividerThemeData(
+        color: AppColors.border.withOpacity(0.5),
         thickness: 1,
       ),
     );
@@ -169,8 +169,8 @@ class AppTheme {
         textColor: AppColors.primaryForeground,
       ),
 
-      dividerTheme: const DividerThemeData(
-        color: Color(0xFF27272A),
+      dividerTheme: DividerThemeData(
+        color: const Color(0xFF27272A).withOpacity(0.6),
         thickness: 1,
       ),
 

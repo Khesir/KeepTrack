@@ -1,0 +1,20 @@
+{
+  "name": "personal-codex-landing",
+  "version": "1.0.0",
+  "description": "Landing page and documentation for Personal Codex",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.0.2",
+    "vue": "^3.4.15"
+  },
+  "devDependencies": {
+    "vitepress": "^1.0.0-rc.40",
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3"
+  }
+}

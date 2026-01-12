@@ -211,7 +211,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
         return Scaffold(
-          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
           body: AsyncStreamBuilder<List<Goal>>(
             state: _controller,
             builder: (context, goals) {

@@ -198,11 +198,17 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildSidebar() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+
     return Container(
       width: 260,
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(right: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        border: Border(right: BorderSide(color: borderColor)),
       ),
       child: Column(
         children: [
@@ -230,24 +236,40 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildSidebarHeader() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.account_balance_wallet,
-            color: AppColors.primary,
+            color: theme.colorScheme.primary,
             size: 28,
           ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Finance', style: AppTextStyles.h4),
-              Text('Management', style: AppTextStyles.caption),
+              Text(
+                'Finance',
+                style: AppTextStyles.h4.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                'Management',
+                style: AppTextStyles.caption.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
             ],
           ),
         ],
@@ -256,6 +278,12 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildSidebarFooter() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -264,21 +292,21 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
           onTap: _navigateToModuleSelection,
           child: Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: borderColor)),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.apps,
                   size: 20,
-                  color: AppColors.textSecondary,
+                  color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'All Modules',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ],
@@ -290,13 +318,18 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildUserProfileSection() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
     final authController = locator.get<AuthController>();
     final user = authController.currentUser;
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: borderColor)),
       ),
       child: PopupMenuButton<String>(
         tooltip: 'Account options',
@@ -365,7 +398,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
               CircleAvatar(
                 radius: 18,
                 backgroundImage: NetworkImage(user!.photoUrl!),
-                backgroundColor: AppColors.primary.withOpacity(0.1),
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
               )
             else
               Container(
@@ -374,8 +407,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.7),
-                      AppColors.primary,
+                      theme.colorScheme.primary.withOpacity(0.7),
+                      theme.colorScheme.primary,
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -395,6 +428,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                     user?.displayName ?? 'User',
                     style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -402,7 +436,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                   Text(
                     user?.email ?? 'No email',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                      color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -410,10 +444,10 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.more_vert,
               size: 20,
-              color: AppColors.textSecondary,
+              color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
             ),
           ],
         ),
@@ -422,11 +456,17 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildNavItem(String label, IconData icon, int index) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isActive = _currentIndex == index;
+    final activeColor = isDark ? const Color(0xFF27272A) : AppColors.secondary;
+    final textColor = theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+    final secondaryTextColor = theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        color: isActive ? AppColors.secondary : Colors.transparent,
+        color: isActive ? activeColor : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: ListTile(
@@ -434,14 +474,14 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         leading: Icon(
           icon,
           size: 20,
-          color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+          color: isActive ? textColor : secondaryTextColor,
         ),
         title: Text(
           label,
           style: TextStyle(
             fontSize: 14,
             fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+            color: isActive ? textColor : secondaryTextColor,
           ),
         ),
         onTap: () => setState(() => _currentIndex = index),
@@ -450,11 +490,17 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildSubNavItem(String label, IconData icon, int index) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isActive = _currentIndex == index;
+    final activeColor = isDark ? const Color(0xFF27272A) : AppColors.secondary;
+    final textColor = theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+    final secondaryTextColor = theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 4, left: 24),
       decoration: BoxDecoration(
-        color: isActive ? AppColors.secondary : Colors.transparent,
+        color: isActive ? activeColor : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: ListTile(
@@ -462,14 +508,14 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         leading: Icon(
           icon,
           size: 18,
-          color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+          color: isActive ? textColor : secondaryTextColor,
         ),
         title: Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+            color: isActive ? textColor : secondaryTextColor,
           ),
         ),
         onTap: () => setState(() => _currentIndex = index),
@@ -478,11 +524,17 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildTopBar() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+
     return Container(
       height: 64,
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        border: Border(bottom: BorderSide(color: borderColor)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(

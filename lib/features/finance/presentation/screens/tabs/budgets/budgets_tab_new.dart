@@ -49,8 +49,12 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
   Widget build(BuildContext context) {
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        final desktopBg = isDark ? const Color(0xFF09090B) : AppColors.backgroundSecondary;
+
         return Scaffold(
-          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          backgroundColor: isDesktop ? desktopBg : null,
           body: AsyncStreamBuilder<List<Budget>>(
             state: _controller,
             loadingBuilder: (_) =>

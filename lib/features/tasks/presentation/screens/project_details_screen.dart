@@ -217,7 +217,7 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
             );
 
             return Scaffold(
-              backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+              backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
               appBar: AppBar(
                 title: Text(currentProject.name),
                 leading: IconButton(

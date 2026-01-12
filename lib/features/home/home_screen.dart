@@ -52,8 +52,11 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
       builder: (context, isDesktop) {
         return Scaffold(
           backgroundColor: isDesktop
-              ? AppColors.backgroundSecondary
-              : Colors.transparent,
+              ? (Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF09090B)
+                    : AppColors.backgroundSecondary)
+              : null,
+
           body: SingleChildScrollView(
             padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : AppSpacing.lg),
             child: Center(

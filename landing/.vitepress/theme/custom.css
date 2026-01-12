@@ -1,0 +1,196 @@
+:root {
+  --vp-c-brand: #6366F1;
+  --vp-c-brand-light: #818CF8;
+  --vp-c-brand-lighter: #A5B4FC;
+  --vp-c-brand-dark: #4F46E5;
+  --vp-c-brand-darker: #4338CA;
+}
+
+/* Hero section customization */
+.VPHero .container {
+  max-width: 1152px;
+}
+
+.VPHero .main {
+  padding-top: 80px !important;
+  padding-bottom: 80px !important;
+}
+
+.VPHero .name {
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1.1;
+  background: linear-gradient(135deg, var(--vp-c-brand) 0%, var(--vp-c-brand-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.VPHero .tagline {
+  font-size: 24px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
+
+/* Feature cards */
+.VPFeature {
+  background: var(--vp-c-bg-soft);
+  border-radius: 12px;
+  padding: 28px;
+  transition: all 0.3s ease;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.VPFeature:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  border-color: var(--vp-c-brand);
+}
+
+.VPFeature .icon {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+/* Download buttons */
+.download-section {
+  margin: 48px 0;
+  text-align: center;
+}
+
+.download-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.download-btn.primary {
+  background: var(--vp-c-brand);
+  color: white;
+}
+
+.download-btn.primary:hover {
+  background: var(--vp-c-brand-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+}
+
+.download-btn.secondary {
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  border-color: var(--vp-c-divider);
+}
+
+.download-btn.secondary:hover {
+  border-color: var(--vp-c-brand);
+  background: var(--vp-c-bg-soft);
+}
+
+.download-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Release info */
+.release-info {
+  margin: 32px 0;
+  padding: 24px;
+  background: var(--vp-c-bg-soft);
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.release-info h3 {
+  margin-top: 0;
+  color: var(--vp-c-brand);
+}
+
+.release-meta {
+  display: flex;
+  gap: 24px;
+  margin: 16px 0;
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+}
+
+.release-changelog {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--vp-c-bg);
+  border-radius: 8px;
+  border-left: 3px solid var(--vp-c-brand);
+}
+
+.release-changelog h4 {
+  margin-top: 0;
+  font-size: 16px;
+}
+
+.release-changelog ul {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.release-changelog li {
+  margin: 4px 0;
+}
+
+/* Stats section */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin: 48px 0;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 24px;
+  background: var(--vp-c-bg-soft);
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.stat-card .number {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--vp-c-brand);
+  line-height: 1;
+}
+
+.stat-card .label {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .VPHero .name {
+    font-size: 48px;
+  }
+
+  .VPHero .tagline {
+    font-size: 18px;
+  }
+
+  .download-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

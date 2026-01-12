@@ -198,7 +198,7 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
         return Scaffold(
-          backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+          backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
           body: SingleChildScrollView(
             padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
             child: Center(

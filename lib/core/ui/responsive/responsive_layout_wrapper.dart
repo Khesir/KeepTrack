@@ -179,11 +179,12 @@ class _ResponsiveLayoutWrapperState extends State<ResponsiveLayoutWrapper> {
 
   /// Build bottom navigation bar for mobile
   Widget _buildBottomNavigationBar() {
+    final theme = Theme.of(context);
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: AppColors.border,
+            color: theme.dividerColor,
             width: 1,
           ),
         ),
@@ -192,9 +193,9 @@ class _ResponsiveLayoutWrapperState extends State<ResponsiveLayoutWrapper> {
         currentIndex: widget.config.currentIndex,
         onTap: widget.config.onNavIndexChanged,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.background,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        selectedItemColor: theme.colorScheme.primary,
+        unselectedItemColor: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
         selectedFontSize: 12,
         unselectedFontSize: 12,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
@@ -227,8 +228,10 @@ class DesktopContentWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
-      color: AppColors.backgroundSecondary,
+      color: isDark ? const Color(0xFF09090B) : AppColors.backgroundSecondary,
       child: SingleChildScrollView(
         child: Center(
           child: ConstrainedBox(

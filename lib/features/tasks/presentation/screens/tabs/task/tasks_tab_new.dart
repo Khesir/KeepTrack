@@ -111,7 +111,7 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
             final sortedTasks = _sortTasksByPriority(filteredTasks);
 
             return Scaffold(
-              backgroundColor: isDesktop ? AppColors.backgroundSecondary : null,
+              backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
               body: isDesktop
                   ? _buildDesktopLayout(tasks, sortedTasks)
                   : _buildMobileLayout(tasks, sortedTasks),
