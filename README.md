@@ -24,14 +24,14 @@ Organize your life with powerful task management, comprehensive finance tracking
 
 ### Current Features
 
-- ✅ **Task Management**
+- ✅ **Task Management (Base Feature)**
   - Create, organize, and track tasks with priorities
   - Set deadlines and due dates
   - Group tasks into projects
   - Archive completed tasks
   - Filter by priority (Urgent, High, Medium, Low)
 
-- ✅ **Finance Tracking**
+- ✅ **Finance Tracking (Base Feature)**
   - Manage multiple accounts (Bank, Cash, E-Wallet, etc.)
   - Create and monitor budgets by category
   - Track debts with payment schedules
@@ -40,7 +40,7 @@ Organize your life with powerful task management, comprehensive finance tracking
   - Comprehensive transaction history
   - Multi-currency support
 
-- ✅ **Productivity Tools**
+- ✅ **Productivity Tools (Base Feature)**
   - Built-in Pomodoro timer with customizable durations
   - Focus sessions with automatic break reminders
   - Session statistics and insights
@@ -62,8 +62,7 @@ Organize your life with powerful task management, comprehensive finance tracking
   - Linux (AppImage, DEB)
   - Android (APK) - Coming soon
   - iOS - Coming soon
-
-### 🚀 Future Features
+### 🚀 Future Features (Updated)
 
 - [ ] **Offline-First Architecture**
   - Local database with SQLite/Hive
@@ -71,21 +70,21 @@ Organize your life with powerful task management, comprehensive finance tracking
   - Conflict resolution for offline changes
   - Queue system for pending operations
 
-- [ ] **Enhanced Task Management**
-  - Subtasks and checklists
-  - Task templates
-  - Recurring tasks
-  - Time tracking per task
-  - Task dependencies
-  - Kanban board view
-
-- [ ] **Advanced Finance**
-  - Investment tracking
-  - Expense categorization with AI
-  - Financial reports and insights
-  - Export to CSV/PDF
-  - Receipt scanning and storage
-  - Bill reminders
+- [ ] **Plugin / Module Management System**
+  - Users can extend the app by installing **modules** (managers) not yet implemented
+    - Examples: Music Manager, Calendar-based Task Manager, Inventory Manager
+  - Each module/plugin is **isolated**:
+    - Separate database or table namespace
+    - Own migrations, UI screens, and rules
+  - Safe offline execution; cross-device sharing via **save files**
+  - Community-driven trust:
+    - Users can rate, review, and approve modules
+    - Highly-rated plugins are displayed as “trusted”
+  - **Plugin Workflow**:
+    1. User installs module from trusted source/repo  
+    2. App validates plugin metadata and runs migrations  
+    3. User configures the module (e.g., sets categories, workflow)  
+    4. Module is ready for offline use  
 
 - [ ] **Collaboration**
   - Share projects with team members
@@ -93,79 +92,82 @@ Organize your life with powerful task management, comprehensive finance tracking
   - Comments and activity feed
   - Real-time collaboration
 
-- [ ] **Integrations**
-  - Calendar sync (Google Calendar, Outlook)
-  - Import from other apps
-  - Export/Import data
-  - API for third-party integrations
-
 - [ ] **Customization**
-  - Custom themes and color schemes
-  - Configurable widgets and dashboard
-  - Custom categories and tags
+  - Custom themes and color schemes: Users can adjust colors, fonts, and certain visual assets
+  - Module layout and dashboard structure are fixed; only the appearance is customizable
   - Keyboard shortcuts
 
-- [ ] **Analytics & Insights**
-  - Productivity metrics
-  - Spending patterns
-  - Goal progress visualization
-  - Custom reports
-
-### 💡 Potential Features
-
-- 🔔 Smart notifications and reminders
-- 🎯 Habit tracking
-- 📝 Note-taking with markdown support
-- 📊 Data visualization with charts
-- 🔐 End-to-end encryption
-- 🌐 PWA (Progressive Web App) version
-- 🤖 AI-powered suggestions
-- 📱 Widgets for mobile home screen
-- 🔄 Integration with other productivity tools
-- 📧 Email notifications for important events
 
 ---
 
+### 🧩 Plugin / Module Development System
+
+Keep Track will support **user-created modules** to extend app functionality beyond core features.
+
+#### Key Concepts
+
+- **Modules / Plugins**: Self-contained managers (e.g., calendar, music, inventory)  
+- **Isolation**: Each plugin has its own database or table namespace to prevent conflicts  
+- **Offline-First Execution**: Plugins run locally on the user device  
+- **Save File Sharing**: Cross-device transfer via exported save files, no server execution required  
+- **Auto Checks & Updates**: App can validate plugin repositories for:
+  - New versions
+  - Compatibility with current app version
+  - Trust rating from community feedback
+
+#### Workflow for Users
+
+1. Browse the **Plugin Marketplace** (online or offline)  
+2. Download and install a trusted plugin/module  
+3. App validates the module and applies its database migrations  
+4. User configures the module according to their needs  
+5. Module is ready for offline use  
+6. Users can rate or review modules to help other users identify trusted plugins  
+
+#### Plugin Development Workflow (For Contributors)
+
+1. Create a module following the **Keep Track plugin structure**:
+   - **Manifest**: ID, name, version, supported engine version  
+   - **Schema**: Database tables, columns, relationships  
+   - **UI**: Screens, forms, dashboards  
+   - **Rules**: Optional logic, validation, or automation  
+2. Package module as a ZIP or repository link  
+3. Submit module to the **community marketplace**  
+4. Users download, install, and configure the module  
+
+> **Future plan:** Optional signature verification for plugin authenticity and versioning  
+
+---
 ## 🚀 Getting Started
-
-### Download
-
-Download the latest version for your platform:
-
-📥 **[Download Latest Release](https://github.com/Khesir/KeepTrack/releases/latest)**
-
-- **Windows**: `.exe` installer
-- **macOS**: `.dmg` disk image
-- **Linux**: `.AppImage` or `.deb` package
 
 ### System Requirements
 
-- **OS**: Windows 10+, macOS 10.15+, or Ubuntu 20.04+
-- **RAM**: 4 GB minimum (8 GB recommended)
-- **Storage**: 500 MB available space
-- **Internet**: Required for cloud sync and authentication
+#### Windows
+- **OS**: Windows 10 or later (64-bit)  
+- **RAM**: 4 GB minimum, 8 GB recommended  
+- **Storage**: 500 MB available space  
+- **Graphics**: DirectX 11 compatible graphics card  
 
-### Installation
+#### Android
+- **OS**: Android 8.0 (Oreo) or later  
+- **RAM**: 2 GB minimum, 4 GB recommended  
+- **Storage**: 200 MB available space  
+- **Architecture**: ARM64 or ARMv7  
+
+---
+
+### Installation Instructions
 
 #### Windows
-1. Download the `.exe` file
-2. Run the installer
-3. Follow the setup wizard
+1. Download the `.exe` installer from the latest release above  
+2. Run the installer and follow the setup wizard  
+3. Launch **Personal Codex** from the Start Menu or Desktop shortcut  
 
-#### macOS
-1. Download the `.dmg` file
-2. Open and drag to Applications
-3. Right-click and select "Open" if you see a security warning
-
-#### Linux
-```bash
-# AppImage
-chmod +x KeepTrack-*.AppImage
-./KeepTrack-*.AppImage
-
-# DEB (Debian/Ubuntu)
-sudo dpkg -i keeptrack-*.deb
-```
+#### Android
+1. Download the `.apk` file from the latest release above  
+2. If prompted, allow installation from unknown sources in your device settings  
+3. Tap the downloaded APK file to install  
+4. Open **Personal Codex** from your app drawer  
 
 ---
 
