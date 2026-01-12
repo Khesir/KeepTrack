@@ -53,8 +53,8 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the Apache 2.0 License.',
-      copyright: 'Copyright © 2024-present Personal Codex'
+      message: 'Released under the Apache 2.0 License. ⚠️ Logo is a placeholder and will be updated later.',
+      copyright: 'Copyright © 2025-present Keep-track'
     }
   }
 })

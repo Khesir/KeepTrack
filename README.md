@@ -1,8 +1,11 @@
 <div align="center">
 
-# 📊 Keep Track
+#  Keep Track
 
-**Your all-in-one personal management system**
+> ⚠️ **Disclaimer:** The app icon/image (`/assets/icon/app_icon.png`) is currently a **placeholder** and will be replaced later. It is **not owned** by me.
+
+
+<img src="assets/icon/app_icon.png" alt="Keep Track App Icon" width="120" height="120"/>
 
 Organize your life with powerful task management, comprehensive finance tracking, and productivity tools - all in one beautiful app.
 
