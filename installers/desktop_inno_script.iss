@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "Keep Track"
-#define MyAppVersion "7.2"
+#define MyAppVersion "7.3"
 #define MyAppPublisher "Khesir"
 #define MyAppURL "https://khesir.com"
 #define MyAppExeName "keep_track.exe"
@@ -33,7 +33,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\installers
-OutputBaseFilename=KeepTrack-v.7.2
+OutputBaseFilename=KeepTrack-v.7.3
 SetupIconFile=C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\app_icon.ico
 SolidCompression=yes
 WizardStyle=modern
