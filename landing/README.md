@@ -1,12 +1,12 @@
-# Personal Codex Landing Page
+# Keep Track Landing Page
 
-This is the VitePress-powered landing page and documentation site for Personal Codex.
+This is the VitePress-powered landing page and documentation site for Keep Track.
 
 ## Features
 
 - 🎨 Modern landing page with hero section
 - 📦 Automatic latest release detection via GitHub API (Octokit)
-- 📥 Download buttons for all platforms
+- 📥 Download buttons for Windows and Android
 - 📝 Release changelog display
 - 📚 Comprehensive documentation
 - 🌙 Dark mode support
@@ -27,12 +27,10 @@ yarn install
 pnpm install
 ```
 
-2. Update GitHub repository info in:
-   - `.vitepress/theme/components/DownloadButtons.vue` (line 51-52)
-   - `.vitepress/theme/components/ReleaseInfo.vue` (line 29-30)
-   - `.vitepress/config.ts` (GitHub links)
-
-Replace `yourusername` with your actual GitHub username and `personal-codex` with your repository name.
+2. GitHub repository info is already configured for:
+   - Repository: `Khesir/KeepTrack`
+   - Currently supports: Windows (.exe) and Android (.apk) downloads
+   - No macOS or Linux builds yet
 
 ## Development
 

@@ -103,17 +103,10 @@ On mobile devices:
 
 Your data automatically syncs to the cloud when you're signed in. Access it from any device!
 
-## What's Next?
-
-Explore more features:
-- [Task Management Guide](./features/tasks)
-- [Finance Tracking Guide](./features/finance)
-- [Pomodoro Guide](./features/pomodoro)
-
 ## Need Help?
 
 - 📚 Check the [full documentation](./index)
-- 💬 Ask in [GitHub Discussions](https://github.com/yourusername/personal-codex/discussions)
-- 🐛 [Report issues](https://github.com/yourusername/personal-codex/issues)
+- 💬 Ask in [GitHub Discussions](https://github.com/Khesir/KeepTrack/discussions)
+- 🐛 [Report issues](https://github.com/Khesir/KeepTrack/issues)
 
 Happy organizing! 🚀

@@ -14,17 +14,11 @@ Get Personal Codex for your platform and start managing your tasks and finances 
 - **Storage**: 500 MB available space
 - **Graphics**: DirectX 11 compatible graphics card
 
-### macOS
-- **OS**: macOS 10.15 (Catalina) or later
-- **RAM**: 4 GB minimum, 8 GB recommended
-- **Storage**: 500 MB available space
-- **Architecture**: Intel or Apple Silicon (M1/M2/M3)
-
-### Linux
-- **OS**: Ubuntu 20.04+, Fedora 35+, or equivalent
-- **RAM**: 4 GB minimum, 8 GB recommended
-- **Storage**: 500 MB available space
-- **Desktop**: GNOME, KDE, or other modern desktop environment
+### Android
+- **OS**: Android 8.0 (Oreo) or later
+- **RAM**: 2 GB minimum, 4 GB recommended
+- **Storage**: 200 MB available space
+- **Architecture**: ARM64 or ARMv7
 
 ## Installation Instructions
 
@@ -34,25 +28,12 @@ Get Personal Codex for your platform and start managing your tasks and finances 
 2. Run the installer and follow the setup wizard
 3. Launch Personal Codex from the Start Menu or Desktop shortcut
 
-### macOS
+### Android
 
-1. Download the `.dmg` file from above
-2. Open the downloaded file
-3. Drag Personal Codex to your Applications folder
-4. Launch Personal Codex from Applications
-5. If you see a security warning, go to System Preferences → Security & Privacy and click "Open Anyway"
-
-### Linux
-
-#### AppImage (Universal)
-1. Download the `.AppImage` file
-2. Make it executable: `chmod +x Personal-Codex-*.AppImage`
-3. Run the AppImage: `./Personal-Codex-*.AppImage`
-
-#### DEB Package (Debian/Ubuntu)
-1. Download the `.deb` file
-2. Install: `sudo dpkg -i personal-codex-*.deb`
-3. Run: `personal-codex` or find it in your applications menu
+1. Download the `.apk` file from above
+2. If prompted, allow installation from unknown sources in your device settings
+3. Tap the downloaded APK file to install
+4. Open Personal Codex from your app drawer
 
 ## First Time Setup
 
@@ -67,20 +48,19 @@ After installing Personal Codex:
 ## Need Help?
 
 - 📚 [Documentation](/docs/) - Comprehensive guides and tutorials
-- 💬 [GitHub Discussions](https://github.com/yourusername/personal-codex/discussions) - Ask questions and share ideas
-- 🐛 [Report Issues](https://github.com/yourusername/personal-codex/issues) - Found a bug? Let us know!
+- 💬 [GitHub Discussions](https://github.com/Khesir/KeepTrack/discussions) - Ask questions and share ideas
+- 🐛 [Report Issues](https://github.com/Khesir/KeepTrack/issues) - Found a bug? Let us know!
 
 ## Alternative Downloads
 
 Looking for older versions or source code?
 
-- [All Releases](https://github.com/yourusername/personal-codex/releases) - View all available versions
-- [Source Code](https://github.com/yourusername/personal-codex) - Build from source
-- [Docker Image](https://hub.docker.com/r/yourusername/personal-codex) - Run in a container (Coming soon)
+- [All Releases](https://github.com/Khesir/KeepTrack/releases) - View all available versions
+- [Source Code](https://github.com/Khesir/KeepTrack) - Build from source
 
 ## Stay Updated
 
-⭐ Star us on [GitHub](https://github.com/yourusername/personal-codex) to stay updated with new releases!
+⭐ Star us on [GitHub](https://github.com/Khesir/KeepTrack) to stay updated with new releases!
 
 ---
 

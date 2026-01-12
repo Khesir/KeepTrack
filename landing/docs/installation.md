@@ -17,62 +17,17 @@ The easiest way to get started is to download the installer for your platform fr
 
 **Note**: You may see a Windows SmartScreen warning on first launch. This is normal for new applications. Click "More info" and then "Run anyway" to proceed.
 
-### macOS
+### Android
 
-1. Download the macOS disk image (`.dmg`) from the [Download page](/download)
-2. Open the downloaded `.dmg` file
-3. Drag the Personal Codex icon to your Applications folder
-4. Launch Personal Codex from Applications
+1. Download the APK file (`.apk`) from the [Download page](/download)
+2. Open the downloaded APK file on your Android device
+3. If prompted, allow installation from unknown sources:
+   - Go to Settings → Security
+   - Enable "Unknown sources" or "Install unknown apps"
+4. Tap **Install** to complete the installation
+5. Open Personal Codex from your app drawer
 
-**First Launch**: You may see a security warning. If so:
-   - Open System Preferences → Security & Privacy
-   - Click the "Open Anyway" button
-   - Confirm by clicking "Open"
-
-### Linux
-
-#### AppImage (Recommended)
-
-AppImage is the universal package format for Linux and works on most distributions:
-
-1. Download the `.AppImage` file from the [Download page](/download)
-2. Make it executable:
-   ```bash
-   chmod +x Personal-Codex-*.AppImage
-   ```
-3. Run the application:
-   ```bash
-   ./Personal-Codex-*.AppImage
-   ```
-
-**Optional**: Integrate with your desktop:
-```bash
-# Move to a standard location
-mkdir -p ~/.local/bin
-mv Personal-Codex-*.AppImage ~/.local/bin/personal-codex
-
-# Make it available system-wide
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-#### DEB Package (Debian/Ubuntu)
-
-For Debian-based distributions:
-
-1. Download the `.deb` package from the [Download page](/download)
-2. Install using dpkg:
-   ```bash
-   sudo dpkg -i personal-codex-*.deb
-   ```
-3. If there are missing dependencies:
-   ```bash
-   sudo apt-get install -f
-   ```
-4. Launch from your application menu or run:
-   ```bash
-   personal-codex
-   ```
+**Note**: You may need to allow installation from your browser or file manager. This is a standard security measure for apps not from the Google Play Store.
 
 ## First Time Setup
 
@@ -95,8 +50,14 @@ After installing and launching Personal Codex for the first time:
 
 Make sure your system meets these minimum requirements:
 
+### Windows
 - **RAM**: 4 GB (8 GB recommended)
 - **Storage**: 500 MB available space
+- **Internet**: Required for cloud sync and authentication
+
+### Android
+- **RAM**: 2 GB (4 GB recommended)
+- **Storage**: 200 MB available space
 - **Internet**: Required for cloud sync and authentication
 
 ## Troubleshooting
@@ -104,8 +65,7 @@ Make sure your system meets these minimum requirements:
 ### Application won't launch
 
 **Windows**: Try running as administrator
-**macOS**: Check Security & Privacy settings
-**Linux**: Ensure all dependencies are installed
+**Android**: Make sure you have enough storage space and your Android version meets the minimum requirements
 
 ### Can't sign in
 

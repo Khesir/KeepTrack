@@ -50,10 +50,10 @@ Personal Codex is open source and built with:
 ## Community
 
 Join our growing community:
-- ⭐ [Star us on GitHub](https://github.com/yourusername/personal-codex)
-- 💬 [Discussions](https://github.com/yourusername/personal-codex/discussions)
-- 🐛 [Report Issues](https://github.com/yourusername/personal-codex/issues)
+- ⭐ [Star us on GitHub](https://github.com/Khesir/KeepTrack)
+- 💬 [Discussions](https://github.com/Khesir/KeepTrack/discussions)
+- 🐛 [Report Issues](https://github.com/Khesir/KeepTrack/issues)
 
 ## License
 
-Personal Codex is released under the [MIT License](https://github.com/yourusername/personal-codex/blob/main/LICENSE).
+Personal Codex is released under the [MIT License](https://github.com/Khesir/KeepTrack/blob/main/LICENSE).

@@ -51,8 +51,8 @@ onMounted(async () => {
   try {
     // Update with your actual GitHub username and repo name
     const { data } = await octokit.repos.getLatestRelease({
-      owner: 'yourusername', // Replace with actual owner
-      repo: 'personal-codex'  // Replace with actual repo
+      owner: 'Khesir',
+      repo: 'KeepTrack'
     })
 
     release.value = {
@@ -70,9 +70,7 @@ onMounted(async () => {
     // Filter for main installers
     downloadAssets.value = release.value.assets.filter(asset =>
       asset.name.endsWith('.exe') ||
-      asset.name.endsWith('.dmg') ||
-      asset.name.endsWith('.AppImage') ||
-      asset.name.endsWith('.deb')
+      asset.name.endsWith('.apk')
     )
 
     loading.value = false
@@ -84,16 +82,13 @@ onMounted(async () => {
 
 function getIcon(filename: string): string {
   if (filename.includes('windows') || filename.endsWith('.exe')) return '🪟'
-  if (filename.includes('macos') || filename.endsWith('.dmg')) return '🍎'
-  if (filename.includes('linux') || filename.endsWith('.AppImage') || filename.endsWith('.deb')) return '🐧'
+  if (filename.includes('android') || filename.endsWith('.apk')) return '🤖'
   return '📦'
 }
 
 function getLabel(filename: string): string {
   if (filename.includes('windows') || filename.endsWith('.exe')) return 'Download for Windows'
-  if (filename.includes('macos') || filename.endsWith('.dmg')) return 'Download for macOS'
-  if (filename.includes('linux') || filename.endsWith('.AppImage')) return 'Download for Linux (AppImage)'
-  if (filename.endsWith('.deb')) return 'Download for Linux (DEB)'
+  if (filename.includes('android') || filename.endsWith('.apk')) return 'Download for Android'
   return filename
 }
 

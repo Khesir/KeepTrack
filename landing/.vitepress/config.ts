@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'Personal Codex',
+  title: 'Keep Track',
   description: 'Your all-in-one personal management system - Tasks, Finance, and more',
   base: '/',
 
@@ -53,7 +53,7 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the MIT License.',
+      message: 'Released under the Apache 2.0 License.',
       copyright: 'Copyright © 2024-present Personal Codex'
     }
   }

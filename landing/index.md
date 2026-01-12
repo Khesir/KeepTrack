@@ -40,7 +40,7 @@ features:
 
   - icon: 💻
     title: Cross-Platform
-    details: Available for Windows, macOS, and Linux. One app, everywhere you work.
+    details: Available for Windows and Android. One app, on desktop and mobile.
 
   - icon: 🎨
     title: Modern Design
