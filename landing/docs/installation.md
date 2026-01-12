@@ -1,6 +1,6 @@
 # Installation
 
-This guide will help you install Personal Codex on your system.
+This guide will help you install Keep Track on your system.
 
 ## Quick Install
 
@@ -13,7 +13,7 @@ The easiest way to get started is to download the installer for your platform fr
 1. Download the Windows installer (`.exe`) from the [Download page](/download)
 2. Double-click the downloaded file to run the installer
 3. Follow the installation wizard
-4. Launch Personal Codex from the Start Menu or Desktop shortcut
+4. Launch Keep Track from the Start Menu or Desktop shortcut
 
 **Note**: You may see a Windows SmartScreen warning on first launch. This is normal for new applications. Click "More info" and then "Run anyway" to proceed.
 
@@ -25,13 +25,13 @@ The easiest way to get started is to download the installer for your platform fr
    - Go to Settings → Security
    - Enable "Unknown sources" or "Install unknown apps"
 4. Tap **Install** to complete the installation
-5. Open Personal Codex from your app drawer
+5. Open Keep Track from your app drawer
 
 **Note**: You may need to allow installation from your browser or file manager. This is a standard security measure for apps not from the Google Play Store.
 
 ## First Time Setup
 
-After installing and launching Personal Codex for the first time:
+After installing and launching Keep Track for the first time:
 
 1. **Authentication**
    - Create a new account or sign in
@@ -79,4 +79,4 @@ Make sure you're running the latest version. Check the [Download page](/download
 
 ## Next Steps
 
-Now that you have Personal Codex installed, check out the [Quick Start Guide](./quickstart) to learn the basics!
+Now that you have Keep Track installed, check out the [Quick Start Guide](./quickstart) to learn the basics!

@@ -1,6 +1,6 @@
-# Download Personal Codex
+# Download Keep Track
 
-Get Personal Codex for your platform and start managing your tasks and finances today.
+Get Keep Track for your platform and start managing your tasks and finances today.
 
 <DownloadButtons />
 
@@ -26,18 +26,18 @@ Get Personal Codex for your platform and start managing your tasks and finances 
 
 1. Download the `.exe` installer from above
 2. Run the installer and follow the setup wizard
-3. Launch Personal Codex from the Start Menu or Desktop shortcut
+3. Launch Keep Track from the Start Menu or Desktop shortcut
 
 ### Android
 
 1. Download the `.apk` file from above
 2. If prompted, allow installation from unknown sources in your device settings
 3. Tap the downloaded APK file to install
-4. Open Personal Codex from your app drawer
+4. Open Keep Track from your app drawer
 
 ## First Time Setup
 
-After installing Personal Codex:
+After installing Keep Track:
 
 1. **Create an Account**: Sign up with your email or use Google authentication
 2. **Set Your Currency**: Go to Settings and select your preferred currency
@@ -66,6 +66,6 @@ Looking for older versions or source code?
 
 <div style="text-align: center; margin: 48px 0;">
   <p style="color: var(--vp-c-text-2);">
-    Personal Codex is free and open source software, released under the MIT License.
+    Keep Track is free and open source software, released under the MIT License.
   </p>
 </div>

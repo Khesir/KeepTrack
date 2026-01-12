@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get up and running with Personal Codex in minutes!
+Get up and running with Keep Track in minutes!
 
 ## Your First Task
 
@@ -71,7 +71,7 @@ Boost your productivity with focused work sessions:
 
 ## Switching Themes
 
-Personal Codex supports light and dark modes:
+Keep Track supports light and dark modes:
 
 1. Click on the theme toggle icon in the top bar
 2. Your preference is saved automatically
