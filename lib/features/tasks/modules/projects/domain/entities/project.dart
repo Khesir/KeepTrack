@@ -9,7 +9,9 @@ class Project {
   final bool isArchived;
   final String? userId;
   final ProjectStatus status; // Project status: active, postponed, closed
-  final Map<String, String> metadata; // Dynamic metadata (e.g., links, ERD, etc.)
+  final Map<String, String>
+  metadata; // Dynamic metadata (e.g., links, ERD, etc.)
+  final String? bucketId;
 
   Project({
     this.id,
@@ -22,6 +24,7 @@ class Project {
     this.userId,
     this.status = ProjectStatus.active,
     this.metadata = const {},
+    this.bucketId,
   });
 
   /// Copy with method for immutability
@@ -36,6 +39,7 @@ class Project {
     String? userId,
     ProjectStatus? status,
     Map<String, String>? metadata,
+    String? bucketId,
   }) {
     return Project(
       id: id ?? this.id,
@@ -48,6 +52,7 @@ class Project {
       userId: userId ?? this.userId,
       status: status ?? this.status,
       metadata: metadata ?? this.metadata,
+      bucketId: bucketId ?? this.bucketId,
     );
   }
 

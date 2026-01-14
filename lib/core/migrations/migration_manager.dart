@@ -43,6 +43,8 @@ import 'migrations/039_create_pomodoro_sessions_table.dart';
 import 'migrations/040_add_pomodoro_session_pause_and_project.dart';
 import 'migrations/041_cleanup_stale_pomodoro_sessions.dart';
 import 'migrations/042_add_pomodoro_session_title.dart';
+import 'migrations/043_create_buckets_table.dart';
+import 'migrations/044_add_bucket_id_to_task_and_project.dart';
 
 /// Manages database migrations
 ///
@@ -297,6 +299,8 @@ class MigrationManager {
     Migration040AddPomodoroSessionPauseAndProject(),
     Migration041CleanupStalePomodoroSessions(),
     Migration042AddPomodoroSessionTitle(),
+    Migration043CreateBucketsTable(),
+    Migration044AddBucketIdToTaskAndProject(),
     // Add new migrations here:
   ];
 

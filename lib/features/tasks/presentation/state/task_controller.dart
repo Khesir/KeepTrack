@@ -58,6 +58,14 @@ class TaskController extends StreamState<AsyncState<List<Task>>> {
     });
   }
 
+  Future<void> loadProjectsByBucketId(String bucketId) async {
+    await execute(() async {
+      return await _repository
+          .getTasksByBucketID(bucketId)
+          .then((r) => r.unwrap());
+    });
+  }
+
   /// Search tasks
   Future<void> searchTasks(String query) async {
     await execute(() async {

@@ -14,6 +14,7 @@ class Task {
   final DateTime? completedAt;
   final bool archived; // Soft delete flag
   final String? userId;
+  final String? bucketId;
 
   // Financial integration fields
   final bool
@@ -43,6 +44,7 @@ class Task {
     this.transactionType,
     this.financeCategoryId,
     this.actualTransactionId,
+    this.bucketId,
     this.userId,
   });
 
@@ -67,6 +69,7 @@ class Task {
     String? financeCategoryId,
     String? actualTransactionId,
     String? userId,
+    String? bucketId,
   }) {
     return Task(
       id: id ?? this.id,
@@ -88,6 +91,7 @@ class Task {
       financeCategoryId: financeCategoryId ?? this.financeCategoryId,
       actualTransactionId: actualTransactionId ?? this.actualTransactionId,
       userId: userId ?? this.userId,
+      bucketId: bucketId ?? this.bucketId,
     );
   }
 

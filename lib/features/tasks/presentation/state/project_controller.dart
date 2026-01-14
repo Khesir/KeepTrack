@@ -25,6 +25,15 @@ class ProjectController extends StreamState<AsyncState<List<Project>>> {
     });
   }
 
+  // Load all projects related to selected bucket
+  Future<void> loadProjectsByBucketId(String bucketId) async {
+    await execute(() async {
+      return await _repository
+          .getProjectsByBucketID(bucketId)
+          .then((r) => r.unwrap());
+    });
+  }
+
   /// Create a new project
   Future<void> createProject(Project project) async {
     await execute(() async {

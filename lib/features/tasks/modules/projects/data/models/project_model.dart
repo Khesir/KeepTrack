@@ -14,6 +14,7 @@ class ProjectModel extends Project {
     super.userId,
     super.status,
     super.metadata,
+    super.bucketId,
   });
 
   /// Convert from domain entity to model
@@ -29,6 +30,7 @@ class ProjectModel extends Project {
       userId: project.userId,
       status: project.status,
       metadata: project.metadata,
+      bucketId: project.bucketId,
     );
   }
 
@@ -70,6 +72,7 @@ class ProjectModel extends Project {
       userId: json['user_id'] as String?,
       status: status,
       metadata: metadata,
+      bucketId: json['bucket_id'] as String?,
     );
   }
 
@@ -84,6 +87,7 @@ class ProjectModel extends Project {
       if (userId != null) 'user_id': userId,
       'status': status.name,
       'metadata': metadata.isNotEmpty ? jsonEncode(metadata) : null,
+      if (bucketId != null) 'bucket_id': bucketId,
     };
   }
 }

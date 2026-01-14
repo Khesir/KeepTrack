@@ -17,6 +17,8 @@ abstract class TaskDataSource {
   /// Get task by ID
   Future<TaskModel?> getTaskById(String id);
 
+  Future<List<TaskModel>> getTasksByBucketId(String bucketId);
+
   /// Create a new task
   Future<TaskModel> createTask(TaskModel task);
 

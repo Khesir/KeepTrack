@@ -13,6 +13,8 @@ abstract class ProjectRepository {
   /// Get project by ID
   Future<Result<Project>> getProjectById(String id);
 
+  Future<Result<List<Project>>> getProjectsByBucketID(String bucketId);
+
   /// Create a new project
   Future<Result<Project>> createProject(Project project);
 

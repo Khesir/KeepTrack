@@ -43,6 +43,13 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<Result<List<Task>>> getTasksByBucketID(String bucketId) async {
+    final taskModels = await dataSource.getTasksByBucketId(bucketId);
+    final tasks = taskModels.cast<Task>();
+    return Result.success(tasks);
+  }
+
+  @override
   Future<Result<Task>> createTask(Task task) async {
     final model = TaskModel.fromEntity(task);
     final created = await dataSource.createTask(model);
@@ -89,12 +96,16 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Result<Map<DateTime, int>>> getTaskActivityForLastMonths(int months) async {
+  Future<Result<Map<DateTime, int>>> getTaskActivityForLastMonths(
+    int months,
+  ) async {
     try {
       final activity = await dataSource.getTaskActivityForLastMonths(months);
       return Result.success(activity);
     } catch (e) {
-      return Result.error(ServerFailure(message: 'Failed to fetch task activity: $e'));
+      return Result.error(
+        ServerFailure(message: 'Failed to fetch task activity: $e'),
+      );
     }
   }
 }
