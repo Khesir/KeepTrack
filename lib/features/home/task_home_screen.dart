@@ -18,9 +18,11 @@ import '../module_selection/task_module_screen.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 
+import '../tasks/modules/buckets/domain/entities/bucket.dart';
 import '../tasks/presentation/screens/tabs/task/create_task_page.dart';
+import '../tasks/presentation/state/bucket_controller.dart';
 
-enum TaskTimeFilter { current, week, month, noDate }
+enum TaskTimeFilter { today, sevenDays, thirtyDays, all }
 
 enum TaskSortOption { priority, dueDate, status }
 
@@ -36,16 +38,19 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
     with AppLayoutControlled {
   late final TaskController _taskController;
   late final ProjectController _projectController;
+  late final BucketController _bucketController;
   late final SupabaseService _supabaseService;
 
-  TaskTimeFilter _timeFilter = TaskTimeFilter.current;
+  TaskTimeFilter _timeFilter = TaskTimeFilter.today;
   TaskSortOption _sortOption = TaskSortOption.priority;
-
   @override
   void registerServices() {
     _taskController = locator.get<TaskController>();
     _projectController = locator.get<ProjectController>();
     _supabaseService = locator.get<SupabaseService>();
+    _bucketController = locator.get<BucketController>();
+
+    _bucketController.loadBuckets();
   }
 
   @override
@@ -80,98 +85,106 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
               .where((p) => p.status == ProjectStatus.active && !p.isArchived)
               .toList();
 
-          return Dialog(
-            child: Container(
-              width: 600,
-              constraints: const BoxConstraints(maxHeight: 700),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey[300]!),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Create Task',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+          return AsyncStreamBuilder<List<Bucket>>(
+            state: _bucketController,
+            builder: (context, buckets) {
+              return Dialog(
+                child: Container(
+                  width: 600,
+                  constraints: const BoxConstraints(maxHeight: 700),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[300]!),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Content
-                  Expanded(
-                    child: TaskManagementDialog(
-                      userId: _supabaseService.userId!,
-                      projects: activeProjects,
-                      useDialogContent: true,
-                      onSave: (newTask) async {
-                        try {
-                          await _taskController.createTask(newTask);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Task created successfully'),
-                                backgroundColor: Colors.green,
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Create Task',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            );
-                            Navigator.pop(context);
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: ${e.toString()}'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ),
-
-                  // Footer with "View Full Page" button
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.grey[300]!)),
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.open_in_full),
-                        label: const Text('View Full Page'),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const CreateTaskPage(),
                             ),
-                          );
-                        },
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+
+                      // Content
+                      Expanded(
+                        child: TaskManagementDialog(
+                          userId: _supabaseService.userId!,
+                          projects: activeProjects,
+                          buckets: buckets,
+                          useDialogContent: true,
+                          onSave: (newTask) async {
+                            try {
+                              await _taskController.createTask(newTask);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Task created successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.pop(context);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ),
+
+                      // Footer with "View Full Page" button
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.open_in_full),
+                            label: const Text('View Full Page'),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CreateTaskPage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -198,7 +211,11 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
         return Scaffold(
-          backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
+          backgroundColor: isDesktop
+              ? (Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF09090B)
+                    : AppColors.backgroundSecondary)
+              : null,
           body: SingleChildScrollView(
             padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
             child: Center(
@@ -627,30 +644,37 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
   List<Task> _filterTasks(List<Task> tasks) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final todayEnd = today.add(const Duration(days: 1));
 
     switch (_timeFilter) {
-      case TaskTimeFilter.current:
-        return tasks
-            .where((t) => t.status == TaskStatus.inProgress && !t.isArchived)
-            .toList();
-      case TaskTimeFilter.week:
-        final weekEnd = today.add(const Duration(days: 7));
+      case TaskTimeFilter.today:
         return tasks.where((t) {
-          if (t.isArchived || t.isCompleted) return false;
+          if (t.isArchived) return false;
           if (t.dueDate == null) return false;
-          return t.dueDate!.isAfter(today) && t.dueDate!.isBefore(weekEnd);
+          final taskDate = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+          return taskDate.isAtSameMomentAs(today) ||
+                 (t.dueDate!.isAfter(today) && t.dueDate!.isBefore(todayEnd));
         }).toList();
-      case TaskTimeFilter.month:
-        final monthEnd = today.add(const Duration(days: 30));
+      case TaskTimeFilter.sevenDays:
+        final endDate = today.add(const Duration(days: 7));
         return tasks.where((t) {
-          if (t.isArchived || t.isCompleted) return false;
+          if (t.isArchived) return false;
           if (t.dueDate == null) return false;
-          return t.dueDate!.isAfter(today) && t.dueDate!.isBefore(monthEnd);
+          final taskDate = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+          return (taskDate.isAtSameMomentAs(today) || taskDate.isAfter(today)) &&
+                 taskDate.isBefore(endDate);
         }).toList();
-      case TaskTimeFilter.noDate:
-        return tasks
-            .where((t) => t.dueDate == null && !t.isArchived && !t.isCompleted)
-            .toList();
+      case TaskTimeFilter.thirtyDays:
+        final endDate = today.add(const Duration(days: 30));
+        return tasks.where((t) {
+          if (t.isArchived) return false;
+          if (t.dueDate == null) return false;
+          final taskDate = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+          return (taskDate.isAtSameMomentAs(today) || taskDate.isAfter(today)) &&
+                 taskDate.isBefore(endDate);
+        }).toList();
+      case TaskTimeFilter.all:
+        return tasks.where((t) => !t.isArchived).toList();
     }
   }
 
@@ -728,20 +752,20 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                   underline: const SizedBox(),
                   items: const [
                     DropdownMenuItem(
-                      value: TaskTimeFilter.current,
-                      child: Text('Current'),
+                      value: TaskTimeFilter.today,
+                      child: Text('Today'),
                     ),
                     DropdownMenuItem(
-                      value: TaskTimeFilter.week,
-                      child: Text('This Week'),
+                      value: TaskTimeFilter.sevenDays,
+                      child: Text('7 Days'),
                     ),
                     DropdownMenuItem(
-                      value: TaskTimeFilter.month,
-                      child: Text('This Month'),
+                      value: TaskTimeFilter.thirtyDays,
+                      child: Text('30 Days'),
                     ),
                     DropdownMenuItem(
-                      value: TaskTimeFilter.noDate,
-                      child: Text('No Date'),
+                      value: TaskTimeFilter.all,
+                      child: Text('All Tasks'),
                     ),
                   ],
                   onChanged: (value) {
@@ -853,40 +877,23 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
   }
 
   Widget _buildTaskItem(Task task, List<Task> allTasks) {
-    Color priorityColor;
-    switch (task.priority) {
-      case TaskPriority.urgent:
-        priorityColor = Colors.red[700]!;
-        break;
-      case TaskPriority.high:
-        priorityColor = Colors.orange[700]!;
-        break;
-      case TaskPriority.medium:
-        priorityColor = Colors.blue[700]!;
-        break;
-      case TaskPriority.low:
-        priorityColor = Colors.grey[700]!;
-        break;
-    }
-
     final isOverdue =
         task.dueDate != null &&
         task.dueDate!.isBefore(DateTime.now()) &&
         !task.isCompleted;
+    final subtasks = allTasks.where((t) => t.parentTaskId == task.id).toList();
+    final subtaskCount = subtasks.length;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: isOverdue
             ? Colors.red.withOpacity(0.05)
             : Theme.of(context).colorScheme.surface.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isOverdue
-              ? Colors.red.withOpacity(0.5)
-              : Theme.of(context).colorScheme.outline.withOpacity(0.2),
-          width: isOverdue ? 1.5 : 1,
-        ),
+        border: isOverdue
+            ? Border.all(color: Colors.red.withOpacity(0.5), width: 1.5)
+            : null,
       ),
       child: InkWell(
         onTap: () {
@@ -907,7 +914,18 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
           padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              // Checkbox to mark task as complete
+              // Priority indicator
+              Container(
+                width: 4,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: _getPriorityColor(task.priority),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Checkbox
               Checkbox(
                 value: task.isCompleted,
                 onChanged: (value) async {
@@ -915,71 +933,29 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                     final updatedTask = task.copyWith(
                       status: value
                           ? TaskStatus.completed
-                          : TaskStatus.inProgress,
+                          : TaskStatus.todo,
                       completedAt: value ? DateTime.now() : null,
                     );
                     await _taskController.updateTask(updatedTask);
                   }
                 },
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                ),
               ),
               const SizedBox(width: 8),
-              Container(
-                width: 4,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: priorityColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
+
+              // Task info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            task.title,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              decoration: task.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                              color: task.isCompleted
-                                  ? Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.5)
-                                  : null,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (isOverdue)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'OVERDUE',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
+                    Text(
+                      task.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        decoration: task.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
                     ),
                     if (task.description != null &&
                         task.description!.isNotEmpty) ...[
@@ -987,47 +963,87 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                       Text(
                         task.description!,
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
-                          decoration: task.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.6),
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    if (task.dueDate != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 12,
-                            color: isOverdue
-                                ? Colors.red
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        if (isOverdue)
+                          _buildTaskBadge(
+                            'OVERDUE',
+                            Colors.red,
+                            Icons.warning_amber_rounded,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Due: ${_formatDate(task.dueDate!)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isOverdue
-                                  ? Colors.red
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.6),
-                              fontWeight: isOverdue ? FontWeight.w600 : null,
-                            ),
+                        _buildTaskBadge(
+                          task.priority.displayName,
+                          _getPriorityColor(task.priority),
+                          Icons.flag,
+                        ),
+                        _buildTaskBadge(
+                          task.status.displayName,
+                          _getStatusColor(task.status),
+                          Icons.circle,
+                        ),
+                        _buildTaskBadge(
+                          task.dueDate != null
+                              ? DateFormat('MMM d, h:mm a').format(task.dueDate!)
+                              : 'No date',
+                          task.dueDate != null
+                              ? (isOverdue ? Colors.red : Colors.grey[700]!)
+                              : Colors.grey[400]!,
+                          Icons.calendar_today,
+                        ),
+                        if (subtaskCount > 0)
+                          _buildTaskBadge(
+                            '$subtaskCount subtask${subtaskCount > 1 ? 's' : ''}',
+                            Colors.blue[700]!,
+                            Icons.list,
                           ),
-                        ],
-                      ),
-                    ],
+                        // Project badge
+                        if (task.projectId != null)
+                          Builder(
+                            builder: (context) {
+                              final project = _projectController.currentProjects
+                                  ?.where((p) => p.id == task.projectId)
+                                  .firstOrNull;
+                              if (project == null) return const SizedBox.shrink();
+                              final projectColor = project.color != null
+                                  ? Color(int.parse(
+                                      project.color!.replaceFirst('#', '0xff')))
+                                  : Colors.blue[700]!;
+                              return _buildTaskBadge(
+                                project.name,
+                                projectColor,
+                                Icons.folder,
+                              );
+                            },
+                          ),
+                        // Bucket badge
+                        if (task.bucketId != null)
+                          Builder(
+                            builder: (context) {
+                              final bucket = _bucketController
+                                  .getBucketFromCurrentState(task.bucketId!);
+                              if (bucket == null) return const SizedBox.shrink();
+                              return _buildTaskBadge(
+                                bucket.name,
+                                Colors.purple[700]!,
+                                Icons.inbox,
+                              );
+                            },
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -1036,6 +1052,58 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildTaskBadge(String label, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getPriorityColor(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.urgent:
+        return Colors.red[700]!;
+      case TaskPriority.high:
+        return Colors.orange[700]!;
+      case TaskPriority.medium:
+        return Colors.blue[700]!;
+      case TaskPriority.low:
+        return Colors.grey[600]!;
+    }
+  }
+
+  Color _getStatusColor(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.todo:
+        return Colors.orange[700]!;
+      case TaskStatus.inProgress:
+        return Colors.purple[700]!;
+      case TaskStatus.completed:
+        return Colors.green[700]!;
+      case TaskStatus.cancelled:
+        return Colors.red[700]!;
+    }
   }
 
   void _showTaskDrawer(Task task, List<Task> allTasks) {
@@ -1385,12 +1453,13 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                   'Active Projects',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                Text(
-                  '${activeProjects.length} project${activeProjects.length != 1 ? 's' : ''}',
-                  style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(context, AppRoutes.projectManagement);
+                  },
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: Text(
+                    '${activeProjects.length} project${activeProjects.length != 1 ? 's' : ''}',
                   ),
                 ),
               ],
@@ -1427,16 +1496,23 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
                 ),
               )
             else
-              SizedBox(
-                height: 140,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: activeProjects.length,
-                  itemBuilder: (context, index) {
-                    final project = activeProjects[index];
-                    return _buildProjectCard(project);
-                  },
+              // 3-Grid Layout for Projects
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.85,
                 ),
+                itemCount: activeProjects.length > 6
+                    ? 6
+                    : activeProjects.length,
+                itemBuilder: (context, index) {
+                  final project = activeProjects[index];
+                  return _buildProjectCard(project);
+                },
               ),
           ],
         );
@@ -1444,66 +1520,127 @@ class _TaskHomeScreenState extends ScopedScreenState<TaskHomeScreen>
     );
   }
 
-  Widget _buildProjectCard(project) {
+  Widget _buildProjectCard(Project project) {
     final projectColor = project.color != null
         ? Color(int.parse(project.color!.replaceFirst('#', '0xff')))
         : Colors.blue[700]!;
 
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [projectColor, projectColor.withOpacity(0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+    // Get bucket from project metadata or default
+    final bucket = project.metadata['bucket'] ?? 'Work';
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: projectColor.withOpacity(0.3)),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.projectDetail,
-              arguments: project,
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.folder, color: Colors.white, size: 32),
-                const SizedBox(height: 12),
-                Text(
-                  project.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.projectDetail,
+            arguments: project,
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Project Icon & Color
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: projectColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const Spacer(),
-                if (project.description != null &&
-                    project.description!.isNotEmpty)
-                  Text(
-                    project.description!,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 12,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                child: Icon(Icons.folder, color: projectColor, size: 20),
+              ),
+              const SizedBox(height: 8),
+              // Project Title
+              Text(
+                project.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Spacer(),
+              // Bucket Tab
+              _buildBucketChip(bucket),
+              const SizedBox(height: 8),
+              // Status indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  project.status.displayName,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: Colors.green,
+                    fontWeight: FontWeight.w600,
                   ),
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBucketChip(String bucket) {
+    Color bucketColor;
+    IconData bucketIcon;
+
+    switch (bucket.toLowerCase()) {
+      case 'work':
+        bucketColor = Colors.blue;
+        bucketIcon = Icons.work;
+        break;
+      case 'personal':
+        bucketColor = Colors.green;
+        bucketIcon = Icons.person;
+        break;
+      case 'urgent':
+        bucketColor = Colors.red;
+        bucketIcon = Icons.priority_high;
+        break;
+      case 'learning':
+        bucketColor = Colors.purple;
+        bucketIcon = Icons.school;
+        break;
+      default:
+        bucketColor = Colors.grey;
+        bucketIcon = Icons.folder;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bucketColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(bucketIcon, size: 10, color: bucketColor),
+          const SizedBox(width: 4),
+          Text(
+            bucket,
+            style: TextStyle(
+              fontSize: 9,
+              color: bucketColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

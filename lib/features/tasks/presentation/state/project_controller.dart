@@ -80,4 +80,21 @@ class ProjectController extends StreamState<AsyncState<List<Project>>> {
       return data ?? [];
     });
   }
+
+  /// Get projects currently in state (if loaded)
+  List<Project>? get currentProjects => state is AsyncData<List<Project>>
+      ? (state as AsyncData<List<Project>>).data
+      : null;
+
+  /// Get project by ID from current state
+  Project? getProjectFromCurrentState(String id) {
+    final projects = currentProjects;
+    if (projects == null) return null;
+
+    try {
+      return projects.where((p) => p.id == id).first;
+    } catch (e) {
+      return null;
+    }
+  }
 }

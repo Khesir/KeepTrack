@@ -32,6 +32,33 @@ class AppConfigurationTaskPage extends StatelessWidget {
               onTap: () => Navigator.pushNamed(context, '/project-create'),
             ),
           ]),
+          const SizedBox(height: 24),
+          _buildSection(context, 'Management', [
+            _buildTile(
+              context,
+              icon: Icons.folder,
+              title: 'Manage Projects',
+              subtitle: 'View, edit, and organize projects',
+              color: Colors.purple,
+              onTap: () => Navigator.pushNamed(context, '/project-management'),
+            ),
+            _buildTile(
+              context,
+              icon: Icons.inbox,
+              title: 'Manage Buckets',
+              subtitle: 'Create and organize task buckets',
+              color: Colors.deepPurple,
+              onTap: () => Navigator.pushNamed(context, '/bucket-management'),
+            ),
+            _buildTile(
+              context,
+              icon: Icons.task_alt,
+              title: 'Manage Tasks',
+              subtitle: 'View and manage all tasks',
+              color: Colors.blue,
+              onTap: () => Navigator.pushNamed(context, '/task-management'),
+            ),
+          ]),
         ],
       ),
     );

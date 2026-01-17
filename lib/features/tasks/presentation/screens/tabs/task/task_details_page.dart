@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/tasks/modules/buckets/domain/entities/bucket.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:keep_track/features/tasks/presentation/state/bucket_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/task/components/task_management_dialog.dart';
@@ -26,6 +28,7 @@ class TaskDetailsPage extends StatefulWidget {
 class _TaskDetailsPageState extends State<TaskDetailsPage> {
   late final TaskController _controller;
   late final ProjectController _projectController;
+  late final BucketController _bucketController;
   late final SupabaseService _supabaseService;
 
   @override
@@ -33,8 +36,10 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
     super.initState();
     _controller = locator.get<TaskController>();
     _projectController = locator.get<ProjectController>();
+    _bucketController = locator.get<BucketController>();
     _supabaseService = locator.get<SupabaseService>();
     _projectController.loadActiveProjects();
+    _bucketController.loadBuckets();
   }
 
   void _showCreateSubtaskDialog(Task parentTask) {
@@ -95,99 +100,107 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
               .where((p) => p.status == ProjectStatus.active && !p.isArchived)
               .toList();
 
-          return Dialog(
-            child: Container(
-              width: 600,
-              constraints: const BoxConstraints(maxHeight: 700),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey[300]!),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Edit Task',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+          return AsyncStreamBuilder<List<Bucket>>(
+            state: _bucketController,
+            builder: (context, buckets) {
+              final activeBuckets = buckets.where((b) => !b.isArchive).toList();
+
+              return Dialog(
+                child: Container(
+                  width: 600,
+                  constraints: const BoxConstraints(maxHeight: 700),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[300]!),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Edit Task',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
-                  // Content
-                  Expanded(
-                    child: TaskManagementDialog(
-                      task: task,
-                      userId: _supabaseService.userId!,
-                      projects: activeProjects,
-                      useDialogContent: true,
-                      onSave: (updatedTask) async {
-                        try {
-                          await _controller.updateTask(updatedTask);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Task updated successfully'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                            Navigator.pop(context);
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: ${e.toString()}'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      onDelete: () async {
-                        try {
-                          await _controller.deleteTask(task.id!);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Task deleted successfully'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                            Navigator.pop(context); // Close dialog
-                            Navigator.pop(context); // Close drawer
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: ${e.toString()}'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
+                      // Content
+                      Expanded(
+                        child: TaskManagementDialog(
+                          task: task,
+                          userId: _supabaseService.userId!,
+                          projects: activeProjects,
+                          buckets: activeBuckets,
+                          useDialogContent: true,
+                          onSave: (updatedTask) async {
+                            try {
+                              await _controller.updateTask(updatedTask);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Task updated successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.pop(context);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          onDelete: () async {
+                            try {
+                              await _controller.deleteTask(task.id!);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Task deleted successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.pop(context); // Close dialog
+                                Navigator.pop(context); // Close drawer
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -577,8 +590,14 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                             ),
                             ...activeProjects.map((project) {
                               final projectColor = project.color != null
-                                  ? Color(int.parse(
-                                      project.color!.replaceFirst('#', '0xff')))
+                                  ? Color(
+                                      int.parse(
+                                        project.color!.replaceFirst(
+                                          '#',
+                                          '0xff',
+                                        ),
+                                      ),
+                                    )
                                   : Colors.blue[700]!;
 
                               return DropdownMenuItem<String?>(
@@ -610,6 +629,81 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                             final updatedTask = task.copyWith(
                               projectId: newProjectId,
                             );
+                            await _controller.updateTask(updatedTask);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Bucket - Editable
+                  AsyncStreamBuilder<List<Bucket>>(
+                    state: _bucketController,
+                    builder: (context, buckets) {
+                      final activeBuckets = buckets
+                          .where((b) => !b.isArchive)
+                          .toList();
+
+                      return _buildEditableDetailSection(
+                        'Bucket',
+                        Icons.inbox,
+                        DropdownButton<String?>(
+                          value: task.bucketId,
+                          isExpanded: true,
+                          underline: const SizedBox(),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.remove_circle_outline,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'No Bucket',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ...activeBuckets.map((bucket) {
+                              return DropdownMenuItem<String?>(
+                                value: bucket.id,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.inbox,
+                                      color: Colors.purple[700],
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        bucket.name,
+                                        style: TextStyle(
+                                          color: Colors.purple[700],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: (newBucketId) async {
+                            final updatedTask = task.copyWith(
+                              bucketId: newBucketId,
+                            );
+                            print(task.bucketId);
                             await _controller.updateTask(updatedTask);
                           },
                         ),

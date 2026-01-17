@@ -1,3 +1,6 @@
+// Sentinel value for clearing nullable fields in copyWith
+const _sentinel = Object();
+
 /// Task entity - Pure domain model
 class Task {
   final String? id; // Optional - Supabase auto-generates
@@ -49,49 +52,74 @@ class Task {
   });
 
   /// Copy with method for immutability
+  /// Use Object? for nullable fields to allow explicitly setting them to null
   Task copyWith({
     String? id,
     String? title,
-    String? description,
+    Object? description = _sentinel,
     TaskStatus? status,
     TaskPriority? priority,
-    String? projectId,
-    String? parentTaskId,
+    Object? projectId = _sentinel,
+    Object? parentTaskId = _sentinel,
     List<String>? tags,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    DateTime? dueDate,
-    DateTime? completedAt,
+    Object? createdAt = _sentinel,
+    Object? updatedAt = _sentinel,
+    Object? dueDate = _sentinel,
+    Object? completedAt = _sentinel,
     bool? archived,
     bool? isMoneyRelated,
-    double? expectedAmount,
-    TaskTransactionType? transactionType,
-    String? financeCategoryId,
-    String? actualTransactionId,
+    Object? expectedAmount = _sentinel,
+    Object? transactionType = _sentinel,
+    Object? financeCategoryId = _sentinel,
+    Object? actualTransactionId = _sentinel,
     String? userId,
-    String? bucketId,
+    Object? bucketId = _sentinel,
   }) {
     return Task(
       id: id ?? this.id,
       title: title ?? this.title,
-      description: description ?? this.description,
+      description: description == _sentinel
+          ? this.description
+          : description as String?,
       status: status ?? this.status,
       priority: priority ?? this.priority,
-      projectId: projectId ?? this.projectId,
-      parentTaskId: parentTaskId ?? this.parentTaskId,
+      projectId: projectId == _sentinel
+          ? this.projectId
+          : projectId as String?,
+      parentTaskId: parentTaskId == _sentinel
+          ? this.parentTaskId
+          : parentTaskId as String?,
       tags: tags ?? this.tags,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      dueDate: dueDate ?? this.dueDate,
-      completedAt: completedAt ?? this.completedAt,
+      createdAt: createdAt == _sentinel
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: updatedAt == _sentinel
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+      dueDate: dueDate == _sentinel
+          ? this.dueDate
+          : dueDate as DateTime?,
+      completedAt: completedAt == _sentinel
+          ? this.completedAt
+          : completedAt as DateTime?,
       archived: archived ?? this.archived,
       isMoneyRelated: isMoneyRelated ?? this.isMoneyRelated,
-      expectedAmount: expectedAmount ?? this.expectedAmount,
-      transactionType: transactionType ?? this.transactionType,
-      financeCategoryId: financeCategoryId ?? this.financeCategoryId,
-      actualTransactionId: actualTransactionId ?? this.actualTransactionId,
+      expectedAmount: expectedAmount == _sentinel
+          ? this.expectedAmount
+          : expectedAmount as double?,
+      transactionType: transactionType == _sentinel
+          ? this.transactionType
+          : transactionType as TaskTransactionType?,
+      financeCategoryId: financeCategoryId == _sentinel
+          ? this.financeCategoryId
+          : financeCategoryId as String?,
+      actualTransactionId: actualTransactionId == _sentinel
+          ? this.actualTransactionId
+          : actualTransactionId as String?,
       userId: userId ?? this.userId,
-      bucketId: bucketId ?? this.bucketId,
+      bucketId: bucketId == _sentinel
+          ? this.bucketId
+          : bucketId as String?,
     );
   }
 

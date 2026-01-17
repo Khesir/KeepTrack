@@ -19,23 +19,46 @@ class BucketController extends StreamState<AsyncState<List<Bucket>>> {
   }
 
   /// Create a new bucket
-  Future<void> createBucket({required String name}) async {
-    // TODO: Implement Create bucket
+  Future<void> createBucket(Bucket bucket) async {
+    await execute(() async {
+      final created = await _repository.createBucket(bucket).then((r) => r.unwrap());
+      final current = data ?? [];
+      return [...current, created];
+    });
   }
 
   /// Update an existing bucket
   Future<void> updateBucket(Bucket bucket) async {
-    // TODO: Implement UpdateBucket
+    await execute(() async {
+      await _repository.updateBucket(bucket).then((r) => r.unwrap());
+      await loadBuckets();
+      return data ?? [];
+    });
   }
 
   /// Delete a bucket
   Future<void> deleteBucket(String id) async {
-    // TODO: Implement DeleteBucket
+    await execute(() async {
+      await _repository.deleteBucket(id).then((r) => r.unwrap());
+      await loadBuckets();
+      return data ?? [];
+    });
   }
 
   /// Archive a bucket (soft delete)
   Future<void> archiveBucket(String id) async {
-    // TODO: Implement ArchiveBucket
+    final bucket = getBucketFromCurrentState(id);
+    if (bucket != null) {
+      await updateBucket(bucket.copyWith(isArchive: true));
+    }
+  }
+
+  /// Unarchive a bucket
+  Future<void> unarchiveBucket(String id) async {
+    final bucket = getBucketFromCurrentState(id);
+    if (bucket != null) {
+      await updateBucket(bucket.copyWith(isArchive: false));
+    }
   }
 
   /// Refresh current data

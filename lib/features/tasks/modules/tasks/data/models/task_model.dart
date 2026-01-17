@@ -116,6 +116,7 @@ class TaskModel extends Task {
       if (actualTransactionId != null)
         'actual_transaction_id': actualTransactionId,
       if (userId != null) 'user_id': userId,
+      if (bucketId != null) 'bucket_id': bucketId,
     };
   }
 }

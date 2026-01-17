@@ -9,6 +9,7 @@ import 'package:keep_track/features/module_selection/task_module_screen.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
 import 'package:keep_track/features/settings/subpages/app_configuration_finance_page.dart';
 import 'package:keep_track/features/settings/subpages/app_configuration_task_page.dart';
+import 'package:keep_track/features/tasks/presentation/screens/configuration/bucket_management_screen.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/project_management_screen.dart';
 import 'package:keep_track/features/tasks/presentation/screens/configuration/task_management_screen.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/task/create_task_page.dart';
@@ -16,6 +17,8 @@ import 'package:keep_track/features/tasks/presentation/screens/create_project_pa
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
+import '../../features/finance/presentation/screens/account_details_screen.dart';
+import '../../features/finance/modules/account/domain/entities/account.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/budget_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/create_budget_screen.dart';
 import '../../features/finance/presentation/screens/configuration/budgets/budget_detail_screen.dart';
@@ -66,9 +69,11 @@ class AppRoutes {
   // Task Management Settings
   static const String taskManagement = '/task-management';
   static const String projectManagement = '/project-management';
+  static const String bucketManagement = '/bucket-management';
 
   // Finance Management
   static const String accountManagement = '/account-management';
+  static const String accountDetail = '/account-detail';
   static const String categoryManagement = '/category-management';
   static const String budgetManagement = '/budget-management';
   static const String goalsManagement = '/goals-management';
@@ -123,6 +128,11 @@ class AppRouter {
       case AppRoutes.projectManagement:
         return MaterialPageRoute(
           builder: (_) => const ProjectManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.bucketManagement:
+        return MaterialPageRoute(
+          builder: (_) => const BucketManagementScreen(),
           settings: settings,
         );
 
@@ -205,6 +215,17 @@ class AppRouter {
       case AppRoutes.accountManagement:
         return MaterialPageRoute(
           builder: (_) => const AccountManagementScreen(),
+          settings: settings,
+        );
+      case AppRoutes.accountDetail:
+        final account = settings.arguments as Account?;
+        if (account == null) {
+          return MaterialPageRoute(
+            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => AccountDetailsScreen(account: account),
           settings: settings,
         );
       case AppRoutes.categoryManagement:
