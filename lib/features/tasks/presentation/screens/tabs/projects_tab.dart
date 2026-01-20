@@ -7,7 +7,9 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/ui.dart';
+import 'package:keep_track/features/tasks/modules/buckets/domain/entities/bucket.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
+import 'package:keep_track/features/tasks/presentation/state/bucket_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 
 enum ProjectStatusFilter { all, active, postponed, closed }
@@ -23,16 +25,19 @@ class ProjectsTab extends ScopedScreen {
 class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
     with AppLayoutControlled {
   late final ProjectController _controller;
+  late final BucketController _bucketController;
   ProjectStatusFilter _statusFilter = ProjectStatusFilter.all;
 
   @override
   void registerServices() {
     _controller = locator.get<ProjectController>();
+    _bucketController = locator.get<BucketController>();
   }
 
   @override
   void onReady() {
     configureLayout(title: 'Projects', showBottomNav: true);
+    _bucketController.loadBuckets();
   }
 
   List<Project> _filterProjects(List<Project> projects) {
@@ -60,10 +65,21 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
   Widget build(BuildContext context) {
     return DesktopAwareScreen(
       builder: (context, isDesktop) {
-        return AsyncStreamBuilder<List<Project>>(
-          state: _controller,
-          builder: (context, projects) {
-            final filteredProjects = _filterProjects(projects);
+        return AsyncStreamBuilder<List<Bucket>>(
+          state: _bucketController,
+          loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+          errorBuilder: (_, __) => _buildBody(context, isDesktop, []),
+          builder: (context, buckets) => _buildBody(context, isDesktop, buckets),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(BuildContext context, bool isDesktop, List<Bucket> buckets) {
+    return AsyncStreamBuilder<List<Project>>(
+      state: _controller,
+      builder: (context, projects) {
+        final filteredProjects = _filterProjects(projects);
 
             return Scaffold(
               backgroundColor: isDesktop ? (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF09090B) : AppColors.backgroundSecondary) : null,
@@ -164,7 +180,7 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
                             spacing: AppSpacing.lg,
                             desktopChildAspectRatio: 0.85,
                             children: filteredProjects
-                                .map((project) => _buildProjectCard(project))
+                                .map((project) => _buildProjectCard(project, buckets))
                                 .toList(),
                           )
                         else
@@ -181,7 +197,7 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
                             itemCount: filteredProjects.length,
                             itemBuilder: (context, index) {
                               final project = filteredProjects[index];
-                              return _buildProjectCard(project);
+                              return _buildProjectCard(project, buckets);
                             },
                           ),
                       ],
@@ -242,8 +258,6 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
             ),
           ),
         );
-      },
-    );
   }
 
   Widget _buildFilterChip(String label, ProjectStatusFilter filter) {
@@ -294,7 +308,7 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
     );
   }
 
-  Widget _buildProjectCard(Project project) {
+  Widget _buildProjectCard(Project project, List<Bucket> buckets) {
     // Parse color from project
     final projectColor = project.color != null
         ? Color(int.parse(project.color!.replaceFirst('#', '0xff')))
@@ -305,6 +319,11 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
         : project.status == ProjectStatus.postponed
         ? Colors.orange
         : Colors.grey;
+
+    // Find bucket name if project has a bucket
+    final bucket = project.bucketId != null
+        ? buckets.where((b) => b.id == project.bucketId).firstOrNull
+        : null;
 
     return Card(
       elevation: 0,
@@ -397,41 +416,80 @@ class _ProjectsTabState extends ScopedScreenState<ProjectsTab>
                         ],
                       ),
 
-                    // Status Badge
+                    // Status and Bucket Badges
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: statusColor),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            project.status == ProjectStatus.active
-                                ? Icons.check_circle
-                                : project.status == ProjectStatus.postponed
-                                ? Icons.pause_circle
-                                : Icons.cancel,
-                            size: 12,
-                            color: statusColor,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        // Status Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            project.status.displayName,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: statusColor,
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: statusColor),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                project.status == ProjectStatus.active
+                                    ? Icons.check_circle
+                                    : project.status == ProjectStatus.postponed
+                                    ? Icons.pause_circle
+                                    : Icons.cancel,
+                                size: 12,
+                                color: statusColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                project.status.displayName,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Bucket Badge
+                        if (bucket != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.purple),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 12,
+                                  color: Colors.purple,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  bucket.name,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.purple,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ],
                 ),

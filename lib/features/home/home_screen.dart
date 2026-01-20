@@ -29,6 +29,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
   late final BudgetController _budgetController;
   late final TransactionController _transactionController;
   int _daysToShow = 15; // Adjustable days for bar graph
+  Set<String> _selectedTypes = {'income', 'expense', 'transfer'};
 
   @override
   void registerServices() {
@@ -225,15 +226,15 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                // Legend
-                Row(
+                const SizedBox(height: 12),
+                // Transaction type filter chips
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    _buildLegendIndicator(Colors.green, 'Income'),
-                    const SizedBox(width: 16),
-                    _buildLegendIndicator(Colors.red, 'Expense'),
-                    const SizedBox(width: 16),
-                    _buildLegendIndicator(Colors.blue, 'Transfer'),
+                    _buildFilterChip('income', 'Income', Colors.green),
+                    _buildFilterChip('expense', 'Expense', Colors.red),
+                    _buildFilterChip('transfer', 'Transfer', Colors.blue),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -265,25 +266,39 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                             final barWidth = (constraints.maxWidth - (data.length - 1) * 6) / (data.length * 3);
                             final clampedBarWidth = barWidth.clamp(3.0, 16.0);
 
+                            final selectedCount = _selectedTypes.length;
+                            final adjustedBarWidth = selectedCount > 0
+                                ? (constraints.maxWidth - (data.length - 1) * 6) / (data.length * selectedCount)
+                                : clampedBarWidth;
+                            final adjustedClampedBarWidth = adjustedBarWidth.clamp(3.0, 20.0);
+
                             return Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: data.map((dayData) {
-                                final incomeHeight = maxAmount > 0
+                                final incomeHeight = maxAmount > 0 && _selectedTypes.contains('income')
                                     ? (dayData.income / maxAmount) * (isDesktop ? 160 : 120)
                                     : 0.0;
-                                final expenseHeight = maxAmount > 0
+                                final expenseHeight = maxAmount > 0 && _selectedTypes.contains('expense')
                                     ? (dayData.expense / maxAmount) * (isDesktop ? 160 : 120)
                                     : 0.0;
-                                final transferHeight = maxAmount > 0
+                                final transferHeight = maxAmount > 0 && _selectedTypes.contains('transfer')
                                     ? (dayData.transfer / maxAmount) * (isDesktop ? 160 : 120)
                                     : 0.0;
 
+                                final tooltipLines = <String>[DateFormat('MMM d').format(dayData.date)];
+                                if (_selectedTypes.contains('income')) {
+                                  tooltipLines.add('Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}');
+                                }
+                                if (_selectedTypes.contains('expense')) {
+                                  tooltipLines.add('Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}');
+                                }
+                                if (_selectedTypes.contains('transfer')) {
+                                  tooltipLines.add('Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}');
+                                }
+
                                 return Tooltip(
-                                  message: '${DateFormat('MMM d').format(dayData.date)}\n'
-                                      'Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}\n'
-                                      'Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}\n'
-                                      'Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}',
+                                  message: tooltipLines.join('\n'),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
@@ -291,43 +306,48 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
                                           // Income bar
-                                          AnimatedContainer(
-                                            duration: const Duration(milliseconds: 300),
-                                            width: clampedBarWidth,
-                                            height: incomeHeight,
-                                            decoration: BoxDecoration(
-                                              color: Colors.green.withValues(alpha: 0.8),
-                                              borderRadius: const BorderRadius.vertical(
-                                                top: Radius.circular(3),
+                                          if (_selectedTypes.contains('income'))
+                                            AnimatedContainer(
+                                              duration: const Duration(milliseconds: 300),
+                                              width: adjustedClampedBarWidth,
+                                              height: incomeHeight,
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.withValues(alpha: 0.8),
+                                                borderRadius: const BorderRadius.vertical(
+                                                  top: Radius.circular(3),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 1),
+                                          if (_selectedTypes.contains('income') && _selectedTypes.length > 1)
+                                            const SizedBox(width: 1),
                                           // Expense bar
-                                          AnimatedContainer(
-                                            duration: const Duration(milliseconds: 300),
-                                            width: clampedBarWidth,
-                                            height: expenseHeight,
-                                            decoration: BoxDecoration(
-                                              color: Colors.red.withValues(alpha: 0.8),
-                                              borderRadius: const BorderRadius.vertical(
-                                                top: Radius.circular(3),
+                                          if (_selectedTypes.contains('expense'))
+                                            AnimatedContainer(
+                                              duration: const Duration(milliseconds: 300),
+                                              width: adjustedClampedBarWidth,
+                                              height: expenseHeight,
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withValues(alpha: 0.8),
+                                                borderRadius: const BorderRadius.vertical(
+                                                  top: Radius.circular(3),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 1),
+                                          if (_selectedTypes.contains('expense') && _selectedTypes.contains('transfer'))
+                                            const SizedBox(width: 1),
                                           // Transfer bar
-                                          AnimatedContainer(
-                                            duration: const Duration(milliseconds: 300),
-                                            width: clampedBarWidth,
-                                            height: transferHeight,
-                                            decoration: BoxDecoration(
-                                              color: Colors.blue.withValues(alpha: 0.8),
-                                              borderRadius: const BorderRadius.vertical(
-                                                top: Radius.circular(3),
+                                          if (_selectedTypes.contains('transfer'))
+                                            AnimatedContainer(
+                                              duration: const Duration(milliseconds: 300),
+                                              width: adjustedClampedBarWidth,
+                                              height: transferHeight,
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue.withValues(alpha: 0.8),
+                                                borderRadius: const BorderRadius.vertical(
+                                                  top: Radius.circular(3),
+                                                ),
                                               ),
                                             ),
-                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 4),
@@ -348,32 +368,37 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                         ),
                 ),
                 const SizedBox(height: 12),
-                // Summary row
+                // Summary row - only show selected types
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Income',
-                        data.fold<double>(0, (sum, d) => sum + d.income),
-                        Colors.green,
+                    if (_selectedTypes.contains('income'))
+                      Expanded(
+                        child: _buildSummaryCard(
+                          'Income',
+                          data.fold<double>(0, (sum, d) => sum + d.income),
+                          Colors.green,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Expense',
-                        data.fold<double>(0, (sum, d) => sum + d.expense),
-                        Colors.red,
+                    if (_selectedTypes.contains('income') && _selectedTypes.length > 1)
+                      const SizedBox(width: 8),
+                    if (_selectedTypes.contains('expense'))
+                      Expanded(
+                        child: _buildSummaryCard(
+                          'Expense',
+                          data.fold<double>(0, (sum, d) => sum + d.expense),
+                          Colors.red,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Transfer',
-                        data.fold<double>(0, (sum, d) => sum + d.transfer),
-                        Colors.blue,
+                    if (_selectedTypes.contains('expense') && _selectedTypes.contains('transfer'))
+                      const SizedBox(width: 8),
+                    if (_selectedTypes.contains('transfer'))
+                      Expanded(
+                        child: _buildSummaryCard(
+                          'Transfer',
+                          data.fold<double>(0, (sum, d) => sum + d.transfer),
+                          Colors.blue,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -461,6 +486,38 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFilterChip(String type, String label, Color color) {
+    final isSelected = _selectedTypes.contains(type);
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: isSelected ? Colors.white : color,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            _selectedTypes.add(type);
+          } else {
+            if (_selectedTypes.length > 1) {
+              _selectedTypes.remove(type);
+            }
+          }
+        });
+      },
+      selectedColor: color,
+      backgroundColor: color.withValues(alpha: 0.1),
+      checkmarkColor: Colors.white,
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      visualDensity: VisualDensity.compact,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:keep_track/features/tasks/modules/buckets/domain/entities/bucket.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 
 class ProjectManagementDialog extends StatefulWidget {
@@ -7,6 +8,7 @@ class ProjectManagementDialog extends StatefulWidget {
   final String userId;
   final Future<void> Function(Project) onSave;
   final Future<void> Function()? onDelete;
+  final List<Bucket>? buckets;
 
   const ProjectManagementDialog({
     super.key,
@@ -14,6 +16,7 @@ class ProjectManagementDialog extends StatefulWidget {
     required this.userId,
     required this.onSave,
     this.onDelete,
+    this.buckets,
   });
 
   @override
@@ -28,6 +31,7 @@ class _ProjectManagementDialogState extends State<ProjectManagementDialog> {
 
   bool _isArchived = false;
   Color _selectedColor = Colors.blue;
+  String? _selectedBucketId;
 
   @override
   void initState() {
@@ -40,6 +44,7 @@ class _ProjectManagementDialogState extends State<ProjectManagementDialog> {
         ? Color(
             int.parse(widget.project!.color!.replaceFirst('#', '0xff')))
         : Colors.blue;
+    _selectedBucketId = widget.project?.bucketId;
   }
 
   @override
@@ -101,6 +106,31 @@ class _ProjectManagementDialogState extends State<ProjectManagementDialog> {
                   ],
                 ),
                 const SizedBox(height: 16),
+
+                // Bucket Selection
+                if (widget.buckets != null && widget.buckets!.isNotEmpty) ...[
+                  DropdownButtonFormField<String?>(
+                    value: _selectedBucketId,
+                    decoration: const InputDecoration(
+                      labelText: 'Bucket',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('No Bucket'),
+                      ),
+                      ...widget.buckets!.where((b) => !b.isArchive).map(
+                        (bucket) => DropdownMenuItem<String?>(
+                          value: bucket.id,
+                          child: Text(bucket.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => _selectedBucketId = v),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Archived
                 SwitchListTile(
@@ -198,6 +228,7 @@ class _ProjectManagementDialogState extends State<ProjectManagementDialog> {
       userId: widget.userId,
       createdAt: widget.project?.createdAt,
       updatedAt: widget.project?.updatedAt,
+      bucketId: _selectedBucketId,
     );
 
     await widget.onSave(project);

@@ -4,9 +4,7 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
-import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
-import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
@@ -27,7 +25,7 @@ class DailyAccountData {
   });
 }
 
-class AccountDetailsScreen extends ScopedScreen {
+class AccountDetailsScreen extends StatefulWidget {
   final Account account;
 
   const AccountDetailsScreen({super.key, required this.account});
@@ -36,70 +34,112 @@ class AccountDetailsScreen extends ScopedScreen {
   State<AccountDetailsScreen> createState() => _AccountDetailsScreenState();
 }
 
-class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
-    with AppLayoutControlled {
+class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   late final TransactionController _transactionController;
   int _daysToShow = 15;
+  Set<String> _selectedTypes = {'income', 'expense', 'transfer'};
 
   @override
-  void registerServices() {
+  void initState() {
+    super.initState();
     _transactionController = locator.get<TransactionController>();
-  }
-
-  @override
-  void onReady() {
-    configureLayout(title: widget.account.name, showBottomNav: false);
     _transactionController.loadTransactionsByAccount(widget.account.id!);
   }
 
   List<DailyAccountData> _processTransactionsToDaily(List<Transaction> transactions) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final startDate = today.subtract(Duration(days: _daysToShow - 1));
-
-    // Create a map with all dates initialized to zero
     final Map<String, DailyAccountData> dailyMap = {};
-    for (int i = 0; i < _daysToShow; i++) {
-      final date = startDate.add(Duration(days: i));
-      final dateKey = DateFormat('yyyy-MM-dd').format(date);
-      dailyMap[dateKey] = DailyAccountData(
-        date: date,
-        income: 0,
-        expense: 0,
-        transfer: 0,
-      );
-    }
 
-    // Aggregate transactions by date
-    for (final transaction in transactions) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(transaction.date);
-      if (dailyMap.containsKey(dateKey)) {
-        final existing = dailyMap[dateKey]!;
-        switch (transaction.type) {
-          case TransactionType.income:
-            dailyMap[dateKey] = DailyAccountData(
-              date: existing.date,
-              income: existing.income + transaction.amount,
-              expense: existing.expense,
-              transfer: existing.transfer,
-            );
-            break;
-          case TransactionType.expense:
-            dailyMap[dateKey] = DailyAccountData(
-              date: existing.date,
-              income: existing.income,
-              expense: existing.expense + transaction.amount,
-              transfer: existing.transfer,
-            );
-            break;
-          case TransactionType.transfer:
-            dailyMap[dateKey] = DailyAccountData(
-              date: existing.date,
-              income: existing.income,
-              expense: existing.expense,
-              transfer: existing.transfer + transaction.amount,
-            );
-            break;
+    if (_daysToShow == 0) {
+      // "All" mode: process all transactions
+      for (final transaction in transactions) {
+        final dateKey = DateFormat('yyyy-MM-dd').format(transaction.date);
+        final existing = dailyMap[dateKey];
+
+        if (existing == null) {
+          dailyMap[dateKey] = DailyAccountData(
+            date: DateTime(transaction.date.year, transaction.date.month, transaction.date.day),
+            income: transaction.type == TransactionType.income ? transaction.amount : 0,
+            expense: transaction.type == TransactionType.expense ? transaction.amount : 0,
+            transfer: transaction.type == TransactionType.transfer ? transaction.amount : 0,
+          );
+        } else {
+          switch (transaction.type) {
+            case TransactionType.income:
+              dailyMap[dateKey] = DailyAccountData(
+                date: existing.date,
+                income: existing.income + transaction.amount,
+                expense: existing.expense,
+                transfer: existing.transfer,
+              );
+              break;
+            case TransactionType.expense:
+              dailyMap[dateKey] = DailyAccountData(
+                date: existing.date,
+                income: existing.income,
+                expense: existing.expense + transaction.amount,
+                transfer: existing.transfer,
+              );
+              break;
+            case TransactionType.transfer:
+              dailyMap[dateKey] = DailyAccountData(
+                date: existing.date,
+                income: existing.income,
+                expense: existing.expense,
+                transfer: existing.transfer + transaction.amount,
+              );
+              break;
+          }
+        }
+      }
+    } else {
+      // Fixed days mode: only process transactions within the range
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final startDate = today.subtract(Duration(days: _daysToShow - 1));
+
+      // Create a map with all dates initialized to zero
+      for (int i = 0; i < _daysToShow; i++) {
+        final date = startDate.add(Duration(days: i));
+        final dateKey = DateFormat('yyyy-MM-dd').format(date);
+        dailyMap[dateKey] = DailyAccountData(
+          date: date,
+          income: 0,
+          expense: 0,
+          transfer: 0,
+        );
+      }
+
+      // Aggregate transactions by date
+      for (final transaction in transactions) {
+        final dateKey = DateFormat('yyyy-MM-dd').format(transaction.date);
+        if (dailyMap.containsKey(dateKey)) {
+          final existing = dailyMap[dateKey]!;
+          switch (transaction.type) {
+            case TransactionType.income:
+              dailyMap[dateKey] = DailyAccountData(
+                date: existing.date,
+                income: existing.income + transaction.amount,
+                expense: existing.expense,
+                transfer: existing.transfer,
+              );
+              break;
+            case TransactionType.expense:
+              dailyMap[dateKey] = DailyAccountData(
+                date: existing.date,
+                income: existing.income,
+                expense: existing.expense + transaction.amount,
+                transfer: existing.transfer,
+              );
+              break;
+            case TransactionType.transfer:
+              dailyMap[dateKey] = DailyAccountData(
+                date: existing.date,
+                income: existing.income,
+                expense: existing.expense,
+                transfer: existing.transfer + transaction.amount,
+              );
+              break;
+          }
         }
       }
     }
@@ -108,6 +148,91 @@ class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
     final result = dailyMap.values.toList();
     result.sort((a, b) => a.date.compareTo(b.date));
     return result;
+  }
+
+  Widget _buildBody(BuildContext context, bool isDesktop, Color accountColor, IconData accountIcon) {
+    return AsyncStreamBuilder<List<Transaction>>(
+      state: _transactionController,
+      loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+      errorBuilder: (context, message) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+            const SizedBox(height: 16),
+            Text('Error: $message'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _transactionController.loadTransactionsByAccount(widget.account.id!),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+      builder: (context, transactions) {
+        // Filter transactions for this account
+        final accountTransactions = transactions.where((t) =>
+            t.accountId == widget.account.id ||
+            t.toAccountId == widget.account.id).toList();
+
+        // Sort by date descending
+        accountTransactions.sort((a, b) => b.date.compareTo(a.date));
+
+        // Calculate totals
+        double totalIncome = 0;
+        double totalExpense = 0;
+        double totalTransfer = 0;
+
+        for (final t in accountTransactions) {
+          switch (t.type) {
+            case TransactionType.income:
+              totalIncome += t.amount;
+              break;
+            case TransactionType.expense:
+              totalExpense += t.amount;
+              break;
+            case TransactionType.transfer:
+              totalTransfer += t.amount;
+              break;
+          }
+        }
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 1200 : double.infinity,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Account Info Card
+                  _buildAccountInfoCard(accountColor, accountIcon, isDesktop),
+                  SizedBox(height: isDesktop ? AppSpacing.xl : 24),
+
+                  // Summary Cards
+                  _buildSummaryCards(
+                    totalIncome,
+                    totalExpense,
+                    totalTransfer,
+                    isDesktop,
+                  ),
+                  SizedBox(height: isDesktop ? AppSpacing.xl : 24),
+
+                  // Bar Graph
+                  _buildBarGraph(accountTransactions, isDesktop),
+                  SizedBox(height: isDesktop ? AppSpacing.xl : 24),
+
+                  // Transactions List
+                  _buildTransactionsList(accountTransactions, isDesktop),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -132,89 +257,7 @@ class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
               onPressed: () => Navigator.pop(context),
             ),
           ),
-          body: AsyncStreamBuilder<List<Transaction>>(
-            state: _transactionController,
-            loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
-            errorBuilder: (context, message) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                  const SizedBox(height: 16),
-                  Text('Error: $message'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => _transactionController
-                        .loadTransactionsByAccount(widget.account.id!),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-            builder: (context, transactions) {
-              // Filter transactions for this account
-              final accountTransactions = transactions.where((t) =>
-                  t.accountId == widget.account.id ||
-                  t.toAccountId == widget.account.id).toList();
-
-              // Sort by date descending
-              accountTransactions.sort((a, b) => b.date.compareTo(a.date));
-
-              // Calculate totals
-              double totalIncome = 0;
-              double totalExpense = 0;
-              double totalTransfer = 0;
-
-              for (final t in accountTransactions) {
-                switch (t.type) {
-                  case TransactionType.income:
-                    totalIncome += t.amount;
-                    break;
-                  case TransactionType.expense:
-                    totalExpense += t.amount;
-                    break;
-                  case TransactionType.transfer:
-                    totalTransfer += t.amount;
-                    break;
-                }
-              }
-
-              return SingleChildScrollView(
-                padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Account Info Card
-                        _buildAccountInfoCard(accountColor, accountIcon, isDesktop),
-                        SizedBox(height: isDesktop ? AppSpacing.xl : 24),
-
-                        // Summary Cards
-                        _buildSummaryCards(
-                          totalIncome,
-                          totalExpense,
-                          totalTransfer,
-                          isDesktop,
-                        ),
-                        SizedBox(height: isDesktop ? AppSpacing.xl : 24),
-
-                        // Bar Graph
-                        _buildBarGraph(accountTransactions, isDesktop),
-                        SizedBox(height: isDesktop ? AppSpacing.xl : 24),
-
-                        // Transactions List
-                        _buildTransactionsList(accountTransactions, isDesktop),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+          body: _buildBody(context, isDesktop, accountColor, accountIcon),
         );
       },
     );
@@ -422,10 +465,13 @@ class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
                     value: _daysToShow,
                     isDense: true,
                     underline: const SizedBox(),
-                    items: [7, 15, 30].map((days) {
+                    items: [7, 15, 30, 0].map((days) {
                       return DropdownMenuItem<int>(
                         value: days,
-                        child: Text('$days days', style: const TextStyle(fontSize: 12)),
+                        child: Text(
+                          days == 0 ? 'All' : '$days days',
+                          style: const TextStyle(fontSize: 12),
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -441,14 +487,14 @@ class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
             ),
             const SizedBox(height: 12),
 
-            // Legend
-            Row(
+            // Filter chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                _buildLegendIndicator(Colors.green, 'Income'),
-                const SizedBox(width: 16),
-                _buildLegendIndicator(Colors.red, 'Expense'),
-                const SizedBox(width: 16),
-                _buildLegendIndicator(Colors.blue, 'Transfer'),
+                _buildFilterChip('income', 'Income', Colors.green),
+                _buildFilterChip('expense', 'Expense', Colors.red),
+                _buildFilterChip('transfer', 'Transfer', Colors.blue),
               ],
             ),
             const SizedBox(height: 16),
@@ -478,28 +524,39 @@ class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
-                        final barWidth = (constraints.maxWidth - (data.length - 1) * 6) / (data.length * 3);
-                        final clampedBarWidth = barWidth.clamp(3.0, 16.0);
+                        final selectedCount = _selectedTypes.length;
+                        final barWidth = selectedCount > 0
+                            ? (constraints.maxWidth - (data.length - 1) * 6) / (data.length * selectedCount)
+                            : (constraints.maxWidth - (data.length - 1) * 6) / (data.length * 3);
+                        final clampedBarWidth = barWidth.clamp(3.0, 20.0);
 
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: data.map((dayData) {
-                            final incomeHeight = maxAmount > 0
+                            final incomeHeight = maxAmount > 0 && _selectedTypes.contains('income')
                                 ? (dayData.income / maxAmount) * (isDesktop ? 160 : 120)
                                 : 0.0;
-                            final expenseHeight = maxAmount > 0
+                            final expenseHeight = maxAmount > 0 && _selectedTypes.contains('expense')
                                 ? (dayData.expense / maxAmount) * (isDesktop ? 160 : 120)
                                 : 0.0;
-                            final transferHeight = maxAmount > 0
+                            final transferHeight = maxAmount > 0 && _selectedTypes.contains('transfer')
                                 ? (dayData.transfer / maxAmount) * (isDesktop ? 160 : 120)
                                 : 0.0;
 
+                            final tooltipLines = <String>[DateFormat('MMM d').format(dayData.date)];
+                            if (_selectedTypes.contains('income')) {
+                              tooltipLines.add('Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}');
+                            }
+                            if (_selectedTypes.contains('expense')) {
+                              tooltipLines.add('Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}');
+                            }
+                            if (_selectedTypes.contains('transfer')) {
+                              tooltipLines.add('Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}');
+                            }
+
                             return Tooltip(
-                              message: '${DateFormat('MMM d').format(dayData.date)}\n'
-                                  'Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}\n'
-                                  'Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}\n'
-                                  'Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}',
+                              message: tooltipLines.join('\n'),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
@@ -507,43 +564,48 @@ class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       // Income bar
-                                      AnimatedContainer(
-                                        duration: const Duration(milliseconds: 300),
-                                        width: clampedBarWidth,
-                                        height: incomeHeight,
-                                        decoration: BoxDecoration(
-                                          color: Colors.green.withOpacity(0.8),
-                                          borderRadius: const BorderRadius.vertical(
-                                            top: Radius.circular(3),
+                                      if (_selectedTypes.contains('income'))
+                                        AnimatedContainer(
+                                          duration: const Duration(milliseconds: 300),
+                                          width: clampedBarWidth,
+                                          height: incomeHeight,
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(0.8),
+                                            borderRadius: const BorderRadius.vertical(
+                                              top: Radius.circular(3),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 1),
+                                      if (_selectedTypes.contains('income') && _selectedTypes.length > 1)
+                                        const SizedBox(width: 1),
                                       // Expense bar
-                                      AnimatedContainer(
-                                        duration: const Duration(milliseconds: 300),
-                                        width: clampedBarWidth,
-                                        height: expenseHeight,
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.withOpacity(0.8),
-                                          borderRadius: const BorderRadius.vertical(
-                                            top: Radius.circular(3),
+                                      if (_selectedTypes.contains('expense'))
+                                        AnimatedContainer(
+                                          duration: const Duration(milliseconds: 300),
+                                          width: clampedBarWidth,
+                                          height: expenseHeight,
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.8),
+                                            borderRadius: const BorderRadius.vertical(
+                                              top: Radius.circular(3),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 1),
+                                      if (_selectedTypes.contains('expense') && _selectedTypes.contains('transfer'))
+                                        const SizedBox(width: 1),
                                       // Transfer bar
-                                      AnimatedContainer(
-                                        duration: const Duration(milliseconds: 300),
-                                        width: clampedBarWidth,
-                                        height: transferHeight,
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.withOpacity(0.8),
-                                          borderRadius: const BorderRadius.vertical(
-                                            top: Radius.circular(3),
+                                      if (_selectedTypes.contains('transfer'))
+                                        AnimatedContainer(
+                                          duration: const Duration(milliseconds: 300),
+                                          width: clampedBarWidth,
+                                          height: transferHeight,
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.withOpacity(0.8),
+                                            borderRadius: const BorderRadius.vertical(
+                                              top: Radius.circular(3),
+                                            ),
                                           ),
                                         ),
-                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
@@ -592,6 +654,38 @@ class _AccountDetailsScreenState extends ScopedScreenState<AccountDetailsScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFilterChip(String type, String label, Color color) {
+    final isSelected = _selectedTypes.contains(type);
+    return FilterChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: isSelected ? Colors.white : color,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            _selectedTypes.add(type);
+          } else {
+            if (_selectedTypes.length > 1) {
+              _selectedTypes.remove(type);
+            }
+          }
+        });
+      },
+      selectedColor: color,
+      backgroundColor: color.withOpacity(0.1),
+      checkmarkColor: Colors.white,
+      side: BorderSide(color: color.withOpacity(0.3)),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      visualDensity: VisualDensity.compact,
     );
   }
 
