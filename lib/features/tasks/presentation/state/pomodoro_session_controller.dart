@@ -37,8 +37,9 @@ class PomodoroSessionController
       final activeSession = result.unwrap();
 
       if (activeSession != null) {
-        // Check if session time has expired
-        if (activeSession.remainingSeconds <= 0 &&
+        // Check if session time has expired (skip for stopwatch - no expiration)
+        if (!activeSession.isStopwatch &&
+            activeSession.remainingSeconds <= 0 &&
             (activeSession.isRunning ||
                 activeSession.status == PomodoroSessionStatus.paused)) {
           // Session expired while user was away - auto-complete it
@@ -327,8 +328,8 @@ class PomodoroSessionController
       // The session entity calculates elapsed/remaining from database startedAt
       final remaining = currentSession.remainingSeconds;
 
-      // Check if timer is complete
-      if (remaining <= 0) {
+      // Check if timer is complete (skip for stopwatch - runs forever until manually stopped)
+      if (!currentSession.isStopwatch && remaining <= 0) {
         timer.cancel();
         _autoCompleteSession(currentSession);
         return;

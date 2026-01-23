@@ -246,6 +246,9 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
             case PomodoroSessionType.longBreak:
               sessionColor = Colors.blue;
               break;
+            case PomodoroSessionType.stopwatch:
+              sessionColor = Colors.amber;
+              break;
           }
         }
 
@@ -353,16 +356,26 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     bool isRunning,
     Color sessionColor,
   ) {
-    int remainingSeconds = 0;
+    int displaySeconds = 0;
     double progress = 0.0;
+    bool isStopwatch = session?.isStopwatch ?? false;
 
     if (session != null) {
-      remainingSeconds = session.remainingSeconds;
-      progress = session.progress;
+      if (isStopwatch) {
+        // Stopwatch: show elapsed time (counting up)
+        displaySeconds = session.elapsedSeconds;
+        progress = 1.0; // Full circle for stopwatch
+      } else {
+        // Regular timer: show remaining time (counting down)
+        displaySeconds = session.remainingSeconds;
+        progress = session.progress;
+      }
     }
 
-    final minutes = remainingSeconds ~/ 60;
-    final seconds = remainingSeconds % 60;
+    // Handle hour display for long stopwatch sessions
+    final hours = displaySeconds ~/ 3600;
+    final minutes = (displaySeconds % 3600) ~/ 60;
+    final seconds = displaySeconds % 60;
 
     return SizedBox(
       width: 300,
@@ -384,10 +397,12 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+                hours > 0
+                    ? '${hours.toString()}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}'
+                    : '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  fontSize: 72,
+                  fontSize: hours > 0 ? 56 : 72,
                   color: session != null ? sessionColor : null,
                 ),
               ),
@@ -453,6 +468,13 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
           Colors.blue,
           '${_settings.longBreakDuration} min',
         ),
+        _buildSessionTypeChip(
+          'Stopwatch',
+          PomodoroSessionType.stopwatch,
+          Colors.amber,
+          'No limit',
+          icon: Icons.timer_outlined,
+        ),
       ],
     );
   }
@@ -461,12 +483,13 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
     String label,
     PomodoroSessionType type,
     Color color,
-    String duration,
-  ) {
+    String duration, {
+    IconData icon = Icons.timer,
+  }) {
     return ActionChip(
       avatar: CircleAvatar(
         backgroundColor: color,
-        child: const Icon(Icons.timer, color: Colors.white, size: 18),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
       label: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,7 +506,8 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
         ],
       ),
       onPressed: () {
-        if (type == PomodoroSessionType.pomodoro) {
+        if (type == PomodoroSessionType.pomodoro ||
+            type == PomodoroSessionType.stopwatch) {
           _showProjectSelectorDialog(type);
         } else {
           _controller.startSession(type);
@@ -562,6 +586,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
                       horizontal: 16,
                       vertical: 16,
                     ),
+                    foregroundColor: Colors.green,
                   ),
                 ),
               ),
@@ -615,6 +640,7 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
           label: const Text('Complete'),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            foregroundColor: Colors.green,
           ),
         ),
         const SizedBox(width: 12),
@@ -986,6 +1012,9 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
       case PomodoroSessionType.longBreak:
         typeColor = Colors.blue;
         break;
+      case PomodoroSessionType.stopwatch:
+        typeColor = Colors.amber;
+        break;
     }
 
     IconData statusIcon;
@@ -1030,8 +1059,13 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Text(
-            '${_formatDateTime(session.startedAt)} • ${session.durationSeconds ~/ 60} min',
-            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            session.isStopwatch
+                ? '${_formatDateTime(session.startedAt)} • ${_formatElapsedTime(session.elapsedSeconds)}'
+                : '${_formatDateTime(session.startedAt)} • ${session.durationSeconds ~/ 60} min',
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         trailing: Container(
@@ -1530,6 +1564,20 @@ class _PomodoroTabState extends ScopedScreenState<PomodoroTab>
       return 'Yesterday at $timeStr';
     } else {
       return '${dateTime.month}/${dateTime.day} at $timeStr';
+    }
+  }
+
+  String _formatElapsedTime(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return '${hours}h ${minutes}m ${seconds}s';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    } else {
+      return '${seconds}s';
     }
   }
 }

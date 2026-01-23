@@ -853,51 +853,51 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
         const SizedBox(height: 12),
 
         // Due Date Filter
-        Text(
-          'Due Date',
-          style: Theme.of(
-            context,
-          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildFilterChip(
-                'All Tasks',
-                _dueDateFilter == DueDateFilter.all,
-                () {
-                  setState(() => _dueDateFilter = DueDateFilter.all);
-                },
-              ),
-              const SizedBox(width: 8),
-              _buildFilterChip(
-                'Due Now',
-                _dueDateFilter == DueDateFilter.dueNow,
-                () {
-                  setState(() => _dueDateFilter = DueDateFilter.dueNow);
-                },
-              ),
-              const SizedBox(width: 8),
-              _buildFilterChip(
-                'Due This Week',
-                _dueDateFilter == DueDateFilter.dueThisWeek,
-                () {
-                  setState(() => _dueDateFilter = DueDateFilter.dueThisWeek);
-                },
-              ),
-              const SizedBox(width: 8),
-              _buildFilterChip(
-                'Due This Month',
-                _dueDateFilter == DueDateFilter.dueThisMonth,
-                () {
-                  setState(() => _dueDateFilter = DueDateFilter.dueThisMonth);
-                },
-              ),
-            ],
-          ),
-        ),
+        // Text(
+        //   'Due Date',
+        //   style: Theme.of(
+        //     context,
+        //   ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+        // ),
+        // const SizedBox(height: 8),
+        // SingleChildScrollView(
+        //   scrollDirection: Axis.horizontal,
+        //   child: Row(
+        //     children: [
+        //       _buildFilterChip(
+        //         'All Tasks',
+        //         _dueDateFilter == DueDateFilter.all,
+        //         () {
+        //           setState(() => _dueDateFilter = DueDateFilter.all);
+        //         },
+        //       ),
+        //       const SizedBox(width: 8),
+        //       _buildFilterChip(
+        //         'Due Now',
+        //         _dueDateFilter == DueDateFilter.dueNow,
+        //         () {
+        //           setState(() => _dueDateFilter = DueDateFilter.dueNow);
+        //         },
+        //       ),
+        //       const SizedBox(width: 8),
+        //       _buildFilterChip(
+        //         'Due This Week',
+        //         _dueDateFilter == DueDateFilter.dueThisWeek,
+        //         () {
+        //           setState(() => _dueDateFilter = DueDateFilter.dueThisWeek);
+        //         },
+        //       ),
+        //       const SizedBox(width: 8),
+        //       _buildFilterChip(
+        //         'Due This Month',
+        //         _dueDateFilter == DueDateFilter.dueThisMonth,
+        //         () {
+        //           setState(() => _dueDateFilter = DueDateFilter.dueThisMonth);
+        //         },
+        //       ),
+        //     ],
+        //   ),
+        // ),
       ],
     );
   }
@@ -1787,19 +1787,20 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
   }
 
   Widget _buildDetailSection(String title, IconData icon, Widget content) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: Colors.grey[600]),
+            Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(width: 8),
             Text(
               title,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -1815,19 +1816,20 @@ class _TasksTabNewState extends ScopedScreenState<TasksTabNew>
     IconData icon,
     Widget content,
   ) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: Colors.grey[600]),
+            Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(width: 8),
             Text(
               title,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
