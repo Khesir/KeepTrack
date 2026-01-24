@@ -14,6 +14,9 @@ class Goal {
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? completedAt;
   final String? userId;
+  final double managementFeePercent; // Recurring fee percentage (0-100)
+  final double withdrawalFeePercent; // Early withdrawal penalty percentage (0-100)
+
   Goal({
     this.id,
     required this.name,
@@ -29,6 +32,8 @@ class Goal {
     this.updatedAt,
     this.completedAt,
     this.userId,
+    this.managementFeePercent = 0,
+    this.withdrawalFeePercent = 0,
   });
 
   /// Calculate progress percentage (0.0 to 1.0)
@@ -45,6 +50,16 @@ class Goal {
   /// Calculate days remaining until target date
   int? get daysRemaining => targetDate?.difference(DateTime.now()).inDays;
 
+  /// Calculate management fee amount based on current amount
+  double get managementFeeAmount => currentAmount * (managementFeePercent / 100);
+
+  /// Calculate withdrawal fee amount (penalty if withdrawn early)
+  double get withdrawalFeeAmount => currentAmount * (withdrawalFeePercent / 100);
+
+  /// Calculate net amount after deducting estimated fees
+  double get netAmountAfterFees =>
+      currentAmount - managementFeeAmount - withdrawalFeeAmount;
+
   Goal copyWith({
     String? id,
     String? name,
@@ -60,6 +75,8 @@ class Goal {
     DateTime? updatedAt,
     DateTime? completedAt,
     String? userId,
+    double? managementFeePercent,
+    double? withdrawalFeePercent,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -76,6 +93,8 @@ class Goal {
       updatedAt: updatedAt ?? this.updatedAt,
       completedAt: completedAt ?? this.completedAt,
       userId: userId ?? this.userId,
+      managementFeePercent: managementFeePercent ?? this.managementFeePercent,
+      withdrawalFeePercent: withdrawalFeePercent ?? this.withdrawalFeePercent,
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:keep_track/core/services/notification/notification_scheduler.dar
 import 'package:keep_track/core/services/notification/notification_service.dart';
 import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/features/notifications/data/repositories/notification_settings_repository.dart';
+import 'package:keep_track/features/notifications/finance_notification_helper.dart';
 import 'package:keep_track/features/notifications/presentation/state/notification_settings_controller.dart';
 
 /// Setup notification dependencies
@@ -37,6 +38,12 @@ void setupNotificationDependencies() {
       locator.get<NotificationSettingsRepository>(),
       locator.get<NotificationScheduler>(),
     );
+  });
+
+  // Register finance notification helper
+  // Note: This depends on finance controllers which are registered separately
+  locator.registerLazySingleton<FinanceNotificationHelper>(() {
+    return FinanceNotificationHelper();
   });
 }
 

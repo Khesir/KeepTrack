@@ -25,6 +25,8 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
   late final TextEditingController targetAmountController;
   late final TextEditingController currentAmountController;
   late final TextEditingController monthlyContributionController;
+  late final TextEditingController managementFeeController;
+  late final TextEditingController withdrawalFeeController;
 
   late DateTime? selectedTargetDate;
   late GoalStatus selectedStatus;
@@ -48,6 +50,16 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
     monthlyContributionController = TextEditingController(
       text: g?.monthlyContribution.toString() ?? '0',
     );
+    managementFeeController = TextEditingController(
+      text: g?.managementFeePercent != null && g!.managementFeePercent > 0
+          ? g.managementFeePercent.toString()
+          : '',
+    );
+    withdrawalFeeController = TextEditingController(
+      text: g?.withdrawalFeePercent != null && g!.withdrawalFeePercent > 0
+          ? g.withdrawalFeePercent.toString()
+          : '',
+    );
 
     selectedTargetDate = g?.targetDate;
     selectedStatus = g?.status ?? GoalStatus.active;
@@ -63,6 +75,8 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
     targetAmountController.dispose();
     currentAmountController.dispose();
     monthlyContributionController.dispose();
+    managementFeeController.dispose();
+    withdrawalFeeController.dispose();
     super.dispose();
   }
 
@@ -89,6 +103,10 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
       final currentAmount = double.tryParse(currentAmountController.text) ?? 0;
       final monthlyContribution =
           double.tryParse(monthlyContributionController.text) ?? 0;
+      final managementFee =
+          (double.tryParse(managementFeeController.text) ?? 0).clamp(0.0, 100.0);
+      final withdrawalFee =
+          (double.tryParse(withdrawalFeeController.text) ?? 0).clamp(0.0, 100.0);
 
       final colorHex = '#${selectedColor.value.toRadixString(16).substring(2)}';
 
@@ -103,6 +121,8 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
         status: selectedStatus,
         monthlyContribution: monthlyContribution,
         userId: widget.userId,
+        managementFeePercent: managementFee,
+        withdrawalFeePercent: withdrawalFee,
       );
 
       widget.onSave(goalEntity);
@@ -180,6 +200,32 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
                   labelText: 'Monthly Contribution',
                   border: const OutlineInputBorder(),
                   prefixText: '$currencySymbol ',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: managementFeeController,
+                decoration: const InputDecoration(
+                  labelText: 'Management Fee % (Optional)',
+                  border: OutlineInputBorder(),
+                  suffixText: '%',
+                  helperText: 'Recurring fee percentage (0-100)',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: withdrawalFeeController,
+                decoration: const InputDecoration(
+                  labelText: 'Withdrawal Fee % (Optional)',
+                  border: OutlineInputBorder(),
+                  suffixText: '%',
+                  helperText: 'Early withdrawal penalty percentage (0-100)',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,

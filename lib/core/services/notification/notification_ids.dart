@@ -18,4 +18,22 @@ class NotificationIds {
     // Range: 1000 to 10999 (10000 possible IDs)
     return 1000 + (taskId.hashCode.abs() % 10000);
   }
+
+  /// Generate a unique ID for planned payment due notifications
+  /// [paymentId] - The planned payment ID
+  /// [daysBefore] - Days before due (1, 2, or 3)
+  /// Range: 20000 to 49999
+  static int plannedPaymentDueNotification(String paymentId, int daysBefore) {
+    final baseId = 20000 + (paymentId.hashCode.abs() % 10000);
+    return baseId + (daysBefore * 10000);
+  }
+
+  /// Generate a unique ID for debt due notifications
+  /// [debtId] - The debt ID
+  /// [daysBefore] - Days before due (1, 2, or 3)
+  /// Range: 50000 to 79999
+  static int debtDueNotification(String debtId, int daysBefore) {
+    final baseId = 50000 + (debtId.hashCode.abs() % 10000);
+    return baseId + (daysBefore * 10000);
+  }
 }

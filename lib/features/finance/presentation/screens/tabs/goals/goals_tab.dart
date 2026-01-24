@@ -49,6 +49,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
           ? goal.monthlyContribution.toStringAsFixed(2)
           : '',
     );
+    final feeController = TextEditingController();
     String? selectedAccountId;
     String? selectedCategoryId;
 
@@ -65,7 +66,25 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                 controller: amountController,
                 decoration: InputDecoration(
                   labelText: 'Amount',
-                  prefixText: '₱',
+                  prefixText: currencyFormatter.currencySymbol,
+                  hintText: goal.monthlyContribution > 0
+                      ? 'Suggested: ${goal.monthlyContribution.toStringAsFixed(2)}'
+                      : 'Enter payment amount',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+
+              // Fee Field
+              TextField(
+                controller: feeController,
+                decoration: InputDecoration(
+                  labelText: 'Fee Amount (Optional)',
+                  prefixText: currencyFormatter.currencySymbol,
+                  hintText: 'Processing/management fee',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -162,6 +181,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
 
               // Call RPC function
               try {
+                final fee = double.tryParse(feeController.text) ?? 0;
                 await _supabaseService.client.rpc(
                   'create_goal_payment_transaction',
                   params: {
@@ -174,6 +194,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                     'p_date': DateTime.now().toIso8601String(),
                     'p_notes': null,
                     'p_goal_id': goal.id,
+                    'p_fee': fee,
                   },
                 );
 
@@ -204,6 +225,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
     }
 
     amountController.dispose();
+    feeController.dispose();
   }
 
   @override

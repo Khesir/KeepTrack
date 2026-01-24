@@ -167,6 +167,132 @@ class NotificationScheduler {
   }
 
   // ============================================
+  // Payment Due Notifications
+  // ============================================
+
+  /// Schedule payment due notifications (3 days, 2 days, 1 day before)
+  /// [paymentId] - Unique payment identifier
+  /// [name] - Payment name for the notification
+  /// [amount] - Payment amount to display
+  /// [dueDate] - When the payment is due
+  /// [notifyDaysBefore] - List of days before to notify (default: [3, 2, 1])
+  /// [notifyHour] - Hour to send notification (default: 9 AM)
+  Future<void> schedulePaymentDueNotifications({
+    required String paymentId,
+    required String name,
+    required double amount,
+    required DateTime dueDate,
+    List<int> notifyDaysBefore = const [3, 2, 1],
+    int notifyHour = 9,
+  }) async {
+    if (!canSchedule) {
+      AppLogger.warning('NotificationScheduler: Cannot schedule - service not initialized');
+      return;
+    }
+
+    for (final daysBefore in notifyDaysBefore) {
+      final notificationId = NotificationIds.plannedPaymentDueNotification(paymentId, daysBefore);
+      final scheduledDate = DateTime(
+        dueDate.year,
+        dueDate.month,
+        dueDate.day - daysBefore,
+        notifyHour,
+        0,
+      );
+
+      // Skip if the scheduled time is in the past
+      if (scheduledDate.isBefore(DateTime.now())) {
+        continue;
+      }
+
+      final daysText = daysBefore == 1 ? 'tomorrow' : 'in $daysBefore days';
+
+      await _service.scheduleNotification(
+        id: notificationId,
+        title: 'Payment Due $daysText',
+        body: '$name - \$${amount.toStringAsFixed(2)}',
+        scheduledTime: scheduledDate,
+        channelId: 'payment_reminders',
+        payload: 'payment_due:$paymentId',
+      );
+    }
+
+    AppLogger.info('NotificationScheduler: Payment notifications scheduled for "$name"');
+  }
+
+  /// Cancel all payment due notifications for a specific payment
+  Future<void> cancelPaymentDueNotifications(String paymentId) async {
+    for (final daysBefore in [1, 2, 3]) {
+      final notificationId = NotificationIds.plannedPaymentDueNotification(paymentId, daysBefore);
+      await _service.cancelNotification(notificationId);
+    }
+    AppLogger.info('NotificationScheduler: Payment notifications cancelled for $paymentId');
+  }
+
+  // ============================================
+  // Debt Due Notifications
+  // ============================================
+
+  /// Schedule debt due notifications (3 days, 2 days, 1 day before)
+  /// [debtId] - Unique debt identifier
+  /// [personName] - Person name for the notification
+  /// [amount] - Remaining debt amount to display
+  /// [dueDate] - When the debt is due
+  /// [notifyDaysBefore] - List of days before to notify (default: [3, 2, 1])
+  /// [notifyHour] - Hour to send notification (default: 9 AM)
+  Future<void> scheduleDebtDueNotifications({
+    required String debtId,
+    required String personName,
+    required double amount,
+    required DateTime dueDate,
+    List<int> notifyDaysBefore = const [3, 2, 1],
+    int notifyHour = 9,
+  }) async {
+    if (!canSchedule) {
+      AppLogger.warning('NotificationScheduler: Cannot schedule - service not initialized');
+      return;
+    }
+
+    for (final daysBefore in notifyDaysBefore) {
+      final notificationId = NotificationIds.debtDueNotification(debtId, daysBefore);
+      final scheduledDate = DateTime(
+        dueDate.year,
+        dueDate.month,
+        dueDate.day - daysBefore,
+        notifyHour,
+        0,
+      );
+
+      // Skip if the scheduled time is in the past
+      if (scheduledDate.isBefore(DateTime.now())) {
+        continue;
+      }
+
+      final daysText = daysBefore == 1 ? 'tomorrow' : 'in $daysBefore days';
+
+      await _service.scheduleNotification(
+        id: notificationId,
+        title: 'Debt Due $daysText',
+        body: '$personName - \$${amount.toStringAsFixed(2)} remaining',
+        scheduledTime: scheduledDate,
+        channelId: 'payment_reminders',
+        payload: 'debt_due:$debtId',
+      );
+    }
+
+    AppLogger.info('NotificationScheduler: Debt notifications scheduled for "$personName"');
+  }
+
+  /// Cancel all debt due notifications for a specific debt
+  Future<void> cancelDebtDueNotifications(String debtId) async {
+    for (final daysBefore in [1, 2, 3]) {
+      final notificationId = NotificationIds.debtDueNotification(debtId, daysBefore);
+      await _service.cancelNotification(notificationId);
+    }
+    AppLogger.info('NotificationScheduler: Debt notifications cancelled for $debtId');
+  }
+
+  // ============================================
   // Utility Methods
   // ============================================
 

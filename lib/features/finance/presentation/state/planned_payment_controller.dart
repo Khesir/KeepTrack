@@ -1,4 +1,8 @@
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/logging/app_logger.dart';
+import 'package:keep_track/core/services/notification/notification_scheduler.dart';
+import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import '../../modules/planned_payment/domain/entities/payment_enums.dart';
 import '../../modules/planned_payment/domain/entities/planned_payment.dart';
@@ -19,8 +23,35 @@ class PlannedPaymentController
       final result = await _repository.getPlannedPayments().then(
         (r) => r.unwrap(),
       );
+      // Schedule notifications for upcoming payments
+      _schedulePaymentNotifications(result);
       return result;
     });
+  }
+
+  /// Schedule notifications for all active planned payments
+  Future<void> _schedulePaymentNotifications(List<PlannedPayment> payments) async {
+    if (!PlatformNotificationHelper.instance.isSupportedPlatform) return;
+
+    try {
+      final scheduler = locator.get<NotificationScheduler>();
+      final activePayments = payments.where((p) =>
+          p.status == PaymentStatus.active &&
+          p.nextPaymentDate.isAfter(DateTime.now()));
+
+      for (final payment in activePayments) {
+        if (payment.id == null) continue;
+
+        await scheduler.schedulePaymentDueNotifications(
+          paymentId: payment.id!,
+          name: payment.name,
+          amount: payment.amount,
+          dueDate: payment.nextPaymentDate,
+        );
+      }
+    } catch (e) {
+      AppLogger.warning('PlannedPaymentController: Failed to schedule notifications: $e');
+    }
   }
 
   /// Create a new planned payment

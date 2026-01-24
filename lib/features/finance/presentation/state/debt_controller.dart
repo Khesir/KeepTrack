@@ -1,4 +1,8 @@
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/logging/app_logger.dart';
+import 'package:keep_track/core/services/notification/notification_scheduler.dart';
+import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../modules/debt/domain/entities/debt.dart';
@@ -17,8 +21,37 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
   /// Load all debts
   Future<void> loadDebts() async {
     await execute(() async {
-      return await _debtRepository.getDebts().then((r) => r.unwrap());
+      final debts = await _debtRepository.getDebts().then((r) => r.unwrap());
+      // Schedule notifications for debts with due dates
+      _scheduleDebtNotifications(debts);
+      return debts;
     });
+  }
+
+  /// Schedule notifications for all active debts with due dates
+  Future<void> _scheduleDebtNotifications(List<Debt> debts) async {
+    if (!PlatformNotificationHelper.instance.isSupportedPlatform) return;
+
+    try {
+      final scheduler = locator.get<NotificationScheduler>();
+      final activeDebts = debts.where((d) =>
+          d.status == DebtStatus.active &&
+          d.dueDate != null &&
+          d.dueDate!.isAfter(DateTime.now()));
+
+      for (final debt in activeDebts) {
+        if (debt.id == null || debt.dueDate == null) continue;
+
+        await scheduler.scheduleDebtDueNotifications(
+          debtId: debt.id!,
+          personName: debt.personName,
+          amount: debt.remainingAmount,
+          dueDate: debt.dueDate!,
+        );
+      }
+    } catch (e) {
+      AppLogger.warning('DebtController: Failed to schedule notifications: $e');
+    }
   }
 
   /// Create a new debt with category and automatically create associated transaction

@@ -18,6 +18,10 @@ class DebtModel extends Debt {
     super.userId,
     super.accountId,
     super.transactionId,
+    super.monthlyPaymentAmount,
+    super.feeAmount,
+    super.nextPaymentDate,
+    super.paymentFrequency,
   });
 
   /// Convert from JSON (Supabase response)
@@ -53,6 +57,16 @@ class DebtModel extends Debt {
       userId: json['user_id'] as String?,
       accountId: json['account_id'] as String?,
       transactionId: json['transaction_id'] as String?,
+      monthlyPaymentAmount:
+          (json['monthly_payment_amount'] as num?)?.toDouble() ?? 0,
+      feeAmount: (json['fee_amount'] as num?)?.toDouble() ?? 0,
+      nextPaymentDate: json['next_payment_date'] != null
+          ? DateTime.parse(json['next_payment_date'] as String)
+          : null,
+      paymentFrequency: PaymentFrequency.values.firstWhere(
+        (e) => e.name == json['payment_frequency'],
+        orElse: () => PaymentFrequency.monthly,
+      ),
     );
   }
 
@@ -73,6 +87,11 @@ class DebtModel extends Debt {
       if (userId != null) 'user_id': userId,
       if (accountId != null) 'account_id': accountId,
       if (transactionId != null) 'transaction_id': transactionId,
+      'monthly_payment_amount': monthlyPaymentAmount,
+      'fee_amount': feeAmount,
+      if (nextPaymentDate != null)
+        'next_payment_date': nextPaymentDate!.toIso8601String(),
+      'payment_frequency': paymentFrequency.name,
     };
   }
 
@@ -95,6 +114,10 @@ class DebtModel extends Debt {
       userId: debt.userId,
       accountId: debt.accountId,
       transactionId: debt.transactionId,
+      monthlyPaymentAmount: debt.monthlyPaymentAmount,
+      feeAmount: debt.feeAmount,
+      nextPaymentDate: debt.nextPaymentDate,
+      paymentFrequency: debt.paymentFrequency,
     );
   }
 }

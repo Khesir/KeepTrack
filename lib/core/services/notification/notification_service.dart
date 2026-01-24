@@ -124,6 +124,16 @@ class NotificationService {
       ),
     );
 
+    // Payment reminders channel (high priority)
+    await androidPlugin.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'payment_reminders',
+        'Payment Reminders',
+        description: 'Reminders for upcoming payments and debt due dates',
+        importance: Importance.high,
+      ),
+    );
+
     AppLogger.info('NotificationService: Notification channels created');
   }
 
@@ -142,9 +152,9 @@ class NotificationService {
 
     final androidDetails = AndroidNotificationDetails(
       channelId,
-      channelId == 'finance_reminders' ? 'Finance Reminders' : 'Task Reminders',
-      importance: channelId == 'task_reminders' ? Importance.high : Importance.defaultImportance,
-      priority: channelId == 'task_reminders' ? Priority.high : Priority.defaultPriority,
+      _getChannelName(channelId),
+      importance: _isHighPriorityChannel(channelId) ? Importance.high : Importance.defaultImportance,
+      priority: _isHighPriorityChannel(channelId) ? Priority.high : Priority.defaultPriority,
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -160,6 +170,23 @@ class NotificationService {
 
     await _plugin!.show(id, title, body, details, payload: payload);
     AppLogger.info('NotificationService: Notification shown - $title');
+  }
+
+  String _getChannelName(String channelId) {
+    switch (channelId) {
+      case 'finance_reminders':
+        return 'Finance Reminders';
+      case 'task_reminders':
+        return 'Task Reminders';
+      case 'payment_reminders':
+        return 'Payment Reminders';
+      default:
+        return 'Reminders';
+    }
+  }
+
+  bool _isHighPriorityChannel(String channelId) {
+    return channelId == 'task_reminders' || channelId == 'payment_reminders';
   }
 
   /// Schedule a notification at a specific time
@@ -184,9 +211,9 @@ class NotificationService {
 
     final androidDetails = AndroidNotificationDetails(
       channelId,
-      channelId == 'finance_reminders' ? 'Finance Reminders' : 'Task Reminders',
-      importance: channelId == 'task_reminders' ? Importance.high : Importance.defaultImportance,
-      priority: channelId == 'task_reminders' ? Priority.high : Priority.defaultPriority,
+      _getChannelName(channelId),
+      importance: _isHighPriorityChannel(channelId) ? Importance.high : Importance.defaultImportance,
+      priority: _isHighPriorityChannel(channelId) ? Priority.high : Priority.defaultPriority,
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -232,9 +259,9 @@ class NotificationService {
 
     final androidDetails = AndroidNotificationDetails(
       channelId,
-      channelId == 'finance_reminders' ? 'Finance Reminders' : 'Task Reminders',
-      importance: channelId == 'task_reminders' ? Importance.high : Importance.defaultImportance,
-      priority: channelId == 'task_reminders' ? Priority.high : Priority.defaultPriority,
+      _getChannelName(channelId),
+      importance: _isHighPriorityChannel(channelId) ? Importance.high : Importance.defaultImportance,
+      priority: _isHighPriorityChannel(channelId) ? Priority.high : Priority.defaultPriority,
     );
 
     const iosDetails = DarwinNotificationDetails(
