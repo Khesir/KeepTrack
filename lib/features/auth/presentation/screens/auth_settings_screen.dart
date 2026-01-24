@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/core/theme/gcash_theme.dart';
 import 'package:keep_track/features/auth/data/services/auth_service.dart';
+import 'package:keep_track/features/notifications/presentation/screens/notification_settings_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Screen for managing authentication methods
@@ -130,6 +132,12 @@ class _AuthSettingsScreenState extends State<AuthSettingsScreen> {
             // Add/Change password section
             _buildPasswordSection(),
             const SizedBox(height: 24),
+
+            // Notification settings (mobile only)
+            if (PlatformNotificationHelper.instance.isSupportedPlatform) ...[
+              _buildNotificationSettingsCard(),
+              const SizedBox(height: 24),
+            ],
 
             // Info about account linking
             _buildInfoCard(),
@@ -341,6 +349,56 @@ class _AuthSettingsScreenState extends State<AuthSettingsScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationSettingsCard() {
+    return Card(
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const NotificationSettingsScreen(),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.notifications, color: GCashColors.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Notification Settings',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Manage reminders for tasks and finances',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
         ),
       ),
     );

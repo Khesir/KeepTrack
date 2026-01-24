@@ -46,6 +46,11 @@ dependencies:
   http: ^1.2.0
   package_info_plus: ^8.0.0
 
+  # Notifications (mobile only)
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+  permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

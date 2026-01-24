@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/config/app_info.dart';
+import 'package:keep_track/core/services/notification/notification_service.dart';
 import 'package:keep_track/core/services/version_checker_service.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
@@ -30,6 +32,36 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
     if (result.updateAvailable) {
       _showUpdateDialog(result);
     }
+  }
+
+  Future<void> _triggerTestNotification() async {
+    final notificationService = NotificationService.instance;
+
+    if (!notificationService.isInitialized) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notification service not initialized'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await notificationService.showNotification(
+      id: 99999,
+      title: 'Test Notification',
+      body: 'This is a test notification from KeepTrack!',
+      payload: 'test',
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Test notification triggered!'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _showUpdateDialog(VersionCheckResult result) {
@@ -148,6 +180,19 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // Debug notification test button (only in debug mode)
+                        if (kDebugMode) ...[
+                          IconButton(
+                            onPressed: _triggerTestNotification,
+                            icon: const Icon(Icons.notifications_active),
+                            tooltip: 'Test Notification',
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.orange.withOpacity(0.1),
+                              foregroundColor: Colors.orange,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         _buildUserProfile(context),
                       ],
                     ),
