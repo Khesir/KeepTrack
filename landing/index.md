@@ -4,7 +4,10 @@ layout: home
 hero:
   name: Keep Track
   tagline: Your all-in-one personal management system
-  text: Organize your life with powerful task management, comprehensive finance tracking, and productivity tools - all in one beautiful app.
+  text: Manage tasks, track finances, and boost productivity — all in one app.
+  image:
+    src: /app_icon.png
+    alt: Keep Track App
   actions:
     - theme: brand
       text: Download Now
@@ -26,10 +29,6 @@ features:
     title: Pomodoro Timer
     details: Boost your productivity with built-in Pomodoro timer. Focus on your work with timed sessions and automatic break reminders.
 
-  - icon: 📊
-    title: Beautiful Dashboard
-    details: Get insights at a glance with our modern, clean dashboard. Track your tasks, finances, and productivity in real-time.
-
   - icon: 🌙
     title: Dark Mode
     details: Easy on the eyes with full dark mode support. Switch between light and dark themes seamlessly across all screens.
@@ -45,6 +44,10 @@ features:
   - icon: 🎨
     title: Modern Design
     details: Built with Flutter and Material Design 3. Beautiful, responsive, and intuitive interface inspired by modern design principles.
+
+  - icon: 🔔
+    title: Mobile Notifications
+    details: Stay on top of your tasks and finances with push notifications on Android and iOS. Never miss a deadline or payment reminder.
 
   - icon: 🚀
     title: Regular Updates
