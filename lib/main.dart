@@ -20,6 +20,7 @@ import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
 import 'features/tasks/tasks_di.dart';
 import 'features/finance/finance_di.dart';
+import 'features/notifications/notifications_di.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -127,6 +128,9 @@ Future<void> _initializeAppWithRetry({
 
       // Setup app dependencies
       _setupDependencies(sharedPreferences);
+
+      // Initialize notifications (mobile only - safe to call on any platform)
+      await initializeNotifications();
 
       // Run the app - SUCCESS!
       runApp(const PersonalCodexApp());
@@ -414,6 +418,7 @@ void _setupDependencies(SharedPreferences sharedPreferences) {
   setupAuthDependencies(); // Auth must be first
   setupTasksDependencies();
   setupFinanceDependencies();
+  setupNotificationDependencies(); // Mobile only - safe to call on any platform
 }
 
 /// Main app widget

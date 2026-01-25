@@ -13,21 +13,30 @@ import 'package:keep_track/features/profile/presentation/profile_screen.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/task/tasks_tab_new.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/projects_tab.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/pomodoro_tab.dart';
+import 'package:keep_track/features/tasks/presentation/widgets/pomodoro_nav_indicator.dart';
 
 import '../auth/presentation/screens/auth_settings_screen.dart';
 
 /// Task Module Screen - Wraps the task management functionality
 /// This is what users see when they select "Task Management" from module selection
 class TaskModuleScreen extends StatefulWidget {
-  const TaskModuleScreen({super.key});
+  final int initialTabIndex;
+
+  const TaskModuleScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<TaskModuleScreen> createState() => _TaskModuleScreenState();
 }
 
 class _TaskModuleScreenState extends State<TaskModuleScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   final _layoutController = AppLayoutController();
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialTabIndex;
+  }
 
   void _changeTab(int index) {
     setState(() => _currentIndex = index);
@@ -56,6 +65,11 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
 
   List<Widget> _buildActions() {
     return [
+      // Pomodoro timer indicator (shows when session is active)
+      PomodoroNavIndicator(
+        onTap: () => _changeTab(3), // Navigate to Pomodoro tab
+      ),
+      const SizedBox(width: 8),
       // Theme toggle button
       IconButton(
         icon: Icon(

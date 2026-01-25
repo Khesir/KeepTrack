@@ -26,10 +26,10 @@ Personal Codex is a comprehensive desktop application designed to help you manag
 - Focus sessions with automatic breaks
 - Statistics and insights
 
-### 🌙 Modern Interface
-- Beautiful, clean design
-- Full dark mode support
-- Responsive layout for all screen sizes
+### 🔔 Mobile Notifications
+- Push notifications on Android and iOS
+- Task deadline reminders
+- Payment and finance alerts
 
 ### 🔐 Secure & Private
 - Supabase authentication

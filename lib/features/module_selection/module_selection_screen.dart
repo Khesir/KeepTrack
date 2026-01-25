@@ -1,12 +1,158 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/config/app_info.dart';
+import 'package:keep_track/core/services/notification/notification_service.dart';
+import 'package:keep_track/core/services/version_checker_service.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Netflix-style module selection screen after login
 /// Users can choose between Task Management and Finance Management
-class ModuleSelectionScreen extends StatelessWidget {
+class ModuleSelectionScreen extends StatefulWidget {
   const ModuleSelectionScreen({super.key});
+
+  @override
+  State<ModuleSelectionScreen> createState() => _ModuleSelectionScreenState();
+}
+
+class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    final result = await VersionCheckerService.instance.checkForUpdates();
+
+    if (!mounted) return;
+
+    if (result.updateAvailable) {
+      _showUpdateDialog(result);
+    }
+  }
+
+  Future<void> _triggerTestNotification() async {
+    final notificationService = NotificationService.instance;
+
+    if (!notificationService.isInitialized) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notification service not initialized'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await notificationService.showNotification(
+      id: 99999,
+      title: 'Test Notification',
+      body: 'This is a test notification from KeepTrack!',
+      payload: 'test',
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Test notification triggered!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showUpdateDialog(VersionCheckResult result) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.system_update, size: 48, color: Colors.blue),
+        title: const Text('Update Available'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A new version of KeepTrack is available!',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            _buildVersionRow('Current:', result.currentVersion),
+            _buildVersionRow('Latest:', result.latestVersion ?? 'Unknown'),
+            if (result.releaseNotes != null && result.releaseNotes!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'What\'s new:',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 150),
+                child: SingleChildScrollView(
+                  child: Text(
+                    result.releaseNotes!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Later'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Try custom download URL first, fallback to GitHub releases
+              final primaryUrl = Uri.parse(AppInfo.downloadUrl);
+              final fallbackUrl = Uri.parse(result.releaseUrl ?? AppInfo.releasesUrl);
+
+              if (await canLaunchUrl(primaryUrl)) {
+                await launchUrl(primaryUrl, mode: LaunchMode.externalApplication);
+              } else if (await canLaunchUrl(fallbackUrl)) {
+                await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+              }
+            },
+            icon: const Icon(Icons.download, size: 18),
+            label: const Text('Download'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVersionRow(String label, String version) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ),
+          Text(
+            version,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +180,19 @@ class ModuleSelectionScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // Debug notification test button (only in debug mode)
+                        if (kDebugMode) ...[
+                          IconButton(
+                            onPressed: _triggerTestNotification,
+                            icon: const Icon(Icons.notifications_active),
+                            tooltip: 'Test Notification',
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.orange.withOpacity(0.1),
+                              foregroundColor: Colors.orange,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         _buildUserProfile(context),
                       ],
                     ),

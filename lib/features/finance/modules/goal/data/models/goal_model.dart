@@ -16,6 +16,8 @@ class GoalModel extends Goal {
     super.updatedAt,
     super.completedAt,
     super.userId,
+    super.managementFeePercent,
+    super.withdrawalFeePercent,
   });
 
   /// Convert from JSON (Supabase response)
@@ -47,6 +49,10 @@ class GoalModel extends Goal {
           ? DateTime.parse(json['completed_at'] as String)
           : null,
       userId: json['user_id'] as String?,
+      managementFeePercent:
+          (json['management_fee_percent'] as num?)?.toDouble() ?? 0,
+      withdrawalFeePercent:
+          (json['withdrawal_fee_percent'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -65,6 +71,8 @@ class GoalModel extends Goal {
       'monthly_contribution': monthlyContribution,
       if (completedAt != null) 'completed_at': completedAt!.toIso8601String(),
       if (userId != null) 'user_id': userId,
+      'management_fee_percent': managementFeePercent,
+      'withdrawal_fee_percent': withdrawalFeePercent,
     };
   }
 
@@ -85,6 +93,8 @@ class GoalModel extends Goal {
       updatedAt: goal.updatedAt,
       completedAt: goal.completedAt,
       userId: goal.userId,
+      managementFeePercent: goal.managementFeePercent,
+      withdrawalFeePercent: goal.withdrawalFeePercent,
     );
   }
 }

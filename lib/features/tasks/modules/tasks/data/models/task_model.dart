@@ -22,11 +22,12 @@ class TaskModel extends Task {
     super.financeCategoryId,
     super.actualTransactionId,
     super.userId,
+    super.bucketId,
   }) : super(
-          status: status,
-          priority: priority,
-          transactionType: transactionType,
-        );
+         status: status,
+         priority: priority,
+         transactionType: transactionType,
+       );
 
   /// Convert from domain entity to model
   factory TaskModel.fromEntity(Task task) {
@@ -50,6 +51,7 @@ class TaskModel extends Task {
       financeCategoryId: task.financeCategoryId,
       actualTransactionId: task.actualTransactionId,
       userId: task.userId,
+      bucketId: task.bucketId,
     );
   }
 
@@ -60,7 +62,9 @@ class TaskModel extends Task {
       title: json['title'] as String,
       description: json['description'] as String?,
       status: TaskStatus.values.firstWhere((e) => e.name == json['status']),
-      priority: TaskPriority.values.firstWhere((e) => e.name == json['priority']),
+      priority: TaskPriority.values.firstWhere(
+        (e) => e.name == json['priority'],
+      ),
       projectId: json['project_id'] as String?,
       parentTaskId: json['parent_task_id'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
@@ -80,11 +84,14 @@ class TaskModel extends Task {
       isMoneyRelated: json['is_money_related'] as bool? ?? false,
       expectedAmount: (json['expected_amount'] as num?)?.toDouble(),
       transactionType: json['transaction_type'] != null
-          ? TaskTransactionType.values.firstWhere((e) => e.name == json['transaction_type'])
+          ? TaskTransactionType.values.firstWhere(
+              (e) => e.name == json['transaction_type'],
+            )
           : null,
       financeCategoryId: json['finance_category_id'] as String?,
       actualTransactionId: json['actual_transaction_id'] as String?,
       userId: json['user_id'] as String?,
+      bucketId: json['bucket_id'] as String?,
     );
   }
 
@@ -106,8 +113,10 @@ class TaskModel extends Task {
       if (expectedAmount != null) 'expected_amount': expectedAmount,
       if (transactionType != null) 'transaction_type': transactionType!.name,
       if (financeCategoryId != null) 'finance_category_id': financeCategoryId,
-      if (actualTransactionId != null) 'actual_transaction_id': actualTransactionId,
+      if (actualTransactionId != null)
+        'actual_transaction_id': actualTransactionId,
       if (userId != null) 'user_id': userId,
+      if (bucketId != null) 'bucket_id': bucketId,
     };
   }
 }

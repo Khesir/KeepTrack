@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
+import 'package:keep_track/core/routing/app_router.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -285,8 +286,11 @@ class _AccountsTabNewState extends State<AccountsTabNew> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          // Navigate to account detail or show edit dialog
-          // You can implement navigation here
+          Navigator.pushNamed(
+            context,
+            AppRoutes.accountDetail,
+            arguments: account,
+          );
         },
         child: Padding(
           padding: const EdgeInsets.all(16),

@@ -79,6 +79,20 @@ class TaskDataSourceSupabase implements TaskDataSource {
   }
 
   @override
+  Future<List<TaskModel>> getTasksByBucketId(String bucketId) async {
+    final response = await supabaseService.client
+        .from(tableName)
+        .select()
+        .eq('user_id', supabaseService.userId!)
+        .eq('bucket_id', bucketId)
+        .order('created_at', ascending: false);
+
+    return (response as List)
+        .map((doc) => TaskModel.fromJson(doc as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
   Future<TaskModel> createTask(TaskModel task) async {
     final doc = task.toJson();
     final response = await supabaseService.client
@@ -186,7 +200,11 @@ class TaskDataSourceSupabase implements TaskDataSource {
       if (completedAtStr != null) {
         final completedAt = DateTime.parse(completedAtStr);
         // Normalize to day (remove time component)
-        final date = DateTime(completedAt.year, completedAt.month, completedAt.day);
+        final date = DateTime(
+          completedAt.year,
+          completedAt.month,
+          completedAt.day,
+        );
         activity[date] = (activity[date] ?? 0) + 1;
       }
     }

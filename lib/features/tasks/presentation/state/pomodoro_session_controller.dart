@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/features/notifications/pomodoro_notification_helper.dart';
 import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomodoro_settings.dart';
 import '../../modules/pomodoro/domain/entities/pomodoro_session.dart';
 import '../../modules/pomodoro/domain/repositories/pomodoro_session_repository.dart';
@@ -37,8 +38,9 @@ class PomodoroSessionController
       final activeSession = result.unwrap();
 
       if (activeSession != null) {
-        // Check if session time has expired
-        if (activeSession.remainingSeconds <= 0 &&
+        // Check if session time has expired (skip for stopwatch - no expiration)
+        if (!activeSession.isStopwatch &&
+            activeSession.remainingSeconds <= 0 &&
             (activeSession.isRunning ||
                 activeSession.status == PomodoroSessionStatus.paused)) {
           // Session expired while user was away - auto-complete it
@@ -327,8 +329,8 @@ class PomodoroSessionController
       // The session entity calculates elapsed/remaining from database startedAt
       final remaining = currentSession.remainingSeconds;
 
-      // Check if timer is complete
-      if (remaining <= 0) {
+      // Check if timer is complete (skip for stopwatch - runs forever until manually stopped)
+      if (!currentSession.isStopwatch && remaining <= 0) {
         timer.cancel();
         _autoCompleteSession(currentSession);
         return;
@@ -359,6 +361,9 @@ class PomodoroSessionController
     try {
       // Update in database
       await _repository.updateSession(updatedSession).then((r) => r.unwrap());
+
+      // Show notification for session completion (mobile only)
+      await PomodoroNotificationHelper.instance.showSessionCompleteNotification(updatedSession);
 
       // Show completed state
       emit(

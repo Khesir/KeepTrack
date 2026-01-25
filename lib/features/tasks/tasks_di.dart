@@ -4,11 +4,17 @@
 library;
 
 import 'package:keep_track/features/profile/presentation/state/task_activity_controller.dart';
+import 'package:keep_track/features/tasks/data/sevices/bucket_initialization_service.dart';
+import 'package:keep_track/features/tasks/modules/buckets/data/datasources/bucket_datasource.dart';
+import 'package:keep_track/features/tasks/modules/buckets/data/datasources/supabase/bucket_datasource_supabase.dart';
+import 'package:keep_track/features/tasks/modules/buckets/data/repositories/bucket_repository_impl.dart';
+import 'package:keep_track/features/tasks/modules/buckets/domain/repositories/bucket_repository.dart';
+import 'package:keep_track/features/tasks/presentation/state/bucket_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
 import '../../core/di/service_locator.dart';
-import 'modules/tasks/data/datasources/mongodb/task_datasource_supabase.dart';
+import 'modules/tasks/data/datasources/supabase/task_datasource_supabase.dart';
 import 'modules/tasks/data/datasources/task_datasource.dart';
 import 'modules/tasks/data/repositories/task_repository_impl.dart';
 import 'modules/tasks/domain/repositories/task_repository.dart';
@@ -74,10 +80,29 @@ void setupTasksDependencies() {
     return PomodoroSessionRepositoryImpl(dataSource);
   });
 
-  // Pomodoro controllers
-  locator.registerFactory<PomodoroSessionController>(() {
+  // Pomodoro controllers - use singleton so nav indicator and timer share state
+  locator.registerLazySingleton<PomodoroSessionController>(() {
     final repo = locator.get<PomodoroSessionRepository>();
     final supabaseService = locator.get<SupabaseService>();
     return PomodoroSessionController(repo, supabaseService.userId!);
+  });
+
+  locator.registerFactory<BucketDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    return BucketDataSourceSupabase(supabaseService);
+  });
+
+  locator.registerFactory<BucketRepository>(() {
+    final dataSource = locator.get<BucketDataSource>();
+    return BucketRepositoryImpl(dataSource);
+  });
+
+  locator.registerFactory<BucketInitializationService>(() {
+    final bucketRepository = locator.get<BucketRepository>();
+    return BucketInitializationService(bucketRepository);
+  });
+  locator.registerFactory<BucketController>(() {
+    final bucketRepository = locator.get<BucketRepository>();
+    return BucketController(bucketRepository);
   });
 }

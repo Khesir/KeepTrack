@@ -4,10 +4,12 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
+import 'package:keep_track/features/tasks/modules/buckets/domain/entities/bucket.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
+import '../../state/bucket_controller.dart';
 import '../../state/project_controller.dart';
 import '../../state/task_controller.dart';
 import 'widgets/project_management_dialog.dart';
@@ -24,18 +26,21 @@ class _ProjectManagementScreenState extends ScopedScreenState<ProjectManagementS
     with AppLayoutControlled {
   late final ProjectController _controller;
   late final TaskController _taskController;
+  late final BucketController _bucketController;
   late final SupabaseService supabaseService;
 
   @override
   void registerServices() {
     _controller = locator.get<ProjectController>();
     _taskController = locator.get<TaskController>();
+    _bucketController = locator.get<BucketController>();
     supabaseService = locator.get<SupabaseService>();
   }
 
   @override
   void onReady() {
     configureLayout(title: 'Manage Projects', showBottomNav: false);
+    _bucketController.loadBuckets();
   }
 
   void _showMetadataEditor(Project project) async {
@@ -66,12 +71,13 @@ class _ProjectManagementScreenState extends ScopedScreenState<ProjectManagementS
     }
   }
 
-  void _showProjectDialog({Project? project, List<Task>? allTasks}) {
+  void _showProjectDialog({Project? project, List<Task>? allTasks, List<Bucket>? buckets}) {
     showDialog(
       context: context,
       builder: (context) => ProjectManagementDialog(
         project: project,
         userId: supabaseService.userId!,
+        buckets: buckets,
         onSave: (updatedProject) async {
           try {
             if (project != null) {
@@ -155,6 +161,19 @@ class _ProjectManagementScreenState extends ScopedScreenState<ProjectManagementS
 
   @override
   Widget build(BuildContext context) {
+    return AsyncStreamBuilder<List<Bucket>>(
+      state: _bucketController,
+      loadingBuilder: (_) => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      errorBuilder: (_, __) => _buildScaffold(null, null, null),
+      builder: (context, buckets) {
+        return _buildScaffold(buckets, null, null);
+      },
+    );
+  }
+
+  Widget _buildScaffold(List<Bucket>? buckets, List<Task>? tasks, List<Project>? projects) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Projects'),
@@ -163,16 +182,16 @@ class _ProjectManagementScreenState extends ScopedScreenState<ProjectManagementS
             state: _taskController,
             builder: (context, tasks) {
               return IconButton(
-                onPressed: () => _showProjectDialog(allTasks: tasks),
+                onPressed: () => _showProjectDialog(allTasks: tasks, buckets: buckets),
                 icon: const Icon(Icons.add),
               );
             },
             loadingBuilder: (_) => IconButton(
-              onPressed: () => _showProjectDialog(),
+              onPressed: () => _showProjectDialog(buckets: buckets),
               icon: const Icon(Icons.add),
             ),
             errorBuilder: (_, __) => IconButton(
-              onPressed: () => _showProjectDialog(),
+              onPressed: () => _showProjectDialog(buckets: buckets),
               icon: const Icon(Icons.add),
             ),
           ),
@@ -291,6 +310,7 @@ class _ProjectManagementScreenState extends ScopedScreenState<ProjectManagementS
                               onTap: () => _showProjectDialog(
                                 project: project,
                                 allTasks: tasks,
+                                buckets: buckets,
                               ),
                             ),
                           );

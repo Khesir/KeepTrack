@@ -1,11 +1,13 @@
 import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/features/notifications/task_notification_helper.dart';
 import '../../modules/tasks/domain/entities/task.dart';
 import '../../modules/tasks/domain/repositories/task_repository.dart';
 
 /// Controller for managing task list state
 class TaskController extends StreamState<AsyncState<List<Task>>> {
   final TaskRepository _repository;
+  final TaskNotificationHelper _notificationHelper = TaskNotificationHelper.instance;
 
   TaskController(this._repository) : super(const AsyncLoading()) {
     loadTasks();
@@ -20,7 +22,9 @@ class TaskController extends StreamState<AsyncState<List<Task>>> {
 
   /// Create a new task
   Future<void> createTask(Task task) async {
-    await _repository.createTask(task).then((r) => r.unwrap());
+    final createdTask = await _repository.createTask(task).then((r) => r.unwrap());
+    // Schedule notification for task with due date (mobile only)
+    await _notificationHelper.scheduleTaskDueNotification(createdTask);
     await loadTasks();
   }
 
@@ -28,6 +32,8 @@ class TaskController extends StreamState<AsyncState<List<Task>>> {
   Future<void> updateTask(Task task) async {
     await execute(() async {
       await _repository.updateTask(task).then((r) => r.unwrap());
+      // Update notification based on task state (mobile only)
+      await _notificationHelper.updateTaskNotification(task);
       await loadTasks();
       return data ?? [];
     });
@@ -36,6 +42,8 @@ class TaskController extends StreamState<AsyncState<List<Task>>> {
   /// Delete a task
   Future<void> deleteTask(String id) async {
     await execute(() async {
+      // Cancel notification before deleting (mobile only)
+      await _notificationHelper.cancelTaskDueNotification(id);
       await _repository.deleteTask(id).then((r) => r.unwrap());
       await loadTasks();
       return data ?? [];
@@ -55,6 +63,14 @@ class TaskController extends StreamState<AsyncState<List<Task>>> {
   Future<void> loadTasksByStatus(TaskStatus status) async {
     await execute(() async {
       return await _repository.getTasksByStatus(status).then((r) => r.unwrap());
+    });
+  }
+
+  Future<void> loadProjectsByBucketId(String bucketId) async {
+    await execute(() async {
+      return await _repository
+          .getTasksByBucketID(bucketId)
+          .then((r) => r.unwrap());
     });
   }
 

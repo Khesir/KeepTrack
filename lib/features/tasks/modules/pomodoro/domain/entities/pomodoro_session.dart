@@ -41,6 +41,8 @@ class PomodoroSession {
         return 'Short Break';
       case PomodoroSessionType.longBreak:
         return 'Long Break';
+      case PomodoroSessionType.stopwatch:
+        return 'Stopwatch Session';
     }
   }
 
@@ -116,6 +118,8 @@ class PomodoroSession {
 
   bool get isCanceled => status == PomodoroSessionStatus.canceled;
 
+  bool get isStopwatch => type == PomodoroSessionType.stopwatch;
+
   double get progress {
     if (durationSeconds == 0) return 1.0;
     final elapsed = elapsedSeconds;
@@ -124,7 +128,7 @@ class PomodoroSession {
   }
 }
 
-enum PomodoroSessionType { pomodoro, shortBreak, longBreak }
+enum PomodoroSessionType { pomodoro, shortBreak, longBreak, stopwatch }
 
 enum PomodoroSessionStatus { running, paused, completed, canceled }
 
@@ -137,6 +141,8 @@ extension PomodoroSessionTypeExtension on PomodoroSessionType {
         return 'short';
       case PomodoroSessionType.longBreak:
         return 'long';
+      case PomodoroSessionType.stopwatch:
+        return 'stopwatch';
     }
   }
 
@@ -148,6 +154,8 @@ extension PomodoroSessionTypeExtension on PomodoroSessionType {
         return 'Short Break';
       case PomodoroSessionType.longBreak:
         return 'Long Break';
+      case PomodoroSessionType.stopwatch:
+        return 'Stopwatch';
     }
   }
 
@@ -159,6 +167,8 @@ extension PomodoroSessionTypeExtension on PomodoroSessionType {
         return PomodoroSessionType.shortBreak;
       case 'long':
         return PomodoroSessionType.longBreak;
+      case 'stopwatch':
+        return PomodoroSessionType.stopwatch;
       default:
         return PomodoroSessionType.pomodoro;
     }

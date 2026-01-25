@@ -33,12 +33,16 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
   late final TextEditingController originalAmountController;
   late final TextEditingController remainingAmountController;
   late final TextEditingController notesController;
+  late final TextEditingController monthlyPaymentController;
+  late final TextEditingController feeAmountController;
   late final FinanceCategoryController _categoryController;
 
   late DateTime selectedStartDate;
   late DateTime? selectedDueDate;
+  late DateTime? selectedNextPaymentDate;
   late DebtType selectedType;
   late DebtStatus selectedStatus;
+  late PaymentFrequency selectedPaymentFrequency;
   String? selectedAccountId;
   String? selectedCategoryId;
 
@@ -59,11 +63,23 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
       text: d?.remainingAmount.toString() ?? d?.originalAmount.toString() ?? '',
     );
     notesController = TextEditingController(text: d?.notes ?? '');
+    monthlyPaymentController = TextEditingController(
+      text: d?.monthlyPaymentAmount != null && d!.monthlyPaymentAmount > 0
+          ? d.monthlyPaymentAmount.toString()
+          : '',
+    );
+    feeAmountController = TextEditingController(
+      text: d?.feeAmount != null && d!.feeAmount > 0
+          ? d.feeAmount.toString()
+          : '',
+    );
 
     selectedStartDate = d?.startDate ?? DateTime.now();
     selectedDueDate = d?.dueDate;
+    selectedNextPaymentDate = d?.nextPaymentDate;
     selectedType = d?.type ?? DebtType.lending;
     selectedStatus = d?.status ?? DebtStatus.active;
+    selectedPaymentFrequency = d?.paymentFrequency ?? PaymentFrequency.monthly;
     selectedAccountId = d?.accountId ?? widget.accounts.firstOrNull?.id;
 
     _categoryController = locator.get<FinanceCategoryController>();
@@ -77,6 +93,8 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     originalAmountController.dispose();
     remainingAmountController.dispose();
     notesController.dispose();
+    monthlyPaymentController.dispose();
+    feeAmountController.dispose();
     super.dispose();
   }
 
@@ -115,6 +133,9 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
           double.tryParse(originalAmountController.text) ?? 0;
       final remainingAmount =
           double.tryParse(remainingAmountController.text) ?? originalAmount;
+      final monthlyPayment =
+          double.tryParse(monthlyPaymentController.text) ?? 0;
+      final feeAmount = double.tryParse(feeAmountController.text) ?? 0;
 
       final debtEntity = Debt(
         id: widget.debt?.id,
@@ -132,6 +153,10 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
         userId: widget.userId,
         accountId: selectedAccountId,
         transactionId: widget.debt?.transactionId,
+        monthlyPaymentAmount: monthlyPayment,
+        feeAmount: feeAmount,
+        nextPaymentDate: selectedNextPaymentDate,
+        paymentFrequency: selectedPaymentFrequency,
       );
 
       widget.onSave(debtEntity, selectedCategoryId);
@@ -339,6 +364,96 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: feeAmountController,
+                decoration: InputDecoration(
+                  labelText: 'Fee Amount (Optional)',
+                  border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
+                  helperText: 'Total fees associated with this debt',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: monthlyPaymentController,
+                decoration: InputDecoration(
+                  labelText: 'Payment Amount (Optional)',
+                  border: const OutlineInputBorder(),
+                  prefixText: '$currencySymbol ',
+                  helperText: 'Fixed amount due each payment period',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Payment Frequency',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<PaymentFrequency>(
+                segments: PaymentFrequency.values
+                    .map(
+                      (freq) => ButtonSegment(
+                        value: freq,
+                        label: Text(freq.displayName),
+                      ),
+                    )
+                    .toList(),
+                selected: {selectedPaymentFrequency},
+                onSelectionChanged: (Set<PaymentFrequency> newSelection) {
+                  setDialogState(() {
+                    selectedPaymentFrequency = newSelection.first;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Next Payment Date (Optional)'),
+                subtitle: Text(
+                  selectedNextPaymentDate != null
+                      ? '${selectedNextPaymentDate?.year}-${selectedNextPaymentDate?.month.toString().padLeft(2, '0')}-${selectedNextPaymentDate?.day.toString().padLeft(2, '0')}'
+                      : 'No next payment date set',
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (selectedNextPaymentDate != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setDialogState(() {
+                            selectedNextPaymentDate = null;
+                          });
+                        },
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: selectedNextPaymentDate ?? DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 3650),
+                          ),
+                        );
+                        if (date != null) {
+                          setDialogState(() {
+                            selectedNextPaymentDate = date;
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),

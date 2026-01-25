@@ -30,6 +30,7 @@ class PomodoroSettings {
   }
 
   /// Get duration in seconds for a specific session type
+  /// Returns 0 for stopwatch type (indicates no limit/endless)
   int getDurationSeconds(PomodoroSessionType type) {
     switch (type) {
       case PomodoroSessionType.pomodoro:
@@ -38,6 +39,8 @@ class PomodoroSettings {
         return shortBreakDuration * 60;
       case PomodoroSessionType.longBreak:
         return longBreakDuration * 60;
+      case PomodoroSessionType.stopwatch:
+        return 0; // No limit for stopwatch
     }
   }
 

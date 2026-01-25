@@ -45,6 +45,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
 
   Future<void> _showRecordPaymentDialog(Debt debt) async {
     final amountController = TextEditingController();
+    final feeController = TextEditingController();
     String? selectedAccountId;
     String? selectedCategoryId;
 
@@ -71,8 +72,24 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 decoration: InputDecoration(
                   labelText: 'Amount',
                   prefixText: currencyFormatter.currencySymbol,
-                  hintText:
-                      'Remaining: ${currencyFormatter.currencySymbol}${debt.remainingAmount.toStringAsFixed(2)}',
+                  hintText: debt.monthlyPaymentAmount > 0
+                      ? 'Suggested: ${debt.monthlyPaymentAmount.toStringAsFixed(2)}'
+                      : 'Enter payment amount',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+
+              // Fee Field
+              TextField(
+                controller: feeController,
+                decoration: InputDecoration(
+                  labelText: 'Fee Amount (Optional)',
+                  prefixText: currencyFormatter.currencySymbol,
+                  hintText: 'Processing/service fee',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -180,6 +197,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
 
               // Call RPC function
               try {
+                final fee = double.tryParse(feeController.text) ?? 0;
                 await _supabaseService.client.rpc(
                   'create_debt_payment_transaction',
                   params: {
@@ -194,6 +212,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                     'p_date': DateTime.now().toIso8601String(),
                     'p_notes': null,
                     'p_debt_id': debt.id,
+                    'p_fee': fee,
                   },
                 );
 
@@ -224,6 +243,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
     }
 
     amountController.dispose();
+    feeController.dispose();
   }
 
   @override

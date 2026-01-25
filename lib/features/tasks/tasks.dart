@@ -12,7 +12,7 @@ export 'modules/projects/domain/repositories/project_repository.dart';
 // Data
 export 'modules/tasks/data/models/task_model.dart';
 export 'modules/tasks/data/datasources/task_datasource.dart';
-export 'modules/tasks/data/datasources/mongodb/task_datasource_supabase.dart';
+export 'modules/tasks/data/datasources/supabase/task_datasource_supabase.dart';
 export 'modules/tasks/data/repositories/task_repository_impl.dart';
 export 'modules/projects/data/datasources/supabase/project_datasource_supabase.dart';
 export 'modules/projects/data/datasources/project_datasource.dart';

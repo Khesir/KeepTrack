@@ -16,6 +16,10 @@ class Debt {
   final String? userId;
   final String? accountId; // Account/wallet this debt is associated with
   final String? transactionId; // Initial transaction when debt was created
+  final double monthlyPaymentAmount; // Fixed amount due each payment period
+  final double feeAmount; // Total fees associated with the debt
+  final DateTime? nextPaymentDate; // When next payment is due
+  final PaymentFrequency paymentFrequency; // Payment frequency
 
   Debt({
     this.id,
@@ -34,6 +38,10 @@ class Debt {
     this.userId,
     this.accountId,
     this.transactionId,
+    this.monthlyPaymentAmount = 0,
+    this.feeAmount = 0,
+    this.nextPaymentDate,
+    this.paymentFrequency = PaymentFrequency.monthly,
   });
 
   /// Calculate repayment progress (0.0 to 1.0)
@@ -53,6 +61,22 @@ class Debt {
   /// Calculate days until due date (negative if overdue)
   int? get daysUntilDue => dueDate?.difference(DateTime.now()).inDays;
 
+  /// Total amount including fees
+  double get totalAmountWithFees => originalAmount + feeAmount;
+
+  /// Check if next payment is due (today or in the past)
+  bool get isPaymentDue {
+    if (nextPaymentDate == null || status != DebtStatus.active) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final paymentDay = DateTime(
+      nextPaymentDate!.year,
+      nextPaymentDate!.month,
+      nextPaymentDate!.day,
+    );
+    return !paymentDay.isAfter(today);
+  }
+
   Debt copyWith({
     String? id,
     DebtType? type,
@@ -70,6 +94,10 @@ class Debt {
     String? userId,
     String? accountId,
     String? transactionId,
+    double? monthlyPaymentAmount,
+    double? feeAmount,
+    DateTime? nextPaymentDate,
+    PaymentFrequency? paymentFrequency,
   }) {
     return Debt(
       id: id ?? this.id,
@@ -88,6 +116,10 @@ class Debt {
       userId: userId ?? this.userId,
       accountId: accountId ?? this.accountId,
       transactionId: transactionId ?? this.transactionId,
+      monthlyPaymentAmount: monthlyPaymentAmount ?? this.monthlyPaymentAmount,
+      feeAmount: feeAmount ?? this.feeAmount,
+      nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
+      paymentFrequency: paymentFrequency ?? this.paymentFrequency,
     );
   }
 
@@ -133,4 +165,18 @@ enum DebtStatus {
         return 'Settled';
     }
   }
+}
+
+enum PaymentFrequency {
+  weekly,
+  biweekly,
+  monthly,
+  quarterly;
+
+  String get displayName => switch (this) {
+        weekly => 'Weekly',
+        biweekly => 'Bi-weekly',
+        monthly => 'Monthly',
+        quarterly => 'Quarterly',
+      };
 }

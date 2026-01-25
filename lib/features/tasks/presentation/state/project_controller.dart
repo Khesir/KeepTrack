@@ -25,6 +25,15 @@ class ProjectController extends StreamState<AsyncState<List<Project>>> {
     });
   }
 
+  // Load all projects related to selected bucket
+  Future<void> loadProjectsByBucketId(String bucketId) async {
+    await execute(() async {
+      return await _repository
+          .getProjectsByBucketID(bucketId)
+          .then((r) => r.unwrap());
+    });
+  }
+
   /// Create a new project
   Future<void> createProject(Project project) async {
     await execute(() async {
@@ -70,5 +79,22 @@ class ProjectController extends StreamState<AsyncState<List<Project>>> {
       await loadProjects();
       return data ?? [];
     });
+  }
+
+  /// Get projects currently in state (if loaded)
+  List<Project>? get currentProjects => state is AsyncData<List<Project>>
+      ? (state as AsyncData<List<Project>>).data
+      : null;
+
+  /// Get project by ID from current state
+  Project? getProjectFromCurrentState(String id) {
+    final projects = currentProjects;
+    if (projects == null) return null;
+
+    try {
+      return projects.where((p) => p.id == id).first;
+    } catch (e) {
+      return null;
+    }
   }
 }

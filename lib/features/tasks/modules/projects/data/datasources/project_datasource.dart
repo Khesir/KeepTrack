@@ -11,6 +11,9 @@ abstract class ProjectDataSource {
   /// Get project by ID
   Future<ProjectModel?> getProjectById(String id);
 
+  // Get Projects by bucketIDs
+  Future<List<ProjectModel>> getProjectsByBucketId(String bucketId);
+
   /// Create a new project
   Future<ProjectModel> createProject(ProjectModel project);
 

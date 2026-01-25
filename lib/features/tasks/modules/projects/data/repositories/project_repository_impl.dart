@@ -36,6 +36,13 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
+  Future<Result<List<Project>>> getProjectsByBucketID(String bucketId) async {
+    final taskModels = await dataSource.getProjectsByBucketId(bucketId);
+    final tasks = taskModels.cast<Project>();
+    return Result.success(tasks);
+  }
+
+  @override
   Future<Result<Project>> createProject(Project project) async {
     final model = ProjectModel.fromEntity(project);
     final created = await dataSource.createProject(model);

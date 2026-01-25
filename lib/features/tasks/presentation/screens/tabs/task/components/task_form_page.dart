@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/features/tasks/modules/buckets/domain/entities/bucket.dart';
 import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
 
@@ -8,9 +9,11 @@ class TaskFormPage extends StatefulWidget {
   final Future<void> Function(Task) onSave;
   final Future<void> Function()? onDelete;
   final List<Project>? projects;
+  final List<Bucket>? buckets;
   final String? parentTaskId;
   final bool isDialog; // Whether this is shown in a dialog or as a full page
-  final bool isDialogContent; // Whether to return just content for custom dialog wrapper
+  final bool
+  isDialogContent; // Whether to return just content for custom dialog wrapper
 
   const TaskFormPage({
     super.key,
@@ -22,6 +25,7 @@ class TaskFormPage extends StatefulWidget {
     this.parentTaskId,
     this.isDialog = false,
     this.isDialogContent = false,
+    this.buckets,
   });
 
   @override
@@ -38,6 +42,8 @@ class _TaskFormPageState extends State<TaskFormPage> {
   DateTime? _dueDate;
   List<String> _tags = [];
   String? _selectedProjectId;
+  String? _selectedBucketId;
+
   final TextEditingController _tagController = TextEditingController();
 
   @override
@@ -52,6 +58,7 @@ class _TaskFormPageState extends State<TaskFormPage> {
     _dueDate = widget.task?.dueDate;
     _tags = widget.task?.tags.toList() ?? [];
     _selectedProjectId = widget.task?.projectId;
+    _selectedBucketId = widget.task?.bucketId; // Add bucket selection
   }
 
   @override
@@ -145,6 +152,7 @@ class _TaskFormPageState extends State<TaskFormPage> {
       userId: widget.userId,
       createdAt: widget.task?.createdAt,
       updatedAt: widget.task?.updatedAt,
+      bucketId: _selectedBucketId,
     );
 
     await widget.onSave(task);
@@ -180,178 +188,200 @@ class _TaskFormPageState extends State<TaskFormPage> {
     // Use Column when wrapped in a parent ScrollView (isDialogContent or isDialog)
     // Use ListView otherwise for built-in scrolling
     final formFields = [
-          // Title
-          TextFormField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'Title',
-              border: OutlineInputBorder(),
-            ),
-            validator: (v) =>
-                v == null || v.isEmpty ? 'Enter task title' : null,
-            autofocus: !widget.isDialog,
-          ),
-          const SizedBox(height: 16),
+      // Title
+      TextFormField(
+        controller: _titleController,
+        decoration: const InputDecoration(
+          labelText: 'Title',
+          border: OutlineInputBorder(),
+        ),
+        validator: (v) => v == null || v.isEmpty ? 'Enter task title' : null,
+        autofocus: !widget.isDialog,
+      ),
+      const SizedBox(height: 16),
 
-          // Description
-          TextFormField(
-            controller: _descriptionController,
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 5,
-            minLines: 3,
-          ),
-          const SizedBox(height: 16),
+      // Description
+      TextFormField(
+        controller: _descriptionController,
+        decoration: const InputDecoration(
+          labelText: 'Description',
+          border: OutlineInputBorder(),
+        ),
+        maxLines: 5,
+        minLines: 3,
+      ),
+      const SizedBox(height: 16),
 
-          // Status
-          DropdownButtonFormField<TaskStatus>(
-            value: _selectedStatus,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              border: OutlineInputBorder(),
-            ),
-            items: TaskStatus.values
-                .map(
-                  (status) => DropdownMenuItem(
-                    value: status,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.circle,
-                          size: 16,
-                          color: _getStatusColor(status),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(status.displayName),
-                      ],
+      // Status
+      DropdownButtonFormField<TaskStatus>(
+        value: _selectedStatus,
+        decoration: const InputDecoration(
+          labelText: 'Status',
+          border: OutlineInputBorder(),
+        ),
+        items: TaskStatus.values
+            .map(
+              (status) => DropdownMenuItem(
+                value: status,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.circle,
+                      size: 16,
+                      color: _getStatusColor(status),
                     ),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) {
-              if (v != null) setState(() => _selectedStatus = v);
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Priority
-          DropdownButtonFormField<TaskPriority>(
-            value: _selectedPriority,
-            decoration: const InputDecoration(
-              labelText: 'Priority',
-              border: OutlineInputBorder(),
-            ),
-            items: TaskPriority.values
-                .map(
-                  (priority) => DropdownMenuItem(
-                    value: priority,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.flag,
-                          size: 16,
-                          color: _getPriorityColor(priority),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(priority.displayName),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) {
-              if (v != null) setState(() => _selectedPriority = v);
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Project
-          if (widget.projects != null && widget.projects!.isNotEmpty) ...[
-            DropdownButtonFormField<String?>(
-              value: _selectedProjectId,
-              decoration: const InputDecoration(
-                labelText: 'Project',
-                border: OutlineInputBorder(),
+                    const SizedBox(width: 8),
+                    Text(status.displayName),
+                  ],
+                ),
               ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('No Project'),
+            )
+            .toList(),
+        onChanged: (v) {
+          if (v != null) setState(() => _selectedStatus = v);
+        },
+      ),
+      const SizedBox(height: 16),
+
+      // Priority
+      DropdownButtonFormField<TaskPriority>(
+        value: _selectedPriority,
+        decoration: const InputDecoration(
+          labelText: 'Priority',
+          border: OutlineInputBorder(),
+        ),
+        items: TaskPriority.values
+            .map(
+              (priority) => DropdownMenuItem(
+                value: priority,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.flag,
+                      size: 16,
+                      color: _getPriorityColor(priority),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(priority.displayName),
+                  ],
                 ),
-                ...widget.projects!.map(
-                  (project) => DropdownMenuItem<String?>(
-                    value: project.id,
-                    child: Text(project.name),
-                  ),
-                ),
-              ],
-              onChanged: (v) => setState(() => _selectedProjectId = v),
+              ),
+            )
+            .toList(),
+        onChanged: (v) {
+          if (v != null) setState(() => _selectedPriority = v);
+        },
+      ),
+      const SizedBox(height: 16),
+
+      // Project
+      if (widget.projects != null && widget.projects!.isNotEmpty) ...[
+        DropdownButtonFormField<String?>(
+          value: _selectedProjectId,
+          decoration: const InputDecoration(
+            labelText: 'Project',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('No Project'),
             ),
-            const SizedBox(height: 16),
+            ...widget.projects!.map(
+              (project) => DropdownMenuItem<String?>(
+                value: project.id,
+                child: Text(project.name),
+              ),
+            ),
           ],
-
-          // Due Date
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Due Date'),
-              subtitle: _dueDate != null
-                  ? Text(
-                      '${_dueDate!.toString().split('.')[0]}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    )
-                  : const Text('Not set'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_dueDate != null)
-                    IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () => setState(() => _dueDate = null),
-                      tooltip: 'Clear due date',
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: _pickDueDate,
-                    tooltip: 'Set due date',
-                  ),
-                ],
+          onChanged: (v) => setState(() => _selectedProjectId = v),
+        ),
+        const SizedBox(height: 16),
+      ],
+      // Buckets
+      if (widget.buckets != null && widget.buckets!.isNotEmpty) ...[
+        DropdownButtonFormField<String?>(
+          value: _selectedBucketId,
+          decoration: const InputDecoration(
+            labelText: 'Buckets',
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('No Buckets'),
+            ),
+            ...widget.buckets!.map(
+              (bucket) => DropdownMenuItem<String?>(
+                value: bucket.id,
+                child: Text(bucket.name),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          // Tags
-          const Text(
-            'Tags',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ..._tags.map(
-                    (tag) => Chip(
-                      label: Text(tag),
-                      onDeleted: () => setState(() => _tags.remove(tag)),
-                      backgroundColor: Colors.blue.withOpacity(0.1),
-                    ),
-                  ),
-                  ActionChip(
-                    avatar: const Icon(Icons.add, size: 16),
-                    label: const Text('Add tag'),
-                    onPressed: _addTag,
-                  ),
-                ],
+          ],
+          onChanged: (v) => setState(() => _selectedBucketId = v),
+        ),
+        const SizedBox(height: 16),
+      ],
+      // Due Date
+      Card(
+        child: ListTile(
+          leading: const Icon(Icons.calendar_today),
+          title: const Text('Due Date'),
+          subtitle: _dueDate != null
+              ? Text(
+                  '${_dueDate!.toString().split('.')[0]}',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                )
+              : const Text('Not set'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_dueDate != null)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => setState(() => _dueDate = null),
+                  tooltip: 'Clear due date',
+                ),
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: _pickDueDate,
+                tooltip: 'Set due date',
               ),
-            ),
+            ],
           ),
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // Tags
+      const Text(
+        'Tags',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: 8),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ..._tags.map(
+                (tag) => Chip(
+                  label: Text(tag),
+                  onDeleted: () => setState(() => _tags.remove(tag)),
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                ),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.add, size: 16),
+                label: const Text('Add tag'),
+                onPressed: _addTag,
+              ),
+            ],
+          ),
+        ),
+      ),
     ];
 
     return Form(
@@ -361,10 +391,7 @@ class _TaskFormPageState extends State<TaskFormPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: formFields,
             )
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: formFields,
-            ),
+          : ListView(padding: const EdgeInsets.all(16), children: formFields),
     );
   }
 
@@ -427,7 +454,10 @@ class _TaskFormPageState extends State<TaskFormPage> {
                 if (isEdit && widget.onDelete != null)
                   TextButton(
                     onPressed: _handleDelete,
-                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                    child: const Text(
+                      'Delete',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 const SizedBox(width: 8),
                 TextButton(

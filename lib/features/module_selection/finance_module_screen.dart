@@ -16,7 +16,9 @@ import 'package:keep_track/features/finance/presentation/screens/tabs/planned_pa
 import 'package:keep_track/features/home/home_screen.dart';
 import 'package:keep_track/features/logs/logs_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
+import 'package:keep_track/features/module_selection/task_module_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
+import 'package:keep_track/features/tasks/presentation/widgets/pomodoro_nav_indicator.dart';
 
 import '../auth/presentation/screens/auth_settings_screen.dart';
 
@@ -59,8 +61,22 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
     );
   }
 
+  void _navigateToTaskModulePomodoro() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TaskModuleScreen(initialTabIndex: 3),
+      ),
+    );
+  }
+
   List<Widget> _buildActions() {
     return [
+      // Pomodoro timer indicator (shows when session is active)
+      PomodoroNavIndicator(
+        onTap: _navigateToTaskModulePomodoro,
+      ),
+      const SizedBox(width: 8),
       // Theme toggle button
       IconButton(
         icon: Icon(

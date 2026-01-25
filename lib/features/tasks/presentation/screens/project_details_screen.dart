@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -11,6 +12,7 @@ import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomod
 import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/pomodoro_session_controller.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
@@ -224,6 +226,13 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.pop(context),
                 ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    tooltip: 'Edit Project',
+                    onPressed: () => _showEditProjectDialog(currentProject),
+                  ),
+                ],
               ),
               body: SingleChildScrollView(
                 padding: EdgeInsets.all(isDesktop ? AppSpacing.xl : 16),
@@ -589,9 +598,7 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
                     if (_isUrl(entry.value))
                       IconButton(
                         icon: const Icon(Icons.open_in_new, size: 18),
-                        onPressed: () {
-                          // TODO: Open URL in browser
-                        },
+                        onPressed: () => _launchUrl(entry.value),
                       ),
                   ],
                 ),
@@ -871,6 +878,46 @@ class _ProjectDetailsScreenState extends ScopedScreenState<ProjectDetailsScreen>
 
   bool _isUrl(String text) {
     return text.startsWith('http://') || text.startsWith('https://');
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open $url'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditProjectDialog(Project project) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => _ProjectEditorDialog(
+        project: project,
+        onSave: (updatedProject) async {
+          await _projectController.updateProject(updatedProject);
+          return true;
+        },
+      ),
+    );
+
+    if (result == true && mounted) {
+      await _projectController.loadProjects();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Project updated successfully'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _showMetadataEditor(Project project) async {
@@ -1462,5 +1509,276 @@ class _MetadataEditorDialogState extends State<_MetadataEditorDialog> {
     } else {
       return Icons.info;
     }
+  }
+}
+
+/// Project Editor Dialog - Allows editing project name, description, status, and color
+class _ProjectEditorDialog extends StatefulWidget {
+  final Project project;
+  final Future<bool> Function(Project) onSave;
+
+  const _ProjectEditorDialog({required this.project, required this.onSave});
+
+  @override
+  State<_ProjectEditorDialog> createState() => _ProjectEditorDialogState();
+}
+
+class _ProjectEditorDialogState extends State<_ProjectEditorDialog> {
+  late TextEditingController _nameController;
+  late TextEditingController _descriptionController;
+  late ProjectStatus _status;
+  late Color _selectedColor;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.project.name);
+    _descriptionController = TextEditingController(
+      text: widget.project.description ?? '',
+    );
+    _status = widget.project.status;
+    _selectedColor = widget.project.color != null
+        ? Color(int.parse(widget.project.color!.replaceFirst('#', '0xff')))
+        : Colors.blue[700]!;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProject() async {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Project name cannot be empty'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final colorHex =
+          '#${_selectedColor.value.toRadixString(16).substring(2).toUpperCase()}';
+      final updatedProject = widget.project.copyWith(
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        status: _status,
+        color: colorHex,
+      );
+
+      final success = await widget.onSave(updatedProject);
+      if (mounted) {
+        Navigator.pop(context, success);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving project: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showColorPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pick a Color'),
+        content: SingleChildScrollView(
+          child: BlockPicker(
+            pickerColor: _selectedColor,
+            onColorChanged: (color) {
+              setState(() {
+                _selectedColor = color;
+              });
+              Navigator.pop(context);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: 500,
+        constraints: const BoxConstraints(maxHeight: 600),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Edit Project',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Project Name
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Project Name',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.folder),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Description
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.description),
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Status
+            DropdownButtonFormField<ProjectStatus>(
+              value: _status,
+              decoration: const InputDecoration(
+                labelText: 'Status',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.flag),
+              ),
+              items: ProjectStatus.values.map((status) {
+                return DropdownMenuItem(
+                  value: status,
+                  child: Row(
+                    children: [
+                      Icon(
+                        status == ProjectStatus.active
+                            ? Icons.play_circle
+                            : status == ProjectStatus.postponed
+                            ? Icons.pause_circle
+                            : Icons.check_circle,
+                        color: status == ProjectStatus.active
+                            ? Colors.green
+                            : status == ProjectStatus.postponed
+                            ? Colors.orange
+                            : Colors.grey,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(status.displayName),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _status = value;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Color Picker
+            InkWell(
+              onTap: _showColorPicker,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.color_lens,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Project Color',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _selectedColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _isSaving ? null : () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _isSaving ? null : _saveProject,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Save Changes'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

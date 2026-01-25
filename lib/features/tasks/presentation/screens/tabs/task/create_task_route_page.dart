@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/features/tasks/modules/buckets/domain/entities/bucket.dart';
 import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
+import 'package:keep_track/features/tasks/presentation/state/bucket_controller.dart';
 import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
 import 'package:keep_track/features/tasks/presentation/screens/tabs/task/components/task_form_page.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
@@ -20,6 +22,7 @@ class _CreateTaskRoutePageState extends State<CreateTaskRoutePage> {
   late final TaskController _controller;
   late final SupabaseService _supabase;
   late final ProjectController _projectController;
+  late final BucketController _bucketController;
 
   @override
   void initState() {
@@ -27,9 +30,10 @@ class _CreateTaskRoutePageState extends State<CreateTaskRoutePage> {
     _controller = locator.get<TaskController>();
     _supabase = locator.get<SupabaseService>();
     _projectController = locator.get<ProjectController>();
-
+    _bucketController = locator.get<BucketController>();
     // Load active projects
     _projectController.loadActiveProjects();
+    _bucketController.loadBuckets();
   }
 
   @override
@@ -40,36 +44,41 @@ class _CreateTaskRoutePageState extends State<CreateTaskRoutePage> {
         final activeProjects = projects
             .where((p) => p.status == ProjectStatus.active && !p.isArchived)
             .toList();
+        return AsyncStreamBuilder<List<Bucket>>(
+          state: _bucketController,
+          builder: (context, buckets) {
+            return TaskFormPage(
+              userId: _supabase.userId!,
+              projects: activeProjects,
+              buckets: buckets,
+              isDialog: false,
+              isDialogContent: false,
+              onSave: (Task task) async {
+                try {
+                  await _controller.createTask(task);
 
-        return TaskFormPage(
-          userId: _supabase.userId!,
-          projects: activeProjects,
-          isDialog: false,
-          isDialogContent: false,
-          onSave: (Task task) async {
-            try {
-              await _controller.createTask(task);
+                  if (!mounted) return;
 
-              if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Task created successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Task created successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+                  Navigator.pop(context);
+                } catch (e) {
+                  if (!mounted) return;
 
-              Navigator.pop(context);
-            } catch (e) {
-              if (!mounted) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to create task: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to create task: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            );
           },
         );
       },

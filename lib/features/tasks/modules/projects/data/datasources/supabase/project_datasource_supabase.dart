@@ -51,6 +51,20 @@ class ProjectDataSourceSupabase implements ProjectDataSource {
   }
 
   @override
+  Future<List<ProjectModel>> getProjectsByBucketId(String bucketId) async {
+    final response = await supabaseService.client
+        .from(tableName)
+        .select()
+        .eq('user_id', supabaseService.userId!)
+        .eq('bucket_id', bucketId)
+        .order('created_at', ascending: false);
+
+    return (response as List)
+        .map((doc) => ProjectModel.fromJson(doc as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
   Future<ProjectModel> createProject(ProjectModel project) async {
     final doc = project.toJson();
     final response = await supabaseService.client

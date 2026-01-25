@@ -121,7 +121,7 @@ class _TransactionCompletionDialogState
                 prefixText: '₱ ',
                 suffixIcon: Icon(
                   Icons.info_outline,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               controller: TextEditingController(

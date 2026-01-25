@@ -13,6 +13,9 @@ abstract class TaskRepository {
   /// Get tasks by status
   Future<Result<List<Task>>> getTasksByStatus(TaskStatus status);
 
+  // Get tasks by bucket
+  Future<Result<List<Task>>> getTasksByBucketID(String bucketId);
+
   /// Get task by ID
   Future<Result<Task>> getTaskById(String id);
 
