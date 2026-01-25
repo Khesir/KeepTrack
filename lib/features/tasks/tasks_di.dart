@@ -80,8 +80,8 @@ void setupTasksDependencies() {
     return PomodoroSessionRepositoryImpl(dataSource);
   });
 
-  // Pomodoro controllers
-  locator.registerFactory<PomodoroSessionController>(() {
+  // Pomodoro controllers - use singleton so nav indicator and timer share state
+  locator.registerLazySingleton<PomodoroSessionController>(() {
     final repo = locator.get<PomodoroSessionRepository>();
     final supabaseService = locator.get<SupabaseService>();
     return PomodoroSessionController(repo, supabaseService.userId!);
