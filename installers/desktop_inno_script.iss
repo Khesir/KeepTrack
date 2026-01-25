@@ -2,16 +2,16 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
-#define MyAppName "Keep Track"
-#define MyAppVersion "7.3"
+#define MyAppName "KeepTrack"
+#define MyAppVersion "0.7.4"
 #define MyAppPublisher "Khesir"
-#define MyAppURL "https://khesir.com"
+#define MyAppURL "https://keep-track.khesir.com/"
 #define MyAppExeName "keep_track.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{A1C21F3D-EFFE-4448-B387-C9D8414C7960}
+AppId={{A8947B06-4B99-45BB-8600-8A7D4B7D06D1}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -33,10 +33,10 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\installers
-OutputBaseFilename=KeepTrack-v.7.3
+OutputBaseFilename=KeepTrack-v0.7.4
 SetupIconFile=C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\app_icon.ico
 SolidCompression=yes
-WizardStyle=modern
+WizardStyle=modern dynamic
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -46,9 +46,10 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\build\windows\x64\runner\Release\url_launcher_windows_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\build\windows\x64\runner\Release\app_links_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\build\windows\x64\runner\Release\flutter_windows.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\build\windows\x64\runner\Release\permission_handler_windows_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\build\windows\x64\runner\Release\url_launcher_windows_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Users\ajriz\Documents\Projects\Personal-Codex\personal_codex\build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
