@@ -41,17 +41,17 @@ jobs:
         run: |
           flutter build apk --release \
             --dart-define="PROD=true" \
-            --dart-define="SUPABASE_URL=${{ vars.SUPABASE_URL }}" \
+            --dart-define="SUPABASE_URL=${{ secrets.SUPABASE_URL }}" \
             --dart-define="SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" \
-            --dart-define="GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}"
+            --dart-define="GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}"
 
       - name: Build App Bundle
         run: |
           flutter build appbundle --release \
             --dart-define="PROD=true" \
-            --dart-define="SUPABASE_URL=${{ vars.SUPABASE_URL }}" \
+            --dart-define="SUPABASE_URL=${{ secrets.SUPABASE_URL }}" \
             --dart-define="SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" \
-            --dart-define="GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}"
+            --dart-define="GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}"
 
       - name: Rename artifacts
         run: |
