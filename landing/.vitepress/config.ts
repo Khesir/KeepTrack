@@ -44,6 +44,12 @@ export default defineConfig({
             { text: 'Configuration', link: '/docs/guide/configuration' },
             { text: 'Themes', link: '/docs/guide/themes' }
           ]
+        },
+        {
+          text: 'Updates',
+          items: [
+            { text: 'Changelog', link: '/docs/changelog' }
+          ]
         }
       ]
     },
