@@ -106,16 +106,24 @@ class NotificationSettingsController
 
   /// Apply settings to scheduler
   Future<void> _applySettings(NotificationSettings settings) async {
-    await _scheduler.rescheduleAllDailyReminders(
-      financeEnabled: settings.financeReminderEnabled,
-      financeTime: settings.financeReminderTime,
-      morningEnabled: settings.morningReminderEnabled,
-      morningTime: settings.morningReminderTime,
-      eveningEnabled: settings.eveningReminderEnabled,
-      eveningTime: settings.eveningReminderTime,
-    );
-
-    AppLogger.info('NotificationSettingsController: Settings applied');
+    try {
+      await _scheduler.rescheduleAllDailyReminders(
+        financeEnabled: settings.financeReminderEnabled,
+        financeTime: settings.financeReminderTime,
+        morningEnabled: settings.morningReminderEnabled,
+        morningTime: settings.morningReminderTime,
+        eveningEnabled: settings.eveningReminderEnabled,
+        eveningTime: settings.eveningReminderTime,
+      );
+      AppLogger.info('NotificationSettingsController: Settings applied');
+    } catch (e, stackTrace) {
+      // Log but don't fail - settings can still be saved even if scheduling fails
+      AppLogger.error(
+        'NotificationSettingsController: Failed to apply notification schedules',
+        e,
+        stackTrace,
+      );
+    }
   }
 
   /// Reset all settings to defaults

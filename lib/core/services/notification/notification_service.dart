@@ -307,15 +307,53 @@ class NotificationService {
   Future<void> cancelNotification(int id) async {
     if (!_initialized || _plugin == null) return;
 
-    await _plugin!.cancel(id);
-    AppLogger.info('NotificationService: Notification cancelled - ID: $id');
+    try {
+      await _plugin!.cancel(id);
+      AppLogger.info('NotificationService: Notification cancelled - ID: $id');
+    } catch (e, stackTrace) {
+      // Handle corrupted notification cache (Missing type parameter error)
+      AppLogger.warning(
+        'NotificationService: Failed to cancel notification $id, attempting cache clear',
+      );
+      await _clearNotificationCacheOnError(e, stackTrace);
+    }
   }
 
   /// Cancel all notifications
   Future<void> cancelAllNotifications() async {
     if (!_initialized || _plugin == null) return;
 
-    await _plugin!.cancelAll();
-    AppLogger.info('NotificationService: All notifications cancelled');
+    try {
+      await _plugin!.cancelAll();
+      AppLogger.info('NotificationService: All notifications cancelled');
+    } catch (e, stackTrace) {
+      // Handle corrupted notification cache
+      AppLogger.warning(
+        'NotificationService: Failed to cancel all notifications, attempting cache clear',
+      );
+      await _clearNotificationCacheOnError(e, stackTrace);
+    }
+  }
+
+  /// Handle corrupted notification cache by clearing it
+  Future<void> _clearNotificationCacheOnError(Object error, StackTrace stackTrace) async {
+    AppLogger.error('NotificationService: Notification cache error', error, stackTrace);
+
+    // On Android, try to clear the notification cache
+    if (Platform.isAndroid && _plugin != null) {
+      try {
+        final androidPlugin = _plugin!.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        if (androidPlugin != null) {
+          // Clear all notifications from the system
+          await androidPlugin.cancelAll();
+          AppLogger.info('NotificationService: Cleared all notifications via Android plugin');
+        }
+      } catch (e2) {
+        AppLogger.error('NotificationService: Could not clear notification cache', e2, stackTrace);
+        // The corrupted cache is stored in SharedPreferences
+        // User may need to clear app data from device settings
+      }
+    }
   }
 }
