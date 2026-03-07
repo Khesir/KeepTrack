@@ -13,8 +13,13 @@ import '../../../state/finance_category_controller.dart';
 
 class CreateBudgetScreen extends StatefulWidget {
   final Budget? existingBudget;
+  final String? initialMonth;
 
-  const CreateBudgetScreen({super.key, this.existingBudget});
+  const CreateBudgetScreen({
+    super.key,
+    this.existingBudget,
+    this.initialMonth,
+  });
 
   @override
   State<CreateBudgetScreen> createState() => _CreateBudgetScreenState();
@@ -55,6 +60,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
         _customTargetController.text = widget.existingBudget!.customTargetAmount
             .toString();
       }
+    } else if (widget.initialMonth != null) {
+      _selectedMonth = widget.initialMonth!;
     } else {
       final now = DateTime.now();
       _selectedMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/theme/theme.dart';
-import 'package:keep_track/features/module_selection/module_selection_screen.dart';
+import 'package:keep_track/features/module_selection/finance_module_screen.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -463,8 +463,8 @@ class _PersonalCodexAppState extends State<PersonalCodexApp> {
           // Routing
           onGenerateRoute: AppRouter.onGenerateRoute,
 
-          // Home screen - Module selection after login, protected by auth guard
-          home: const AuthGuard(child: ModuleSelectionScreen()),
+          // Home screen - Finance module after login, protected by auth guard
+          home: const AuthGuard(child: FinanceModuleScreen()),
         );
       },
     );

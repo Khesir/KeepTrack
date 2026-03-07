@@ -7,15 +7,10 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
-import 'package:keep_track/features/finance/presentation/screens/finance_main_screen.dart';
+import 'package:keep_track/features/finance/presentation/screens/budget_month_screen.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/accounts/accounts_tab_new.dart';
-import 'package:keep_track/features/finance/presentation/screens/tabs/budgets/budgets_tab_new.dart';
-import 'package:keep_track/features/finance/presentation/screens/tabs/debts/debts_tab_new.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/goals/goals_tab.dart';
-import 'package:keep_track/features/finance/presentation/screens/tabs/planned_payments/planned_payments_tab.dart';
-import 'package:keep_track/features/home/home_screen.dart';
 import 'package:keep_track/features/logs/logs_screen.dart';
-import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/features/module_selection/task_module_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
 import 'package:keep_track/features/tasks/presentation/widgets/pomodoro_nav_indicator.dart';
@@ -35,30 +30,19 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
 
-  // All screens including sub-tabs for desktop sidebar
+  // 0=Budget, 1=Accounts, 2=Goals, 3=Logs, 4=Profile
   final List<Widget> _allScreens = const [
-    HomeScreen(),
-    FinanceMainScreen(), // Index 1 - shown on mobile "Finance" tab
-    AccountsTabNew(), // Index 2 - Finance sub-item
-    BudgetsTabNew(), // Index 3 - Finance sub-item
-    GoalsTabNew(), // Index 4 - Finance sub-item
-    DebtsTabNew(), // Index 5 - Finance sub-item
-    PlannedPaymentsTabNew(), // Index 6 - Finance sub-item
-    LogsScreen(), // Index 7
-    ProfileScreen(moduleType: ModuleType.finance), // Index 8
+    BudgetMonthScreen(), // Index 0 - Budget tab
+    AccountsTabNew(), // Index 1 - Accounts tab
+    GoalsTabNew(), // Index 2 - Goals tab
+    LogsScreen(), // Index 3
+    ProfileScreen(moduleType: ModuleType.finance), // Index 4
   ];
 
   @override
   void dispose() {
     _layoutController.dispose();
     super.dispose();
-  }
-
-  void _navigateToModuleSelection() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const ModuleSelectionScreen()),
-    );
   }
 
   void _navigateToTaskModulePomodoro() {
@@ -168,46 +152,41 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildMobileLayout() {
-    // Map desktop index to mobile index
-    int mobileIndex = _currentIndex;
-    if (_currentIndex >= 2 && _currentIndex <= 6) {
-      mobileIndex = 1; // All finance sub-tabs map to Finance tab
-    } else if (_currentIndex == 7) {
-      mobileIndex = 2; // Transactions
-    } else if (_currentIndex == 8) {
-      mobileIndex = 3; // Profile
-    }
+    // Mobile nav: 0=Budget, 1=Accounts, 2=Goals, 3=Profile
+    // _allScreens: 0=Budget, 1=Accounts, 2=Goals, 3=Logs(desktop), 4=Profile
+    // Nav index → allScreens index
+    const navToScreen = [0, 1, 2, 4];
+    final mobileNavIndex = navToScreen.indexOf(_currentIndex);
+    final selectedNavIndex = mobileNavIndex < 0 ? 0 : mobileNavIndex;
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _navigateToModuleSelection,
-        ),
         title: Text(_layoutController.title),
         actions: _buildActions(),
       ),
-      body: mobileIndex == 1
-          ? const FinanceMainScreen()
-          : _allScreens[_currentIndex],
+      body: _allScreens[_currentIndex],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: mobileIndex,
+        selectedIndex: selectedNavIndex,
         onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = [0, 1, 7, 8][index];
-          });
+          setState(() => _currentIndex = navToScreen[index]);
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month),
+            label: 'Budget',
+          ),
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet),
-            label: 'Finance',
+            label: 'Accounts',
           ),
           NavigationDestination(
-            icon: Icon(Icons.history),
-            label: 'Transactions',
+            icon: Icon(Icons.flag),
+            label: 'Goals',
           ),
-          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -233,15 +212,11 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildNavItem('Home', Icons.home, 0),
-                _buildNavItem('Finance', Icons.account_balance_wallet, 1),
-                _buildSubNavItem('Accounts', Icons.account_balance_wallet, 2),
-                _buildSubNavItem('Budgets', Icons.pie_chart, 3),
-                _buildSubNavItem('Goals', Icons.flag, 4),
-                _buildSubNavItem('Debts', Icons.swap_horiz, 5),
-                _buildSubNavItem('Payments', Icons.event_repeat, 6),
-                _buildNavItem('Transactions', Icons.history, 7),
-                _buildNavItem('Profile', Icons.person, 8),
+                _buildNavItem('Budget', Icons.calendar_month, 0),
+                _buildNavItem('Accounts', Icons.account_balance_wallet, 1),
+                _buildNavItem('Goals', Icons.flag, 2),
+                _buildNavItem('Logs', Icons.bug_report, 3),
+                _buildNavItem('Profile', Icons.person, 4),
               ],
             ),
           ),
@@ -294,43 +269,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildSidebarFooter() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final borderColor = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildUserProfileSection(),
-        InkWell(
-          onTap: _navigateToModuleSelection,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: borderColor)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.apps,
-                  size: 20,
-                  color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'All Modules',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
+    return _buildUserProfileSection();
   }
 
   Widget _buildUserProfileSection() {
@@ -505,39 +444,6 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
     );
   }
 
-  Widget _buildSubNavItem(String label, IconData icon, int index) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final isActive = _currentIndex == index;
-    final activeColor = isDark ? const Color(0xFF27272A) : AppColors.secondary;
-    final textColor = theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
-    final secondaryTextColor = theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4, left: 24),
-      decoration: BoxDecoration(
-        color: isActive ? activeColor : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListTile(
-        dense: true,
-        leading: Icon(
-          icon,
-          size: 18,
-          color: isActive ? textColor : secondaryTextColor,
-        ),
-        title: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isActive ? FontWeight.w500 : FontWeight.w400,
-            color: isActive ? textColor : secondaryTextColor,
-          ),
-        ),
-        onTap: () => setState(() => _currentIndex = index),
-      ),
-    );
-  }
 
   Widget _buildTopBar() {
     final theme = Theme.of(context);

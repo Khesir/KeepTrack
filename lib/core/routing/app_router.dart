@@ -193,8 +193,11 @@ class AppRouter {
 
       // Budget create (new budget)
       case AppRoutes.budgetCreate:
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (_) => const CreateBudgetScreen(),
+          builder: (_) => CreateBudgetScreen(
+            initialMonth: args?['initialMonth'] as String?,
+          ),
           settings: settings,
         );
 
