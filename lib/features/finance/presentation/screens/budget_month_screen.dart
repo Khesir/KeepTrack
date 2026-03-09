@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -16,15 +15,154 @@ import 'package:keep_track/features/finance/modules/transaction/domain/entities/
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
+import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
+import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_screen.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 String _fmt(double amount) => '₱${NumberFormat('#,##0.00').format(amount)}';
+
+// Simple data class for a named group of categories
+class _CategoryGroup {
+  final String name;
+  final List<FinanceCategory> categories;
+  const _CategoryGroup(this.name, this.categories);
+}
+
+/// Builds grouped category list: one group per active budget in [monthKey],
+/// then an "Other" group for any categories not assigned to a budget.
+List<_CategoryGroup> _buildGroupedCategories({
+  required List<FinanceCategory> allCategories,
+  required List<Budget> allBudgets,
+  required CategoryType targetType,
+  required String monthKey,
+}) {
+  final targetBudgetType =
+      targetType == CategoryType.income ? BudgetType.income : BudgetType.expense;
+
+  final monthBudgets = allBudgets
+      .where((b) =>
+          b.month == monthKey &&
+          b.periodType == BudgetPeriodType.monthly &&
+          b.status == BudgetStatus.active &&
+          b.budgetType == targetBudgetType)
+      .toList();
+
+  final typedCats = allCategories.where((c) => c.type == targetType).toList();
+  final seenIds = <String>{};
+  final groups = <_CategoryGroup>[];
+
+  for (final budget in monthBudgets) {
+    final groupCats = <FinanceCategory>[];
+    for (final bc in budget.categories) {
+      final cat = typedCats.firstWhere(
+        (c) => c.id == bc.financeCategoryId,
+        orElse: () => FinanceCategory(name: '', type: targetType),
+      );
+      if (cat.id != null && !seenIds.contains(cat.id)) {
+        groupCats.add(cat);
+        seenIds.add(cat.id!);
+      }
+    }
+    if (groupCats.isNotEmpty) {
+      groups.add(_CategoryGroup(budget.title ?? 'Untitled', groupCats));
+    }
+  }
+
+  final others =
+      typedCats.where((c) => c.id != null && !seenIds.contains(c.id)).toList();
+  if (others.isNotEmpty) {
+    groups.add(_CategoryGroup('Other', others));
+  }
+
+  return groups;
+}
+
+/// Shows a scrollable grouped category picker dialog.
+/// Returns the selected [FinanceCategory] or null (cancelled).
+Future<FinanceCategory?> _showGroupedCategoryDialog(
+  BuildContext context, {
+  required List<_CategoryGroup> groups,
+  required String? selectedId,
+}) {
+  final theme = Theme.of(context);
+  final colorScheme = theme.colorScheme;
+  return showDialog<FinanceCategory>(
+    context: context,
+    builder: (dialogCtx) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.65,
+          maxWidth: 420,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              child: Text('Select Category', style: theme.textTheme.titleLarge),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final group in groups) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                        child: Text(
+                          group.name.toUpperCase(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                      for (final cat in group.categories)
+                        ListTile(
+                          leading:
+                              Icon(cat.type.icon, size: 20, color: cat.type.color),
+                          title: Text(cat.name),
+                          selected: selectedId == cat.id,
+                          selectedTileColor:
+                              colorScheme.primaryContainer.withValues(alpha: 0.3),
+                          trailing: selectedId == cat.id
+                              ? Icon(Icons.check,
+                                  size: 18, color: colorScheme.primary)
+                              : null,
+                          onTap: () => Navigator.of(dialogCtx).pop(cat),
+                        ),
+                    ],
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Cancel'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
 // ─── BudgetMonthScreen ────────────────────────────────────────────────────────
 
@@ -37,6 +175,7 @@ class BudgetMonthScreen extends StatefulWidget {
 
 class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
   late final BudgetController _budgetController;
+  late final MonthPlanController _monthPlanController;
   late final DebtController _debtController;
   late final PlannedPaymentController _plannedPaymentController;
   late final FinanceCategoryController _categoryController;
@@ -48,11 +187,13 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
   Budget? _selectedGroup;
   BudgetCategory? _selectedCategory;
   Budget? _selectedCategoryGroup;
+  Debt? _selectedDebt;
 
   @override
   void initState() {
     super.initState();
     _budgetController = locator.get<BudgetController>();
+    _monthPlanController = locator.get<MonthPlanController>();
     _debtController = locator.get<DebtController>();
     _plannedPaymentController = locator.get<PlannedPaymentController>();
     _categoryController = locator.get<FinanceCategoryController>();
@@ -69,12 +210,21 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
 
   String get _monthLabel => DateFormat('MMMM yyyy').format(_currentMonth);
 
+  DateTime get _prevMonthDate =>
+      DateTime(_currentMonth.year, _currentMonth.month - 1);
+
+  String get _prevMonthKey =>
+      '${_prevMonthDate.year}-${_prevMonthDate.month.toString().padLeft(2, '0')}';
+
+  String get _prevMonthLabel => DateFormat('MMMM yyyy').format(_prevMonthDate);
+
   void _prevMonth() {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
       _selectedGroup = null;
       _selectedCategory = null;
       _selectedCategoryGroup = null;
+      _selectedDebt = null;
     });
     _loadMonthTransactions();
   }
@@ -85,6 +235,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
       _selectedGroup = null;
       _selectedCategory = null;
       _selectedCategoryGroup = null;
+      _selectedDebt = null;
     });
     _loadMonthTransactions();
   }
@@ -106,6 +257,12 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
   // ── Dialogs / sheets ─────────────────────────────────────────────────────
 
   void _showAddCategorySheet(Budget group) {
+    if (group.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Budget group is still saving. Please wait a moment.')),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -122,11 +279,15 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _EditCategorySheet(
+      builder: (sheetCtx) => _EditCategorySheet(
         group: group,
         category: cat,
         categoryController: _categoryController,
         budgetController: _budgetController,
+        onDelete: () async {
+          Navigator.pop(sheetCtx);
+          await _confirmDeleteCategory(group, cat);
+        },
       ),
     );
   }
@@ -135,11 +296,43 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _EditGroupSheet(
+      builder: (sheetCtx) => _EditGroupSheet(
         group: group,
         budgetController: _budgetController,
+        onDelete: () async {
+          Navigator.pop(sheetCtx);
+          await _confirmDeleteGroup(group);
+        },
       ),
     );
+  }
+
+  Future<void> _confirmDeleteGroup(Budget group) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Budget Group'),
+        content: Text(
+          'Delete "${group.title ?? 'this group'}" and all its categories?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && group.id != null) {
+      await _budgetController.deleteBudget(group.id!);
+    }
   }
 
   Future<void> _updateCategoryAmount(
@@ -153,6 +346,10 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
     );
   }
 
+  Future<void> _updateDebtMonthlyPayment(Debt debt, double amount) async {
+    await _debtController.updateDebt(debt.copyWith(monthlyPaymentAmount: amount));
+  }
+
   void _showCreateGroupSheet() {
     showModalBottomSheet(
       context: context,
@@ -164,6 +361,93 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
         supabaseService: _supabaseService,
       ),
     );
+  }
+
+  /// Shown when no budget exists for the month — creates the MonthPlan first,
+  /// then offers "Copy from previous month" or "Start fresh".
+  void _showStartPlanningSheet(List<Budget> allBudgets) {
+    final prevBudgets = allBudgets
+        .where((b) =>
+            b.month == _prevMonthKey &&
+            b.periodType == BudgetPeriodType.monthly &&
+            b.status == BudgetStatus.active)
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _StartPlanningSheet(
+        monthKey: _monthKey,
+        monthLabel: _monthLabel,
+        prevMonthKey: _prevMonthKey,
+        prevMonthLabel: _prevMonthLabel,
+        hasPrevBudgets: prevBudgets.isNotEmpty,
+        monthPlanController: _monthPlanController,
+        budgetController: _budgetController,
+        supabaseService: _supabaseService,
+      ),
+    );
+  }
+
+  Future<void> _copyFromPreviousMonth(List<Budget> allBudgets) async {
+    final prevBudgets = allBudgets
+        .where((b) =>
+            b.month == _prevMonthKey &&
+            b.periodType == BudgetPeriodType.monthly &&
+            b.status == BudgetStatus.active)
+        .toList();
+
+    if (prevBudgets.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No budget found for $_prevMonthLabel')),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Copying budget from $_prevMonthLabel…'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    for (final prev in prevBudgets) {
+      // Create the group shell (no categories yet)
+      final created = await _budgetController.createBudget(
+        Budget(
+          month: _monthKey,
+          title: prev.title,
+          budgetType: prev.budgetType,
+          periodType: BudgetPeriodType.monthly,
+          status: BudgetStatus.active,
+          userId: prev.userId,
+        ),
+      );
+
+      // Copy each category from the previous month
+      for (final cat in prev.categories) {
+        await _budgetController.addCategory(
+          created.id!,
+          BudgetCategory(
+            budgetId: created.id!,
+            financeCategoryId: cat.financeCategoryId,
+            targetAmount: cat.targetAmount,
+            financeCategory: cat.financeCategory,
+            userId: cat.userId,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Budget copied! Adjust amounts as needed.')),
+      );
+    }
   }
 
   Future<void> _confirmDeleteCategory(Budget group, BudgetCategory cat) async {
@@ -214,6 +498,432 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
         isIncomeGroup: group.budgetType == BudgetType.income,
       ),
     );
+  }
+
+  Future<void> _showDebtPaymentDialog(Debt debt) async {
+    final isReceivable = debt.type == DebtType.lending;
+    final amountCtrl = TextEditingController(
+      text: debt.monthlyPaymentAmount > 0
+          ? debt.monthlyPaymentAmount.toStringAsFixed(2)
+          : '',
+    );
+    final feeCtrl = TextEditingController();
+    String? selectedAccountId;
+    String? selectedCategoryId;
+
+    FinanceCategory? selectedCategory;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          title: Text(
+            isReceivable
+                ? 'Collect from ${debt.personName}'
+                : 'Pay ${debt.personName}',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Remaining balance info
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Remaining balance',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        _fmt(debt.remainingAmount),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Payment Amount',
+                    prefixText: '₱',
+                    border: const OutlineInputBorder(),
+                    helperText: debt.monthlyPaymentAmount > 0
+                        ? 'Monthly: ${_fmt(debt.monthlyPaymentAmount)}'
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: feeCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Fee (optional)',
+                    prefixText: '₱',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AsyncStreamBuilder<List<Account>>(
+                  state: _accountController,
+                  builder: (_, accounts) => DropdownButtonFormField<String>(
+                    initialValue: selectedAccountId,
+                    decoration: const InputDecoration(
+                      labelText: 'Account',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: accounts
+                        .map((a) => DropdownMenuItem(
+                            value: a.id, child: Text(a.name)))
+                        .toList(),
+                    onChanged: (v) => selectedAccountId = v,
+                  ),
+                  loadingBuilder: (_) => const LinearProgressIndicator(),
+                  errorBuilder: (_, m) => Text(m),
+                ),
+                const SizedBox(height: 12),
+                // Category picker button (grouped by budget)
+                AsyncStreamBuilder<List<FinanceCategory>>(
+                  state: _categoryController,
+                  builder: (_, allCats) {
+                    return AsyncStreamBuilder<List<Budget>>(
+                      state: _budgetController,
+                      builder: (_, allBudgets) {
+                        final targetType = isReceivable
+                            ? CategoryType.income
+                            : CategoryType.expense;
+                        final groups = _buildGroupedCategories(
+                          allCategories: allCats,
+                          allBudgets: allBudgets,
+                          targetType: targetType,
+                          monthKey: _monthKey,
+                        );
+                        return InkWell(
+                          onTap: () async {
+                            final picked = await _showGroupedCategoryDialog(
+                              dialogCtx,
+                              groups: groups,
+                              selectedId: selectedCategory?.id,
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                selectedCategory = picked;
+                                selectedCategoryId = picked.id;
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Category',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 14),
+                            ),
+                            child: Row(
+                              children: [
+                                if (selectedCategory != null) ...[
+                                  Icon(selectedCategory!.type.icon,
+                                      size: 16,
+                                      color: selectedCategory!.type.color),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    selectedCategory?.name ??
+                                        'Select a category',
+                                    style: TextStyle(
+                                      color: selectedCategory == null
+                                          ? AppColors.textTertiary
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(Icons.unfold_more,
+                                    size: 16, color: AppColors.textTertiary),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      loadingBuilder: (_) => const LinearProgressIndicator(),
+                      errorBuilder: (_, m) => Text(m),
+                    );
+                  },
+                  loadingBuilder: (_) => const LinearProgressIndicator(),
+                  errorBuilder: (_, m) => Text(m),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final amount = double.tryParse(amountCtrl.text);
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                    const SnackBar(content: Text('Enter a valid amount')),
+                  );
+                  return;
+                }
+                if (amount > debt.remainingAmount) {
+                  ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Amount exceeds remaining balance of ${_fmt(debt.remainingAmount)}',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                if (selectedAccountId == null) {
+                  ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                    const SnackBar(content: Text('Select an account')),
+                  );
+                  return;
+                }
+                if (selectedCategoryId == null) {
+                  ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                    const SnackBar(content: Text('Select a category')),
+                  );
+                  return;
+                }
+                try {
+                  final fee = double.tryParse(feeCtrl.text) ?? 0.0;
+                  await _supabaseService.client.rpc(
+                    'create_debt_payment_transaction',
+                    params: {
+                      'p_user_id': _supabaseService.userId,
+                      'p_account_id': selectedAccountId,
+                      'p_finance_category_id': selectedCategoryId,
+                      'p_amount': amount,
+                      'p_type': isReceivable ? 'income' : 'expense',
+                      'p_description': isReceivable
+                          ? 'Collected from ${debt.personName}'
+                          : 'Paid to ${debt.personName}',
+                      'p_date': DateTime.now().toIso8601String(),
+                      'p_notes': null,
+                      'p_debt_id': debt.id,
+                      'p_fee': fee,
+                    },
+                  );
+                  // Refresh debts, transactions, and budget spent amounts
+                  _debtController.loadDebts();
+                  _loadMonthTransactions();
+                  _budgetController.refreshBudgetsWithSpentAmounts();
+                  if (dialogCtx.mounted) Navigator.pop(dialogCtx, true);
+                } catch (e) {
+                  if (dialogCtx.mounted) {
+                    ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                      SnackBar(content: Text('Failed: $e')),
+                    );
+                  }
+                }
+              },
+              child: Text(isReceivable ? 'Collect' : 'Pay'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    amountCtrl.dispose();
+    feeCtrl.dispose();
+
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isReceivable ? 'Collection recorded' : 'Payment recorded',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
+  void _showDebtDetailSheet(Debt debt, List<Transaction> allTransactions) {
+    final debtTxns = allTransactions
+        .where((t) => t.debtId == debt.id)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, controller) => _DebtDetailContent(
+          debt: debt,
+          transactions: debtTxns,
+          scrollController: controller,
+          onPay: () {
+            Navigator.pop(context);
+            _showDebtPaymentDialog(debt);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showAddDebtSheet({required bool isReceivable}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _AddDebtSheet(
+        isReceivable: isReceivable,
+        accountController: _accountController,
+        categoryController: _categoryController,
+        supabaseService: _supabaseService,
+        onSave: (debt, categoryId) async {
+          if (debt.accountId != null && categoryId != null) {
+            await _debtController.createDebtWithCategory(debt, categoryId);
+          } else {
+            await _debtController.createDebtOnly(debt);
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirmDeletePlan(List<Budget> monthBudgets) async {
+    // Look up the MonthPlan for the current month
+    final planState = _monthPlanController.state;
+    final plans = planState is AsyncData<List<MonthPlan>> ? planState.data : <MonthPlan>[];
+    final plan = plans.cast<MonthPlan?>().firstWhere(
+      (p) => p?.month == _monthKey,
+      orElse: () => null,
+    );
+
+    // Nothing to delete if no plan and no budgets
+    if (plan == null && monthBudgets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No plan found for this month.')),
+      );
+      return;
+    }
+
+    bool deleteAll = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          title: Text('Delete plan for $_monthLabel?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The month plan record will be removed.',
+              ),
+              if (monthBudgets.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: deleteAll,
+                  onChanged: (v) =>
+                      setDialogState(() => deleteAll = v ?? false),
+                  title: const Text('Also delete all budget groups and categories'),
+                  subtitle: Text(
+                    '${monthBudgets.length} group${monthBudgets.length == 1 ? '' : 's'} will be permanently removed',
+                    style: TextStyle(color: AppColors.error, fontSize: 12),
+                  ),
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // Show loading dialog while deleting
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Deleting…'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      if (deleteAll && plan != null && plan.id != null) {
+        await _monthPlanController.deleteMonthPlanWithBudgets(plan.id!, _monthKey);
+        await _budgetController.refreshBudgetsWithSpentAmounts();
+      } else if (deleteAll && plan == null) {
+        // No plan row, just delete the budgets directly
+        for (final b in monthBudgets) {
+          if (b.id != null) await _budgetController.deleteBudget(b.id!);
+        }
+      } else if (plan != null && plan.id != null) {
+        await _monthPlanController.deleteMonthPlan(plan.id!);
+      }
+
+      if (mounted) {
+        Navigator.pop(context); // close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              deleteAll
+                  ? 'Plan and all budget groups deleted.'
+                  : 'Plan deleted. Budget groups kept.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // close loading dialog
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
   void _showCommitmentsSheet(List<PlannedPayment> payments) {
@@ -291,8 +1001,26 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
         errorBuilder: (_, msg) => Center(child: Text('Error: $msg')),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () =>
-            Navigator.pushNamed(context, AppRoutes.transactionCreate),
+        onPressed: () async {
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => Dialog(
+              insetPadding: const EdgeInsets.all(16),
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 520,
+                  maxHeight: 700,
+                ),
+                child: const CreateTransactionScreen(),
+              ),
+            ),
+          );
+          if (mounted) _loadMonthTransactions();
+        },
         icon: const Icon(Icons.add),
         label: const Text('New Transaction'),
       ),
@@ -376,6 +1104,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
           selectedGroup: syncedSelected,
           selectedCategory: syncedCategory,
           selectedCategoryGroup: syncedCategoryGroup,
+          selectedDebt: _selectedDebt,
           allBudgets: monthBudgets,
           allTransactions: monthTransactions,
           onClose: () => setState(() {
@@ -387,6 +1116,8 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
             _selectedCategory = null;
             _selectedCategoryGroup = null;
           }),
+          onDebtClose: () => setState(() => _selectedDebt = null),
+          onDebtPay: _showDebtPaymentDialog,
           onEditCategory: syncedCategory != null && syncedCategoryGroup != null
               ? () => _showEditCategorySheet(syncedCategoryGroup!, syncedCategory!)
               : null,
@@ -397,7 +1128,6 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
             }
           },
           onUpdateAmount: _updateCategoryAmount,
-          onCategoryDelete: _confirmDeleteCategory,
         );
 
         Widget budgetCard = Card(
@@ -424,7 +1154,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                 SliverToBoxAdapter(
                   child: _EmptyBudgetState(
                     monthLabel: _monthLabel,
-                    onStart: _showCreateGroupSheet,
+                    onStart: () => _showStartPlanningSheet(allBudgets),
                   ),
                 )
               else
@@ -456,8 +1186,6 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                       },
                       onUpdateAmount: (cat, amount) =>
                           _updateCategoryAmount(group, cat, amount),
-                      onCategoryDelete: (cat) =>
-                          _confirmDeleteCategory(group, cat),
                     );
                   }, childCount: monthBudgets.length),
                 ),
@@ -475,8 +1203,18 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                   title: 'DEBTS',
                   debts: debts,
                   isReceivable: false,
-                  onAdd: () =>
-                      Navigator.pushNamed(context, AppRoutes.debtsManagement),
+                  selectedDebt: _selectedDebt,
+                  onAdd: () => _showAddDebtSheet(isReceivable: false),
+                  onPay: _showDebtPaymentDialog,
+                  onUpdateMonthlyPayment: _updateDebtMonthlyPayment,
+                  onSelect: (d) {
+                    if (isWide) {
+                      setState(() => _selectedDebt =
+                          _selectedDebt?.id == d.id ? null : d);
+                    } else {
+                      _showDebtDetailSheet(d, monthTransactions);
+                    }
+                  },
                 ),
               ),
 
@@ -486,8 +1224,18 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                   title: 'RECEIVABLES',
                   debts: receivables,
                   isReceivable: true,
-                  onAdd: () =>
-                      Navigator.pushNamed(context, AppRoutes.debtsManagement),
+                  selectedDebt: _selectedDebt,
+                  onAdd: () => _showAddDebtSheet(isReceivable: true),
+                  onPay: _showDebtPaymentDialog,
+                  onUpdateMonthlyPayment: _updateDebtMonthlyPayment,
+                  onSelect: (d) {
+                    if (isWide) {
+                      setState(() => _selectedDebt =
+                          _selectedDebt?.id == d.id ? null : d);
+                    } else {
+                      _showDebtDetailSheet(d, monthTransactions);
+                    }
+                  },
                 ),
               ),
 
@@ -508,6 +1256,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                 onSummaryTap: isWide
                     ? null
                     : () => _showSummarySheet(context, buildSummaryPanel()),
+                onDelete: () => _confirmDeletePlan(monthBudgets),
               ),
             ),
 
@@ -713,12 +1462,14 @@ class _MonthHeader extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback? onSummaryTap;
+  final VoidCallback? onDelete;
 
   const _MonthHeader({
     required this.monthLabel,
     required this.onPrev,
     required this.onNext,
     this.onSummaryTap,
+    this.onDelete,
   });
 
   @override
@@ -740,7 +1491,154 @@ class _MonthHeader extends StatelessWidget {
             onPressed: onSummaryTap,
             tooltip: 'Summary & Transactions',
           ),
+        if (onDelete != null)
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: onDelete,
+            tooltip: 'Delete plan',
+            color: AppColors.textTertiary,
+          ),
       ],
+    );
+  }
+}
+
+// ─── Start Planning Sheet ─────────────────────────────────────────────────────
+
+class _StartPlanningSheet extends StatefulWidget {
+  final String monthKey;
+  final String monthLabel;
+  final String prevMonthKey;
+  final String prevMonthLabel;
+  final bool hasPrevBudgets;
+  final MonthPlanController monthPlanController;
+  final BudgetController budgetController;
+  final SupabaseService supabaseService;
+
+  const _StartPlanningSheet({
+    required this.monthKey,
+    required this.monthLabel,
+    required this.prevMonthKey,
+    required this.prevMonthLabel,
+    required this.hasPrevBudgets,
+    required this.monthPlanController,
+    required this.budgetController,
+    required this.supabaseService,
+  });
+
+  @override
+  State<_StartPlanningSheet> createState() => _StartPlanningSheetState();
+}
+
+class _StartPlanningSheetState extends State<_StartPlanningSheet> {
+  bool _loading = false;
+
+  Future<void> _copyFromPrev() async {
+    setState(() => _loading = true);
+    try {
+      await widget.monthPlanController.copyMonthPlan(
+        widget.prevMonthKey,
+        widget.monthKey,
+      );
+      // Refresh budget list so the new budgets appear immediately
+      await widget.budgetController.refreshBudgetsWithSpentAmounts();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to copy: $e')),
+        );
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  void _startFresh() {
+    Navigator.pop(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CreateGroupSheet(
+        monthKey: widget.monthKey,
+        monthLabel: widget.monthLabel,
+        budgetController: widget.budgetController,
+        supabaseService: widget.supabaseService,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Start Planning', style: AppTextStyles.h4),
+            const SizedBox(height: 4),
+            Text(
+              widget.monthLabel,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            if (widget.hasPrevBudgets) ...[
+              // Copy option
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _loading ? null : _copyFromPrev,
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.copy_outlined, size: 18),
+                  label: Text(
+                    _loading
+                        ? 'Copying…'
+                        : 'Copy from ${widget.prevMonthLabel}',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Start fresh option
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _loading ? null : _startFresh,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Start Fresh'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -806,7 +1704,6 @@ class _BudgetGroupCard extends StatelessWidget {
   final void Function(BudgetCategory) onCategoryDetailTap;
   final void Function(BudgetCategory) onCategoryEditTap;
   final Future<void> Function(BudgetCategory, double) onUpdateAmount;
-  final void Function(BudgetCategory) onCategoryDelete;
 
   const _BudgetGroupCard({
     required this.group,
@@ -818,7 +1715,6 @@ class _BudgetGroupCard extends StatelessWidget {
     required this.onCategoryDetailTap,
     required this.onCategoryEditTap,
     required this.onUpdateAmount,
-    required this.onCategoryDelete,
   });
 
   @override
@@ -964,38 +1860,49 @@ class _BudgetGroupCard extends StatelessWidget {
         // ── Category rows ────────────────────────────────────────────────
         if (group.categories.isNotEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            color: Theme.of(context)
-                .colorScheme
-                .surfaceContainerHighest
-                .withValues(alpha: 0.2),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.5),
+              border: Border.symmetric(
+                horizontal: BorderSide(
+                  color: AppColors.border,
+                  width: 0.5,
+                ),
+              ),
+            ),
             child: Row(
-              children: const [
+              children: [
                 Expanded(
-                  child: Text('Category',
+                  child: Text('CATEGORY',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary,
-                          fontWeight: FontWeight.w500)),
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6)),
                 ),
                 SizedBox(
                   width: 80,
-                  child: Text('Planned',
+                  child: Text('PLANNED',
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary,
-                          fontWeight: FontWeight.w500)),
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6)),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 SizedBox(
                   width: 72,
-                  child: Text('Spent',
+                  child: Text('SPENT',
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary,
-                          fontWeight: FontWeight.w500)),
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6)),
                 ),
               ],
             ),
@@ -1008,7 +1915,6 @@ class _BudgetGroupCard extends StatelessWidget {
               onDetailTap: () => onCategoryDetailTap(cat),
               onEditTap: () => onCategoryEditTap(cat),
               onUpdateAmount: (amount) => onUpdateAmount(cat, amount),
-              onLongPress: () => onCategoryDelete(cat),
             )),
         _GhostAddRow(label: 'Add Category', onTap: onAddRow),
       ],
@@ -1025,7 +1931,6 @@ class _CategoryRow extends StatefulWidget {
   final VoidCallback onDetailTap;
   final VoidCallback onEditTap;
   final Future<void> Function(double) onUpdateAmount;
-  final VoidCallback onLongPress;
 
   const _CategoryRow({
     super.key,
@@ -1035,7 +1940,6 @@ class _CategoryRow extends StatefulWidget {
     required this.onDetailTap,
     required this.onEditTap,
     required this.onUpdateAmount,
-    required this.onLongPress,
   });
 
   @override
@@ -1129,7 +2033,7 @@ class _CategoryRowState extends State<_CategoryRow> {
 
     return InkWell(
       onTap: widget.onDetailTap,
-      onLongPress: widget.onLongPress,
+      onLongPress: widget.onEditTap,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
         child: Column(
@@ -1145,20 +2049,6 @@ class _CategoryRowState extends State<_CategoryRow> {
                       color: AppColors.textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Edit button
-                GestureDetector(
-                  onTap: widget.onEditTap,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 4),
-                    child: Icon(
-                      Icons.edit_outlined,
-                      size: 15,
-                      color: AppColors.textSecondary,
-                    ),
                   ),
                 ),
 
@@ -1468,6 +2358,138 @@ class _CategoryDetailContent extends StatelessWidget {
   }
 }
 
+// ─── Debt Detail Content (shared between side panel and mobile sheet) ─────────
+
+class _DebtDetailContent extends StatelessWidget {
+  final Debt debt;
+  final List<Transaction> transactions;
+  final ScrollController? scrollController;
+  final VoidCallback? onPay;
+
+  const _DebtDetailContent({
+    required this.debt,
+    required this.transactions,
+    this.scrollController,
+    this.onPay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isReceivable = debt.type == DebtType.lending;
+    final paid = debt.paidAmount;
+    final progress = debt.progress;
+    final progressColor =
+        isReceivable ? AppColors.accent : AppColors.success;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Stats header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                debt.description.isNotEmpty
+                    ? debt.description
+                    : debt.personName,
+                style: AppTextStyles.h4,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _StatChip(
+                    label: 'Original',
+                    value: _fmt(debt.originalAmount),
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  _StatChip(
+                    label: isReceivable ? 'Collected' : 'Paid',
+                    value: _fmt(paid),
+                    color:
+                        paid > 0 ? AppColors.textPrimary : AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: 8),
+                  _StatChip(
+                    label: 'Remaining',
+                    value: _fmt(debt.remainingAmount),
+                    color: debt.remainingAmount > 0
+                        ? AppColors.error
+                        : AppColors.success,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor:
+                      AppColors.textTertiary.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${(progress * 100).toStringAsFixed(0)}% complete',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                  if (debt.monthlyPaymentAmount > 0)
+                    Text(
+                      'Monthly: ${_fmt(debt.monthlyPaymentAmount)}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              Text(
+                'PAYMENT HISTORY',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Transactions list
+        Expanded(
+          child: transactions.isEmpty
+              ? Center(
+                  child: Text(
+                    'No payments recorded yet',
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.textTertiary),
+                  ),
+                )
+              : ListView.separated(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
+                  itemCount: transactions.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) =>
+                      _TransactionMiniRow(transaction: transactions[i]),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─── Category Detail Sheet (mobile bottom sheet wrapper) ─────────────────────
 
 class _CategoryDetailSheet extends StatelessWidget {
@@ -1594,29 +2616,33 @@ class _SideSummaryPanel extends StatefulWidget {
   final Budget? selectedGroup;
   final BudgetCategory? selectedCategory;
   final Budget? selectedCategoryGroup;
+  final Debt? selectedDebt;
   final List<Budget> allBudgets;
   final List<Transaction> allTransactions;
   final VoidCallback onClose;
   final VoidCallback onCategoryPanelClose;
+  final VoidCallback onDebtClose;
+  final void Function(Debt) onDebtPay;
   final VoidCallback? onEditCategory;
   final void Function(Budget) onAddCategory;
   final void Function(BudgetCategory) onCategoryDetailTap;
   final Future<void> Function(Budget, BudgetCategory, double) onUpdateAmount;
-  final void Function(Budget, BudgetCategory) onCategoryDelete;
 
   const _SideSummaryPanel({
     required this.selectedGroup,
     required this.selectedCategory,
     required this.selectedCategoryGroup,
+    required this.selectedDebt,
     required this.allBudgets,
     required this.allTransactions,
     required this.onClose,
     required this.onCategoryPanelClose,
+    required this.onDebtClose,
+    required this.onDebtPay,
     this.onEditCategory,
     required this.onAddCategory,
     required this.onCategoryDetailTap,
     required this.onUpdateAmount,
-    required this.onCategoryDelete,
   });
 
   @override
@@ -1669,6 +2695,91 @@ class _SideSummaryPanelState extends State<_SideSummaryPanel>
     final theme = Theme.of(context);
     final cat = widget.selectedCategory;
     final group = widget.selectedGroup;
+
+    // ── Debt detail mode ────────────────────────────────────────────────
+    final debt = widget.selectedDebt;
+    if (debt != null) {
+      final isReceivable = debt.type == DebtType.lending;
+      final debtTxns = widget.allTransactions
+          .where((t) => t.debtId == debt.id)
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.4),
+              border: Border(top: BorderSide(color: theme.dividerColor)),
+            ),
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+            child: Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (isReceivable ? AppColors.success : AppColors.error)
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isReceivable ? 'RECEIVABLE' : 'DEBT',
+                    style: AppTextStyles.caption.copyWith(
+                      color:
+                          isReceivable ? AppColors.success : AppColors.error,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    debt.personName,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => widget.onDebtPay(debt),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    isReceivable ? 'Collect' : 'Pay',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 15),
+                  onPressed: widget.onDebtClose,
+                  color: AppColors.textTertiary,
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _DebtDetailContent(
+              debt: debt,
+              transactions: debtTxns,
+            ),
+          ),
+        ],
+      );
+    }
 
     // ── Category detail mode ───────────────────────────────────────────
     if (cat != null) {
@@ -2305,10 +3416,12 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
 class _EditGroupSheet extends StatefulWidget {
   final Budget group;
   final BudgetController budgetController;
+  final VoidCallback? onDelete;
 
   const _EditGroupSheet({
     required this.group,
     required this.budgetController,
+    this.onDelete,
   });
 
   @override
@@ -2426,6 +3539,19 @@ class _EditGroupSheetState extends State<_EditGroupSheet> {
                     : const Text('Save'),
               ),
             ),
+            if (widget.onDelete != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: _saving ? null : widget.onDelete,
+                  child: const Text(
+                    'Delete Group',
+                    style: TextStyle(color: AppColors.error),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -2440,12 +3566,14 @@ class _EditCategorySheet extends StatefulWidget {
   final BudgetCategory category;
   final FinanceCategoryController categoryController;
   final BudgetController budgetController;
+  final VoidCallback? onDelete;
 
   const _EditCategorySheet({
     required this.group,
     required this.category,
     required this.categoryController,
     required this.budgetController,
+    this.onDelete,
   });
 
   @override
@@ -2583,6 +3711,19 @@ class _EditCategorySheetState extends State<_EditCategorySheet> {
                     : const Text('Save'),
               ),
             ),
+            if (widget.onDelete != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: _saving ? null : widget.onDelete,
+                  child: const Text(
+                    'Delete Category',
+                    style: TextStyle(color: AppColors.error),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -2596,13 +3737,21 @@ class _DebtSection extends StatelessWidget {
   final String title;
   final List<Debt> debts;
   final bool isReceivable;
+  final Debt? selectedDebt;
   final VoidCallback onAdd;
+  final void Function(Debt) onPay;
+  final void Function(Debt) onSelect;
+  final Future<void> Function(Debt, double) onUpdateMonthlyPayment;
 
   const _DebtSection({
     required this.title,
     required this.debts,
     required this.isReceivable,
     required this.onAdd,
+    required this.onPay,
+    required this.onSelect,
+    required this.onUpdateMonthlyPayment,
+    this.selectedDebt,
   });
 
   @override
@@ -2678,79 +3827,267 @@ class _DebtSection extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 46), // spacer for Pay/Collect button column
             ],
           ),
         ),
-        ...debts.map(
-          (d) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        d.personName,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (d.isOverdue)
-                        Text(
-                          'Overdue',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.error,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: 70,
-                  child: Text(
-                    _fmt(d.remainingAmount),
-                    textAlign: TextAlign.right,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.error,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 70,
-                  child: Text(
-                    _fmt(d.monthlyPaymentAmount),
-                    textAlign: TextAlign.right,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 70,
-                  child: Text(
-                    _fmt(d.paidAmount),
-                    textAlign: TextAlign.right,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.success,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        ...debts.map((d) => _DebtRow(
+              key: ValueKey(d.id),
+              debt: d,
+              isReceivable: isReceivable,
+              isSelected: selectedDebt?.id == d.id,
+              onSelect: () => onSelect(d),
+              onPay: () => onPay(d),
+              onUpdateMonthlyPayment: (amount) =>
+                  onUpdateMonthlyPayment(d, amount),
+            )),
         // Ghost add button
         _GhostAddRow(
           label: isReceivable ? 'Add Receivable' : 'Add Debt',
           onTap: onAdd,
         ),
       ],
+    );
+  }
+}
+
+// ─── Debt Row (with inline planned-amount editing) ────────────────────────────
+
+class _DebtRow extends StatefulWidget {
+  final Debt debt;
+  final bool isReceivable;
+  final bool isSelected;
+  final VoidCallback onSelect;
+  final VoidCallback onPay;
+  final Future<void> Function(double) onUpdateMonthlyPayment;
+
+  const _DebtRow({
+    super.key,
+    required this.debt,
+    required this.isReceivable,
+    required this.isSelected,
+    required this.onSelect,
+    required this.onPay,
+    required this.onUpdateMonthlyPayment,
+  });
+
+  @override
+  State<_DebtRow> createState() => _DebtRowState();
+}
+
+class _DebtRowState extends State<_DebtRow> {
+  bool _editing = false;
+  bool _saving = false;
+  late TextEditingController _amountCtrl;
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _amountCtrl = TextEditingController(
+      text: widget.debt.monthlyPaymentAmount.toStringAsFixed(2),
+    );
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(_DebtRow old) {
+    super.didUpdateWidget(old);
+    if (!_editing &&
+        old.debt.monthlyPaymentAmount != widget.debt.monthlyPaymentAmount) {
+      _amountCtrl.text =
+          widget.debt.monthlyPaymentAmount.toStringAsFixed(2);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus && _editing) _commitEdit();
+  }
+
+  void _startEdit() => setState(() {
+        _editing = true;
+        _amountCtrl.selection = TextSelection(
+            baseOffset: 0, extentOffset: _amountCtrl.text.length);
+      });
+
+  Future<void> _commitEdit() async {
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    if (amount < 0 || amount == widget.debt.monthlyPaymentAmount) {
+      _amountCtrl.text =
+          widget.debt.monthlyPaymentAmount.toStringAsFixed(2);
+      if (mounted) setState(() => _editing = false);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await widget.onUpdateMonthlyPayment(amount);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _editing = false;
+          _saving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final d = widget.debt;
+
+    return Material(
+      color: widget.isSelected
+          ? theme.colorScheme.primary.withValues(alpha: 0.07)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: widget.onSelect,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
+              // Name + overdue
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      d.personName,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: widget.isSelected
+                            ? theme.colorScheme.primary
+                            : AppColors.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (d.isOverdue)
+                      Text('Overdue',
+                          style: AppTextStyles.caption
+                              .copyWith(color: AppColors.error)),
+                  ],
+                ),
+              ),
+              // Balance
+              SizedBox(
+                width: 70,
+                child: Text(
+                  _fmt(d.remainingAmount),
+                  textAlign: TextAlign.right,
+                  style:
+                      AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Planned — tap to edit (absorb tap so row select doesn't fire)
+              GestureDetector(
+                onTap: _editing ? null : _startEdit,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 70,
+                  child: _editing
+                      ? TextField(
+                          controller: _amountCtrl,
+                          focusNode: _focusNode,
+                          autofocus: true,
+                          textAlign: TextAlign.right,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide(
+                                  color: AppColors.accent, width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide(
+                                  color: AppColors.accent, width: 1.5),
+                            ),
+                            suffixIcon: _saving
+                                ? const Padding(
+                                    padding: EdgeInsets.all(6),
+                                    child: SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 1.5),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          onSubmitted: (_) => _commitEdit(),
+                        )
+                      : Text(
+                          _fmt(d.monthlyPaymentAmount),
+                          textAlign: TextAlign.right,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            decoration: TextDecoration.underline,
+                            decorationStyle: TextDecorationStyle.dotted,
+                            decorationColor: AppColors.textTertiary,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Paid
+              SizedBox(
+                width: 70,
+                child: Text(
+                  _fmt(d.paidAmount),
+                  textAlign: TextAlign.right,
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.success),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Pay / Collect button
+              if (d.status == DebtStatus.active)
+                SizedBox(
+                  height: 28,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: widget.onPay,
+                    child: Text(
+                      widget.isReceivable ? 'Collect' : 'Pay',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: widget.isReceivable
+                            ? AppColors.success
+                            : AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(width: 40),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -2876,6 +4213,13 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
           const SnackBar(content: Text('Enter a valid amount')));
       return;
     }
+    final budgetId = widget.group.id;
+    if (budgetId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Budget group has no ID — please try again.')),
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       // Derive CategoryType from the group's BudgetType
@@ -2918,7 +4262,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
 
       await widget.onSave(
         BudgetCategory(
-          budgetId: widget.group.id!,
+          budgetId: budgetId,
           financeCategoryId: created.id ?? '',
           targetAmount: amount,
           financeCategory: created,
@@ -3324,5 +4668,387 @@ class _CommitmentTile extends StatelessWidget {
         ).showSnackBar(const SnackBar(content: Text('Payment skipped')));
       }
     }
+  }
+}
+
+// ─── Add Debt / Receivable Sheet ──────────────────────────────────────────────
+
+class _AddDebtSheet extends StatefulWidget {
+  final bool isReceivable;
+  final AccountController accountController;
+  final FinanceCategoryController categoryController;
+  final SupabaseService supabaseService;
+  final Future<void> Function(Debt debt, String? categoryId) onSave;
+
+  const _AddDebtSheet({
+    required this.isReceivable,
+    required this.accountController,
+    required this.categoryController,
+    required this.supabaseService,
+    required this.onSave,
+  });
+
+  @override
+  State<_AddDebtSheet> createState() => _AddDebtSheetState();
+}
+
+class _AddDebtSheetState extends State<_AddDebtSheet> {
+  final _personCtrl = TextEditingController();
+  final _amountCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _monthlyCtrl = TextEditingController();
+
+  late DebtType _type;
+  String? _accountId;
+  String? _categoryId;
+  FinanceCategory? _selectedCategory;
+  DateTime? _dueDate;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _type =
+        widget.isReceivable ? DebtType.lending : DebtType.borrowing;
+  }
+
+  @override
+  void dispose() {
+    _personCtrl.dispose();
+    _amountCtrl.dispose();
+    _descCtrl.dispose();
+    _monthlyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _personCtrl.text.trim();
+    final amount = double.tryParse(_amountCtrl.text);
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Enter a person name')));
+      return;
+    }
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
+      return;
+    }
+    // If one of account/category is filled, require both (they're needed together for the initial transaction)
+    if ((_accountId != null) != (_categoryId != null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Select both account and category to record the initial transaction, or leave both empty to skip it.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final debt = Debt(
+        type: _type,
+        personName: name,
+        description: _descCtrl.text.trim(),
+        originalAmount: amount,
+        remainingAmount: amount,
+        startDate: DateTime.now(),
+        dueDate: _dueDate,
+        userId: widget.supabaseService.userId,
+        accountId: _accountId,
+        monthlyPaymentAmount:
+            double.tryParse(_monthlyCtrl.text) ?? 0,
+      );
+      await widget.onSave(debt, _categoryId);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isReceivable = _type == DebtType.lending;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Type toggle
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isReceivable ? 'Add Receivable' : 'Add Debt',
+                      style: AppTextStyles.h4,
+                    ),
+                  ),
+                  SegmentedButton<DebtType>(
+                    segments: const [
+                      ButtonSegment(
+                        value: DebtType.borrowing,
+                        label: Text('Debt'),
+                      ),
+                      ButtonSegment(
+                        value: DebtType.lending,
+                        label: Text('Receivable'),
+                      ),
+                    ],
+                    selected: {_type},
+                    onSelectionChanged: (s) => setState(() {
+                      _type = s.first;
+                      _categoryId = null; // reset category when type changes
+                    }),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Person name
+              TextField(
+                controller: _personCtrl,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: isReceivable ? 'Borrower Name' : 'Lender Name',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Amount
+              TextField(
+                controller: _amountCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                  border: OutlineInputBorder(),
+                  prefixText: '₱ ',
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Initial transaction (optional)
+              Text(
+                'Initial Transaction (optional)',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isReceivable
+                    ? 'Records money leaving your wallet when you lend it.'
+                    : 'Records money entering your wallet when you borrow.',
+                style: AppTextStyles.caption
+                    .copyWith(color: AppColors.textTertiary),
+              ),
+              const SizedBox(height: 8),
+              AsyncStreamBuilder<List<Account>>(
+                state: widget.accountController,
+                builder: (_, accounts) => DropdownButtonFormField<String>(
+                  initialValue: _accountId,
+                  decoration: const InputDecoration(
+                    labelText: 'Account (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                        value: null, child: Text('— Skip —')),
+                    ...accounts.map((a) =>
+                        DropdownMenuItem(value: a.id, child: Text(a.name))),
+                  ],
+                  onChanged: (v) => setState(() => _accountId = v),
+                ),
+                loadingBuilder: (_) => const LinearProgressIndicator(),
+                errorBuilder: (_, m) => Text(m),
+              ),
+              const SizedBox(height: 12),
+
+              // Category picker (grouped by budget)
+              AsyncStreamBuilder<List<FinanceCategory>>(
+                state: widget.categoryController,
+                builder: (_, allCats) {
+                  final budgetCtrl = locator.get<BudgetController>();
+                  final allBudgets = budgetCtrl.data ?? [];
+                  final targetType = isReceivable
+                      ? CategoryType.expense
+                      : CategoryType.income;
+                  final groups = _buildGroupedCategories(
+                    allCategories: allCats,
+                    allBudgets: allBudgets,
+                    targetType: targetType,
+                    monthKey:
+                        '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}',
+                  );
+                  return InkWell(
+                    onTap: () async {
+                      final picked = await _showGroupedCategoryDialog(
+                        context,
+                        groups: groups,
+                        selectedId: _categoryId,
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedCategory = picked;
+                          _categoryId = picked.id;
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Category (optional)',
+                        border: const OutlineInputBorder(),
+                        helperText: isReceivable
+                            ? 'Expense category — money lent out'
+                            : 'Income category — money borrowed',
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14),
+                      ),
+                      child: Row(
+                        children: [
+                          if (_selectedCategory != null) ...[
+                            Icon(_selectedCategory!.type.icon,
+                                size: 16, color: _selectedCategory!.type.color),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(
+                            child: Text(
+                              _selectedCategory?.name ?? '— Skip —',
+                              style: TextStyle(
+                                color: _selectedCategory == null
+                                    ? AppColors.textTertiary
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.unfold_more,
+                              size: 16, color: AppColors.textTertiary),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loadingBuilder: (_) => const LinearProgressIndicator(),
+                errorBuilder: (_, m) => Text(m),
+              ),
+              const SizedBox(height: 12),
+
+              // Description (optional)
+              TextField(
+                controller: _descCtrl,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Monthly payment (optional)
+              TextField(
+                controller: _monthlyCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Monthly Payment (optional)',
+                  border: OutlineInputBorder(),
+                  prefixText: '₱ ',
+                  helperText: 'Fixed amount expected each month',
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Due date (optional)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Due Date (optional)'),
+                subtitle: Text(
+                  _dueDate != null
+                      ? DateFormat('MMM d, yyyy').format(_dueDate!)
+                      : 'Not set',
+                  style: AppTextStyles.caption
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_dueDate != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () => setState(() => _dueDate = null),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_today, size: 18),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _dueDate ?? DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now()
+                              .add(const Duration(days: 3650)),
+                        );
+                        if (d != null) setState(() => _dueDate = d);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(isReceivable ? 'Add Receivable' : 'Add Debt'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

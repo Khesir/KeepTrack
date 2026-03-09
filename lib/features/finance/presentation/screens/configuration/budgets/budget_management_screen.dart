@@ -30,25 +30,20 @@ class _BudgetManagementScreenState
 
   @override
   void onReady() {
-    // Load budgets with spent amounts when screen is ready
-    _controller.loadBudgetsWithSpentAmounts();
-  }
-
-  @override
-  void onDispose() {
-    _controller.dispose();
+    // Silently refresh so existing data stays visible while loading
+    _controller.refreshBudgetsWithSpentAmounts();
   }
 
   void _createBudget() {
     context.goToBudgetCreate().then(
-      (_) => _controller.loadBudgetsWithSpentAmounts(),
+      (_) => _controller.refreshBudgetsWithSpentAmounts(),
     );
   }
 
   void _openBudget(Budget budget) {
     context
         .goToBudgetDetail(budget)
-        .then((_) => _controller.loadBudgetsWithSpentAmounts());
+        .then((_) => _controller.refreshBudgetsWithSpentAmounts());
   }
 
   Future<void> _refreshAllBudgets() async {

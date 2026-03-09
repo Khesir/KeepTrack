@@ -49,6 +49,8 @@ import 'migrations/045_add_pomodoro_stopwatch_type.dart';
 import 'migrations/046_add_debt_monthly_payment_fields.dart';
 import 'migrations/047_add_goal_fee_fields.dart';
 import 'migrations/048_add_fee_to_payment_rpcs.dart';
+import 'migrations/049_create_month_plans_table.dart';
+import 'migrations/050_backfill_month_plans_from_budgets.dart';
 
 /// Manages database migrations
 ///
@@ -309,6 +311,8 @@ class MigrationManager {
     Migration046AddDebtMonthlyPaymentFields(),
     Migration047AddGoalFeeFields(),
     Migration048AddFeeToPaymentRpcs(),
+    Migration049CreateMonthPlansTable(),
+    Migration050BackfillMonthPlansFromBudgets(),
     // Add new migrations here:
   ];
 

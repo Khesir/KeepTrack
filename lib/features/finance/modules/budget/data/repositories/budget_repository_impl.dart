@@ -49,6 +49,18 @@ class BudgetRepositoryImpl implements BudgetRepository {
   }
 
   @override
+  Future<Result<List<Budget>>> getBudgetsByMonth(String month) async {
+    try {
+      final models = await dataSource.getBudgetsByMonth(month);
+      return Result.success(models);
+    } catch (e) {
+      return Result.error(
+        UnknownFailure(message: 'Failed to get budgets for month $month: $e'),
+      );
+    }
+  }
+
+  @override
   Future<Result<Budget>> getActiveBudget() async {
     final result = await getBudgets();
     if (result.isError) {

@@ -47,7 +47,7 @@ class _TaskModuleScreenState extends State<TaskModuleScreen> {
     TasksTabNew(),
     ProjectsTab(),
     PomodoroTab(),
-    ProfileScreen(moduleType: ModuleType.task),
+    ProfileScreen(),
   ];
 
   @override

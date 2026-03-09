@@ -95,4 +95,29 @@ extension AsyncStateExtension<T> on StreamState<AsyncState<T>> {
       );
     }
   }
+
+  /// Execute async operation WITHOUT showing a loading state.
+  /// Keeps existing data visible during the operation.
+  /// Use this for mutations and background refreshes to avoid full-page spinners.
+  Future<void> executeSilent(Future<T> Function() operation) async {
+    try {
+      final result = await operation();
+      emit(AsyncData(result));
+    } on Failure catch (failure) {
+      emit(AsyncError(failure.message, failure));
+    } catch (e, stackTrace) {
+      print('StreamState unexpected error: $e');
+      print('Stack trace: $stackTrace');
+      emit(
+        AsyncError(
+          'Unexpected error: ${e.toString()}',
+          UnknownFailure(
+            message: e.toString(),
+            originalError: e,
+            stackTrace: stackTrace,
+          ),
+        ),
+      );
+    }
+  }
 }

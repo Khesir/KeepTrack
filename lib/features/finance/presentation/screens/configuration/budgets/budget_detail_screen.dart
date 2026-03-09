@@ -90,7 +90,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
 
   @override
   void onReady() {
-    _controller.loadBudgets();
+    _controller.refreshBudgetsWithSpentAmounts();
     _accountController.loadAccounts();
     // Load all transactions to ensure we get all budget transactions
     _transactionController.loadAllTransactions();
@@ -430,8 +430,8 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
       context,
     ).pushNamed('/budget/edit', arguments: _currentBudget);
 
-    // Reload budget after returning from edit (the stream listener will update the UI)
-    await _controller.loadBudgets();
+    // Silently refresh after returning from edit
+    await _controller.refreshBudgetsWithSpentAmounts();
   }
 
   Future<void> _deleteBudget() async {

@@ -218,6 +218,64 @@ class BudgetDataSourceSupabase implements BudgetDataSource {
   }
 
   @override
+  Future<List<BudgetModel>> getBudgetsByMonth(String month) async {
+    try {
+      final response = await supabaseService.client
+          .from(tableName)
+          .select('''
+            *,
+            budget_categories (
+              *,
+              finance_categories (*)
+            )
+          ''')
+          .eq('month', month)
+          .eq('user_id', supabaseService.userId!)
+          .order('budget_type', ascending: true);
+
+      return (response as List).map((doc) {
+        final budgetData = Map<String, dynamic>.from(doc);
+        final categoriesData = budgetData.remove('budget_categories') as List?;
+        final budget = BudgetModel.fromJson(budgetData);
+
+        if (categoriesData == null || categoriesData.isEmpty) return budget;
+
+        final categories = categoriesData.map((catData) {
+          final categoryMap = Map<String, dynamic>.from(catData);
+          final financeCategoryData =
+              categoryMap.remove('finance_categories') as Map<String, dynamic>?;
+          final budgetCategory = BudgetCategoryModel.fromJson(categoryMap);
+
+          if (financeCategoryData != null) {
+            final financeCategory =
+                FinanceCategoryModel.fromJson(financeCategoryData);
+            return BudgetCategoryModel(
+              id: budgetCategory.id,
+              budgetId: budgetCategory.budgetId,
+              financeCategoryId: budgetCategory.financeCategoryId,
+              userId: budgetCategory.userId,
+              targetAmount: budgetCategory.targetAmount,
+              financeCategory: financeCategory.toEntity(),
+              createdAt: budgetCategory.createdAt,
+              updatedAt: budgetCategory.updatedAt,
+            );
+          }
+
+          return budgetCategory;
+        }).toList();
+
+        return budget.withCategories(categories);
+      }).toList();
+    } catch (e, stackTrace) {
+      throw UnknownFailure(
+        message: 'Failed to fetch budgets for month $month',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
   Future<BudgetModel> createBudget(BudgetModel budget) async {
     try {
       // Create budget WITHOUT categories first

@@ -4,6 +4,10 @@ import 'package:keep_track/features/finance/modules/account/data/repositories/ac
 import 'package:keep_track/features/finance/modules/account/domain/repositories/account_repository.dart';
 import 'package:keep_track/features/finance/modules/budget/data/datasources/budget_category_datasource.dart';
 import 'package:keep_track/features/finance/modules/budget/data/datasources/supabase/budget_category_datasource_supabase.dart';
+import 'package:keep_track/features/finance/modules/budget/data/datasources/month_plan_datasource.dart';
+import 'package:keep_track/features/finance/modules/budget/data/datasources/supabase/month_plan_datasource_supabase.dart';
+import 'package:keep_track/features/finance/modules/budget/data/repositories/month_plan_repository_impl.dart';
+import 'package:keep_track/features/finance/modules/budget/domain/repositories/month_plan_repository.dart';
 import 'package:keep_track/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
 import 'package:keep_track/features/finance/modules/finance_category/data/datasources/supabase/finance_category_datasource_supabase.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
@@ -33,6 +37,7 @@ import 'modules/planned_payment/data/datasources/supabase/planned_payment_dataso
 import 'modules/planned_payment/data/repositories/planned_payment_repository_impl.dart';
 import 'modules/planned_payment/domain/repositories/planned_payment_repository.dart';
 import 'presentation/state/account_controller.dart';
+import 'presentation/state/month_plan_controller.dart';
 import 'presentation/state/finance_category_controller.dart';
 import 'presentation/state/transaction_controller.dart';
 import 'presentation/state/goal_controller.dart';
@@ -77,6 +82,16 @@ void setupFinanceDependencies() {
     final bugetCategory = locator.get<BudgetCategoryDataSource>();
     return BudgetDataSourceSupabase(supabaseService, bugetCategory);
   });
+  locator.registerFactory<MonthPlanDataSource>(() {
+    final supabaseService = locator.get<SupabaseService>();
+    final budgetDataSource = locator.get<BudgetDataSource>();
+    final categoryDataSource = locator.get<BudgetCategoryDataSource>();
+    return MonthPlanDataSourceSupabase(
+      supabaseService,
+      budgetDataSource,
+      categoryDataSource,
+    );
+  });
 
   // Repositories
   locator.registerFactory<FinanceCategoryRepository>(() {
@@ -90,6 +105,9 @@ void setupFinanceDependencies() {
       locator.get<BudgetDataSource>(),
       locator.get<BudgetCategoryDataSource>(),
     ),
+  );
+  locator.registerLazySingleton<MonthPlanRepository>(
+    () => MonthPlanRepositoryImpl(locator.get<MonthPlanDataSource>()),
   );
   locator.registerFactory<AccountRepository>(() {
     final dataSource = locator.get<AccountDataSource>();
@@ -126,7 +144,11 @@ void setupFinanceDependencies() {
   });
   locator.registerFactory<TransactionController>(() {
     final repository = locator.get<TransactionRepository>();
-    return TransactionController(repository);
+    return TransactionController(
+      repository,
+      onMutated: () =>
+          locator.get<BudgetController>().refreshBudgetsWithSpentAmounts(),
+    );
   });
   locator.registerFactory<GoalController>(() {
     final repository = locator.get<GoalRepository>();
@@ -145,8 +167,12 @@ void setupFinanceDependencies() {
     final repository = locator.get<FinanceCategoryRepository>();
     return FinanceCategoryController(repository);
   });
-  locator.registerFactory<BudgetController>(() {
+  locator.registerLazySingleton<BudgetController>(() {
     final repository = locator.get<BudgetRepository>();
     return BudgetController(repository);
+  });
+  locator.registerLazySingleton<MonthPlanController>(() {
+    final repository = locator.get<MonthPlanRepository>();
+    return MonthPlanController(repository);
   });
 }

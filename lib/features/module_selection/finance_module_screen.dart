@@ -30,13 +30,13 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
 
-  // 0=Budget, 1=Accounts, 2=Goals, 3=Logs, 4=Profile
+  // 0=Budget, 1=Accounts, 2=Goals, 3=Logs, 4=Insights
   final List<Widget> _allScreens = const [
     BudgetMonthScreen(), // Index 0 - Budget tab
     AccountsTabNew(), // Index 1 - Accounts tab
     GoalsTabNew(), // Index 2 - Goals tab
     LogsScreen(), // Index 3
-    ProfileScreen(moduleType: ModuleType.finance), // Index 4
+    ProfileScreen(), // Index 4 - Insights
   ];
 
   @override
@@ -152,8 +152,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildMobileLayout() {
-    // Mobile nav: 0=Budget, 1=Accounts, 2=Goals, 3=Profile
-    // _allScreens: 0=Budget, 1=Accounts, 2=Goals, 3=Logs(desktop), 4=Profile
+    // Mobile nav: 0=Budget, 1=Accounts, 2=Goals, 3=Insights
+    // _allScreens: 0=Budget, 1=Accounts, 2=Goals, 3=Logs(desktop), 4=Insights
     // Nav index → allScreens index
     const navToScreen = [0, 1, 2, 4];
     final mobileNavIndex = navToScreen.indexOf(_currentIndex);
@@ -184,8 +184,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             label: 'Goals',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.insights_outlined),
+            label: 'Insights',
           ),
         ],
       ),
@@ -216,7 +216,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                 _buildNavItem('Accounts', Icons.account_balance_wallet, 1),
                 _buildNavItem('Goals', Icons.flag, 2),
                 _buildNavItem('Logs', Icons.bug_report, 3),
-                _buildNavItem('Profile', Icons.person, 4),
+                _buildNavItem('Insights', Icons.insights_outlined, 4),
               ],
             ),
           ),

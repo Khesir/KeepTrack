@@ -7,7 +7,12 @@ import '../../modules/transaction/domain/repositories/transaction_repository.dar
 class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
   final TransactionRepository _repository;
 
-  TransactionController(this._repository) : super(const AsyncLoading()) {
+  /// Called after any create/update/delete mutation so other controllers
+  /// (e.g. BudgetController) can react without tight coupling.
+  final void Function()? onMutated;
+
+  TransactionController(this._repository, {this.onMutated})
+      : super(const AsyncLoading()) {
     loadRecentTransactions();
   }
 
@@ -66,30 +71,33 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
 
   /// Create a new transaction
   Future<void> createTransaction(Transaction transaction) async {
-    await execute(() async {
+    await executeSilent(() async {
       final created = await _repository
           .createTransaction(transaction)
           .then((r) => r.unwrap());
       final current = data ?? [];
       return [...current, created];
     });
+    onMutated?.call();
   }
 
   /// Update an existing transaction
   Future<void> updateTransaction(Transaction transaction) async {
-    await execute(() async {
+    await executeSilent(() async {
       await _repository.updateTransaction(transaction).then((r) => r.unwrap());
       await loadRecentTransactions();
       return data ?? [];
     });
+    onMutated?.call();
   }
 
   /// Delete a transaction
   Future<void> deleteTransaction(String id) async {
-    await execute(() async {
+    await executeSilent(() async {
       await _repository.deleteTransaction(id).then((r) => r.unwrap());
       await loadRecentTransactions();
       return data ?? [];
     });
+    onMutated?.call();
   }
 }

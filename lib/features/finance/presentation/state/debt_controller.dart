@@ -86,6 +86,17 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     });
   }
 
+  /// Create a debt record only, without an initial transaction.
+  /// Use when no wallet is involved (pre-existing or informal debt).
+  Future<void> createDebtOnly(Debt debt) async {
+    await execute(() async {
+      await _debtRepository.createDebt(debt).then((r) => r.unwrap());
+      await loadDebts();
+      final current = data ?? [];
+      return current;
+    });
+  }
+
   /// Create a new debt and automatically create associated transaction
   /// Uses RPC function for atomic operation
   /// Deprecated: Use createDebtWithCategory instead

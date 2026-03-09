@@ -18,6 +18,10 @@ abstract class BudgetDataSource {
   /// Get budget with spent amounts calculated from transactions
   Future<BudgetModel?> getBudgetWithSpentAmounts(String budgetId);
 
+  /// Get all budgets for a given month (YYYY-MM) — returns multiple budgets
+  /// (e.g., one income + one expense budget for the same month)
+  Future<List<BudgetModel>> getBudgetsByMonth(String month);
+
   /// Get all budgets with spent amounts calculated from transactions
   Future<List<BudgetModel>> getBudgetsWithSpentAmounts();
 

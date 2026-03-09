@@ -10,8 +10,11 @@ abstract class BudgetRepository {
   /// Get budget by ID
   Future<Result<Budget>> getBudgetById(String id);
 
-  /// Get budget by month (YYYY-MM format)
+  /// Get budget by month (YYYY-MM format) — returns the first match
   Future<Result<Budget>> getBudgetByMonth(String month);
+
+  /// Get ALL budgets for a given month (YYYY-MM format)
+  Future<Result<List<Budget>>> getBudgetsByMonth(String month);
 
   /// Get active budget
   Future<Result<Budget>> getActiveBudget();

@@ -67,8 +67,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
       _selectedMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
     }
 
-    // Load budgets to check for duplicates
-    _controller.loadBudgets();
+    // Load budgets silently (for copy-from dropdown) without affecting other screens
+    _controller.refreshBudgetsWithSpentAmounts();
   }
 
   @override
@@ -240,8 +240,8 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
         }
       }
 
-      // Reload all budgets to ensure we have the latest data
-      await _controller.loadBudgets();
+      // Silently refresh budgets after save
+      await _controller.refreshBudgetsWithSpentAmounts();
 
       if (mounted) {
         context.goBack();
