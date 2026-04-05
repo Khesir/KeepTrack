@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration013UpdateBudgetsTable extends Migration {
       'Update budgets table: add user_id and account_id, remove JSONB columns';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add user_id column
 DO \$\$ 
@@ -102,7 +102,7 @@ CREATE POLICY budgets_delete_policy
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop policies
 DROP POLICY IF EXISTS budgets_select_policy ON budgets;

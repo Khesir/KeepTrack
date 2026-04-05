@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration044AddBucketIdToTaskAndProject extends Migration {
   String get description => 'Add bucket_id foreign key to tasks and projects tables';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  🔗 Adding bucket_id to tasks and projects tables...');
 
     final sql = '''
@@ -42,7 +42,7 @@ class Migration044AddBucketIdToTaskAndProject extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  🗑️ Removing bucket_id from tasks and projects tables...');
 
     final sql = '''

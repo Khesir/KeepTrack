@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration018AddTransactionType extends Migration {
       'Add type column (income/expense/transfer) to transactions table';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Create enum type for transaction types
 CREATE TYPE transaction_type AS ENUM ('income', 'expense', 'transfer');
@@ -37,7 +37,7 @@ CREATE INDEX idx_transactions_type ON transactions(type);
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop index
 DROP INDEX IF EXISTS idx_transactions_type;

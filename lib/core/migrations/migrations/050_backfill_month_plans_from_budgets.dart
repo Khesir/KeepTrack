@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -19,7 +19,7 @@ class Migration050BackfillMonthPlansFromBudgets extends Migration {
       'Backfill month_plans rows for every distinct (user_id, month) that exists in budgets';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Insert one month_plan per distinct (user_id, month) found in budgets.
 -- account_id is taken from the first budget row for that user+month (arbitrary
@@ -56,7 +56,7 @@ ON CONFLICT (user_id, month) DO NOTHING;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     // Removing backfilled rows is safe only if no plans were created after
     // migration 049. We delete plans whose created_at matches what this
     // migration would have inserted (i.e., plans with no manually-set notes).

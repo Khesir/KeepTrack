@@ -73,16 +73,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  if (widget.mode == "finance") {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.settingsConfigFinance,
-                    );
-                  } else if (widget.mode == "task") {
-                    Navigator.pushNamed(context, AppRoutes.settingsConfigTask);
-                  } else {
-                    Navigator.pushNamed(context, AppRoutes.settingsConfig);
-                  }
+                  Navigator.pushNamed(
+                    context,
+                    widget.mode == "finance"
+                        ? AppRoutes.settingsConfigFinance
+                        : AppRoutes.settingsConfig,
+                  );
                 },
               ),
 

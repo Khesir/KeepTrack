@@ -5,6 +5,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
@@ -557,11 +558,13 @@ class _AccountDetailContent extends StatefulWidget {
 
 class _AccountDetailContentState extends State<_AccountDetailContent> {
   late TransactionController _txController;
+  late AccountController _accountController;
 
   @override
   void initState() {
     super.initState();
     _txController = locator.get<TransactionController>();
+    _accountController = locator.get<AccountController>();
     _txController.loadTransactionsByAccount(widget.account.id!);
   }
 
@@ -736,7 +739,8 @@ class _AccountDetailContentState extends State<_AccountDetailContent> {
                         if (i > 0) Divider(height: 1, color: borderColor),
                         _TransactionRow(
                             transaction: transactions[i],
-                            accountId: widget.account.id!),
+                            accountId: widget.account.id!,
+                            accounts: _accountController.data ?? []),
                       ],
                     ],
                   ),
@@ -906,8 +910,22 @@ class _StatCard extends StatelessWidget {
 class _TransactionRow extends StatelessWidget {
   final Transaction transaction;
   final String accountId;
+  final List<Account> accounts;
 
-  const _TransactionRow({required this.transaction, required this.accountId});
+  const _TransactionRow({
+    required this.transaction,
+    required this.accountId,
+    required this.accounts,
+  });
+
+  String? _accountName(String? id) {
+    if (id == null) return null;
+    try {
+      return accounts.firstWhere((a) => a.id == id).name;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -919,6 +937,14 @@ class _TransactionRow extends StatelessWidget {
           Icons.swap_horiz_rounded,
           transaction.accountId == accountId ? '-' : '+',
         ),
+    };
+
+    final String? accountLabel = switch (transaction.type) {
+      TransactionType.income || TransactionType.expense =>
+        _accountName(transaction.accountId),
+      TransactionType.transfer => transaction.accountId == accountId
+          ? 'To: ${_accountName(transaction.toAccountId) ?? '—'}'
+          : 'From: ${_accountName(transaction.accountId) ?? '—'}',
     };
 
     return Padding(
@@ -949,6 +975,13 @@ class _TransactionRow extends StatelessWidget {
                   DateFormat('MMM d, yyyy · h:mm a').format(transaction.date),
                   style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
                 ),
+                if (accountLabel != null)
+                  Text(
+                    accountLabel,
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),

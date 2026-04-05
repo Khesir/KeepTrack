@@ -22,12 +22,12 @@ class PlannedPaymentModel extends PlannedPayment {
     super.remainingInstallments,
   });
 
-  /// Convert from JSON (Supabase response)
+  /// Convert from JSON (NestJS camelCase response)
   factory PlannedPaymentModel.fromJson(Map<String, dynamic> json) {
     return PlannedPaymentModel(
       id: json['id'] as String?,
       name: json['name'] as String,
-      payee: json['payee'] as String,
+      payee: json['payee'] as String? ?? '',
       amount: (json['amount'] as num).toDouble(),
       category: PaymentCategory.values.firstWhere(
         (e) => e.name == json['category'],
@@ -37,32 +37,51 @@ class PlannedPaymentModel extends PlannedPayment {
         (e) => e.name == json['frequency'],
         orElse: () => PaymentFrequency.monthly,
       ),
-      nextPaymentDate: DateTime.parse(json['next_payment_date'] as String),
-      lastPaymentDate: json['last_payment_date'] != null
-          ? DateTime.parse(json['last_payment_date'] as String)
+      nextPaymentDate: DateTime.parse(json['nextPaymentDate'] as String),
+      lastPaymentDate: json['lastPaymentDate'] != null
+          ? DateTime.parse(json['lastPaymentDate'] as String)
           : null,
-      endDate: json['end_date'] != null
-          ? DateTime.parse(json['end_date'] as String)
+      endDate: json['endDate'] != null
+          ? DateTime.parse(json['endDate'] as String)
           : null,
-      accountId: json['account_id'] as String?,
+      accountId: json['accountId'] as String?,
       status: PaymentStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => PaymentStatus.active,
       ),
       notes: json['notes'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
           : null,
-      userId: json['user_id'] as String?,
-      totalInstallments: json['total_installments'] as int?,
-      remainingInstallments: json['remaining_installments'] as int?,
+      userId: json['userId'] as String?,
+      totalInstallments: json['totalInstallments'] as int?,
+      remainingInstallments: json['remainingInstallments'] as int?,
     );
   }
 
-  /// Convert to JSON (for Supabase insert/update)
+  /// NestJS API request body
+  Map<String, dynamic> toApiJson() {
+    return {
+      'name': name,
+      'payee': payee,
+      'amount': amount,
+      'category': category.name,
+      'frequency': frequency.name,
+      'nextPaymentDate': nextPaymentDate.toIso8601String(),
+      if (lastPaymentDate != null) 'lastPaymentDate': lastPaymentDate!.toIso8601String(),
+      if (endDate != null) 'endDate': endDate!.toIso8601String(),
+      if (accountId != null) 'accountId': accountId,
+      'status': status.name,
+      if (notes != null) 'notes': notes,
+      if (totalInstallments != null) 'totalInstallments': totalInstallments,
+      if (remainingInstallments != null) 'remainingInstallments': remainingInstallments,
+    };
+  }
+
+  /// Cache serialisation (local storage)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
@@ -71,18 +90,15 @@ class PlannedPaymentModel extends PlannedPayment {
       'amount': amount,
       'category': category.name,
       'frequency': frequency.name,
-      'next_payment_date': nextPaymentDate.toIso8601String(),
-      if (lastPaymentDate != null)
-        'last_payment_date': lastPaymentDate!.toIso8601String(),
-      if (endDate != null)
-        'end_date': endDate!.toIso8601String(),
-      if (accountId != null) 'account_id': accountId,
+      'nextPaymentDate': nextPaymentDate.toIso8601String(),
+      if (lastPaymentDate != null) 'lastPaymentDate': lastPaymentDate!.toIso8601String(),
+      if (endDate != null) 'endDate': endDate!.toIso8601String(),
+      if (accountId != null) 'accountId': accountId,
       'status': status.name,
       if (notes != null) 'notes': notes,
-      if (userId != null) 'user_id': userId,
-      if (totalInstallments != null) 'total_installments': totalInstallments,
-      if (remainingInstallments != null)
-        'remaining_installments': remainingInstallments,
+      if (userId != null) 'userId': userId,
+      if (totalInstallments != null) 'totalInstallments': totalInstallments,
+      if (remainingInstallments != null) 'remainingInstallments': remainingInstallments,
     };
   }
 

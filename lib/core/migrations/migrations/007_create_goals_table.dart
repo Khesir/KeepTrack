@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration007CreateGoalsTable extends Migration {
   String get description => 'Create goals table for tracking financial savings goals';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Create goals table
 CREATE TABLE IF NOT EXISTS goals (
@@ -81,7 +81,7 @@ CREATE TRIGGER trigger_update_goals_updated_at
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop trigger
 DROP TRIGGER IF EXISTS trigger_update_goals_updated_at ON goals;

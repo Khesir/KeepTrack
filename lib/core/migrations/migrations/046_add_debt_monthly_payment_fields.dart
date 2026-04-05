@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration046AddDebtMonthlyPaymentFields extends Migration {
       'Add monthly payment amount, fee, next payment date, and payment frequency to debts';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  Adding monthly payment fields to debts table...');
 
     final sql = '''
@@ -60,7 +60,7 @@ class Migration046AddDebtMonthlyPaymentFields extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  Removing monthly payment fields from debts table...');
 
     final sql = '''

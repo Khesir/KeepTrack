@@ -2,57 +2,72 @@ import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import '../../modules/transaction/domain/entities/transaction.dart';
 import '../../modules/transaction/domain/repositories/transaction_repository.dart';
+import 'transaction_cache.dart';
 
 /// Controller for managing transaction state
 class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
   final TransactionRepository _repository;
+  final TransactionCache _cache;
 
   /// Called after any create/update/delete mutation so other controllers
   /// (e.g. BudgetController) can react without tight coupling.
   final void Function()? onMutated;
 
-  TransactionController(this._repository, {this.onMutated})
-      : super(const AsyncLoading()) {
-    loadRecentTransactions();
-  }
+  TransactionController(this._repository, this._cache, {this.onMutated})
+      : super(const AsyncLoading());
 
   /// Load all transactions
   Future<void> loadAllTransactions() async {
     await execute(() async {
-      final transactions = await _repository
-          .getTransactions()
-          .then((r) => r.unwrap());
-      return transactions;
+      return await _repository.getTransactions().then((r) => r.unwrap());
     });
   }
 
   /// Load recent transactions
   Future<void> loadRecentTransactions({int limit = 10}) async {
     await execute(() async {
-      final transactions = await _repository
+      return await _repository
           .getRecentTransactions(limit: limit)
           .then((r) => r.unwrap());
-      return transactions;
     });
   }
 
-  /// Load transactions by account
+  /// Load transactions by account with stale-while-revalidate caching.
+  /// - If cached: emits cached data immediately (no loading spinner), then
+  ///   silently refreshes in the background and emits fresh data.
+  /// - If no cache: shows loading, fetches, stores result, emits data.
   Future<void> loadTransactionsByAccount(String accountId) async {
-    await execute(() async {
-      final transactions = await _repository
-          .getTransactionsByAccount(accountId)
-          .then((r) => r.unwrap());
-      return transactions;
-    });
+    final cached = _cache.getByAccount(accountId);
+    if (cached != null) {
+      // Serve cache immediately — no loading flash
+      emit(AsyncData(cached));
+      // Refresh in background
+      try {
+        final fresh = await _repository
+            .getTransactionsByAccount(accountId)
+            .then((r) => r.unwrap());
+        _cache.setByAccount(accountId, fresh);
+        emit(AsyncData(fresh));
+      } catch (_) {
+        // Keep showing cached data if refresh fails
+      }
+    } else {
+      await execute(() async {
+        final transactions = await _repository
+            .getTransactionsByAccount(accountId)
+            .then((r) => r.unwrap());
+        _cache.setByAccount(accountId, transactions);
+        return transactions;
+      });
+    }
   }
 
   /// Load transactions by budget
   Future<void> loadTransactionsByBudget(String budgetId) async {
     await execute(() async {
-      final transactions = await _repository
+      return await _repository
           .getTransactionsByBudget(budgetId)
           .then((r) => r.unwrap());
-      return transactions;
     });
   }
 
@@ -62,10 +77,9 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
     DateTime endDate,
   ) async {
     await execute(() async {
-      final transactions = await _repository
+      return await _repository
           .getTransactionsByDateRange(startDate, endDate)
           .then((r) => r.unwrap());
-      return transactions;
     });
   }
 
@@ -78,6 +92,7 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
       final current = data ?? [];
       return [...current, created];
     });
+    _cache.invalidateAll();
     onMutated?.call();
   }
 
@@ -88,6 +103,7 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
       await loadRecentTransactions();
       return data ?? [];
     });
+    _cache.invalidateAll();
     onMutated?.call();
   }
 
@@ -98,6 +114,7 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
       await loadRecentTransactions();
       return data ?? [];
     });
+    _cache.invalidateAll();
     onMutated?.call();
   }
 }

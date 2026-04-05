@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration004CreateTransactionsTable extends Migration {
       'Create transactions table for independent financial transactions';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Create transactions table
 CREATE TABLE IF NOT EXISTS transactions (
@@ -57,7 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_date_type ON transactions(date DESC,
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop transactions table
 DROP TABLE IF EXISTS transactions CASCADE;

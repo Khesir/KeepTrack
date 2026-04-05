@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration041CleanupStalePomodoroSessions extends Migration {
   String get description => 'Mark old running sessions as canceled';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  📝 Cleaning up stale pomodoro sessions...');
 
     final sql = '''
@@ -36,7 +36,7 @@ class Migration041CleanupStalePomodoroSessions extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  📝 Skipping down migration for cleanup');
     // No down migration needed - we don't want to revert cleanup
   }

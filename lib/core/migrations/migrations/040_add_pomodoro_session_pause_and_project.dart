@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration040AddPomodoroSessionPauseAndProject extends Migration {
   String get description => 'Add pause tracking and project relation to pomodoro_sessions';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  📝 Adding pause and project fields to pomodoro_sessions...');
 
     final sql = '''
@@ -43,7 +43,7 @@ class Migration040AddPomodoroSessionPauseAndProject extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  📝 Removing pause and project fields from pomodoro_sessions...');
 
     final sql = '''

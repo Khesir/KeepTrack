@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -15,7 +15,7 @@ class Migration025AddBudgetCategoryFeeTracking extends Migration {
       'Add fee_spent column to budget_categories and update spent calculation to include fees';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add fee_spent column to budget_categories
 ALTER TABLE budget_categories
@@ -135,7 +135,7 @@ END \$\$;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Restore original calculate_budget_category_spent function (without fees)
 CREATE OR REPLACE FUNCTION calculate_budget_category_spent(

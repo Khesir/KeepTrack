@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -20,7 +20,7 @@ class Migration027AddPlannedPaymentInstallments extends Migration {
       'Add installment tracking fields to planned_payments table';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add installment tracking columns to planned_payments table
 ALTER TABLE planned_payments
@@ -52,7 +52,7 @@ ALTER TABLE planned_payments
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Remove installment tracking columns
 ALTER TABLE planned_payments

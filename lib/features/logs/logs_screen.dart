@@ -3,12 +3,15 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/state.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
+import '../finance/modules/account/domain/entities/account.dart';
 import '../finance/modules/transaction/domain/entities/transaction.dart';
 import '../finance/modules/finance_category/domain/entities/finance_category.dart';
 import '../finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import '../finance/presentation/state/account_controller.dart';
 import '../finance/presentation/state/transaction_controller.dart';
 import '../finance/presentation/state/finance_category_controller.dart';
 
@@ -23,7 +26,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
     with AppLayoutControlled {
   late final TransactionController _controller;
   late final FinanceCategoryController _categoryController;
+  late final AccountController _accountController;
   Map<String, FinanceCategory> _categoriesMap = {};
+  List<Account> _accounts = [];
   String _selectedFilter = 'All';
 
   static const _filters = ['All', 'Income', 'Expense', 'Transfer'];
@@ -33,7 +38,9 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
     super.initState();
     _controller = locator.get<TransactionController>();
     _categoryController = locator.get<FinanceCategoryController>();
+    _accountController = locator.get<AccountController>();
     _categoryController.loadCategories();
+    _accountController.loadAccounts();
     _controller.loadAllTransactions();
 
     _categoryController.stream.listen((state) {
@@ -43,6 +50,15 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
         });
       }
     });
+
+    _accountController.stream.listen((state) {
+      if (state is AsyncData<List<Account>>) {
+        setState(() => _accounts = state.data);
+      }
+    });
+    // Seed from already-loaded data if available
+    final existing = _accountController.data;
+    if (existing != null) _accounts = existing;
   }
 
   @override
@@ -90,6 +106,8 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
                 _TransactionRow(
                   transaction: t,
                   category: t.financeCategoryId != null ? _categoriesMap[t.financeCategoryId] : null,
+                  accountName: _accounts.cast<Account?>().firstWhere(
+                    (a) => a?.id == t.accountId, orElse: () => null)?.name,
                   onDelete: () => _confirmDelete(t),
                   onEdit: () => _showEdit(t),
                 ),
@@ -150,6 +168,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
         transaction: t,
         currentCategory: cat,
         categories: _categoriesMap.values.toList(),
+        accounts: _accounts,
         onSave: (updated) async {
           await _controller.updateTransaction(updated);
           if (mounted) {
@@ -295,12 +314,14 @@ class _DateHeader extends StatelessWidget {
 class _TransactionRow extends StatelessWidget {
   final Transaction transaction;
   final FinanceCategory? category;
+  final String? accountName;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
 
   const _TransactionRow({
     required this.transaction,
     required this.category,
+    required this.accountName,
     required this.onDelete,
     required this.onEdit,
   });
@@ -379,6 +400,15 @@ class _TransactionRow extends StatelessWidget {
                           catName,
                           style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
                         ),
+                        if (accountName != null) ...[
+                          const SizedBox(width: 4),
+                          Text('·', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                          const SizedBox(width: 4),
+                          Text(
+                            accountName!,
+                            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
                         if (t.hasFee) ...[
                           const SizedBox(width: 6),
                           Text(
@@ -430,6 +460,7 @@ class _EditSheet extends StatefulWidget {
   final Transaction transaction;
   final FinanceCategory? currentCategory;
   final List<FinanceCategory> categories;
+  final List<Account> accounts;
   final Future<void> Function(Transaction) onSave;
   final VoidCallback onDelete;
 
@@ -437,6 +468,7 @@ class _EditSheet extends StatefulWidget {
     required this.transaction,
     required this.currentCategory,
     required this.categories,
+    required this.accounts,
     required this.onSave,
     required this.onDelete,
   });
@@ -453,6 +485,7 @@ class _EditSheetState extends State<_EditSheet> {
   late TimeOfDay _time;
   late TransactionType _type;
   FinanceCategory? _category;
+  String? _selectedAccountId;
   bool _hasFee = false;
   bool _saving = false;
 
@@ -467,6 +500,7 @@ class _EditSheetState extends State<_EditSheet> {
     _time = TimeOfDay.fromDateTime(t.date);
     _type = t.type;
     _category = widget.currentCategory;
+    _selectedAccountId = t.accountId;
     _hasFee = t.hasFee;
   }
 
@@ -492,6 +526,7 @@ class _EditSheetState extends State<_EditSheet> {
         date: dt,
         type: _type,
         financeCategoryId: _category?.id,
+        accountId: _selectedAccountId,
       ));
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -551,6 +586,21 @@ class _EditSheetState extends State<_EditSheet> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Account
+            if (widget.accounts.isNotEmpty)
+              DropdownButtonFormField<String>(
+                value: widget.accounts.any((a) => a.id == _selectedAccountId)
+                    ? _selectedAccountId
+                    : null,
+                decoration: const InputDecoration(labelText: 'Account', border: OutlineInputBorder()),
+                items: widget.accounts.map((a) => DropdownMenuItem(
+                  value: a.id,
+                  child: Text(a.name, overflow: TextOverflow.ellipsis),
+                )).toList(),
+                onChanged: (v) => setState(() => _selectedAccountId = v),
+              ),
+            const SizedBox(height: 12),
 
             // Category
             DropdownButtonFormField<FinanceCategory>(

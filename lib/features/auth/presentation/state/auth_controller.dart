@@ -5,7 +5,6 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/features/auth/data/services/auth_service.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/finance/data/services/finance_initialization_service.dart';
-import 'package:keep_track/features/tasks/data/sevices/bucket_initialization_service.dart';
 
 class AuthController extends StreamState<AsyncState<User?>> {
   final AuthService _authService;
@@ -197,31 +196,6 @@ class AuthController extends StreamState<AsyncState<User?>> {
           } else {
             AppLogger.info(
               'Finance data  already exists, skipping initialization',
-            );
-          }
-        },
-        onError: (failure) {
-          // Log error but don't block user from using the app
-          AppLogger.warning(
-            'Failed to initialize user data (non-blocking): ${failure.message}',
-          );
-        },
-      );
-      final bucketService = locator.get<BucketInitializationService>();
-
-      final bucketResult = await bucketService.initializeDefaultCategories(
-        userId,
-      );
-
-      bucketResult.fold(
-        onSuccess: (wasInitialized) {
-          if (wasInitialized) {
-            AppLogger.info(
-              '✅ Bucket data initialization completed successfully',
-            );
-          } else {
-            AppLogger.info(
-              'Bucket data already exists, skipping initialization',
             );
           }
         },

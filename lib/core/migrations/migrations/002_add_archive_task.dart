@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration002AddArchivedTask extends Migration {
       'Add archived column to tasks table for soft deletes';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add archived column
 ALTER TABLE tasks
@@ -33,7 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_archived ON tasks(archived);
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Remove archived column
 ALTER TABLE tasks

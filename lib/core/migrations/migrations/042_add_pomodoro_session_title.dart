@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration042AddPomodoroSessionTitle extends Migration {
   String get description => 'Add title field to pomodoro_sessions';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  📝 Adding title field to pomodoro_sessions...');
 
     final sql = '''
@@ -44,7 +44,7 @@ class Migration042AddPomodoroSessionTitle extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  📝 Removing title field from pomodoro_sessions...');
 
     final sql = '''

@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration036AddTransferTransactionTrigger extends Migration {
       'Add trigger to handle transfer transactions - add amount to to_account_id';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Function to handle transfer transaction balance updates
 CREATE OR REPLACE FUNCTION handle_transfer_transaction()
@@ -65,7 +65,7 @@ CREATE TRIGGER trigger_handle_transfer_transaction
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 DROP TRIGGER IF EXISTS trigger_handle_transfer_transaction ON transactions;
 DROP FUNCTION IF EXISTS handle_transfer_transaction();

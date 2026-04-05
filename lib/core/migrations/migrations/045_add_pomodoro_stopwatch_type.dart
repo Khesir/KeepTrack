@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration045AddPomodoroStopwatchType extends Migration {
   String get description => 'Add stopwatch type to pomodoro_sessions table';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  Updating pomodoro_sessions type constraint...');
 
     final sql = '''
@@ -35,7 +35,7 @@ class Migration045AddPomodoroStopwatchType extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  Reverting pomodoro_sessions type constraint...');
 
     final sql = '''

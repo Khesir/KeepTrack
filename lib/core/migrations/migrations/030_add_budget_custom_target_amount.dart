@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -16,7 +16,7 @@ class Migration030AddBudgetCustomTargetAmount extends Migration {
       'Add custom_target_amount column to budgets table to allow custom budget targets';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add custom_target_amount column for custom budget targets
 DO \$\$
@@ -61,7 +61,7 @@ END \$\$;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- WARNING: This will delete custom_target_amount data!
 -- Make sure to backup your data before running this rollback.

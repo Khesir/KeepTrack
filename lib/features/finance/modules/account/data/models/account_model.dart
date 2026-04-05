@@ -1,5 +1,4 @@
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
-
 import '../../domain/entities/account_enums.dart';
 
 class AccountModel extends Account {
@@ -18,7 +17,6 @@ class AccountModel extends Account {
     super.userId,
   });
 
-  /// Convert from domain entity to model
   factory AccountModel.fromEntity(Account account) {
     return AccountModel(
       id: account.id,
@@ -36,41 +34,55 @@ class AccountModel extends Account {
     );
   }
 
-  /// Convert from Supabase JSON
+  /// NestJS API response (camelCase)
   factory AccountModel.fromJson(Map<String, dynamic> json) {
     return AccountModel(
       id: json['id'] as String?,
       name: json['name'] as String,
-      accountType: AccountTypeX.fromString(json['account_type'] as String?),
+      accountType: AccountTypeX.fromString(json['accountType'] as String?),
       balance: (json['balance'] as num?)?.toDouble() ?? 0,
-      colorHex: json['color_hex'] as String?,
-      iconCodePoint: json['icon_code_point'] as String?,
-      bankAccountNumber: json['bank_account_number'] as String?,
-      isActive: json['is_active'] as bool? ?? true,
-      isArchived: json['is_archived'] as bool? ?? false,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+      colorHex: json['colorHex'] as String?,
+      iconCodePoint: json['iconCodePoint']?.toString(),
+      bankAccountNumber: json['bankAccountNumber'] as String?,
+      isActive: json['isActive'] as bool? ?? true,
+      isArchived: json['isArchived'] as bool? ?? false,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
           : null,
-      userId: json['user_id'] as String?,
+      userId: json['userId'] as String?,
     );
   }
 
-  /// Convert to Supabase JSON
-  Map<String, dynamic> toJson() {
+  /// NestJS API request body (camelCase)
+  Map<String, dynamic> toApiJson() {
     return {
-      if (id != null) 'id': id,
       'name': name,
-      'account_type': accountType.name,
+      'accountType': accountType.name,
       'balance': balance,
-      if (colorHex != null) 'color_hex': colorHex,
-      if (iconCodePoint != null) 'icon_code_point': iconCodePoint,
-      if (bankAccountNumber != null) 'bank_account_number': bankAccountNumber,
-      'is_active': isActive,
-      'is_archived': isArchived,
-      if (userId != null) 'user_id': userId,
+      if (colorHex != null) 'colorHex': colorHex,
+      if (iconCodePoint != null) 'iconCodePoint': int.tryParse(iconCodePoint!),
+      if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+      'isActive': isActive,
+      'isArchived': isArchived,
     };
   }
+
+  /// Cache serialisation (local storage)
+  Map<String, dynamic> toJson() => {
+        if (id != null) 'id': id,
+        'name': name,
+        'accountType': accountType.name,
+        'balance': balance,
+        if (colorHex != null) 'colorHex': colorHex,
+        if (iconCodePoint != null) 'iconCodePoint': iconCodePoint,
+        if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+        'isActive': isActive,
+        'isArchived': isArchived,
+        if (userId != null) 'userId': userId,
+        if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      };
 }

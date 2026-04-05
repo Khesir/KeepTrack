@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration034AddTransferAccountField extends Migration {
       'Add to_account_id field to transactions table to support account transfers';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add to_account_id field for transfer transactions
 -- For transfer transactions: account_id is the source, to_account_id is the destination
@@ -40,7 +40,7 @@ COMMENT ON COLUMN transactions.to_account_id IS
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Remove to_account_id field
 DROP INDEX IF EXISTS idx_transactions_to_account_id;

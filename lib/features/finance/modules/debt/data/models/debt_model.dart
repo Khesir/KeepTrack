@@ -24,7 +24,7 @@ class DebtModel extends Debt {
     super.paymentFrequency,
   });
 
-  /// Convert from JSON (Supabase response)
+  /// Convert from JSON (NestJS camelCase response)
   factory DebtModel.fromJson(Map<String, dynamic> json) {
     return DebtModel(
       id: json['id'] as String?,
@@ -32,66 +32,87 @@ class DebtModel extends Debt {
         (e) => e.name == json['type'],
         orElse: () => DebtType.borrowing,
       ),
-      personName: json['person_name'] as String,
+      personName: json['personName'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      originalAmount: (json['original_amount'] as num).toDouble(),
-      remainingAmount: (json['remaining_amount'] as num).toDouble(),
-      startDate: DateTime.parse(json['start_date'] as String),
-      dueDate: json['due_date'] != null
-          ? DateTime.parse(json['due_date'] as String)
+      originalAmount: (json['originalAmount'] as num).toDouble(),
+      remainingAmount: (json['remainingAmount'] as num).toDouble(),
+      startDate: DateTime.parse(json['startDate'] as String),
+      dueDate: json['dueDate'] != null
+          ? DateTime.parse(json['dueDate'] as String)
           : null,
       status: DebtStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => DebtStatus.active,
       ),
       notes: json['notes'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
           : null,
-      settledAt: json['settled_at'] != null
-          ? DateTime.parse(json['settled_at'] as String)
+      settledAt: json['settledAt'] != null
+          ? DateTime.parse(json['settledAt'] as String)
           : null,
-      userId: json['user_id'] as String?,
-      accountId: json['account_id'] as String?,
-      transactionId: json['transaction_id'] as String?,
+      userId: json['userId'] as String?,
+      accountId: json['accountId'] as String?,
+      transactionId: json['transactionId'] as String?,
       monthlyPaymentAmount:
-          (json['monthly_payment_amount'] as num?)?.toDouble() ?? 0,
-      feeAmount: (json['fee_amount'] as num?)?.toDouble() ?? 0,
-      nextPaymentDate: json['next_payment_date'] != null
-          ? DateTime.parse(json['next_payment_date'] as String)
+          (json['monthlyPaymentAmount'] as num?)?.toDouble() ?? 0,
+      feeAmount: (json['feeAmount'] as num?)?.toDouble() ?? 0,
+      nextPaymentDate: json['nextPaymentDate'] != null
+          ? DateTime.parse(json['nextPaymentDate'] as String)
           : null,
       paymentFrequency: PaymentFrequency.values.firstWhere(
-        (e) => e.name == json['payment_frequency'],
+        (e) => e.name == json['paymentFrequency'],
         orElse: () => PaymentFrequency.monthly,
       ),
     );
   }
 
-  /// Convert to JSON (for Supabase insert/update)
+  /// NestJS API request body
+  Map<String, dynamic> toApiJson() {
+    return {
+      'type': type.name,
+      'personName': personName,
+      'description': description,
+      'originalAmount': originalAmount,
+      'remainingAmount': remainingAmount,
+      'startDate': startDate.toIso8601String(),
+      if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
+      'status': status.name,
+      if (notes != null) 'notes': notes,
+      if (settledAt != null) 'settledAt': settledAt!.toIso8601String(),
+      if (accountId != null) 'accountId': accountId,
+      if (transactionId != null) 'transactionId': transactionId,
+      'monthlyPaymentAmount': monthlyPaymentAmount,
+      'feeAmount': feeAmount,
+      if (nextPaymentDate != null) 'nextPaymentDate': nextPaymentDate!.toIso8601String(),
+      'paymentFrequency': paymentFrequency.name,
+    };
+  }
+
+  /// Cache serialisation (local storage)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
       'type': type.name,
-      'person_name': personName,
+      'personName': personName,
       'description': description,
-      'original_amount': originalAmount,
-      'remaining_amount': remainingAmount,
-      'start_date': startDate.toIso8601String(),
-      if (dueDate != null) 'due_date': dueDate!.toIso8601String(),
+      'originalAmount': originalAmount,
+      'remainingAmount': remainingAmount,
+      'startDate': startDate.toIso8601String(),
+      if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
       'status': status.name,
       if (notes != null) 'notes': notes,
-      if (settledAt != null) 'settled_at': settledAt!.toIso8601String(),
-      if (userId != null) 'user_id': userId,
-      if (accountId != null) 'account_id': accountId,
-      if (transactionId != null) 'transaction_id': transactionId,
-      'monthly_payment_amount': monthlyPaymentAmount,
-      'fee_amount': feeAmount,
-      if (nextPaymentDate != null)
-        'next_payment_date': nextPaymentDate!.toIso8601String(),
-      'payment_frequency': paymentFrequency.name,
+      if (settledAt != null) 'settledAt': settledAt!.toIso8601String(),
+      if (userId != null) 'userId': userId,
+      if (accountId != null) 'accountId': accountId,
+      if (transactionId != null) 'transactionId': transactionId,
+      'monthlyPaymentAmount': monthlyPaymentAmount,
+      'feeAmount': feeAmount,
+      if (nextPaymentDate != null) 'nextPaymentDate': nextPaymentDate!.toIso8601String(),
+      'paymentFrequency': paymentFrequency.name,
     };
   }
 

@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration035AddTransferCategoryType extends Migration {
       'Extend finance_categories.type CHECK constraint to allow transfer';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Drop existing CHECK constraint
 ALTER TABLE finance_categories
@@ -51,7 +51,7 @@ CHECK (
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Rollback: remove transfer from CHECK constraint
 ALTER TABLE finance_categories

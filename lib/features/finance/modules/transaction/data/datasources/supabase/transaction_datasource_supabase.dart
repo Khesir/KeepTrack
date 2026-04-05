@@ -39,8 +39,9 @@ class TransactionDataSourceSupabase implements TransactionDataSource {
       final response = await supabaseService.client
           .from(_tableName)
           .select()
-          .eq('account_id', accountId)
-          .order('date', ascending: false);
+          .or('account_id.eq.$accountId,to_account_id.eq.$accountId')
+          .order('date', ascending: false)
+          .limit(50);
 
       return (response as List)
           .map((json) => TransactionModel.fromJson(json).toEntity())

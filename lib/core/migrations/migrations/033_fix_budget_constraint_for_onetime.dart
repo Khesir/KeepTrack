@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration033FixBudgetConstraintForOnetime extends Migration {
       'Update budget constraint to allow multiple one-time budgets per month while keeping monthly budgets unique';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Drop the existing composite unique constraint
 DO \$\$
@@ -55,7 +55,7 @@ WHERE period_type = 'one_time';
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop the partial unique indexes
 DROP INDEX IF EXISTS budgets_monthly_unique_idx;

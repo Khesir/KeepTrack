@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration021AddTaskParentTaskId extends Migration {
   String get description => 'Add parent_task_id column to tasks table to support subtasks';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add parent_task_id column to tasks table for subtask support
 ALTER TABLE tasks
@@ -35,7 +35,7 @@ COMMENT ON COLUMN tasks.parent_task_id IS 'Reference to parent task for subtasks
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Remove index
 DROP INDEX IF EXISTS idx_tasks_parent_task_id;

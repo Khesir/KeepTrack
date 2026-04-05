@@ -44,62 +44,77 @@ class BudgetModel extends Budget {
     );
   }
 
-  /// Create model from JSON (Supabase response)
+  /// Create model from JSON (NestJS camelCase response)
   factory BudgetModel.fromJson(Map<String, dynamic> json) {
     return BudgetModel(
       id: json['id'] as String?,
       month: json['month'] as String,
       title: json['title'] as String?,
-      budgetType: json['budget_type'] != null
+      budgetType: json['budgetType'] != null
           ? BudgetType.values.firstWhere(
-              (e) => e.name == (json['budget_type'] as String),
+              (e) => e.name == (json['budgetType'] as String),
               orElse: () => BudgetType.expense,
             )
           : BudgetType.expense,
-      periodType: json['period_type'] != null
+      periodType: json['periodType'] != null
           ? BudgetPeriodType.values.firstWhere(
-              (e) => e.name == (json['period_type'] as String),
+              (e) => e.name == (json['periodType'] as String),
               orElse: () => BudgetPeriodType.monthly,
             )
           : BudgetPeriodType.monthly,
       categories: const [], // Categories loaded separately
       status: BudgetStatus.values.firstWhere(
         (e) => e.name == (json['status'] as String),
+        orElse: () => BudgetStatus.active,
       ),
       notes: json['notes'] as String?,
-      customTargetAmount: json['custom_target_amount'] != null
-          ? (json['custom_target_amount'] as num).toDouble()
+      customTargetAmount: json['customTargetAmount'] != null
+          ? (json['customTargetAmount'] as num).toDouble()
           : null,
-      userId: json['user_id'] as String?,
-      accountId: json['account_id'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+      userId: json['userId'] as String?,
+      accountId: json['accountId'] as String?,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
           : null,
-      closedAt: json['closed_at'] != null
-          ? DateTime.parse(json['closed_at'] as String)
+      closedAt: json['closedAt'] != null
+          ? DateTime.parse(json['closedAt'] as String)
           : null,
     );
   }
 
-  /// Convert model to JSON for Supabase
+  /// NestJS API request body
+  Map<String, dynamic> toApiJson() {
+    return {
+      'month': month,
+      if (title != null) 'title': title,
+      'budgetType': budgetType.name,
+      'periodType': periodType.name,
+      'status': status.name,
+      if (notes != null) 'notes': notes,
+      if (customTargetAmount != null) 'customTargetAmount': customTargetAmount,
+      if (accountId != null) 'accountId': accountId,
+    };
+  }
+
+  /// Cache serialisation (local storage)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
       'month': month,
       if (title != null) 'title': title,
-      'budget_type': budgetType.name,
-      'period_type': periodType.name,
+      'budgetType': budgetType.name,
+      'periodType': periodType.name,
       'status': status.name,
       if (notes != null) 'notes': notes,
-      if (customTargetAmount != null) 'custom_target_amount': customTargetAmount,
-      if (userId != null) 'user_id': userId,
-      if (accountId != null) 'account_id': accountId,
-      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
-      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
-      if (closedAt != null) 'closed_at': closedAt!.toIso8601String(),
+      if (customTargetAmount != null) 'customTargetAmount': customTargetAmount,
+      if (userId != null) 'userId': userId,
+      if (accountId != null) 'accountId': accountId,
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      if (closedAt != null) 'closedAt': closedAt!.toIso8601String(),
     };
   }
 

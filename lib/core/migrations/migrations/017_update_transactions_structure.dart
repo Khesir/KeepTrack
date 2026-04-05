@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration017UpdateTransactionsStructure extends Migration {
       'Update transactions table: change id and account_id to UUID, replace category_id with finance_category_id';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Drop existing trigger temporarily to avoid conflicts
 DROP TRIGGER IF EXISTS trigger_transaction_update_budget_spent ON transactions;
@@ -146,7 +146,7 @@ CREATE TRIGGER update_transactions_updated_at
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop triggers
 DROP TRIGGER IF EXISTS update_transactions_updated_at ON transactions;

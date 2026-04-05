@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -18,7 +18,7 @@ class Migration024AddTransactionFeeFields extends Migration {
       'Add fee and fee_description fields to transactions table for tracking taxes, service charges, and transfer fees';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add fee fields to transactions table
 -- fee: The additional cost/charge (tax, service fee, transfer fee, etc.)
@@ -47,7 +47,7 @@ CREATE INDEX idx_transactions_with_fees ON transactions(fee) WHERE fee > 0;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop index
 DROP INDEX IF EXISTS idx_transactions_with_fees;

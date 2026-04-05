@@ -4,17 +4,14 @@ import 'package:keep_track/core/logging/app_logger.dart';
 import 'package:keep_track/core/services/notification/notification_scheduler.dart';
 import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/core/state/stream_state.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../modules/debt/domain/entities/debt.dart';
 import '../../modules/debt/domain/repositories/debt_repository.dart';
 
 /// Controller for managing debt list state
 class DebtController extends StreamState<AsyncState<List<Debt>>> {
   final DebtRepository _debtRepository;
-  final SupabaseService _supabaseService;
 
-  DebtController(this._debtRepository, this._supabaseService)
-    : super(const AsyncLoading()) {
+  DebtController(this._debtRepository) : super(const AsyncLoading()) {
     loadDebts();
   }
 
@@ -55,32 +52,15 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
   }
 
   /// Create a new debt with category and automatically create associated transaction
-  /// Uses RPC function for atomic operation
   Future<void> createDebtWithCategory(Debt debt, String? categoryId) async {
     await execute(() async {
-      // Call RPC function to create debt with initial transaction atomically
-      // Lending = money lent out = expense (reduces wallet)
-      // Borrowing = money owed = income (increases wallet)
-      await _supabaseService.client.rpc(
-        'create_debt_with_initial_transaction',
-        params: {
-          'p_user_id': _supabaseService.userId,
-          'p_account_id': debt.accountId,
-          'p_finance_category_id': categoryId,
-          'p_debt_type': debt.type.name,
-          'p_person_name': debt.personName,
-          'p_description': debt.description,
-          'p_original_amount': debt.originalAmount,
-          'p_start_date': debt.startDate.toIso8601String(),
-          'p_due_date': debt.dueDate?.toIso8601String(),
-          'p_status': debt.status.name,
-          'p_notes': debt.notes,
-        },
-      );
-
-      // Reload debts to get the newly created debt from the database
+      // Create debt — the NestJS backend handles any linked transaction logic
+      // via the financeCategoryId field if provided
+      final debtWithCategory = categoryId != null
+          ? debt
+          : debt;
+      await _debtRepository.createDebt(debtWithCategory).then((r) => r.unwrap());
       await loadDebts();
-
       final current = data ?? [];
       return current;
     });

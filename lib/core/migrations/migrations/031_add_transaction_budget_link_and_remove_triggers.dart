@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -17,7 +17,7 @@ class Migration031AddTransactionBudgetLinkAndRemoveTriggers extends Migration {
       'Add budget_id to transactions, remove trigger-based budget calculations, and remove spent_amount/fee_spent from budget_categories';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Step 1: Add budget_id column to transactions
 DO \$\$
@@ -78,7 +78,7 @@ END \$\$;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- WARNING: This rollback will:
 -- 1. Remove budget_id from transactions

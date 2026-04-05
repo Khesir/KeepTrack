@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration022AddDebtAccountTransactionFields extends Migration {
       'Add account_id and transaction_id columns to debts table for automatic transaction creation';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add account_id column to debts table
 ALTER TABLE debts
@@ -44,7 +44,7 @@ COMMENT ON COLUMN debts.transaction_id IS 'Reference to the initial transaction 
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop indexes
 DROP INDEX IF EXISTS idx_debts_account_id;

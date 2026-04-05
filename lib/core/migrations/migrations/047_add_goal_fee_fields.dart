@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration047AddGoalFeeFields extends Migration {
       'Add management fee percent and withdrawal fee percent to goals';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  Adding fee fields to goals table...');
 
     final sql = '''
@@ -57,7 +57,7 @@ class Migration047AddGoalFeeFields extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  Removing fee fields from goals table...');
 
     final sql = '''

@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration032UpdateBudgetUniqueConstraint extends Migration {
       'Update UNIQUE constraint on budgets to (user_id, month, budget_type) to allow one income and one expense budget per month';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Drop the existing composite unique constraint on (user_id, month)
 DO \$\$
@@ -51,7 +51,7 @@ END \$\$;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop the composite unique constraint on (user_id, month, budget_type)
 ALTER TABLE budgets DROP CONSTRAINT IF EXISTS budgets_user_month_type_unique;

@@ -1,7 +1,4 @@
 import 'package:keep_track/features/profile/domain/contribution_data.dart';
-import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
-import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
-import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomodoro_session.dart';
 
 /// Calculator for contribution statistics
 class ContributionCalculator {
@@ -9,9 +6,6 @@ class ContributionCalculator {
   static ContributionSummary calculateContributions({
     required DateTime startDate,
     required DateTime endDate,
-    required List<Task> tasks,
-    required List<Project> projects,
-    required List<PomodoroSession> sessions,
   }) {
     // Normalize dates to start of day
     final start = DateTime(startDate.year, startDate.month, startDate.day);
@@ -32,133 +26,6 @@ class ContributionCalculator {
       current = current.add(const Duration(days: 1));
     }
 
-    int tasksCreated = 0;
-    int tasksCompleted = 0;
-    int sessionsCreated = 0;
-    int projectsCreated = 0;
-
-    // Process tasks
-    for (final task in tasks) {
-      // Task created
-      if (task.createdAt != null &&
-          !task.createdAt!.isBefore(start) &&
-          !task.createdAt!.isAfter(end)) {
-        final dayKey = DateTime(
-          task.createdAt!.year,
-          task.createdAt!.month,
-          task.createdAt!.day,
-        );
-
-        if (contributionsByDate.containsKey(dayKey)) {
-          final existing = contributionsByDate[dayKey]!;
-          contributionsByDate[dayKey] = ContributionData(
-            date: dayKey,
-            count: existing.count + 1,
-            activities: [
-              ...existing.activities,
-              ContributionActivity(
-                timestamp: task.createdAt!,
-                type: ContributionType.taskCreated,
-                title: task.title,
-                id: task.id,
-              ),
-            ],
-          );
-          tasksCreated++;
-        }
-      }
-
-      // Task completed
-      if (task.completedAt != null &&
-          !task.completedAt!.isBefore(start) &&
-          !task.completedAt!.isAfter(end)) {
-        final dayKey = DateTime(
-          task.completedAt!.year,
-          task.completedAt!.month,
-          task.completedAt!.day,
-        );
-
-        if (contributionsByDate.containsKey(dayKey)) {
-          final existing = contributionsByDate[dayKey]!;
-          contributionsByDate[dayKey] = ContributionData(
-            date: dayKey,
-            count: existing.count + 1,
-            activities: [
-              ...existing.activities,
-              ContributionActivity(
-                timestamp: task.completedAt!,
-                type: ContributionType.taskCompleted,
-                title: task.title,
-                id: task.id,
-              ),
-            ],
-          );
-          tasksCompleted++;
-        }
-      }
-    }
-
-    // Process projects
-    for (final project in projects) {
-      if (project.createdAt != null &&
-          !project.createdAt!.isBefore(start) &&
-          !project.createdAt!.isAfter(end)) {
-        final dayKey = DateTime(
-          project.createdAt!.year,
-          project.createdAt!.month,
-          project.createdAt!.day,
-        );
-
-        if (contributionsByDate.containsKey(dayKey)) {
-          final existing = contributionsByDate[dayKey]!;
-          contributionsByDate[dayKey] = ContributionData(
-            date: dayKey,
-            count: existing.count + 1,
-            activities: [
-              ...existing.activities,
-              ContributionActivity(
-                timestamp: project.createdAt!,
-                type: ContributionType.projectCreated,
-                title: project.name,
-                id: project.id,
-              ),
-            ],
-          );
-          projectsCreated++;
-        }
-      }
-    }
-
-    // Process sessions
-    for (final session in sessions) {
-      if (!session.startedAt.isBefore(start) &&
-          !session.startedAt.isAfter(end)) {
-        final dayKey = DateTime(
-          session.startedAt.year,
-          session.startedAt.month,
-          session.startedAt.day,
-        );
-
-        if (contributionsByDate.containsKey(dayKey)) {
-          final existing = contributionsByDate[dayKey]!;
-          contributionsByDate[dayKey] = ContributionData(
-            date: dayKey,
-            count: existing.count + 1,
-            activities: [
-              ...existing.activities,
-              ContributionActivity(
-                timestamp: session.startedAt,
-                type: ContributionType.sessionCreated,
-                title: session.title,
-                id: session.id,
-              ),
-            ],
-          );
-          sessionsCreated++;
-        }
-      }
-    }
-
     // Sort activities by timestamp (most recent first)
     for (final entry in contributionsByDate.entries) {
       final sorted = List<ContributionActivity>.from(entry.value.activities)
@@ -174,17 +41,12 @@ class ContributionCalculator {
     // Calculate streaks
     final streaks = _calculateStreaks(contributionsByDate);
 
-    final totalContributions = tasksCreated +
-        tasksCompleted +
-        sessionsCreated +
-        projectsCreated;
-
     return ContributionSummary(
-      totalContributions: totalContributions,
-      tasksCreated: tasksCreated,
-      tasksCompleted: tasksCompleted,
-      sessionsCreated: sessionsCreated,
-      projectsCreated: projectsCreated,
+      totalContributions: 0,
+      tasksCreated: 0,
+      tasksCompleted: 0,
+      sessionsCreated: 0,
+      projectsCreated: 0,
       currentStreak: streaks['current']!,
       longestStreak: streaks['longest']!,
       contributionsByDate: contributionsByDate,
@@ -248,9 +110,6 @@ class ContributionCalculator {
   static ContributionSummary getMonthlyContributions({
     required int year,
     required int month,
-    required List<Task> tasks,
-    required List<Project> projects,
-    required List<PomodoroSession> sessions,
   }) {
     final startDate = DateTime(year, month, 1);
     final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
@@ -258,18 +117,12 @@ class ContributionCalculator {
     return calculateContributions(
       startDate: startDate,
       endDate: endDate,
-      tasks: tasks,
-      projects: projects,
-      sessions: sessions,
     );
   }
 
   /// Get contribution data for a specific year
   static ContributionSummary getYearlyContributions({
     required int year,
-    required List<Task> tasks,
-    required List<Project> projects,
-    required List<PomodoroSession> sessions,
   }) {
     final startDate = DateTime(year, 1, 1);
     final endDate = DateTime(year, 12, 31, 23, 59, 59);
@@ -277,9 +130,6 @@ class ContributionCalculator {
     return calculateContributions(
       startDate: startDate,
       endDate: endDate,
-      tasks: tasks,
-      projects: projects,
-      sessions: sessions,
     );
   }
 }

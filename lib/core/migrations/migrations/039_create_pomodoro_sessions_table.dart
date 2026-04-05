@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration039CreatePomodoroSessionsTable extends Migration {
   String get description => 'Create pomodoro_sessions table for timer tracking';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = _getPomodoroSessionsTableSql();
 
     AppLogger.info('  📝 Creating pomodoro_sessions table...');
@@ -28,7 +28,7 @@ class Migration039CreatePomodoroSessionsTable extends Migration {
     }
   }
 
-  Future<void> _checkTableExists(SupabaseClient client) async {
+  Future<void> _checkTableExists(dynamic client) async {
     try {
       await client.from('pomodoro_sessions').select('id').limit(1);
       AppLogger.info('  ✅ Verified: pomodoro_sessions table is accessible');
@@ -122,7 +122,7 @@ class Migration039CreatePomodoroSessionsTable extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  📝 Dropping pomodoro_sessions table...');
 
     final sql = '''

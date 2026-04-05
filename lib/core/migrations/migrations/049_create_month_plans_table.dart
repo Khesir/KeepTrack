@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -17,7 +17,7 @@ class Migration049CreateMonthPlansTable extends Migration {
       'Create month_plans table as a parent container for budget groups per month';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Create month_plans table
 CREATE TABLE IF NOT EXISTS month_plans (
@@ -64,7 +64,7 @@ CREATE POLICY "Users can manage their own month plans"
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 DROP POLICY IF EXISTS "Users can manage their own month plans" ON month_plans;
 DROP INDEX IF EXISTS idx_month_plans_user_month;

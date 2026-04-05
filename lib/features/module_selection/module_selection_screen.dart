@@ -225,60 +225,12 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                 child: Center(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24.0),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        // Responsive layout
-                        final isWideScreen = constraints.maxWidth > 600;
-
-                        if (isWideScreen) {
-                          // Side by side for tablets/desktop
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: _ModuleCard(
-                                  title: 'Task Management',
-                                  description: 'Manage tasks, projects, and pomodoro sessions',
-                                  icon: Icons.task_alt,
-                                  color: Colors.blue,
-                                  onTap: () => _navigateToTaskModule(context),
-                                ),
-                              ),
-                              const SizedBox(width: 24),
-                              Flexible(
-                                child: _ModuleCard(
-                                  title: 'Finance Management',
-                                  description: 'Track accounts, budgets, and transactions',
-                                  icon: Icons.account_balance_wallet,
-                                  color: Colors.green,
-                                  onTap: () => _navigateToFinanceModule(context),
-                                ),
-                              ),
-                            ],
-                          );
-                        } else {
-                          // Stacked for mobile
-                          return Column(
-                            children: [
-                              _ModuleCard(
-                                title: 'Task Management',
-                                description: 'Manage tasks, projects, and pomodoro sessions',
-                                icon: Icons.task_alt,
-                                color: Colors.blue,
-                                onTap: () => _navigateToTaskModule(context),
-                              ),
-                              const SizedBox(height: 24),
-                              _ModuleCard(
-                                title: 'Finance Management',
-                                description: 'Track accounts, budgets, and transactions',
-                                icon: Icons.account_balance_wallet,
-                                color: Colors.green,
-                                onTap: () => _navigateToFinanceModule(context),
-                              ),
-                            ],
-                          );
-                        }
-                      },
+                    child: _ModuleCard(
+                      title: 'Finance Management',
+                      description: 'Track accounts, budgets, and transactions',
+                      icon: Icons.account_balance_wallet,
+                      color: Colors.green,
+                      onTap: () => _navigateToFinanceModule(context),
                     ),
                   ),
                 ),
@@ -288,10 +240,6 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
         ),
       ),
     );
-  }
-
-  void _navigateToTaskModule(BuildContext context) {
-    Navigator.pushReplacementNamed(context, '/task-module');
   }
 
   void _navigateToFinanceModule(BuildContext context) {

@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -18,7 +18,7 @@ class Migration028AddPlannedPaymentEndDate extends Migration {
   String get description => 'Add end_date column to planned_payments table';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add end_date column to planned_payments
 ALTER TABLE planned_payments
@@ -47,7 +47,7 @@ ALTER TABLE planned_payments
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop check constraint
 ALTER TABLE planned_payments

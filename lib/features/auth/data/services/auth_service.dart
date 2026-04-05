@@ -1,399 +1,261 @@
 import 'dart:io' show Platform;
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:keep_track/core/error/result.dart';
+import 'package:keep_track/core/auth/auth_tokens.dart';
+import 'package:keep_track/core/auth/token_storage.dart';
 import 'package:keep_track/core/error/failure.dart';
+import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/logging/app_logger.dart';
-import 'package:keep_track/features/auth/data/services/email_password_auth.dart';
+import 'package:keep_track/core/network/api_client.dart';
+import 'package:keep_track/core/network/api_exception.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 class AuthService {
-  final SupabaseClient _supabase;
+  final Dio _dio = ApiClient.instance;
+  final TokenStorage _tokens = TokenStorage.instance;
   GoogleSignIn? _googleSignIn;
-  late final EmailPasswordAuth _emailPasswordAuth;
 
-  AuthService(this._supabase) {
-    _emailPasswordAuth = EmailPasswordAuth(_supabase);
-  }
+  // ── State ─────────────────────────────────────────────────────────────────
 
-  /// Lazy initialize Google Sign-In (only when needed)
-  GoogleSignIn get _googleSignInInstance {
-    _googleSignIn ??= GoogleSignIn(
-      scopes: [
-        'email',
-        'profile',
-        'openid',  // Required for id_token
-      ],
-      // For web, we need to specify the serverClientId (Web OAuth Client ID)
-      serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
-    );
-    return _googleSignIn!;
-  }
+  User? _currentUser;
+  User? get currentUser => _currentUser;
+  bool get isAuthenticated => _currentUser != null;
+  String? get currentUserId => _currentUser?.id;
 
-  /// Get current user
-  User? get currentUser {
-    final supabaseUser = _supabase.auth.currentUser;
-    if (supabaseUser == null) return null;
+  final _stateController = _UserStreamController();
+  Stream<User?> get authStateChanges => _stateController.stream;
 
-    return User(
-      id: supabaseUser.id,
-      email: supabaseUser.email ?? '',
-      displayName: supabaseUser.userMetadata?['full_name'] as String?,
-      photoUrl: supabaseUser.userMetadata?['avatar_url'] as String?,
-      createdAt: DateTime.parse(supabaseUser.createdAt),
-      isAdmin: supabaseUser.userMetadata?['is_admin'] as bool? ?? false,
-      metadata: supabaseUser.userMetadata,
-    );
-  }
+  // ── Google Sign-In ────────────────────────────────────────────────────────
 
-  /// Get current user ID
-  String? get currentUserId => _supabase.auth.currentUser?.id;
+  GoogleSignIn get _gsi => _googleSignIn ??= kIsWeb
+      ? GoogleSignIn(
+          scopes: ['email', 'profile', 'openid'],
+          clientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+        )
+      : GoogleSignIn(
+          scopes: ['email', 'profile', 'openid'],
+          serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+        );
 
-  /// Check if user is authenticated
-  bool get isAuthenticated => _supabase.auth.currentUser != null;
-
-  /// Stream of auth state changes
-  Stream<User?> get authStateChanges {
-    return _supabase.auth.onAuthStateChange.map((event) {
-      final supabaseUser = event.session?.user;
-      if (supabaseUser == null) return null;
-
-      return User(
-        id: supabaseUser.id,
-        email: supabaseUser.email ?? '',
-        displayName: supabaseUser.userMetadata?['full_name'] as String?,
-        photoUrl: supabaseUser.userMetadata?['avatar_url'] as String?,
-        createdAt: DateTime.parse(supabaseUser.createdAt),
-        isAdmin: supabaseUser.userMetadata?['is_admin'] as bool? ?? false,
-        metadata: supabaseUser.userMetadata,
-      );
-    });
-  }
-
-  /// Sign in with Google
   Future<Result<User>> signInWithGoogle() async {
     try {
-      final devMode = await _isDevMode();
-      AppLogger.info('Starting Google Sign-In... Dev mode: $devMode');
+      if (await _isDevMode()) return _devBypass(isAdmin: false);
 
-      // Check if in dev mode
-      if (devMode) {
-        AppLogger.info('Dev mode detected - using bypass');
-        return _devBypass(isAdmin: false);
-      }
-
-      // IMPORTANT: Clear any existing Supabase session first
-      // This ensures the account picker is always shown, even if there's a cached session
-      if (_supabase.auth.currentUser != null) {
-        AppLogger.info('Existing Supabase session found, clearing to force account picker');
-        await _supabase.auth.signOut();
-      }
-
-      // On web or Windows desktop, use Supabase OAuth flow (redirect-based)
-      // Note: google_sign_in doesn't support Windows, so we use OAuth there too
-      final bool isWindowsDesktop = !kIsWeb && Platform.isWindows;
-      final bool useOAuth = kIsWeb || isWindowsDesktop;
-
-      if (useOAuth) {
-        final platform = kIsWeb ? 'Web' : 'Windows Desktop';
-        AppLogger.info('$platform platform detected - using Supabase OAuth redirect');
-
-        // Determine redirect URL based on platform
-        String? redirectUrl;
-        if (kIsWeb) {
-          // Web: Use current URL
-          redirectUrl = Uri.base.toString();
-          AppLogger.info('Web redirect URL: $redirectUrl');
-        } else {
-          // Desktop: Use NULL to enable loopback redirect (http://127.0.0.1:PORT)
-          // Supabase will automatically start a local server and handle the callback
-          // This works with PKCE flow for secure desktop authentication
-          redirectUrl = null;
-          AppLogger.info('Desktop: Using loopback redirect (http://127.0.0.1:PORT)');
-        }
-
-        // This will redirect to Google OAuth and back
-        // On desktop with null redirectTo + PKCE, Supabase starts a local server
-        AppLogger.info('Initiating OAuth sign-in...');
-        final response = await _supabase.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: redirectUrl,
-        );
-
-        if (!response) {
-          AppLogger.error('OAuth initiation failed', null, null);
-          return Result.error(
-            const ServerFailure(message: 'Failed to initiate Google Sign-In'),
-          );
-        }
-
-        AppLogger.info('OAuth initiated successfully - browser should open');
-
-        // On web/Windows, the redirect happens and the user comes back authenticated
-        // We need to wait for the auth state to update
-        // The auth state listener in AuthController will handle this
+      // Desktop (non-web, non-mobile) — not yet supported
+      if (!kIsWeb && !Platform.isAndroid && !Platform.isIOS) {
         return Result.error(
-          const ValidationFailure('Sign-in initiated - waiting for redirect'),
+          const ValidationFailure('Google Sign-In not supported on this platform'),
         );
       }
 
-      // On mobile (Android/iOS), use google_sign_in package
-      AppLogger.info('Mobile platform - using google_sign_in package');
+      // Disconnect to force account picker
+      if (_gsi.currentUser != null) await _gsi.disconnect();
 
-      // Force disconnect to ensure account picker is shown on every sign-in
-      // disconnect() fully revokes access, while signOut() might cache the account
-      // This is especially important on Android to prevent auto-selecting the last account
-      try {
-        if (await _googleSignInInstance.isSignedIn()) {
-          AppLogger.info('User already signed in to Google, disconnecting to force account picker');
-          await _googleSignInInstance.disconnect();
-        }
-      } catch (e) {
-        AppLogger.warning('Error checking/clearing Google Sign-In state: $e');
-        // Continue anyway - disconnect might fail if already disconnected
-      }
-
-      final GoogleSignInAccount? googleUser = await _googleSignInInstance.signIn();
+      final googleUser = await _gsi.signIn();
       if (googleUser == null) {
-        AppLogger.warning('Google Sign-In cancelled by user');
-        return Result.error(
-          const ValidationFailure('Sign-in cancelled'),
-        );
+        return Result.error(const ValidationFailure('Sign-in cancelled'));
       }
 
-      // Get Google auth credentials
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        AppLogger.error('Failed to get Google tokens', null, null);
-        return Result.error(
-          const UnknownFailure(message: 'Failed to authenticate with Google'),
-        );
-      }
-
-      AppLogger.info('Google tokens obtained, signing in to Supabase...');
-
-      // Sign in to Supabase with Google credentials
-      final AuthResponse response = await _supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: googleAuth.idToken!,
-        accessToken: googleAuth.accessToken!,
-      );
-
-      if (response.user == null) {
-        AppLogger.error('Supabase sign-in failed', null, null);
-        return Result.error(
-          const ServerFailure(message: 'Failed to sign in'),
-        );
-      }
-
-      final user = User(
-        id: response.user!.id,
-        email: response.user!.email ?? '',
-        displayName: response.user!.userMetadata?['full_name'] as String?,
-        photoUrl: response.user!.userMetadata?['avatar_url'] as String?,
-        createdAt: DateTime.parse(response.user!.createdAt),
-        isAdmin: response.user!.userMetadata?['is_admin'] as bool? ?? false,
-        metadata: response.user!.userMetadata,
-      );
-
-      AppLogger.info('Sign-in successful for user: ${user.email}');
-      return Result.success(user);
-    } catch (e, stackTrace) {
-      AppLogger.error('Google Sign-In error', e, stackTrace);
-      return Result.error(
-        UnknownFailure(
-          message: 'Failed to sign in: ${e.toString()}',
-          stackTrace: stackTrace,
-          originalError: e,
-        ),
-      );
-    }
-  }
-
-  /// Sign out
-  Future<Result<void>> signOut() async {
-    try {
-      AppLogger.info('Signing out user...');
-
-      // Disconnect from Google (only if initialized)
-      // Using disconnect() instead of signOut() to fully revoke access
-      // This ensures the account picker shows on next sign-in (especially on Android)
-      if (_googleSignIn != null && await _googleSignIn!.isSignedIn()) {
-        await _googleSignIn!.disconnect();
-      }
-
-      // Sign out from Supabase
-      await _supabase.auth.signOut();
-
-      AppLogger.info('Sign-out successful');
-      return Result.success(null);
-    } catch (e, stackTrace) {
-      AppLogger.error('Sign-out error', e, stackTrace);
-      return Result.error(
-        UnknownFailure(
-          message: 'Failed to sign out',
-          stackTrace: stackTrace,
-          originalError: e,
-        ),
-      );
-    }
-  }
-
-  /// Dev bypass for testing without Google auth
-  Future<bool> _isDevMode() async {
-    try {
-      // Check if DEV_BYPASS is set in environment
-      final devBypass = dotenv.env['DEV_BYPASS'] ?? 'false';
-      AppLogger.info('DEV_BYPASS value: $devBypass');
-      return devBypass.toLowerCase() == 'true';
-    } catch (e) {
-      AppLogger.error('Error checking dev mode', e, null);
-      return false;
-    }
-  }
-
-  /// Sign in as Admin (Dev mode only)
-  Future<Result<User>> signInAsAdmin() async {
-    try {
-      // Only allow in dev mode
-      if (!await _isDevMode()) {
-        AppLogger.warning('Admin sign-in attempted in production mode');
-        return Result.error(
-          const ValidationFailure('Admin mode is only available in development'),
-        );
-      }
-
-      AppLogger.warning('Using ADMIN BYPASS - signing in as admin');
-      return _devBypass(isAdmin: true);
-    } catch (e, stackTrace) {
-      AppLogger.error('Admin bypass error', e, stackTrace);
-      return Result.error(
-        UnknownFailure(
-          message: 'Admin bypass failed',
-          stackTrace: stackTrace,
-          originalError: e,
-        ),
-      );
-    }
-  }
-
-  /// Dev bypass sign-in
-  Future<Result<User>> _devBypass({required bool isAdmin}) async {
-    try {
-      final String email;
-      final String password;
-      final String displayName;
-
-      if (isAdmin) {
-        // Use admin credentials
-        email = dotenv.env['ADMIN_EMAIL'] ?? 'admin@personalcodex.app';
-        password = dotenv.env['ADMIN_PASSWORD'] ?? 'admin123456';
-        displayName = 'Admin User';
-        AppLogger.warning('Using ADMIN BYPASS - signing in as admin');
-      } else {
-        // Use regular dev credentials
-        email = dotenv.env['DEV_EMAIL'] ?? 'dev@personalcodex.app';
-        password = dotenv.env['DEV_PASSWORD'] ?? 'dev123456';
-        displayName = 'Dev User';
-        AppLogger.warning('Using DEV BYPASS - signing in as dev user');
-      }
-
-      final response = await _supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-
-      if (response.user == null) {
-        // Try to sign up if sign-in failed
-        AppLogger.info('User not found, creating new user...');
-        final signUpResponse = await _supabase.auth.signUp(
-          email: email,
-          password: password,
-          data: {
-            'full_name': displayName,
-            'avatar_url': null,
-            'is_admin': isAdmin,
-          },
-        );
-
-        if (signUpResponse.user == null) {
+      if (kIsWeb) {
+        // Web: Token Client returns an access token, not an id token.
+        // Pull it from authHeaders and verify server-side via userinfo endpoint.
+        final headers = await googleUser.authHeaders;
+        final accessToken = headers['Authorization']?.replaceFirst('Bearer ', '');
+        if (accessToken == null || accessToken.isEmpty) {
           return Result.error(
-            const ServerFailure(message: 'Failed to create user'),
+            const UnknownFailure(message: 'Failed to get Google access token'),
           );
         }
-
-        final user = User(
-          id: signUpResponse.user!.id,
-          email: signUpResponse.user!.email ?? email,
-          displayName: displayName,
-          photoUrl: null,
-          createdAt: DateTime.parse(signUpResponse.user!.createdAt),
-          isAdmin: isAdmin,
-          metadata: signUpResponse.user!.userMetadata,
-        );
-
-        return Result.success(user);
+        return _exchangeGoogleToken(accessToken: accessToken);
+      } else {
+        // Mobile: get id token to exchange with backend
+        final auth = await googleUser.authentication;
+        if (auth.idToken == null) {
+          return Result.error(
+            const UnknownFailure(message: 'Failed to get Google ID token'),
+          );
+        }
+        return _exchangeGoogleToken(idToken: auth.idToken!);
       }
-
-      final user = User(
-        id: response.user!.id,
-        email: response.user!.email ?? email,
-        displayName: response.user!.userMetadata?['full_name'] as String? ??
-            displayName,
-        photoUrl: response.user!.userMetadata?['avatar_url'] as String?,
-        createdAt: DateTime.parse(response.user!.createdAt),
-        isAdmin: response.user!.userMetadata?['is_admin'] as bool? ?? isAdmin,
-        metadata: response.user!.userMetadata,
-      );
-
-      return Result.success(user);
-    } catch (e, stackTrace) {
-      AppLogger.error('Dev bypass error', e, stackTrace);
+    } catch (e, st) {
+      AppLogger.error('Google Sign-In error', e, st);
       return Result.error(
-        UnknownFailure(
-          message: 'Dev bypass failed',
-          stackTrace: stackTrace,
-          originalError: e,
-        ),
+        UnknownFailure(message: e.toString(), stackTrace: st, originalError: e),
       );
     }
   }
 
-  /// Sign up with email and password (simple, works on all platforms)
+  Future<Result<User>> _exchangeGoogleToken({String? idToken, String? accessToken}) async {
+    try {
+      final res = await _dio.post(
+        '/auth/google',
+        data: {
+          if (idToken != null) 'idToken': idToken,
+          if (accessToken != null) 'accessToken': accessToken,
+        },
+      );
+      return _handleAuthResponse(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      return Result.error(mapDioError(e));
+    }
+  }
+
+  // ── Email / Password ──────────────────────────────────────────────────────
+
+  Future<Result<User>> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/auth/login',
+        data: {'email': email, 'password': password},
+      );
+      return _handleAuthResponse(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      return Result.error(mapDioError(e));
+    } catch (e, st) {
+      return Result.error(
+        UnknownFailure(message: e.toString(), stackTrace: st, originalError: e),
+      );
+    }
+  }
+
   Future<Result<User>> signUpWithEmail({
     required String email,
     required String password,
     String? displayName,
   }) async {
-    return _emailPasswordAuth.signUpWithEmail(
-      email: email,
-      password: password,
-      displayName: displayName,
-    );
+    try {
+      final res = await _dio.post(
+        '/auth/register',
+        data: {'email': email, 'password': password},
+      );
+      return _handleAuthResponse(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      return Result.error(mapDioError(e));
+    } catch (e, st) {
+      return Result.error(
+        UnknownFailure(message: e.toString(), stackTrace: st, originalError: e),
+      );
+    }
   }
 
-  /// Sign in with email and password (simple, works on all platforms)
-  Future<Result<User>> signInWithEmail({
-    required String email,
-    required String password,
-  }) async {
-    return _emailPasswordAuth.signInWithEmail(
-      email: email,
-      password: password,
-    );
-  }
-
-  /// Send password reset email
-  Future<Result<void>> resetPassword(String email) async {
-    return _emailPasswordAuth.resetPassword(email);
-  }
-
-  /// Sign in with Magic Link (passwordless - just email, no password!)
+  /// Magic link is not supported with NestJS backend.
   Future<Result<void>> signInWithMagicLink(String email) async {
-    return _emailPasswordAuth.signInWithMagicLink(email);
+    return Result.error(
+      const ValidationFailure('Magic link sign-in is not supported'),
+    );
+  }
+
+  // ── Session ───────────────────────────────────────────────────────────────
+
+  /// Call on app start — restores session from secure storage
+  Future<bool> restoreSession() async {
+    try {
+      final stored = await _tokens.load();
+      if (stored == null) return false;
+
+      // Fetch profile to validate the stored token
+      final res = await _dio.get('/users/me');
+      _currentUser = _userFromJson(res.data as Map<String, dynamic>);
+      _stateController.add(_currentUser);
+      return true;
+    } catch (_) {
+      await _tokens.clear();
+      return false;
+    }
+  }
+
+  Future<Result<void>> signOut() async {
+    try {
+      final refresh = await _tokens.getRefreshToken();
+      if (refresh != null) {
+        await _dio
+            .post('/auth/logout', data: {'refreshToken': refresh})
+            .catchError((_) {});
+      }
+      if (_googleSignIn != null && await _gsi.isSignedIn()) {
+        await _gsi.disconnect();
+      }
+    } catch (_) {}
+    await _tokens.clear();
+    _currentUser = null;
+    _stateController.add(null);
+    return Result.success(null);
+  }
+
+  // ── Dev bypass ────────────────────────────────────────────────────────────
+
+  Future<bool> _isDevMode() async {
+    final v = dotenv.env['DEV_BYPASS'] ?? 'false';
+    return v.toLowerCase() == 'true';
+  }
+
+  Future<Result<User>> signInAsAdmin() async {
+    if (!await _isDevMode()) {
+      return Result.error(
+        const ValidationFailure('Admin bypass only in dev mode'),
+      );
+    }
+    return _devBypass(isAdmin: true);
+  }
+
+  Future<Result<User>> _devBypass({required bool isAdmin}) async {
+    final email = isAdmin
+        ? (dotenv.env['ADMIN_EMAIL'] ?? 'admin@personalcodex.app')
+        : (dotenv.env['DEV_EMAIL'] ?? 'dev@personalcodex.app');
+    final password = isAdmin
+        ? (dotenv.env['ADMIN_PASSWORD'] ?? 'admin123456')
+        : (dotenv.env['DEV_PASSWORD'] ?? 'dev123456');
+
+    AppLogger.warning('DEV BYPASS — signing in as $email');
+    return signInWithEmail(email: email, password: password);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  Future<Result<User>> _handleAuthResponse(Map<String, dynamic> data) async {
+    final tokens = AuthTokens.fromJson(data);
+    await _tokens.save(tokens);
+
+    final userData = data['user'] as Map<String, dynamic>;
+    _currentUser = _userFromJson(userData);
+    _stateController.add(_currentUser);
+    return Result.success(_currentUser!);
+  }
+
+  User _userFromJson(Map<String, dynamic> json) => User(
+        id: json['id'] as String,
+        email: json['email'] as String,
+        displayName: json['displayName'] as String?,
+        photoUrl: json['photoUrl'] as String?,
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'] as String)
+            : DateTime.now(),
+        isAdmin: json['isAdmin'] as bool? ?? false,
+        metadata: (json['metadata'] as Map?)?.cast<String, dynamic>(),
+      );
+}
+
+// Simple broadcast stream controller without dart:async imports
+class _UserStreamController {
+  User? _last;
+  final List<void Function(User?)> _listeners = [];
+
+  Stream<User?> get stream => Stream.multi((c) {
+        c.add(_last);
+        final fn = c.add;
+        _listeners.add(fn);
+        c.onCancel = () => _listeners.remove(fn);
+      });
+
+  void add(User? user) {
+    _last = user;
+    for (final l in List.of(_listeners)) {
+      l(user);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -18,7 +18,7 @@ class Migration001CreateInitialSchema extends Migration {
   String get description => 'Create initial schema for tasks, projects, and budgets';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = _getInitialSchemaSql();
 
     AppLogger.info('  📝 Executing initial schema migration...');
@@ -37,7 +37,7 @@ class Migration001CreateInitialSchema extends Migration {
   }
 
   /// Check if the required tables exist
-  Future<void> _checkTablesExist(SupabaseClient client) async {
+  Future<void> _checkTablesExist(dynamic client) async {
     try {
       // Try to query each table - this is just a sanity check
       // If RLS is enabled, this might fail even if tables exist, so we don't throw
@@ -195,7 +195,7 @@ CREATE TRIGGER update_budgets_updated_at
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     // WARNING: This will delete all data!
     final sql = '''
       DROP TABLE IF EXISTS tasks CASCADE;

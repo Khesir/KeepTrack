@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:keep_track/core/logging/app_logger.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 /// Handles deep link authentication callbacks for desktop platforms
 class DeepLinkHandler {
@@ -44,20 +44,7 @@ class DeepLinkHandler {
   /// Handle incoming deep link
   void _handleDeepLink(Uri uri) {
     try {
-      // Check if this is an OAuth callback
-      if (uri.fragment.isNotEmpty) {
-        // Supabase OAuth callback format: scheme://path#access_token=...
-        AppLogger.info('Processing OAuth callback from deep link');
-
-        // Supabase will automatically handle the OAuth callback
-        // We just need to make sure the session is processed
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-          final event = data.event;
-          if (event == AuthChangeEvent.signedIn) {
-            AppLogger.info('✅ User signed in via deep link');
-          }
-        });
-      }
+      AppLogger.info('Deep link received: $uri (OAuth callbacks handled by NestJS)');
     } catch (e, stackTrace) {
       AppLogger.error('Error handling deep link', e, stackTrace);
     }

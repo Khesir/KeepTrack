@@ -1,29 +1,9 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-/// Base class for database migrations
-///
-/// Each migration should extend this class and implement the [up] method.
-/// Migrations run in order based on their version number.
+/// Base class for database migrations (legacy — no longer used with NestJS backend).
 abstract class Migration {
-  /// Unique version identifier (e.g., "001_create_initial_schema")
-  /// Format: NNN_description_in_snake_case
   String get version;
-
-  /// Description of what this migration does
   String get description;
-
-  /// Execute the migration
-  ///
-  /// This method should contain the SQL or logic to apply the migration.
-  /// Throw an exception if the migration fails.
-  Future<void> up(SupabaseClient client);
-
-  /// Rollback the migration (optional)
-  ///
-  /// This method should undo the changes made by [up].
-  /// Not all migrations can be rolled back.
-  Future<void> down(SupabaseClient client) async {
-    // Default: no rollback
+  Future<void> up(dynamic client);
+  Future<void> down(dynamic client) async {
     throw UnimplementedError('Rollback not implemented for $version');
   }
 
@@ -31,7 +11,6 @@ abstract class Migration {
   String toString() => '$version: $description';
 }
 
-/// Result of a migration operation
 class MigrationResult {
   final String version;
   final bool success;
@@ -44,13 +23,4 @@ class MigrationResult {
     this.error,
     required this.appliedAt,
   });
-
-  @override
-  String toString() {
-    if (success) {
-      return '✓ $version (applied at $appliedAt)';
-    } else {
-      return '✗ $version failed: $error';
-    }
-  }
 }

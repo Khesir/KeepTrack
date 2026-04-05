@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -18,7 +18,7 @@ class Migration026FixTransactionDateToTimestamp extends Migration {
       'Change transaction date column from DATE to TIMESTAMP WITH TIME ZONE to preserve time';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Change the date column from DATE to TIMESTAMP WITH TIME ZONE
 -- This allows transactions to store the time component, not just the date
@@ -45,7 +45,7 @@ CREATE INDEX idx_transactions_date ON transactions(date);
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Revert back to DATE (loses time component)
 ALTER TABLE transactions

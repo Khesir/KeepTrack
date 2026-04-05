@@ -49,13 +49,13 @@ class TransactionModel extends Transaction {
     );
   }
 
-  /// Convert from JSON
+  /// Convert from JSON (NestJS camelCase response)
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     return TransactionModel(
       id: json['id'] as String?,
-      accountId: json['account_id'] as String?,
-      toAccountId: json['to_account_id'] as String?,
-      financeCategoryId: json['finance_category_id'] as String?,
+      accountId: json['accountId'] as String?,
+      toAccountId: json['toAccountId'] as String?,
+      financeCategoryId: json['financeCategoryId'] as String?,
       amount: (json['amount'] as num).toDouble(),
       type: TransactionType.values.firstWhere(
         (e) => e.name == json['type'],
@@ -64,45 +64,66 @@ class TransactionModel extends Transaction {
       description: json['description'] as String?,
       date: DateTime.parse(json['date'] as String),
       notes: json['notes'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
           : null,
-      userId: json['user_id'] as String?,
+      userId: json['userId'] as String?,
       fee: json['fee'] != null ? (json['fee'] as num).toDouble() : 0.0,
-      feeDescription: json['fee_description'] as String?,
-      budgetId: json['budget_id'] as String?,
-      debtId: json['debt_id'] as String?,
-      goalId: json['goal_id'] as String?,
-      plannedPaymentId: json['planned_payment_id'] as String?,
-      refundedTransactionId: json['refunded_transaction_id'] as String?,
+      feeDescription: json['feeDescription'] as String?,
+      budgetId: json['budgetId'] as String?,
+      debtId: json['debtId'] as String?,
+      goalId: json['goalId'] as String?,
+      plannedPaymentId: json['plannedPaymentId'] as String?,
+      refundedTransactionId: json['refundedTransactionId'] as String?,
     );
   }
 
-  /// Convert to JSON
+  /// NestJS API request body
+  Map<String, dynamic> toApiJson() {
+    return {
+      if (accountId != null) 'accountId': accountId,
+      if (toAccountId != null) 'toAccountId': toAccountId,
+      if (financeCategoryId != null) 'financeCategoryId': financeCategoryId,
+      'amount': amount,
+      'type': type.name,
+      if (description != null) 'description': description,
+      'date': date.toIso8601String(),
+      if (notes != null) 'notes': notes,
+      'fee': fee,
+      if (feeDescription != null) 'feeDescription': feeDescription,
+      if (budgetId != null) 'budgetId': budgetId,
+      if (debtId != null) 'debtId': debtId,
+      if (goalId != null) 'goalId': goalId,
+      if (plannedPaymentId != null) 'plannedPaymentId': plannedPaymentId,
+      if (refundedTransactionId != null) 'refundedTransactionId': refundedTransactionId,
+    };
+  }
+
+  /// Cache serialisation (local storage)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
-      'account_id': accountId,
-      if (toAccountId != null) 'to_account_id': toAccountId,
-      'finance_category_id': financeCategoryId,
+      if (accountId != null) 'accountId': accountId,
+      if (toAccountId != null) 'toAccountId': toAccountId,
+      if (financeCategoryId != null) 'financeCategoryId': financeCategoryId,
       'amount': amount,
       'type': type.name,
-      'description': description,
+      if (description != null) 'description': description,
       'date': date.toIso8601String(),
-      'notes': notes,
-      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
-      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
-      if (userId != null) 'user_id': userId,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      if (userId != null) 'userId': userId,
       'fee': fee,
-      if (feeDescription != null) 'fee_description': feeDescription,
-      if (budgetId != null) 'budget_id': budgetId,
-      if (debtId != null) 'debt_id': debtId,
-      if (goalId != null) 'goal_id': goalId,
-      if (plannedPaymentId != null) 'planned_payment_id': plannedPaymentId,
-      if (refundedTransactionId != null) 'refunded_transaction_id': refundedTransactionId,
+      if (feeDescription != null) 'feeDescription': feeDescription,
+      if (budgetId != null) 'budgetId': budgetId,
+      if (debtId != null) 'debtId': debtId,
+      if (goalId != null) 'goalId': goalId,
+      if (plannedPaymentId != null) 'plannedPaymentId': plannedPaymentId,
+      if (refundedTransactionId != null) 'refundedTransactionId': refundedTransactionId,
     };
   }
 

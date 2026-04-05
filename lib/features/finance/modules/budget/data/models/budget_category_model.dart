@@ -31,34 +31,43 @@ class BudgetCategoryModel extends BudgetCategory {
     );
   }
 
-  /// Create model from JSON (Supabase response)
+  /// Create model from JSON (NestJS camelCase response)
   factory BudgetCategoryModel.fromJson(Map<String, dynamic> json) {
     return BudgetCategoryModel(
       id: json['id'] as String?,
-      budgetId: json['budget_id'] as String,
-      financeCategoryId: json['finance_category_id'] as String,
-      userId: json['user_id'] as String?,
-      targetAmount: (json['target_amount'] as num).toDouble(),
+      budgetId: json['budgetId'] as String? ?? '',
+      financeCategoryId: json['financeCategoryId'] as String? ?? '',
+      userId: json['userId'] as String?,
+      targetAmount: (json['targetAmount'] as num).toDouble(),
       financeCategory: null, // Hydrated separately
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
           : null,
     );
   }
 
-  /// Convert model to JSON for Supabase
+  /// NestJS API request body
+  Map<String, dynamic> toApiJson() {
+    return {
+      'budgetId': budgetId,
+      'financeCategoryId': financeCategoryId,
+      'targetAmount': targetAmount,
+    };
+  }
+
+  /// Cache serialisation (local storage)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
-      'budget_id': budgetId,
-      'finance_category_id': financeCategoryId,
-      if (userId != null) 'user_id': userId,
-      'target_amount': targetAmount,
-      if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
-      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      'budgetId': budgetId,
+      'financeCategoryId': financeCategoryId,
+      if (userId != null) 'userId': userId,
+      'targetAmount': targetAmount,
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
   }
 }

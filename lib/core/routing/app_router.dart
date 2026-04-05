@@ -5,15 +5,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:keep_track/features/module_selection/finance_module_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
-import 'package:keep_track/features/module_selection/task_module_screen.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
 import 'package:keep_track/features/settings/subpages/app_configuration_finance_page.dart';
-import 'package:keep_track/features/settings/subpages/app_configuration_task_page.dart';
-import 'package:keep_track/features/tasks/presentation/screens/configuration/bucket_management_screen.dart';
-import 'package:keep_track/features/tasks/presentation/screens/configuration/project_management_screen.dart';
-import 'package:keep_track/features/tasks/presentation/screens/configuration/task_management_screen.dart';
-import 'package:keep_track/features/tasks/presentation/screens/tabs/task/create_task_page.dart';
-import 'package:keep_track/features/tasks/presentation/screens/create_project_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
@@ -30,11 +23,6 @@ import '../../features/finance/presentation/screens/transactions/create_transact
 import '../../features/finance/presentation/screens/transactions/create_transfer_transaction_screen.dart';
 import '../../features/finance/presentation/screens/finance_main_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
-import '../../features/tasks/modules/tasks/domain/entities/task.dart';
-import '../../features/tasks/presentation/screens/project_details_screen.dart';
-
-import '../../features/tasks/modules/projects/domain/entities/project.dart';
-import '../../features/tasks/presentation/screens/tabs/task/create_task_route_page.dart';
 
 /// App routes
 class AppRoutes {
@@ -44,16 +32,6 @@ class AppRoutes {
   // Module Selection
   static const String moduleSelection = '/module-selection';
   static const String financeModule = '/finance-module';
-  static const String taskModule = '/task-module';
-
-  // Tasks
-  static const String taskDetail = '/tasks/detail';
-  static const String taskCreate = '/task-create';
-
-  // Projects
-  static const String projectList = '/projects';
-  static const String projectDetail = '/projects/detail';
-  static const String projectCreate = '/project-create';
 
   // Budget
   static const String budgetList = '/budget';
@@ -64,12 +42,7 @@ class AppRoutes {
   // Settings
   static const String settings = '/settings';
   static const String settingsConfig = '/settings/config';
-  static const String settingsConfigTask = '/settings/config-task';
   static const String settingsConfigFinance = '/settings/config-finance';
-  // Task Management Settings
-  static const String taskManagement = '/task-management';
-  static const String projectManagement = '/project-management';
-  static const String bucketManagement = '/bucket-management';
 
   // Finance Management
   static const String accountManagement = '/account-management';
@@ -103,50 +76,6 @@ class AppRouter {
           builder: (_) => const FinanceModuleScreen(),
           settings: settings,
         );
-      case AppRoutes.taskModule:
-        return MaterialPageRoute(
-          builder: (_) => const TaskModuleScreen(),
-          settings: settings,
-        );
-
-      // Tasks
-      case AppRoutes.taskCreate:
-        return MaterialPageRoute(
-          builder: (_) => const CreateTaskRoutePage(),
-          settings: settings,
-        );
-      case AppRoutes.projectCreate:
-        return MaterialPageRoute(
-          builder: (_) => const CreateProjectPage(),
-          settings: settings,
-        );
-      case AppRoutes.taskManagement:
-        return MaterialPageRoute(
-          builder: (_) => const TaskManagementScreen(),
-          settings: settings,
-        );
-      case AppRoutes.projectManagement:
-        return MaterialPageRoute(
-          builder: (_) => const ProjectManagementScreen(),
-          settings: settings,
-        );
-      case AppRoutes.bucketManagement:
-        return MaterialPageRoute(
-          builder: (_) => const BucketManagementScreen(),
-          settings: settings,
-        );
-
-      case AppRoutes.projectDetail:
-        final project = settings.arguments as Project?;
-        if (project == null) {
-          return MaterialPageRoute(
-            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => ProjectDetailsScreen(project: project),
-          settings: settings,
-        );
 
       // Budget
       case AppRoutes.budgetList:
@@ -170,11 +99,6 @@ class AppRouter {
       case AppRoutes.settingsConfigFinance:
         return MaterialPageRoute(
           builder: (_) => const AppConfigurationFinancePage(),
-          settings: settings,
-        );
-      case AppRoutes.settingsConfigTask:
-        return MaterialPageRoute(
-          builder: (_) => const AppConfigurationTaskPage(),
           settings: settings,
         );
 
@@ -320,35 +244,6 @@ class AppRouter {
 
 /// Helper extensions for easier navigation
 extension NavigationExtensions on BuildContext {
-  // Tasks
-  Future<void> goToTaskDetail(Task task) {
-    return AppRouter.push(this, AppRoutes.taskDetail, arguments: task);
-  }
-
-  Future<void> goToTaskCreate({String? initialProjectId}) {
-    return AppRouter.push(
-      this,
-      AppRoutes.taskCreate,
-      arguments: initialProjectId != null
-          ? {'initialProjectId': initialProjectId}
-          : null,
-    );
-  }
-
-  // Projects
-  Future<void> goToProjectList() {
-    return AppRouter.push(this, AppRoutes.projectList);
-  }
-
-  Future<void> goToProjectDetail(Project project) {
-    return AppRouter.push(this, AppRoutes.projectDetail, arguments: project);
-  }
-
-  // Note: goToProjectCreate() not implemented - uses dialog in ProjectListScreen
-  // Future<void> goToProjectCreate() {
-  //   return AppRouter.push(this, AppRoutes.projectCreate);
-  // }
-
   // Budget
   Future<void> goToBudgetList() {
     return AppRouter.push(this, AppRoutes.budgetList);

@@ -1,13 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/tasks/modules/tasks/domain/entities/task.dart';
-import 'package:keep_track/features/tasks/modules/projects/domain/entities/project.dart';
-import 'package:keep_track/features/tasks/modules/pomodoro/domain/entities/pomodoro_session.dart';
-import 'package:keep_track/features/tasks/presentation/state/task_controller.dart';
-import 'package:keep_track/features/tasks/presentation/state/project_controller.dart';
-import 'package:keep_track/features/tasks/presentation/state/pomodoro_session_controller.dart';
-import 'package:keep_track/features/profile/domain/contribution_data.dart';
 import 'package:keep_track/features/profile/domain/contribution_calculator.dart';
 import 'package:keep_track/features/profile/presentation/widgets/contribution_heatmap.dart';
 import 'package:keep_track/features/profile/presentation/widgets/contribution_activity_feed.dart';
@@ -21,80 +12,16 @@ class ContributionCard extends StatefulWidget {
 }
 
 class _ContributionCardState extends State<ContributionCard> {
-  late final TaskController _taskController;
-  late final ProjectController _projectController;
-  late final PomodoroSessionController _pomodoroController;
-
   int _selectedYear = DateTime.now().year;
 
   @override
-  void initState() {
-    super.initState();
-    _taskController = locator.get<TaskController>();
-    _projectController = locator.get<ProjectController>();
-    _pomodoroController = locator.get<PomodoroSessionController>();
-
-    _taskController.loadTasks();
-    _projectController.loadProjects();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Task>>(
-      state: _taskController,
-      loadingBuilder: (_) => _buildLoadingCard(),
-      errorBuilder: (context, message) => _buildErrorCard(message),
-      builder: (context, tasks) {
-        return AsyncStreamBuilder<List<Project>>(
-          state: _projectController,
-          loadingBuilder: (_) => _buildLoadingCard(),
-          errorBuilder: (context, message) => _buildStatsCard(tasks, [], []),
-          builder: (context, projects) {
-            return FutureBuilder<List<PomodoroSession>>(
-              future: _pomodoroController.getSessions(),
-              builder: (context, snapshot) {
-                final sessions = snapshot.data ?? [];
-                return _buildStatsCard(tasks, projects, sessions);
-              },
-            );
-          },
-        );
-      },
-    );
+    return _buildStatsCard();
   }
 
-  Widget _buildLoadingCard() {
-    return Card(
-      elevation: 0,
-      child: Container(
-        height: 300,
-        alignment: Alignment.center,
-        child: const CircularProgressIndicator(),
-      ),
-    );
-  }
-
-  Widget _buildErrorCard(String message) {
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text('Error: $message'),
-      ),
-    );
-  }
-
-  Widget _buildStatsCard(
-    List<Task> tasks,
-    List<Project> projects,
-    List<PomodoroSession> sessions,
-  ) {
-    // Calculate yearly contributions
+  Widget _buildStatsCard() {
     final summary = ContributionCalculator.getYearlyContributions(
       year: _selectedYear,
-      tasks: tasks,
-      projects: projects,
-      sessions: sessions,
     );
 
     return Column(

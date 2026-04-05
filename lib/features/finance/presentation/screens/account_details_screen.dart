@@ -3,11 +3,13 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
+import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 
 /// Daily finance data for bar graph
@@ -36,6 +38,7 @@ class AccountDetailsScreen extends StatefulWidget {
 
 class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   late final TransactionController _transactionController;
+  late final AccountController _accountController;
   int _daysToShow = 15;
   Set<String> _selectedTypes = {'income', 'expense', 'transfer'};
 
@@ -43,6 +46,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   void initState() {
     super.initState();
     _transactionController = locator.get<TransactionController>();
+    _accountController = locator.get<AccountController>();
     _transactionController.loadTransactionsByAccount(widget.account.id!);
   }
 
@@ -748,6 +752,16 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     );
   }
 
+  String? _accountName(String? id) {
+    if (id == null) return null;
+    final accounts = _accountController.data ?? [];
+    try {
+      return accounts.firstWhere((a) => a.id == id).name;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Widget _buildTransactionItem(Transaction transaction) {
     Color typeColor;
     IconData typeIcon;
@@ -771,6 +785,14 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         break;
     }
 
+    final String? accountLabel = switch (transaction.type) {
+      TransactionType.income || TransactionType.expense =>
+        _accountName(transaction.accountId),
+      TransactionType.transfer => transaction.accountId == widget.account.id
+          ? 'To: ${_accountName(transaction.toAccountId) ?? '—'}'
+          : 'From: ${_accountName(transaction.accountId) ?? '—'}',
+    };
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 8),
@@ -787,12 +809,25 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
           transaction.description ?? transaction.type.displayName,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(
-          DateFormat('MMM d, yyyy - h:mm a').format(transaction.date),
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              DateFormat('MMM d, yyyy - h:mm a').format(transaction.date),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+            if (accountLabel != null)
+              Text(
+                accountLabel,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ),
+          ],
         ),
         trailing: Text(
           '$prefix${NumberFormat.currency(

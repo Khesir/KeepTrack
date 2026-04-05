@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration019AddTransactionContextFields extends Migration {
       'Add optional foreign key fields (debt_id, goal_id, planned_payment_id, refunded_transaction_id) to transactions table';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add context metadata columns to transactions table
 -- These optional foreign keys link transactions to related entities
@@ -57,7 +57,7 @@ COMMENT ON COLUMN transactions.refunded_transaction_id IS 'Link to original tran
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop indexes
 DROP INDEX IF EXISTS idx_transactions_debt_id;

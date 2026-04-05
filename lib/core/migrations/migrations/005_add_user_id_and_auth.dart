@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../migration.dart';
 
 class Migration005AddUserIdAndAuth extends Migration {
@@ -10,7 +10,7 @@ class Migration005AddUserIdAndAuth extends Migration {
       'Add user_id columns to all tables and update RLS policies for proper authentication';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     // Add user_id column to tasks table
     await client.rpc('exec_sql', params: {
       'sql': '''

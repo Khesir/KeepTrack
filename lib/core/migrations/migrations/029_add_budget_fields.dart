@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -18,7 +18,7 @@ class Migration029AddBudgetFields extends Migration {
       'Add title, budget_type, and period_type fields to budgets table and remove month uniqueness constraint';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add title column for user-defined budget names
 DO \$\$
@@ -128,7 +128,7 @@ END \$\$;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- WARNING: This will delete title, budget_type, and period_type data!
 -- Make sure to backup your data before running this rollback.

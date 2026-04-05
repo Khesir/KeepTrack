@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration014RemoveBudgetMonthUnique extends Migration {
       'Remove UNIQUE constraint from budgets.month to allow multiple users to have budgets for the same month';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Drop the existing UNIQUE constraint on month column
 -- This allows multiple users to create budgets for the same month
@@ -53,7 +53,7 @@ END \$\$;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop the composite unique constraint
 ALTER TABLE budgets DROP CONSTRAINT IF EXISTS budgets_user_month_unique;

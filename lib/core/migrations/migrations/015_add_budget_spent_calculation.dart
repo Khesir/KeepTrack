@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration015AddBudgetSpentCalculation extends Migration {
       'Add function and trigger to automatically calculate spent amounts for budget categories based on transactions';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Function to calculate spent amount for a budget category
 CREATE OR REPLACE FUNCTION calculate_budget_category_spent(
@@ -138,7 +138,7 @@ END \$\$;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop trigger
 DROP TRIGGER IF EXISTS trigger_transaction_update_budget_spent ON transactions;

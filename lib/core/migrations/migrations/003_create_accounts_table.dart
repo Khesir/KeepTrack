@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration003CreateAccountsTable extends Migration {
   String get description => 'Create accounts table with soft delete support';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Create accounts table
 CREATE TABLE IF NOT EXISTS accounts (
@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_accounts_archived ON accounts(is_archived);
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop accounts table
 DROP TABLE IF EXISTS accounts CASCADE;

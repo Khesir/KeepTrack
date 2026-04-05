@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration016UpdateAccountsToUUID extends Migration {
       'Update accounts table: change id from TEXT to UUID';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Create a new accounts table with UUID id
 CREATE TABLE accounts_new (
@@ -136,7 +136,7 @@ CREATE TRIGGER update_accounts_updated_at
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop trigger
 DROP TRIGGER IF EXISTS update_accounts_updated_at ON accounts;

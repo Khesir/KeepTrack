@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration048AddFeeToPaymentRpcs extends Migration {
       'Add optional fee parameter to create_goal_payment_transaction and create_debt_payment_transaction';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  Updating payment RPC functions with fee support...');
 
     final sql = '''
@@ -240,7 +240,7 @@ GRANT EXECUTE ON FUNCTION create_debt_payment_transaction TO authenticated;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     // Reverting would restore the original functions without fee parameter
     // This is handled by re-running migration 020
     AppLogger.info('  Rollback not implemented - run migration 020 to restore');

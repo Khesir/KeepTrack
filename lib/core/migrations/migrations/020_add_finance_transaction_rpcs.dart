@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration020AddFinanceTransactionRpcs extends Migration {
       'Create RPC functions for atomic transaction operations with goals, debts, and planned payments';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- ============================================================
 -- RPC Function: create_goal_payment_transaction
@@ -333,7 +333,7 @@ GRANT EXECUTE ON FUNCTION create_planned_payment_transaction TO authenticated;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop RPC functions
 DROP FUNCTION IF EXISTS create_goal_payment_transaction;

@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration043CreateBucketsTable extends Migration {
   String get description => 'Create buckets table for task categorization';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     AppLogger.info('  🪣 Creating buckets table...');
 
     final sql = '''
@@ -79,7 +79,7 @@ class Migration043CreateBucketsTable extends Migration {
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     AppLogger.info('  🗑️ Dropping buckets table...');
 
     final sql = '''

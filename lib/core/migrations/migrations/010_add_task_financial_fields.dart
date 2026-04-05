@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration010AddTaskFinancialFields extends Migration {
   String get description => 'Add financial integration fields to tasks table for money-related tasks';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add financial integration columns to tasks table
 ALTER TABLE tasks
@@ -38,7 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_actual_transaction_id ON tasks(actual_trans
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Remove indexes
 DROP INDEX IF EXISTS idx_tasks_is_money_related;

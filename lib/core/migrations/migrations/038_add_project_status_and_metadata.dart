@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration038AddProjectStatusAndMetadata extends Migration {
   String get description => 'Add status and metadata columns to projects table';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add status column to projects table (active, postponed, closed)
 ALTER TABLE projects
@@ -55,7 +55,7 @@ COMMENT ON COLUMN projects.metadata IS 'Dynamic metadata as JSON (e.g., project 
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Remove indexes
 DROP INDEX IF EXISTS idx_projects_status;

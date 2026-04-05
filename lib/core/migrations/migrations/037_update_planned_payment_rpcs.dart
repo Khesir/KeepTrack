@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration037UpdatePlannedPaymentRpcs extends Migration {
       'Update create_planned_payment_transaction to support fees and add skip_planned_payment function';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Drop the old function first (since we're changing the signature)
 DROP FUNCTION IF EXISTS create_planned_payment_transaction(UUID, UUID, UUID, DECIMAL, transaction_type, TEXT, TIMESTAMP WITH TIME ZONE, TEXT, UUID);
@@ -217,7 +217,7 @@ GRANT EXECUTE ON FUNCTION skip_planned_payment TO authenticated;
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Revert create_planned_payment_transaction to original version
 CREATE OR REPLACE FUNCTION create_planned_payment_transaction(

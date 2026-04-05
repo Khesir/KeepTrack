@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -12,7 +12,7 @@ class Migration012CreateBudgetCategoriesTable extends Migration {
       'Create budget_categories table with user reference, RLS, and triggers for timestamps';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Create budget_categories table
 CREATE TABLE IF NOT EXISTS budget_categories (
@@ -98,7 +98,7 @@ CREATE TRIGGER trigger_update_budget_categories_updated_at
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Drop trigger and function
 DROP TRIGGER IF EXISTS trigger_update_budget_categories_updated_at

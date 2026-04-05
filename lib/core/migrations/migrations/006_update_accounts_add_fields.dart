@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:keep_track/core/logging/app_logger.dart';
 import '../migration.dart';
 
@@ -11,7 +11,7 @@ class Migration006UpdateAccountsAddFields extends Migration {
   String get description => 'Add account_type, color_hex, icon_code_point, and is_active fields to accounts table';
 
   @override
-  Future<void> up(SupabaseClient client) async {
+  Future<void> up(dynamic client) async {
     final sql = '''
 -- Add new columns to accounts table
 ALTER TABLE accounts
@@ -50,7 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_accounts_active ON accounts(is_active);
   }
 
   @override
-  Future<void> down(SupabaseClient client) async {
+  Future<void> down(dynamic client) async {
     final sql = '''
 -- Remove new columns from accounts table
 ALTER TABLE accounts
