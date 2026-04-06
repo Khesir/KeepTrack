@@ -204,7 +204,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Personal Codex',
+                      'Keep Track',
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

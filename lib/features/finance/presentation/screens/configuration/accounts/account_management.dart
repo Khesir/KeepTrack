@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -7,7 +8,7 @@ import 'package:keep_track/features/finance/modules/account/domain/entities/acco
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
 import '../../../state/account_controller.dart';
-import 'widget/account_management_dialog.dart';
+import 'account_form_screen.dart';
 
 class AccountManagementScreen extends StatefulWidget {
   const AccountManagementScreen({super.key});
@@ -20,6 +21,7 @@ class AccountManagementScreen extends StatefulWidget {
 class _AccountManagementScreenState extends State<AccountManagementScreen> {
   late final AccountController _controller;
   late final SupabaseService supabaseService;
+
   @override
   void initState() {
     super.initState();
@@ -29,22 +31,72 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
   final _currencyFormat = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
 
-  void _showAccountDialog({Account? account}) {
-    showDialog(
-      context: context,
-      builder: (context) => AccountManagementDialog(
-        account: account,
-        userId: supabaseService.userId!,
-        onSave: (updatedAccount) async {
-          if (account != null) {
-            await _controller.updateAccount(updatedAccount);
-          } else {
-            await _controller.createAccount(updatedAccount);
-          }
-        },
-        onDelete: account != null
-            ? () async => await _controller.deleteAccount(account.id!)
-            : null,
+  void _showAccountForm({Account? account}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AccountFormScreen(
+          account: account,
+          userId: supabaseService.userId!,
+          onSave: (updatedAccount) async {
+            if (account != null) {
+              await _controller.updateAccount(updatedAccount);
+            } else {
+              await _controller.createAccount(updatedAccount);
+            }
+          },
+          onDelete: account != null
+              ? () async => await _controller.deleteAccount(account.id!)
+              : null,
+        ),
+      ),
+    );
+  }
+
+  /// Build the leading avatar for an account list tile.
+  Widget _buildAccountAvatar(Account account) {
+    const double radius = 22;
+
+    if (account.imageUrl != null) {
+      ImageProvider? imageProvider;
+      if (account.imageUrl!.startsWith('data:')) {
+        try {
+          final base64Str = account.imageUrl!.split(',').last;
+          imageProvider = MemoryImage(base64Decode(base64Str));
+        } catch (_) {
+          imageProvider = null;
+        }
+      } else {
+        imageProvider = NetworkImage(account.imageUrl!);
+      }
+
+      if (imageProvider != null) {
+        return CircleAvatar(
+          radius: radius,
+          backgroundImage: imageProvider,
+        );
+      }
+    }
+
+    // Fallback: icon with color background
+    Color? iconColor;
+    if (account.colorHex != null) {
+      try {
+        iconColor = Color(
+          int.parse(account.colorHex!.replaceFirst('#', '0xff')),
+        );
+      } catch (_) {
+        iconColor = null;
+      }
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: iconColor ?? Theme.of(context).colorScheme.primary,
+      child: Icon(
+        IconHelper.fromString(account.iconCodePoint),
+        color: Colors.white,
+        size: 22,
       ),
     );
   }
@@ -56,7 +108,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         title: const Text('Accounts'),
         actions: [
           IconButton(
-            onPressed: () => _showAccountDialog(),
+            onPressed: () => _showAccountForm(),
             icon: const Icon(Icons.add),
           ),
         ],
@@ -68,7 +120,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
           return Column(
             children: [
-              // Total balance card - always shown
+              // Total balance card
               Card(
                 margin: const EdgeInsets.all(16),
                 child: ListTile(
@@ -116,30 +168,16 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             child: ListTile(
-                              leading: Icon(
-                                IconHelper.fromString(account.iconCodePoint),
-                                color: account.colorHex != null
-                                    ? Color(
-                                        int.parse(
-                                          account.colorHex!.replaceFirst(
-                                            '#',
-                                            '0xff',
-                                          ),
-                                        ),
-                                      )
-                                    : null,
-                              ),
+                              leading: _buildAccountAvatar(account),
                               title: Text(account.name),
-                              subtitle: Text(
-                                account.accountType.toString().split('.').last,
-                              ),
+                              subtitle: Text(account.accountType.name),
                               trailing: Text(
                                 _currencyFormat.format(account.balance),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              onTap: () => _showAccountDialog(account: account),
+                              onTap: () => _showAccountForm(account: account),
                             ),
                           );
                         },
@@ -148,7 +186,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
             ],
           );
         },
-        loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+        loadingBuilder: (_) =>
+            const Center(child: CircularProgressIndicator()),
         errorBuilder: (context, message) => Center(child: Text(message)),
       ),
     );

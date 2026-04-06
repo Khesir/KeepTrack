@@ -86,7 +86,7 @@ class _AuthGuardState extends State<AuthGuard> {
             ),
             const SizedBox(height: 32),
             const Text(
-              'Personal Codex',
+              'Keep Track',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

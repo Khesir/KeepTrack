@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
-import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
-import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../modules/debt/domain/entities/debt.dart';
 import '../../../state/debt_controller.dart';
+import 'debt_history_screen.dart';
 
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
@@ -26,8 +24,6 @@ class DebtsTabNew extends StatefulWidget {
 class _DebtsTabNewState extends State<DebtsTabNew> {
   late final DebtController _controller;
   late final AccountController _accountController;
-  late final FinanceCategoryController _categoryController;
-  late final SupabaseService _supabaseService;
   String _selectedFilter = 'All'; // All, Lending, Borrowing
 
   @override
@@ -35,24 +31,18 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
     super.initState();
     _controller = locator.get<DebtController>();
     _accountController = locator.get<AccountController>();
-    _categoryController = locator.get<FinanceCategoryController>();
-    _supabaseService = locator.get<SupabaseService>();
 
-    // Load accounts and categories
+    // Load accounts
     _accountController.loadAccounts();
-    _categoryController.loadCategories();
   }
 
   Future<void> _showRecordPaymentDialog(Debt debt) async {
     final amountController = TextEditingController();
     final feeController = TextEditingController();
     String? selectedAccountId;
-    String? selectedCategoryId;
 
     // Determine transaction type based on debt type
     final isLending = debt.type == DebtType.lending;
-    final transactionType = isLending ? 'income' : 'expense';
-    final categoryType = isLending ? CategoryType.income : CategoryType.expense;
 
     final result = await showDialog<bool>(
       context: context,
@@ -122,36 +112,6 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                   );
                 },
               ),
-              const SizedBox(height: 16),
-
-              // Category Selector
-              AsyncStreamBuilder<List<FinanceCategory>>(
-                state: _categoryController,
-                builder: (context, categories) {
-                  final filteredCategories = categories
-                      .where((c) => c.type == categoryType)
-                      .toList();
-
-                  return DropdownButtonFormField<String>(
-                    value: selectedCategoryId,
-                    decoration: InputDecoration(
-                      labelText: 'Category',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    items: filteredCategories
-                        .map(
-                          (category) => DropdownMenuItem(
-                            value: category.id,
-                            child: Text(category.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => selectedCategoryId = value,
-                  );
-                },
-              ),
             ],
           ),
         ),
@@ -188,40 +148,18 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 return;
               }
 
-              if (selectedCategoryId == null) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Please select a category')),
-                );
-                return;
-              }
-
-              // Call RPC function
               try {
                 final fee = double.tryParse(feeController.text) ?? 0;
-                await _supabaseService.client.rpc(
-                  'create_debt_payment_transaction',
-                  params: {
-                    'p_user_id': _supabaseService.userId,
-                    'p_account_id': selectedAccountId,
-                    'p_finance_category_id': selectedCategoryId,
-                    'p_amount': amount,
-                    'p_type': transactionType,
-                    'p_description': isLending
-                        ? 'Received payment from ${debt.personName}'
-                        : 'Paid debt to ${debt.personName}',
-                    'p_date': DateTime.now().toIso8601String(),
-                    'p_notes': null,
-                    'p_debt_id': debt.id,
-                    'p_fee': fee,
+                await ApiClient.instance.post(
+                  '/debts/${debt.id}/pay',
+                  data: {
+                    'accountId': selectedAccountId,
+                    'amount': amount,
+                    if (fee > 0) 'fee': fee,
                   },
                 );
-
-                // Reload debts
                 _controller.loadDebts();
-
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext, true);
-                }
+                if (dialogContext.mounted) Navigator.pop(dialogContext, true);
               } catch (e) {
                 if (dialogContext.mounted) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -314,21 +252,45 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('Debts & Lending', style: AppTextStyles.h1),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/debts-management',
-                                  );
-                                },
-                                icon: const Icon(Icons.add, size: 20),
-                                label: const Text('Manage Debts'),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
+                              Row(
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const DebtHistoryScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.history, size: 20),
+                                    label: const Text('History'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/debts-management',
+                                      );
+                                    },
+                                    icon: const Icon(Icons.add, size: 20),
+                                    label: const Text('Manage Debts'),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -459,12 +421,33 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
           ),
           floatingActionButton: isDesktop
               ? null
-              : FloatingActionButton.extended(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/debts-management');
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Manage Debts'),
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    FloatingActionButton.small(
+                      heroTag: 'debt_history_fab',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DebtHistoryScreen(),
+                          ),
+                        );
+                      },
+                      tooltip: 'History',
+                      child: const Icon(Icons.history),
+                    ),
+                    const SizedBox(height: 10),
+                    FloatingActionButton.extended(
+                      heroTag: 'debt_manage_fab',
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/debts-management');
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Manage Debts'),
+                    ),
+                  ],
                 ),
         );
       },

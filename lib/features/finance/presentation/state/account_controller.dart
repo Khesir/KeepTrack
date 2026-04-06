@@ -18,33 +18,23 @@ class AccountController extends StreamState<AsyncState<List<Account>>> {
     });
   }
 
-  /// Create a new account
+  /// Create a new account — throws on failure so callers can show errors
   Future<void> createAccount(Account account) async {
-    await execute(() async {
-      final created = await _repository
-          .createAccount(account)
-          .then((r) => r.unwrap());
-      final current = data ?? [];
-      return [...current, created];
-    });
+    final created = await _repository.createAccount(account).then((r) => r.unwrap());
+    final current = data ?? [];
+    emit(AsyncData([...current, created]));
   }
 
-  /// Update an existing account
+  /// Update an existing account — throws on failure so callers can show errors
   Future<void> updateAccount(Account account) async {
-    await execute(() async {
-      await _repository.updateAccount(account).then((r) => r.unwrap());
-      await loadAccounts();
-      return data ?? [];
-    });
+    await _repository.updateAccount(account).then((r) => r.unwrap());
+    await loadAccounts();
   }
 
-  /// Delete an account
+  /// Delete an account — throws on failure so callers can show errors
   Future<void> deleteAccount(String id) async {
-    await execute(() async {
-      await _repository.deleteAccount(id).then((r) => r.unwrap());
-      await loadAccounts();
-      return data ?? [];
-    });
+    await _repository.deleteAccount(id).then((r) => r.unwrap());
+    await loadAccounts();
   }
 
   /// Archive an account

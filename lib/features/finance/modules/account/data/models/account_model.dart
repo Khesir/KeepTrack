@@ -10,6 +10,7 @@ class AccountModel extends Account {
     super.colorHex,
     super.iconCodePoint,
     super.bankAccountNumber,
+    super.imageUrl,
     super.isActive,
     super.isArchived,
     super.createdAt,
@@ -26,6 +27,7 @@ class AccountModel extends Account {
       colorHex: account.colorHex,
       iconCodePoint: account.iconCodePoint,
       bankAccountNumber: account.bankAccountNumber,
+      imageUrl: account.imageUrl,
       isActive: account.isActive,
       isArchived: account.isArchived,
       createdAt: account.createdAt,
@@ -44,6 +46,7 @@ class AccountModel extends Account {
       colorHex: json['colorHex'] as String?,
       iconCodePoint: json['iconCodePoint']?.toString(),
       bankAccountNumber: json['bankAccountNumber'] as String?,
+      imageUrl: json['imageUrl'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       isArchived: json['isArchived'] as bool? ?? false,
       createdAt: json['createdAt'] != null
@@ -60,11 +63,12 @@ class AccountModel extends Account {
   Map<String, dynamic> toApiJson() {
     return {
       'name': name,
-      'accountType': accountType.name,
+      'accountType': accountType.toString().split('.').last, // lowercase enum name
       'balance': balance,
       if (colorHex != null) 'colorHex': colorHex,
       if (iconCodePoint != null) 'iconCodePoint': int.tryParse(iconCodePoint!),
       if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+      if (imageUrl != null) 'imageUrl': imageUrl,
       'isActive': isActive,
       'isArchived': isArchived,
     };
@@ -79,6 +83,7 @@ class AccountModel extends Account {
         if (colorHex != null) 'colorHex': colorHex,
         if (iconCodePoint != null) 'iconCodePoint': iconCodePoint,
         if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+        if (imageUrl != null) 'imageUrl': imageUrl,
         'isActive': isActive,
         'isArchived': isArchived,
         if (userId != null) 'userId': userId,

@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Keep Track',
-  description: 'Your all-in-one personal management system - Tasks, Finance, and more',
+  description: 'Your personal finance manager - budgets, accounts, debts, and more',
   base: '/',
 
   head: [
@@ -33,15 +33,18 @@ export default defineConfig({
         {
           text: 'Features',
           items: [
-            { text: 'Task Management', link: '/docs/features/tasks' },
-            { text: 'Finance Tracking', link: '/docs/features/finance' },
-            { text: 'Pomodoro Timer', link: '/docs/features/pomodoro' }
+            { text: 'Finance Overview', link: '/docs/features/finance' },
+            { text: 'Budgets', link: '/docs/features/budgets' },
+            { text: 'Accounts', link: '/docs/features/accounts' },
+            { text: 'Transactions', link: '/docs/features/transactions' },
+            { text: 'Debts & Receivables', link: '/docs/features/debts' },
+            { text: 'Goals', link: '/docs/features/goals' },
+            { text: 'Planned Payments', link: '/docs/features/planned-payments' }
           ]
         },
         {
           text: 'Guide',
           items: [
-            { text: 'Configuration', link: '/docs/guide/configuration' },
             { text: 'Themes', link: '/docs/guide/themes' }
           ]
         },

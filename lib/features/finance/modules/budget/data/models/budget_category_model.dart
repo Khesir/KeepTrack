@@ -1,6 +1,8 @@
+import 'package:keep_track/features/finance/modules/finance_category/data/models/finance_category_model.dart';
+
 import '../../domain/entities/budget_category.dart';
 
-/// BudgetCategory model - DTO for Supabase
+/// BudgetCategory model
 class BudgetCategoryModel extends BudgetCategory {
   BudgetCategoryModel({
     super.id,
@@ -31,15 +33,31 @@ class BudgetCategoryModel extends BudgetCategory {
     );
   }
 
-  /// Create model from JSON (NestJS camelCase response)
+  /// Create model from JSON (NestJS camelCase response).
+  /// [financeCategoryId] may be a plain String ID or a populated Map from
+  /// the backend `.populate('categories.financeCategoryId')` call.
   factory BudgetCategoryModel.fromJson(Map<String, dynamic> json) {
+    final rawFcId = json['financeCategoryId'];
+    String financeCategoryId;
+    FinanceCategoryModel? fcModel;
+
+    if (rawFcId is Map<String, dynamic>) {
+      fcModel = FinanceCategoryModel.fromJson(rawFcId);
+      financeCategoryId = fcModel.id ?? '';
+    } else {
+      financeCategoryId = (rawFcId as String?) ?? '';
+    }
+
+    // Support both `id` (transformed) and `_id` (raw Mongoose)
+    final id = (json['id'] ?? json['_id']) as String?;
+
     return BudgetCategoryModel(
-      id: json['id'] as String?,
+      id: id,
       budgetId: json['budgetId'] as String? ?? '',
-      financeCategoryId: json['financeCategoryId'] as String? ?? '',
+      financeCategoryId: financeCategoryId,
       userId: json['userId'] as String?,
       targetAmount: (json['targetAmount'] as num).toDouble(),
-      financeCategory: null, // Hydrated separately
+      financeCategory: fcModel?.toEntity(),
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : null,

@@ -108,7 +108,7 @@ class _PersonalCodexAppState extends State<PersonalCodexApp> {
             : const AppSettings();
 
         return MaterialApp(
-          title: 'Personal Codex',
+          title: 'Keep Track',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,

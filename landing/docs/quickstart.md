@@ -2,111 +2,68 @@
 
 Get up and running with Keep Track in minutes!
 
-## Your First Task
+## 1. Add Your First Account
 
-1. Click on the **Tasks** tab in the navigation
-2. Click the **+** button to create a new task
-3. Enter a title (e.g., "Buy groceries")
-4. Set a priority (Urgent, High, Medium, or Low)
-5. Optionally add a due date
-6. Click **Create**
-
-Congratulations! You've created your first task. 🎉
-
-## Creating a Project
-
-Tasks can be organized into projects:
-
-1. Go to the **Projects** tab
-2. Click **New Project**
-3. Enter a project name (e.g., "Home Renovation")
-4. Add a description
-5. Click **Create**
-
-Now when you create tasks, you can assign them to this project!
-
-## Setting Up Your Finances
-
-### Add Your First Account
-
-1. Navigate to the **Finance** module
-2. Click on **Accounts**
-3. Click **Add Account**
-4. Fill in the details:
+1. Go to **Finance** → **Accounts** tab
+2. Tap the **+** button
+3. Fill in the details:
    - Name (e.g., "Main Bank Account")
-   - Type (Bank, Cash, E-Wallet, etc.)
-   - Initial balance
-5. Click **Save**
+   - Type (Bank, Cash, E-Wallet, Credit Card, etc.)
+   - Starting balance
+4. Tap **Save**
 
-### Create a Budget
+Your account balance will update automatically with every transaction.
 
-1. Go to **Budgets** tab
-2. Click **Create Budget**
-3. Select the month
-4. Choose a category (Food, Transportation, etc.)
-5. Set your budget amount
-6. Click **Save**
+## 2. Set Up a Budget
 
-The system will automatically track your spending against this budget!
+1. Go to **Finance** → **Budget** tab
+2. Tap **Start Planning** for the current month
+3. Create a budget group (e.g., "Monthly Expenses")
+4. Add categories (Food, Transport, Utilities, etc.) with target amounts
+5. Repeat for an income group if needed
 
-### Record a Transaction
+The budget screen shows your actual spending vs. planned in real time.
 
-1. Go to **Finance** → **Accounts**
-2. Click on an account
-3. Click **Add Transaction**
-4. Choose type (Income or Expense)
-5. Enter amount, category, and description
-6. Click **Save**
+## 3. Record a Transaction
 
-## Using the Pomodoro Timer
+1. Tap the **New Transaction** button (bottom right)
+2. Choose the type: **Income**, **Expense**, or **Transfer**
+3. Enter the amount
+4. Select the account and category
+5. Optionally add a description, date, and fee
+6. Tap **Create Transaction**
 
-Boost your productivity with focused work sessions:
+Your account balance and budget progress update immediately.
 
-1. Go to the **Pomodoro** tab
-2. Set your work duration (default: 25 minutes)
-3. Set your break duration (default: 5 minutes)
-4. Click **Start Session**
-5. Focus on your work until the timer ends
-6. Take your break when prompted!
+## 4. Track Debts & Receivables
 
-## Switching Themes
+1. Go to **Finance** → **Debts** tab
+2. Tap **+** to add a debt or receivable
+3. Fill in the person's name, total amount, and payment schedule
+4. When making a payment, tap **Pay** and select the account to deduct from
 
-Keep Track supports light and dark modes:
+## 5. Set a Savings Goal
 
-1. Click on the theme toggle icon in the top bar
-2. Your preference is saved automatically
+1. Go to **Finance** → **Goals** tab
+2. Tap **+** to create a goal
+3. Enter a name, target amount, and deadline
+4. Contribute from any account whenever you like
 
-## Organizing Your Workspace
+## 6. Schedule Recurring Payments
 
-### Desktop Layout
+1. Go to **Finance** → **Planned Payments** tab
+2. Tap **+** to add a recurring bill (rent, subscription, etc.)
+3. Set the amount, frequency, and linked account
+4. Mark it paid each period to keep your budget accurate
 
-On desktop, you'll see:
-- **Sidebar**: Quick navigation between modules
-- **Top bar**: Current view title and actions
-- **Main area**: Your content
+## Tips
 
-### Mobile Layout
-
-On mobile devices:
-- **Bottom navigation**: Switch between main modules
-- **Top app bar**: Current view and menu
-- **Swipe**: Navigate between tabs
-
-## Pro Tips
-
-- **Keyboard Shortcuts**: Use `Ctrl/Cmd + N` to quickly create new items
-- **Search**: Use the search bar to quickly find tasks or transactions
-- **Filters**: Use filters to view only what matters
-- **Archive**: Keep your workspace clean by archiving completed items
-
-## Sync Your Data
-
-Your data automatically syncs to the cloud when you're signed in. Access it from any device!
+- Use **Settings** to change your currency and theme
+- All data syncs automatically across your devices when signed in
+- Tap any account to see its full transaction history
 
 ## Need Help?
 
-- 📚 Check the [full documentation](./index)
-- 💬 Ask in [GitHub Discussions](https://github.com/Khesir/KeepTrack/discussions)
-- 🐛 [Report issues](https://github.com/Khesir/KeepTrack/issues)
-
-Happy organizing! 🚀
+- 📚 [Full Documentation](./index)
+- 💬 [GitHub Discussions](https://github.com/Khesir/KeepTrack/discussions)
+- 🐛 [Report Issues](https://github.com/Khesir/KeepTrack/issues)

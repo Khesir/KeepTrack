@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -59,27 +58,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _showCurrencyDialog(context, settings.currency),
-              ),
-
-              const Divider(),
-
-              // Configuration Section
-              _buildSectionHeader('Management'),
-              ListTile(
-                leading: const Icon(Icons.settings),
-                title: const Text('Configuration'),
-                subtitle: const Text(
-                  'Manage accounts, categories, transactions, and goals',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    widget.mode == "finance"
-                        ? AppRoutes.settingsConfigFinance
-                        : AppRoutes.settingsConfig,
-                  );
-                },
               ),
 
               const Divider(),

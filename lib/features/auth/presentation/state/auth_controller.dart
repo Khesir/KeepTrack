@@ -14,6 +14,9 @@ class AuthController extends StreamState<AsyncState<User?>> {
     _init();
   }
 
+  // Track last user ID that was initialized to avoid duplicate seeding
+  String? _lastInitializedUserId;
+
   /// Initialize auth state
   void _init() async {
     // Listen to auth state changes FIRST
@@ -22,9 +25,13 @@ class AuthController extends StreamState<AsyncState<User?>> {
         if (user != null) {
           AppLogger.info('Auth state changed: User signed in - ${user.email}');
           emit(AsyncData(user));
-          _initializeUserData(user.id);
+          if (_lastInitializedUserId != user.id) {
+            _lastInitializedUserId = user.id;
+            _initializeUserData(user.id);
+          }
         } else {
           AppLogger.info('Auth state changed: User signed out');
+          _lastInitializedUserId = null;
           emit(const AsyncData(null));
         }
       },
@@ -33,6 +40,15 @@ class AuthController extends StreamState<AsyncState<User?>> {
         emit(AsyncError('Auth error', error));
       },
     );
+
+    // Try to restore a saved session from secure storage first
+    AppLogger.info('Attempting session restore...');
+    final restored = await _authService.restoreSession();
+    if (restored) {
+      // Stream listener already emitted the user; initialization handled there
+      AppLogger.info('Session restored successfully');
+      return;
+    }
 
     // On web, if there's an OAuth callback in progress (URL has ?code=...),
     // Supabase processes it automatically. Wait for auth state listener to fire.
@@ -44,7 +60,7 @@ class AuthController extends StreamState<AsyncState<User?>> {
       if (currentUser != null) {
         AppLogger.info('User authenticated: ${currentUser.email}');
         emit(AsyncData(currentUser));
-        _initializeUserData(currentUser.id);
+        // Initialization already handled by the auth state listener above
         return; // Done!
       }
     }
@@ -61,8 +77,7 @@ class AuthController extends StreamState<AsyncState<User?>> {
     result.fold(
       onSuccess: (user) async {
         emit(AsyncData(user));
-        // Initialize user data (finance categories, etc.) in the background
-        _initializeUserData(user.id);
+        // Initialization handled by the auth state listener in _init()
       },
       onError: (failure) {
         // On web, "Sign-in initiated" is expected (redirect flow)
@@ -90,7 +105,7 @@ class AuthController extends StreamState<AsyncState<User?>> {
     result.fold(
       onSuccess: (user) async {
         emit(AsyncData(user));
-        _initializeUserData(user.id);
+        // Initialization handled by the auth state listener in _init()
       },
       onError: (failure) => emit(AsyncError(failure.message, failure)),
     );
@@ -111,7 +126,7 @@ class AuthController extends StreamState<AsyncState<User?>> {
     result.fold(
       onSuccess: (user) async {
         emit(AsyncData(user));
-        _initializeUserData(user.id);
+        // Initialization handled by the auth state listener in _init()
       },
       onError: (failure) => emit(AsyncError(failure.message, failure)),
     );
@@ -124,8 +139,7 @@ class AuthController extends StreamState<AsyncState<User?>> {
     result.fold(
       onSuccess: (user) async {
         emit(AsyncData(user));
-        // Initialize user data (finance categories, etc.) in the background
-        _initializeUserData(user.id);
+        // Initialization handled by the auth state listener in _init()
       },
       onError: (failure) => emit(AsyncError(failure.message, failure)),
     );

@@ -8,6 +8,7 @@ class Account {
   final String? colorHex; // Store color as hex string
   final String? iconCodePoint; // Store icon as code point
   final String? bankAccountNumber;
+  final String? imageUrl;
   final bool isActive;
   final bool isArchived;
   final DateTime? createdAt; // Optional - Supabase auto-generates
@@ -22,6 +23,7 @@ class Account {
     this.colorHex,
     this.iconCodePoint,
     this.bankAccountNumber,
+    this.imageUrl,
     this.isActive = true,
     this.isArchived = false,
     this.createdAt,
@@ -38,6 +40,7 @@ class Account {
     String? colorHex,
     String? iconCodePoint,
     String? bankAccountNumber,
+    String? imageUrl,
     bool? isActive,
     bool? isArchived,
     DateTime? createdAt,
@@ -52,6 +55,7 @@ class Account {
       colorHex: colorHex ?? this.colorHex,
       iconCodePoint: iconCodePoint ?? this.iconCodePoint,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      imageUrl: imageUrl ?? this.imageUrl,
       isActive: isActive ?? this.isActive,
       isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt ?? this.createdAt,

@@ -3,7 +3,6 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
@@ -23,7 +22,7 @@ class _CategoryGroup {
   const _CategoryGroup(this.name, this.categories);
 }
 
-/// Screen for creating a new transaction
+/// Screen for creating a new transaction (income, expense, or transfer)
 class CreateTransactionScreen extends StatefulWidget {
   final String? initialDescription;
   final double? initialAmount;
@@ -59,13 +58,22 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   final _descriptionController = TextEditingController();
   final _notesController = TextEditingController();
   TransactionType _selectedType = TransactionType.expense;
+
+  // Income / Expense fields
   String? _selectedAccountId;
   String? _selectedCategoryId;
   FinanceCategory? _selectedCategory;
   String? _selectedBudgetId;
+
+  // Transfer fields
+  String? _fromAccountId;
+  String? _toAccountId;
+
   DateTime _selectedDate = DateTime.now();
   bool _isCreating = false;
   bool _showFeeFields = false;
+
+  bool get _isTransfer => _selectedType == TransactionType.transfer;
 
   @override
   void initState() {
@@ -84,6 +92,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     }
     if (widget.initialAccountId != null) {
       _selectedAccountId = widget.initialAccountId;
+      _fromAccountId = widget.initialAccountId;
     }
     if (widget.initialCategoryId != null) {
       _selectedCategoryId = widget.initialCategoryId;
@@ -97,11 +106,20 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     _budgetController.loadBudgets();
   }
 
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _feeController.dispose();
+    _feeDescriptionController.dispose();
+    _descriptionController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
   List<Budget> _getOnetimeBudgets() {
     final budgets = _budgetController.state is AsyncData<List<Budget>>
         ? (_budgetController.state as AsyncData<List<Budget>>).data
         : <Budget>[];
-
     return budgets
         .where(
           (b) =>
@@ -164,9 +182,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       }
     }
 
-    // Categories not assigned to any current-month budget group
-    final others =
-        typedCategories.where((c) => c.id != null && !seenIds.contains(c.id)).toList();
+    final others = typedCategories
+        .where((c) => c.id != null && !seenIds.contains(c.id))
+        .toList();
     if (others.isNotEmpty) {
       groups.add(_CategoryGroup('Other', others));
     }
@@ -197,10 +215,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text(
-                  'Select Category',
-                  style: theme.textTheme.titleLarge,
-                ),
+                child: Text('Select Category', style: theme.textTheme.titleLarge),
               ),
               const Divider(height: 1),
               Flexible(
@@ -232,11 +247,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                             selectedTileColor: colorScheme.primaryContainer
                                 .withValues(alpha: 0.3),
                             trailing: _selectedCategoryId == cat.id
-                                ? Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: colorScheme.primary,
-                                  )
+                                ? Icon(Icons.check,
+                                    size: 18, color: colorScheme.primary)
                                 : null,
                             onTap: () {
                               setState(() {
@@ -265,16 +277,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    _feeController.dispose();
-    _feeDescriptionController.dispose();
-    _descriptionController.dispose();
-    _notesController.dispose();
-    super.dispose();
   }
 
   Future<void> _selectDate() async {
@@ -318,18 +320,40 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   Future<void> _createTransaction() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an account')),
-      );
-      return;
-    }
-
-    if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category')),
-      );
-      return;
+    if (_isTransfer) {
+      if (_fromAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select source account')),
+        );
+        return;
+      }
+      if (_toAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select destination account')),
+        );
+        return;
+      }
+      if (_fromAccountId == _toAccountId) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Source and destination accounts must be different'),
+          ),
+        );
+        return;
+      }
+    } else {
+      if (_selectedAccountId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select an account')),
+        );
+        return;
+      }
+      if (_selectedCategoryId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a category')),
+        );
+        return;
+      }
     }
 
     setState(() => _isCreating = true);
@@ -340,8 +364,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           : double.parse(_feeController.text);
 
       final transaction = Transaction(
-        accountId: _selectedAccountId,
-        financeCategoryId: _selectedCategoryId,
+        accountId: _isTransfer ? _fromAccountId : _selectedAccountId,
+        toAccountId: _isTransfer ? _toAccountId : null,
+        financeCategoryId: _isTransfer ? null : _selectedCategoryId,
         amount: double.parse(_amountController.text),
         type: _selectedType,
         description: _descriptionController.text.trim().isEmpty
@@ -355,7 +380,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         feeDescription: _feeDescriptionController.text.trim().isEmpty
             ? null
             : _feeDescriptionController.text.trim(),
-        budgetId: _selectedBudgetId,
+        budgetId: _isTransfer ? null : _selectedBudgetId,
         userId: supabaseService.userId,
       );
 
@@ -363,14 +388,20 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction created successfully')),
+          SnackBar(
+            content: Text(
+              _isTransfer
+                  ? 'Transfer created successfully'
+                  : 'Transaction created successfully',
+            ),
+          ),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create transaction: $e')),
+          SnackBar(content: Text('Failed to create: $e')),
         );
       }
     } finally {
@@ -398,9 +429,15 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 children: [
-                  _buildAccountSelector(colorScheme),
-                  const SizedBox(height: 12),
-                  _buildCategorySelector(colorScheme, theme),
+                  if (_isTransfer) ...[
+                    _buildFromAccountSelector(colorScheme),
+                    const SizedBox(height: 12),
+                    _buildToAccountSelector(colorScheme),
+                  ] else ...[
+                    _buildAccountSelector(colorScheme),
+                    const SizedBox(height: 12),
+                    _buildCategorySelector(colorScheme, theme),
+                  ],
                   const SizedBox(height: 12),
                   _buildDateRow(theme, colorScheme),
                   const SizedBox(height: 12),
@@ -436,8 +473,10 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     maxLines: 3,
                     maxLength: 500,
                   ),
-                  const SizedBox(height: 12),
-                  _buildBudgetSelector(colorScheme),
+                  if (!_isTransfer) ...[
+                    const SizedBox(height: 12),
+                    _buildBudgetSelector(colorScheme),
+                  ],
                 ],
               ),
             ),
@@ -458,7 +497,11 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                         )
                       : const Icon(Icons.check),
                   label: Text(
-                    _isCreating ? 'Creating...' : 'Create Transaction',
+                    _isCreating
+                        ? 'Creating...'
+                        : _isTransfer
+                            ? 'Create Transfer'
+                            : 'Create Transaction',
                   ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 52),
@@ -512,16 +555,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             ],
             selected: {_selectedType},
             onSelectionChanged: (selection) {
-              final type = selection.first;
-              if (type == TransactionType.transfer) {
-                Navigator.pushReplacementNamed(
-                  context,
-                  AppRoutes.transferCreate,
-                );
-                return;
-              }
               setState(() {
-                _selectedType = type;
+                _selectedType = selection.first;
                 _selectedCategoryId = null;
                 _selectedCategory = null;
               });
@@ -588,6 +623,197 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     );
   }
 
+  // ── Income / Expense account selector ────────────────────────────────────
+
+  Widget _buildAccountSelector(ColorScheme colorScheme) {
+    return AsyncStreamBuilder<List<Account>>(
+      state: _accountController,
+      loadingBuilder: (context) => const LinearProgressIndicator(),
+      errorBuilder: (context, message) => Text(
+        'Error loading accounts: $message',
+        style: TextStyle(color: colorScheme.error),
+      ),
+      builder: (context, accounts) {
+        if (accounts.isEmpty) {
+          return Text(
+            'No accounts found. Please create an account first.',
+            style: TextStyle(color: colorScheme.error),
+          );
+        }
+
+        if (_selectedAccountId != null &&
+            !accounts.any((acc) => acc.id == _selectedAccountId)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _selectedAccountId = null);
+          });
+        }
+
+        return DropdownButtonFormField<String>(
+          initialValue: _selectedAccountId != null &&
+                  accounts.any((acc) => acc.id == _selectedAccountId)
+              ? _selectedAccountId
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'Account',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: colorScheme.surfaceContainerHighest,
+          ),
+          items: accounts
+              .map(
+                (account) => DropdownMenuItem(
+                  value: account.id,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          account.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: account.balance >= 0
+                              ? Colors.green[700]
+                              : Colors.red[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) => setState(() => _selectedAccountId = value),
+          validator: (value) =>
+              value == null || value.isEmpty ? 'Please select an account' : null,
+          menuMaxHeight: 300,
+        );
+      },
+    );
+  }
+
+  // ── Transfer account selectors ────────────────────────────────────────────
+
+  Widget _buildFromAccountSelector(ColorScheme colorScheme) {
+    return AsyncStreamBuilder<List<Account>>(
+      state: _accountController,
+      loadingBuilder: (context) => const LinearProgressIndicator(),
+      errorBuilder: (context, message) => Text(
+        'Error loading accounts: $message',
+        style: TextStyle(color: colorScheme.error),
+      ),
+      builder: (context, accounts) {
+        if (accounts.isEmpty) {
+          return Text(
+            'No accounts found. Please create at least two accounts.',
+            style: TextStyle(color: colorScheme.error),
+          );
+        }
+        return DropdownButtonFormField<String>(
+          initialValue: _fromAccountId != null &&
+                  accounts.any((a) => a.id == _fromAccountId)
+              ? _fromAccountId
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'From Account',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: colorScheme.surfaceContainerHighest,
+            prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
+          ),
+          items: accounts
+              .map(
+                (a) => DropdownMenuItem(
+                  value: a.id,
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: Text(a.name, overflow: TextOverflow.ellipsis)),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(a.balance)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: a.balance >= 0
+                              ? Colors.green[700]
+                              : Colors.red[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) => setState(() => _fromAccountId = value),
+          validator: (value) =>
+              value == null ? 'Please select source account' : null,
+          menuMaxHeight: 300,
+        );
+      },
+    );
+  }
+
+  Widget _buildToAccountSelector(ColorScheme colorScheme) {
+    return AsyncStreamBuilder<List<Account>>(
+      state: _accountController,
+      loadingBuilder: (context) => const LinearProgressIndicator(),
+      errorBuilder: (context, message) => const SizedBox.shrink(),
+      builder: (context, accounts) {
+        return DropdownButtonFormField<String>(
+          initialValue: _toAccountId != null &&
+                  accounts.any((a) => a.id == _toAccountId)
+              ? _toAccountId
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'To Account',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: colorScheme.surfaceContainerHighest,
+            prefixIcon: const Icon(Icons.account_balance_outlined),
+          ),
+          items: accounts
+              .map(
+                (a) => DropdownMenuItem(
+                  value: a.id,
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: Text(a.name, overflow: TextOverflow.ellipsis)),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(a.balance)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: a.balance >= 0
+                              ? Colors.green[700]
+                              : Colors.red[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) => setState(() => _toAccountId = value),
+          validator: (value) =>
+              value == null ? 'Please select destination account' : null,
+          menuMaxHeight: 300,
+        );
+      },
+    );
+  }
+
+  // ── Category selector (income / expense only) ─────────────────────────────
+
   Widget _buildCategorySelector(ColorScheme colorScheme, ThemeData theme) {
     return AsyncStreamBuilder<List<FinanceCategory>>(
       state: _categoryController,
@@ -613,7 +839,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           );
         }
 
-        // Validate selected category still matches current type
         if (_selectedCategory != null &&
             _selectedCategory!.type != targetType) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -630,9 +855,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
         return FormField<String>(
           initialValue: _selectedCategoryId,
-          validator: (_) => _selectedCategoryId == null
-              ? 'Please select a category'
-              : null,
+          validator: (_) =>
+              _selectedCategoryId == null ? 'Please select a category' : null,
           builder: (field) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -691,6 +915,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     );
   }
 
+  // ── Date row ──────────────────────────────────────────────────────────────
+
   Widget _buildDateRow(ThemeData theme, ColorScheme colorScheme) {
     return InkWell(
       onTap: _selectDate,
@@ -700,10 +926,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           filled: true,
           fillColor: colorScheme.surfaceContainerHighest,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 16,
-          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         ),
         child: Row(
           children: [
@@ -725,6 +949,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       ),
     );
   }
+
+  // ── Fee section ───────────────────────────────────────────────────────────
 
   Widget _buildFeeSection(ColorScheme colorScheme, ThemeData theme) {
     final hasFee = _feeController.text.isNotEmpty;
@@ -751,7 +977,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                   child: Text(
                     hasFee
                         ? 'Fee: ${currencyFormatter.currencySymbol}${_feeController.text}'
-                        : 'Add Fee (Optional)',
+                        : _isTransfer
+                            ? 'Add Transfer Fee (Optional)'
+                            : 'Add Fee (Optional)',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: hasFee
                           ? colorScheme.primary
@@ -776,6 +1004,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
               labelText: 'Fee Amount',
               hintText: 'e.g., 18.00',
               prefixText: '${currencyFormatter.currencySymbol} ',
+              helperText: _isTransfer
+                  ? 'Deducted from the transfer amount received'
+                  : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -795,98 +1026,29 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             },
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _feeDescriptionController,
-            decoration: InputDecoration(
-              labelText: 'Fee Description',
-              hintText: 'e.g., Tax, Transfer Fee',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+          if (!_isTransfer) ...[
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _feeDescriptionController,
+              decoration: InputDecoration(
+                labelText: 'Fee Description',
+                hintText: 'e.g., Tax, Transfer Fee',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest,
+                counterText: '',
               ),
-              filled: true,
-              fillColor: colorScheme.surfaceContainerHighest,
-              counterText: '',
+              maxLength: 50,
             ),
-            maxLength: 50,
-          ),
+          ],
         ],
       ],
     );
   }
 
-  Widget _buildAccountSelector(ColorScheme colorScheme) {
-    return AsyncStreamBuilder<List<Account>>(
-      state: _accountController,
-      loadingBuilder: (context) => const LinearProgressIndicator(),
-      errorBuilder: (context, message) => Text(
-        'Error loading accounts: $message',
-        style: TextStyle(color: colorScheme.error),
-      ),
-      builder: (context, accounts) {
-        if (accounts.isEmpty) {
-          return Text(
-            'No accounts found. Please create an account first.',
-            style: TextStyle(color: colorScheme.error),
-          );
-        }
-
-        if (_selectedAccountId != null &&
-            !accounts.any((acc) => acc.id == _selectedAccountId)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _selectedAccountId = null);
-          });
-        }
-
-        return DropdownButtonFormField<String>(
-          value: _selectedAccountId != null &&
-                  accounts.any((acc) => acc.id == _selectedAccountId)
-              ? _selectedAccountId
-              : null,
-          isExpanded: true,
-          decoration: InputDecoration(
-            labelText: 'Account',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: colorScheme.surfaceContainerHighest,
-          ),
-          items: accounts
-              .map(
-                (account) => DropdownMenuItem(
-                  value: account.id,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          account.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: account.balance >= 0
-                              ? Colors.green[700]
-                              : Colors.red[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (value) => setState(() => _selectedAccountId = value),
-          validator: (value) => value == null || value.isEmpty
-              ? 'Please select an account'
-              : null,
-          menuMaxHeight: 300,
-        );
-      },
-    );
-  }
+  // ── Budget selector (income / expense only) ───────────────────────────────
 
   Widget _buildBudgetSelector(ColorScheme colorScheme) {
     return AsyncStreamBuilder<List<Budget>>(
@@ -900,7 +1062,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: DropdownButtonFormField<String>(
-            value: _selectedBudgetId,
+            initialValue: _selectedBudgetId,
             decoration: InputDecoration(
               labelText: 'Budget (Optional)',
               hintText: 'Assign to a one-time budget',
@@ -911,10 +1073,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
               fillColor: colorScheme.surfaceContainerHighest,
             ),
             items: [
-              const DropdownMenuItem<String>(
-                value: null,
-                child: Text('None'),
-              ),
+              const DropdownMenuItem<String>(value: null, child: Text('None')),
               ...onetimeBudgets.map((budget) {
                 final title = budget.title ?? 'Untitled';
                 final parts = budget.month.split('-');

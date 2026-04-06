@@ -3,6 +3,7 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../modules/account/domain/entities/account.dart';
@@ -39,6 +40,7 @@ class _CreateTransferTransactionScreenState
   String? _transferCategoryId;
   DateTime _selectedDate = DateTime.now();
   bool _isCreating = false;
+  bool _showFeeFields = false;
 
   @override
   void initState() {
@@ -48,7 +50,6 @@ class _CreateTransferTransactionScreenState
     _categoryController = locator.get<FinanceCategoryController>();
     supabaseService = locator.get<SupabaseService>();
 
-    // Load accounts and categories
     _accountController.loadAccounts();
     _categoryController.loadCategories();
   }
@@ -101,9 +102,7 @@ class _CreateTransferTransactionScreenState
   }
 
   Future<void> _createTransfer() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (_fromAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,9 +127,7 @@ class _CreateTransferTransactionScreenState
       return;
     }
 
-    setState(() {
-      _isCreating = true;
-    });
+    setState(() => _isCreating = true);
 
     try {
       final feeAmount = _feeController.text.trim().isEmpty
@@ -138,8 +135,8 @@ class _CreateTransferTransactionScreenState
           : double.parse(_feeController.text);
 
       final transaction = Transaction(
-        accountId: _fromAccountId, // Source account
-        toAccountId: _toAccountId, // Destination account
+        accountId: _fromAccountId,
+        toAccountId: _toAccountId,
         financeCategoryId: _transferCategoryId,
         amount: double.parse(_amountController.text),
         type: TransactionType.transfer,
@@ -169,398 +166,463 @@ class _CreateTransferTransactionScreenState
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isCreating = false;
-        });
-      }
+      if (mounted) setState(() => _isCreating = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transfer Between Accounts'),
+        title: const Text('New Transaction'),
+        centerTitle: true,
         elevation: 0,
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            // Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.purple.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.purple.withValues(alpha: 0.3)),
-              ),
-              child: Row(
+            _buildHeader(colorScheme, theme),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 children: [
-                  Icon(Icons.swap_horiz, color: Colors.purple, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Move money between your accounts. Source account pays amount + fee, destination receives amount only.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: colorScheme.onSurface.withOpacity(0.8),
-                        height: 1.4,
+                  _buildFromAccountSelector(colorScheme),
+                  const SizedBox(height: 12),
+                  _buildToAccountSelector(colorScheme),
+                  const SizedBox(height: 12),
+                  _buildDateRow(theme, colorScheme),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: InputDecoration(
+                      labelText: 'Description',
+                      hintText: 'Optional',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      counterText: '',
                     ),
+                    maxLength: 100,
                   ),
+                  const SizedBox(height: 12),
+                  _buildFeeSection(colorScheme, theme),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: InputDecoration(
+                      labelText: 'Notes',
+                      hintText: 'Optional',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest,
+                      counterText: '',
+                    ),
+                    maxLines: 3,
+                    maxLength: 500,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildCategorySelector(colorScheme, theme),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Amount Field
-            TextFormField(
-              controller: _amountController,
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                prefixText: '₱',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest,
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-              ],
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter an amount';
-                }
-                final amount = double.tryParse(value);
-                if (amount == null || amount <= 0) {
-                  return 'Please enter a valid amount';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Fee Field (Optional)
-            TextFormField(
-              controller: _feeController,
-              decoration: InputDecoration(
-                labelText: 'Transfer Fee (Optional)',
-                hintText: 'e.g., 15.00 for bank transfer fee',
-                prefixText: '₱',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest,
-                helperText: 'Fee is deducted from source account',
-                helperMaxLines: 2,
-              ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-              ],
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  final amount = double.tryParse(value);
-                  if (amount == null || amount < 0) {
-                    return 'Please enter a valid fee amount';
-                  }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            // From Account Selector
-            AsyncStreamBuilder<List<Account>>(
-              state: _accountController,
-              loadingBuilder: (context) => const LinearProgressIndicator(),
-              errorBuilder: (context, message) => Card(
-                color: Colors.red.withValues(alpha: 0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Error loading accounts: $message',
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-              ),
-              builder: (context, accounts) {
-                if (accounts.isEmpty) {
-                  return Card(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    child: const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(
-                        'No accounts found. Please create at least two accounts.',
-                        style: TextStyle(color: Colors.orange),
-                      ),
-                    ),
-                  );
-                }
-                return DropdownButtonFormField<String>(
-                  value: _fromAccountId,
-                  decoration: InputDecoration(
-                    labelText: 'From Account (Source)',
-                    border: OutlineInputBorder(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SafeArea(
+                top: false,
+                child: FilledButton.icon(
+                  onPressed: _isCreating ? null : _createTransfer,
+                  icon: _isCreating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check),
+                  label: Text(_isCreating ? 'Creating...' : 'Create Transfer'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    prefixIcon: const Icon(Icons.account_balance_wallet),
                   ),
-                  items: accounts
-                      .map(
-                        (account) => DropdownMenuItem(
-                          value: account.id,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min, // ADD THIS
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Flexible(
-                                // CHANGE FROM Expanded TO Flexible
-                                child: Text(
-                                  account.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8), // ADD SPACING
-                              Text(
-                                '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: account.balance >= 0
-                                      ? Colors.green[700]
-                                      : Colors.red[700],
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _fromAccountId = value;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select source account';
-                    }
-                    return null;
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // To Account Selector
-            AsyncStreamBuilder<List<Account>>(
-              state: _accountController,
-              loadingBuilder: (context) => const LinearProgressIndicator(),
-              errorBuilder: (context, message) => const SizedBox.shrink(),
-              builder: (context, accounts) {
-                return DropdownButtonFormField<String>(
-                  value: _toAccountId,
-                  decoration: InputDecoration(
-                    labelText: 'To Account (Destination)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    prefixIcon: const Icon(Icons.account_balance),
-                  ),
-                  items: accounts
-                      .map(
-                        (account) => DropdownMenuItem(
-                          value: account.id,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min, // ADD THIS
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Flexible(
-                                // CHANGE FROM Expanded TO Flexible
-                                child: Text(
-                                  account.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8), // ADD SPACING
-                              Text(
-                                '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(account.balance)}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: account.balance >= 0
-                                      ? Colors.green[700]
-                                      : Colors.red[700],
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _toAccountId = value;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select destination account';
-                    }
-                    return null;
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Transfer Category Selector (Optional)
-            AsyncStreamBuilder<List<FinanceCategory>>(
-              state: _categoryController,
-              loadingBuilder: (context) => const SizedBox.shrink(),
-              errorBuilder: (context, message) => const SizedBox.shrink(),
-              builder: (context, categories) {
-                final transferCategories = categories
-                    .where((c) => c.type == CategoryType.transfer)
-                    .toList();
-
-                if (transferCategories.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-
-                return Column(
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: _transferCategoryId,
-                      decoration: InputDecoration(
-                        labelText: 'Category (Optional)',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest,
-                      ),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('None'),
-                        ),
-                        ...transferCategories.map(
-                          (category) => DropdownMenuItem(
-                            value: category.id,
-                            child: Text(category.name),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _transferCategoryId = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                );
-              },
-            ),
-
-            // Date & Time Selector
-            InkWell(
-              onTap: _selectDate,
-              borderRadius: BorderRadius.circular(12),
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Date & Time',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      DateFormat('MMM d, y • h:mm a').format(_selectedDate),
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const Icon(Icons.calendar_today),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Description Field
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Description (Optional)',
-                hintText: 'e.g., Monthly savings transfer',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest,
-              ),
-              maxLength: 100,
-            ),
-            const SizedBox(height: 16),
-
-            // Notes Field
-            TextFormField(
-              controller: _notesController,
-              decoration: InputDecoration(
-                labelText: 'Notes (Optional)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: colorScheme.surfaceContainerHighest,
-              ),
-              maxLines: 3,
-              maxLength: 500,
-            ),
-            const SizedBox(height: 24),
-
-            // Create Button
-            FilledButton.icon(
-              onPressed: _isCreating ? null : _createTransfer,
-              icon: _isCreating
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.swap_horiz),
-              label: Text(_isCreating ? 'Creating...' : 'Create Transfer'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.purple,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader(ColorScheme colorScheme, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: colorScheme.outlineVariant),
+        ),
+      ),
+      child: Column(
+        children: [
+          SegmentedButton<TransactionType>(
+            segments: const [
+              ButtonSegment(
+                value: TransactionType.income,
+                label: Text('Income'),
+                icon: Icon(Icons.arrow_downward, size: 16),
+              ),
+              ButtonSegment(
+                value: TransactionType.expense,
+                label: Text('Expense'),
+                icon: Icon(Icons.arrow_upward, size: 16),
+              ),
+              ButtonSegment(
+                value: TransactionType.transfer,
+                label: Text('Transfer'),
+                icon: Icon(Icons.swap_horiz, size: 16),
+              ),
+            ],
+            selected: const {TransactionType.transfer},
+            onSelectionChanged: (selection) {
+              final type = selection.first;
+              if (type != TransactionType.transfer) {
+                Navigator.pushReplacementNamed(
+                  context,
+                  AppRoutes.transactionCreate,
+                  arguments: {'initialType': type},
+                );
+              }
+            },
+            showSelectedIcon: false,
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                currencyFormatter.currencySymbol,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 200,
+                child: TextFormField(
+                  controller: _amountController,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade600,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '0.00',
+                    hintStyle: theme.textTheme.displaySmall?.copyWith(
+                      color: colorScheme.outlineVariant,
+                      fontWeight: FontWeight.w300,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    counterText: '',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d+\.?\d{0,2}'),
+                    ),
+                  ],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Enter an amount';
+                    final amount = double.tryParse(value);
+                    if (amount == null || amount <= 0) return 'Invalid amount';
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFromAccountSelector(ColorScheme colorScheme) {
+    return AsyncStreamBuilder<List<Account>>(
+      state: _accountController,
+      loadingBuilder: (context) => const LinearProgressIndicator(),
+      errorBuilder: (context, message) => Text(
+        'Error loading accounts: $message',
+        style: TextStyle(color: colorScheme.error),
+      ),
+      builder: (context, accounts) {
+        if (accounts.isEmpty) {
+          return Text(
+            'No accounts found. Please create at least two accounts.',
+            style: TextStyle(color: colorScheme.error),
+          );
+        }
+
+        return DropdownButtonFormField<String>(
+          initialValue: _fromAccountId != null &&
+                  accounts.any((a) => a.id == _fromAccountId)
+              ? _fromAccountId
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'From Account',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: colorScheme.surfaceContainerHighest,
+            prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
+          ),
+          items: accounts
+              .map(
+                (a) => DropdownMenuItem(
+                  value: a.id,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(a.name, overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(a.balance)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: a.balance >= 0
+                              ? Colors.green[700]
+                              : Colors.red[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) => setState(() => _fromAccountId = value),
+          validator: (value) =>
+              value == null ? 'Please select source account' : null,
+          menuMaxHeight: 300,
+        );
+      },
+    );
+  }
+
+  Widget _buildToAccountSelector(ColorScheme colorScheme) {
+    return AsyncStreamBuilder<List<Account>>(
+      state: _accountController,
+      loadingBuilder: (context) => const LinearProgressIndicator(),
+      errorBuilder: (context, message) => const SizedBox.shrink(),
+      builder: (context, accounts) {
+        return DropdownButtonFormField<String>(
+          initialValue: _toAccountId != null &&
+                  accounts.any((a) => a.id == _toAccountId)
+              ? _toAccountId
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'To Account',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: colorScheme.surfaceContainerHighest,
+            prefixIcon: const Icon(Icons.account_balance_outlined),
+          ),
+          items: accounts
+              .map(
+                (a) => DropdownMenuItem(
+                  value: a.id,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(a.name, overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(a.balance)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: a.balance >= 0
+                              ? Colors.green[700]
+                              : Colors.red[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (value) => setState(() => _toAccountId = value),
+          validator: (value) =>
+              value == null ? 'Please select destination account' : null,
+          menuMaxHeight: 300,
+        );
+      },
+    );
+  }
+
+  Widget _buildDateRow(ThemeData theme, ColorScheme colorScheme) {
+    return InkWell(
+      onTap: _selectDate,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: colorScheme.surfaceContainerHighest,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today, size: 18, color: colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                DateFormat('EEE, MMM d y  •  h:mm a').format(_selectedDate),
+                style: theme.textTheme.bodyLarge,
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeeSection(ColorScheme colorScheme, ThemeData theme) {
+    final hasFee = _feeController.text.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _showFeeFields = !_showFeeFields),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.receipt_long, size: 18, color: colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    hasFee
+                        ? 'Fee: ${currencyFormatter.currencySymbol}${_feeController.text}'
+                        : 'Add Transfer Fee (Optional)',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: hasFee
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _showFeeFields ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_showFeeFields) ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _feeController,
+            decoration: InputDecoration(
+              labelText: 'Fee Amount',
+              hintText: 'e.g., 15.00',
+              prefixText: '${currencyFormatter.currencySymbol} ',
+              helperText: 'Deducted from source account',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: colorScheme.surfaceContainerHighest,
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+            ],
+            validator: (value) {
+              if (value != null && value.isNotEmpty) {
+                final amount = double.tryParse(value);
+                if (amount == null || amount < 0) return 'Invalid fee amount';
+              }
+              return null;
+            },
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCategorySelector(ColorScheme colorScheme, ThemeData theme) {
+    return AsyncStreamBuilder<List<FinanceCategory>>(
+      state: _categoryController,
+      loadingBuilder: (context) => const SizedBox.shrink(),
+      errorBuilder: (context, message) => const SizedBox.shrink(),
+      builder: (context, categories) {
+        final transferCategories =
+            categories.where((c) => c.type == CategoryType.transfer).toList();
+
+        if (transferCategories.isEmpty) return const SizedBox.shrink();
+
+        return DropdownButtonFormField<String>(
+          initialValue: _transferCategoryId,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'Category (Optional)',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: colorScheme.surfaceContainerHighest,
+          ),
+          items: [
+            const DropdownMenuItem<String>(value: null, child: Text('None')),
+            ...transferCategories.map(
+              (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+            ),
+          ],
+          onChanged: (value) => setState(() => _transferCategoryId = value),
+          menuMaxHeight: 300,
+        );
+      },
     );
   }
 }

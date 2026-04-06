@@ -42,9 +42,9 @@ After installing and launching Keep Track for the first time:
    - Choose your theme (Light/Dark/System)
 
 3. **Start Exploring**
-   - Create your first task
-   - Set up your financial accounts
-   - Try the Pomodoro timer
+   - Add your financial accounts
+   - Create your first budget
+   - Record a transaction
 
 ## System Requirements
 

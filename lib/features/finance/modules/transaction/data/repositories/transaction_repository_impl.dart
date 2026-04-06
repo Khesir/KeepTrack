@@ -72,17 +72,25 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
   @override
   Future<Result<Transaction>> createTransaction(Transaction transaction) async {
-    final createdTransaction = await _dataSource.createTransaction(transaction);
+    final t = await _dataSource.createTransaction(transaction);
 
-    if (createdTransaction.accountId != null) {
-      final adjustmentAmount = _calculateBalanceAdjustment(createdTransaction);
+    // Adjust source account
+    if (t.accountId != null) {
       await _accountRepository.adjustBalance(
-        createdTransaction.accountId!,
-        adjustmentAmount,
+        t.accountId!,
+        _calculateBalanceAdjustment(t),
       );
     }
 
-    return Result.success(createdTransaction);
+    // For transfers, credit the destination account (receives amount minus fee)
+    if (t.type == TransactionType.transfer && t.toAccountId != null) {
+      await _accountRepository.adjustBalance(
+        t.toAccountId!,
+        t.amount - t.fee,
+      );
+    }
+
+    return Result.success(t);
   }
 
   @override
@@ -91,47 +99,59 @@ class TransactionRepositoryImpl implements TransactionRepository {
       throw Exception('Cannot update transaction without an ID');
     }
 
-    final oldTransaction = await _dataSource.getTransactionById(
-      transaction.id!,
-    );
-    final updatedTransaction = await _dataSource.updateTransaction(transaction);
+    final old = await _dataSource.getTransactionById(transaction.id!);
+    final updated = await _dataSource.updateTransaction(transaction);
 
-    if (oldTransaction?.accountId != null ||
-        updatedTransaction.accountId != null) {
-      // Reverse old transaction effect
-      if (oldTransaction?.accountId != null) {
-        final reverseAmount = -_calculateBalanceAdjustment(oldTransaction!);
-        await _accountRepository.adjustBalance(
-          oldTransaction.accountId!,
-          reverseAmount,
-        );
-      }
-      // Apply new transaction effect
-      if (updatedTransaction.accountId != null) {
-        final adjustmentAmount = _calculateBalanceAdjustment(
-          updatedTransaction,
-        );
-        await _accountRepository.adjustBalance(
-          updatedTransaction.accountId!,
-          adjustmentAmount,
-        );
-      }
+    // Reverse old source
+    if (old?.accountId != null) {
+      await _accountRepository.adjustBalance(
+        old!.accountId!,
+        -_calculateBalanceAdjustment(old),
+      );
+    }
+    // Reverse old destination (if was a transfer)
+    if (old?.type == TransactionType.transfer && old?.toAccountId != null) {
+      await _accountRepository.adjustBalance(
+        old!.toAccountId!,
+        -(old.amount - old.fee),
+      );
     }
 
-    return Result.success(updatedTransaction);
+    // Apply new source
+    if (updated.accountId != null) {
+      await _accountRepository.adjustBalance(
+        updated.accountId!,
+        _calculateBalanceAdjustment(updated),
+      );
+    }
+    // Apply new destination (if is a transfer)
+    if (updated.type == TransactionType.transfer && updated.toAccountId != null) {
+      await _accountRepository.adjustBalance(
+        updated.toAccountId!,
+        updated.amount - updated.fee,
+      );
+    }
+
+    return Result.success(updated);
   }
 
   @override
   Future<Result<void>> deleteTransaction(String id) async {
-    final transaction = await _dataSource.getTransactionById(id);
-
+    final t = await _dataSource.getTransactionById(id);
     await _dataSource.deleteTransaction(id);
 
-    if (transaction?.accountId != null) {
-      final reverseAmount = -_calculateBalanceAdjustment(transaction!);
+    // Reverse source
+    if (t?.accountId != null) {
       await _accountRepository.adjustBalance(
-        transaction.accountId!,
-        reverseAmount,
+        t!.accountId!,
+        -_calculateBalanceAdjustment(t),
+      );
+    }
+    // Reverse destination (if was a transfer)
+    if (t?.type == TransactionType.transfer && t?.toAccountId != null) {
+      await _accountRepository.adjustBalance(
+        t!.toAccountId!,
+        -(t.amount - t.fee),
       );
     }
 
@@ -175,10 +195,9 @@ class TransactionRepositoryImpl implements TransactionRepository {
         // You pay: amount + fee
         return -(transaction.amount + transaction.fee);
       case TransactionType.transfer:
-        // For transfers, source account pays the transfer amount + transfer fee
-        // Source pays: amount + fee
-        // Note: Destination account receives only 'amount' (handled separately)
-        return -(transaction.amount + transaction.fee);
+        // Source pays the full entered amount; fee is deducted from what
+        // the destination receives (handled separately in createTransaction).
+        return -transaction.amount;
     }
   }
 }

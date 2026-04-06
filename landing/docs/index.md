@@ -1,59 +1,74 @@
 # Introduction
 
-Welcome to Personal Codex - your all-in-one personal management system!
+Welcome to **Keep Track** — your personal finance manager.
 
-## What is Personal Codex?
+## What is Keep Track?
 
-Personal Codex is a comprehensive desktop application designed to help you manage your life efficiently. Whether you're tracking tasks, managing finances, or staying focused with the Pomodoro technique, Personal Codex has you covered.
+Keep Track is a cross-platform application built to help you take full control of your finances. Track your income and expenses, plan monthly budgets, manage debts, set savings goals, and schedule recurring payments — all in one place.
 
 ## Key Features
 
-### 📝 Task Management
-- Create and organize tasks with priorities
-- Group tasks into projects
-- Set deadlines and track progress
-- Archive completed tasks
+### 💰 Accounts
 
-### 💰 Finance Tracking
-- Manage multiple accounts (bank, cash, e-wallets)
-- Create and monitor budgets
-- Track debts and savings goals
-- Schedule recurring payments
-- Comprehensive transaction history
+- Manage multiple accounts (bank, cash, e-wallets, credit cards)
+- Real-time balance tracking with every transaction
+- Transfer money between accounts
 
-### ⏱️ Productivity Tools
-- Built-in Pomodoro timer
-- Focus sessions with automatic breaks
-- Statistics and insights
+### 📊 Budgets
 
-### 🔔 Mobile Notifications
-- Push notifications on Android and iOS
-- Task deadline reminders
-- Payment and finance alerts
+- Create monthly income and expense budget groups
+- Assign spending categories to each group
+- Visualize actual vs. planned with live progress bars
+
+### 🧾 Transactions
+
+- Record income, expenses, and transfers
+- Attach categories, descriptions, and optional fees
+- Filter and search your full transaction history
+
+### 🤝 Debts & Receivables
+
+- Track money you owe and money owed to you
+- Record partial payments linked to accounts
+- Automatic balance deduction on payment
+
+### 🎯 Goals
+
+- Set savings targets with deadlines
+- Contribute from any account
+- Track progress visually
+
+### 📅 Planned Payments
+
+- Schedule recurring bills and subscriptions
+- Mark payments as paid, skip, or pause
+- Get an overview of upcoming commitments
 
 ### 🔐 Secure & Private
-- Supabase authentication
-- Cloud sync across devices
+
+- Supabase authentication (email/password or Google)
+- Cloud sync across all your devices
 - Your data, your control
 
 ## Getting Started
 
-Ready to dive in? Check out our [Installation Guide](./installation) to get Personal Codex up and running on your system.
+Ready? Check out the [Installation Guide](./installation) to get Keep Track running, then follow the [Quick Start Guide](./quickstart).
 
 ## Open Source
 
-Personal Codex is open source and built with:
-- **Flutter** - Beautiful, natively compiled applications
-- **Supabase** - Open source Firebase alternative
-- **PostgreSQL** - Powerful, open source database
+Keep Track is open source and built with:
+
+- **Flutter** — beautiful, natively compiled applications for mobile, web, and desktop
+- **NestJS** — scalable Node.js backend
+- **MongoDB** — flexible document database
+- **Supabase** — authentication and storage
 
 ## Community
 
-Join our growing community:
 - ⭐ [Star us on GitHub](https://github.com/Khesir/KeepTrack)
 - 💬 [Discussions](https://github.com/Khesir/KeepTrack/discussions)
 - 🐛 [Report Issues](https://github.com/Khesir/KeepTrack/issues)
 
 ## License
 
-Personal Codex is released under the [MIT License](https://github.com/Khesir/KeepTrack/blob/main/LICENSE).
+Keep Track is released under the [MIT License](https://github.com/Khesir/KeepTrack/blob/main/LICENSE).

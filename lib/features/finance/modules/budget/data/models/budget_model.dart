@@ -1,9 +1,7 @@
 import '../../domain/entities/budget.dart';
 import 'budget_category_model.dart';
 
-/// Budget model - DTO for Supabase
-///
-/// Note: Categories are loaded separately using BudgetCategoryRepository.
+/// Budget model - DTO for NestJS REST API
 class BudgetModel extends Budget {
   BudgetModel({
     super.id,
@@ -46,8 +44,21 @@ class BudgetModel extends Budget {
 
   /// Create model from JSON (NestJS camelCase response)
   factory BudgetModel.fromJson(Map<String, dynamic> json) {
+    final budgetId = json['id'] as String?;
+
+    // Parse embedded categories. financeCategoryId may already be populated.
+    final rawCategories = json['categories'] as List<dynamic>?;
+    final categories = rawCategories
+            ?.map((c) {
+              final catMap = Map<String, dynamic>.from(c as Map<String, dynamic>);
+              catMap['budgetId'] ??= budgetId;
+              return BudgetCategoryModel.fromJson(catMap);
+            })
+            .toList() ??
+        const <BudgetCategoryModel>[];
+
     return BudgetModel(
-      id: json['id'] as String?,
+      id: budgetId,
       month: json['month'] as String,
       title: json['title'] as String?,
       budgetType: json['budgetType'] != null
@@ -62,7 +73,7 @@ class BudgetModel extends Budget {
               orElse: () => BudgetPeriodType.monthly,
             )
           : BudgetPeriodType.monthly,
-      categories: const [], // Categories loaded separately
+      categories: categories,
       status: BudgetStatus.values.firstWhere(
         (e) => e.name == (json['status'] as String),
         orElse: () => BudgetStatus.active,

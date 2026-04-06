@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
-import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
-import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../../../core/theme/app_theme.dart';
 import '../../../../../../core/ui/responsive/desktop_aware_screen.dart';
 import '../../../../modules/planned_payment/domain/entities/payment_enums.dart';
@@ -26,8 +23,6 @@ class PlannedPaymentsTabNew extends StatefulWidget {
 class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
   late final PlannedPaymentController _controller;
   late final AccountController _accountController;
-  late final FinanceCategoryController _categoryController;
-  late final SupabaseService _supabaseService;
   String _selectedFilter = 'All'; // All, Active, Upcoming, Paused
 
   @override
@@ -35,22 +30,15 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
     super.initState();
     _controller = locator.get<PlannedPaymentController>();
     _accountController = locator.get<AccountController>();
-    _categoryController = locator.get<FinanceCategoryController>();
-    _supabaseService = locator.get<SupabaseService>();
 
-    // Load accounts and categories
+    // Load accounts
     _accountController.loadAccounts();
-    _categoryController.loadCategories();
   }
 
   Future<void> _showRecordPaymentDialog(PlannedPayment payment) async {
     final amountController = TextEditingController(
       text: payment.amount.toStringAsFixed(2),
     );
-    final feeController = TextEditingController(text: '0.00');
-    final feeDescriptionController = TextEditingController();
-    String? selectedAccountId;
-    String? selectedCategoryId;
 
     final result = await showDialog<bool>(
       context: context,
@@ -72,109 +60,6 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
               ),
-              const SizedBox(height: 16),
-
-              // Account Selector
-              AsyncStreamBuilder<List<Account>>(
-                state: _accountController,
-                builder: (context, accounts) {
-                  return DropdownButtonFormField<String>(
-                    value: selectedAccountId,
-                    decoration: InputDecoration(
-                      labelText: 'Account',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    items: accounts
-                        .map(
-                          (account) => DropdownMenuItem(
-                            value: account.id,
-                            child: Text(account.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => selectedAccountId = value,
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Category Selector (expense categories only)
-              AsyncStreamBuilder<List<FinanceCategory>>(
-                state: _categoryController,
-                builder: (context, categories) {
-                  final expenseCategories = categories
-                      .where((c) => c.type == CategoryType.expense)
-                      .toList();
-
-                  return DropdownButtonFormField<String>(
-                    value: selectedCategoryId,
-                    decoration: InputDecoration(
-                      labelText: 'Category',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    items: expenseCategories
-                        .map(
-                          (category) => DropdownMenuItem(
-                            value: category.id,
-                            child: Text(category.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => selectedCategoryId = value,
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Fee Section
-              const Divider(),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 16,
-                    color: Theme.of(dialogContext).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Additional Fees (Optional)',
-                    style: Theme.of(dialogContext).textTheme.titleSmall,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Fee Amount Field
-              TextField(
-                controller: feeController,
-                decoration: InputDecoration(
-                  labelText: 'Fee Amount',
-                  prefixText: '₱',
-                  helperText: 'Tax, service charge, etc.',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 12),
-
-              // Fee Description Field
-              TextField(
-                controller: feeDescriptionController,
-                decoration: InputDecoration(
-                  labelText: 'Fee Description',
-                  hintText: 'e.g., Tax, Service Charge',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -193,43 +78,12 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                 return;
               }
 
-              if (selectedAccountId == null) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Please select an account')),
-                );
-                return;
-              }
-
-              if (selectedCategoryId == null) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Please select a category')),
-                );
-                return;
-              }
-
-              // Parse fee amount
-              final fee = double.tryParse(feeController.text) ?? 0.0;
-              final feeDescription =
-                  feeDescriptionController.text.trim().isEmpty
-                  ? null
-                  : feeDescriptionController.text.trim();
-
-              // Call RPC function
               try {
-                await _supabaseService.client.rpc(
-                  'create_planned_payment_transaction',
-                  params: {
-                    'p_user_id': _supabaseService.userId,
-                    'p_account_id': selectedAccountId,
-                    'p_finance_category_id': selectedCategoryId,
-                    'p_amount': amount,
-                    'p_type': 'expense',
-                    'p_description': 'Paid: ${payment.name}',
-                    'p_date': DateTime.now().toIso8601String(),
-                    'p_notes': null,
-                    'p_planned_payment_id': payment.id,
-                    'p_fee': fee,
-                    'p_fee_description': feeDescription,
+                await ApiClient.instance.post(
+                  '/planned-payments/${payment.id}/pay',
+                  data: {
+                    'paidDate': DateTime.now().toIso8601String(),
+                    'createTransaction': true,
                   },
                 );
 
@@ -260,8 +114,6 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
     }
 
     amountController.dispose();
-    feeController.dispose();
-    feeDescriptionController.dispose();
   }
 
   Future<void> _skipPlannedPayment(PlannedPayment payment) async {
@@ -290,13 +142,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await _supabaseService.client.rpc(
-        'skip_planned_payment',
-        params: {
-          'p_user_id': _supabaseService.userId,
-          'p_planned_payment_id': payment.id,
-        },
-      );
+      await ApiClient.instance.post('/planned-payments/${payment.id}/skip');
 
       _controller.loadPlannedPayments();
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
@@ -9,7 +10,7 @@ import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
-import 'package:keep_track/features/finance/presentation/screens/configuration/accounts/widget/account_management_dialog.dart';
+import 'package:keep_track/features/finance/presentation/screens/configuration/accounts/account_form_screen.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../state/account_controller.dart';
@@ -34,28 +35,29 @@ class _AccountsTabNewState extends State<AccountsTabNew> {
   }
 
   void _showAccountDialog({Account? account}) {
-    showDialog(
-      context: context,
-      builder: (_) => AccountManagementDialog(
-        account: account,
-        userId: _supabaseService.userId!,
-        onSave: (a) async {
-          if (account != null) {
-            await _controller.updateAccount(a);
-            // Refresh selected account state
-            if (_selectedAccount?.id == a.id) {
-              setState(() => _selectedAccount = a);
-            }
-          } else {
-            await _controller.createAccount(a);
-          }
-        },
-        onDelete: account != null
-            ? () async {
-                await _controller.deleteAccount(account.id!);
-                setState(() => _selectedAccount = null);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AccountFormScreen(
+          account: account,
+          userId: _supabaseService.userId!,
+          onSave: (a) async {
+            if (account != null) {
+              await _controller.updateAccount(a);
+              if (_selectedAccount?.id == a.id) {
+                setState(() => _selectedAccount = a);
               }
-            : null,
+            } else {
+              await _controller.createAccount(a);
+            }
+          },
+          onDelete: account != null
+              ? () async {
+                  await _controller.deleteAccount(account.id!);
+                  setState(() => _selectedAccount = null);
+                }
+              : null,
+        ),
       ),
     );
   }
@@ -505,15 +507,7 @@ class _DetailHeader extends StatelessWidget {
             ),
             const SizedBox(width: 12),
           ],
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
+          _buildAccountAvatar(account, color, icon),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -793,16 +787,8 @@ class _AccountListRow extends StatelessWidget {
             ),
             const SizedBox(width: 10),
 
-            // Icon
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: Icon(icon, color: color, size: 17),
-            ),
+            // Avatar: image takes priority, falls back to icon
+            _buildAccountAvatar(account, color, icon),
             const SizedBox(width: 10),
 
             // Name + type
@@ -1034,6 +1020,40 @@ class _StatusBadge extends StatelessWidget {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
+
+Widget _buildAccountAvatar(Account account, Color color, IconData icon) {
+  if (account.imageUrl != null) {
+    ImageProvider? imageProvider;
+    if (account.imageUrl!.startsWith('data:')) {
+      try {
+        final base64Str = account.imageUrl!.split(',').last;
+        imageProvider = MemoryImage(base64Decode(base64Str));
+      } catch (_) {}
+    } else {
+      imageProvider = NetworkImage(account.imageUrl!);
+    }
+    if (imageProvider != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Image(
+          image: imageProvider,
+          width: 34,
+          height: 34,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+  }
+  return Container(
+    width: 34,
+    height: 34,
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: Icon(icon, color: color, size: 17),
+  );
+}
 
 Color _parseColor(String? hex) {
   if (hex == null) return AppColors.accent;

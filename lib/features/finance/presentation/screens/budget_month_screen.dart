@@ -21,6 +21,7 @@ import 'package:keep_track/features/finance/presentation/state/debt_controller.d
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
+import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_screen.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 
@@ -509,9 +510,6 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
     );
     final feeCtrl = TextEditingController();
     String? selectedAccountId;
-    String? selectedCategoryId;
-
-    FinanceCategory? selectedCategory;
 
     final result = await showDialog<bool>(
       context: context,
@@ -597,78 +595,6 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                   loadingBuilder: (_) => const LinearProgressIndicator(),
                   errorBuilder: (_, m) => Text(m),
                 ),
-                const SizedBox(height: 12),
-                // Category picker button (grouped by budget)
-                AsyncStreamBuilder<List<FinanceCategory>>(
-                  state: _categoryController,
-                  builder: (_, allCats) {
-                    return AsyncStreamBuilder<List<Budget>>(
-                      state: _budgetController,
-                      builder: (_, allBudgets) {
-                        final targetType = isReceivable
-                            ? CategoryType.income
-                            : CategoryType.expense;
-                        final groups = _buildGroupedCategories(
-                          allCategories: allCats,
-                          allBudgets: allBudgets,
-                          targetType: targetType,
-                          monthKey: _monthKey,
-                        );
-                        return InkWell(
-                          onTap: () async {
-                            final picked = await _showGroupedCategoryDialog(
-                              dialogCtx,
-                              groups: groups,
-                              selectedId: selectedCategory?.id,
-                            );
-                            if (picked != null) {
-                              setDialogState(() {
-                                selectedCategory = picked;
-                                selectedCategoryId = picked.id;
-                              });
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(4),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Category',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 14),
-                            ),
-                            child: Row(
-                              children: [
-                                if (selectedCategory != null) ...[
-                                  Icon(selectedCategory!.type.icon,
-                                      size: 16,
-                                      color: selectedCategory!.type.color),
-                                  const SizedBox(width: 8),
-                                ],
-                                Expanded(
-                                  child: Text(
-                                    selectedCategory?.name ??
-                                        'Select a category',
-                                    style: TextStyle(
-                                      color: selectedCategory == null
-                                          ? AppColors.textTertiary
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                                const Icon(Icons.unfold_more,
-                                    size: 16, color: AppColors.textTertiary),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                      loadingBuilder: (_) => const LinearProgressIndicator(),
-                      errorBuilder: (_, m) => Text(m),
-                    );
-                  },
-                  loadingBuilder: (_) => const LinearProgressIndicator(),
-                  errorBuilder: (_, m) => Text(m),
-                ),
               ],
             ),
           ),
@@ -702,30 +628,24 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                   );
                   return;
                 }
-                if (selectedCategoryId == null) {
-                  ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                    const SnackBar(content: Text('Select a category')),
-                  );
-                  return;
-                }
                 try {
                   final fee = double.tryParse(feeCtrl.text) ?? 0.0;
-                  await _supabaseService.client.rpc(
-                    'create_debt_payment_transaction',
-                    params: {
-                      'p_user_id': _supabaseService.userId,
-                      'p_account_id': selectedAccountId,
-                      'p_finance_category_id': selectedCategoryId,
-                      'p_amount': amount,
-                      'p_type': isReceivable ? 'income' : 'expense',
-                      'p_description': isReceivable
-                          ? 'Collected from ${debt.personName}'
-                          : 'Paid to ${debt.personName}',
-                      'p_date': DateTime.now().toIso8601String(),
-                      'p_notes': null,
-                      'p_debt_id': debt.id,
-                      'p_fee': fee,
+                  await ApiClient.instance.post(
+                    '/debts/${debt.id}/pay',
+                    data: {
+                      'accountId': selectedAccountId,
+                      'amount': amount,
+                      if (fee > 0) 'fee': fee,
                     },
+                  );
+                  // Adjust account balance (backend creates transaction directly,
+                  // bypassing the frontend repo layer that normally handles this)
+                  final balanceDelta = isReceivable
+                      ? amount - fee   // income: receive amount minus fee
+                      : -(amount + fee); // expense: pay amount plus fee
+                  await _accountController.adjustBalance(
+                    selectedAccountId!,
+                    balanceDelta,
                   );
                   // Refresh debts, transactions, and budget spent amounts
                   _debtController.loadDebts();
@@ -1033,13 +953,6 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
     required List<Debt> allDebts,
     required List<PlannedPayment> allPayments,
   }) {
-    final monthBudgets = _budgetsForMonth(allBudgets, _monthKey)
-      ..sort((a, b) {
-        // Income always before expense
-        if (a.budgetType == b.budgetType) return 0;
-        return a.budgetType == BudgetType.income ? -1 : 1;
-      });
-
     // Filter transactions strictly to the selected month
     final monthStart = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final monthEnd = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
@@ -1048,15 +961,38 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
             !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd))
         .toList();
 
+    // Build spent-per-financeCategoryId map from actual transactions
+    final Map<String, double> spentByCategory = {};
+    for (final t in monthTransactions) {
+      if (t.financeCategoryId != null) {
+        spentByCategory[t.financeCategoryId!] =
+            (spentByCategory[t.financeCategoryId!] ?? 0.0) + t.amount;
+      }
+    }
+
+    final monthBudgets = _budgetsForMonth(allBudgets, _monthKey)
+      ..sort((a, b) {
+        // Income always before expense
+        if (a.budgetType == b.budgetType) return 0;
+        return a.budgetType == BudgetType.income ? -1 : 1;
+      });
+
+    // Show a debt/receivable in this month if:
+    // - It started on or before the end of this month (debt existed by this month)
+    // - AND it was not settled before this month started
+    //   (active = always show; settled = show only up through the month it was settled)
+    bool debtVisibleThisMonth(Debt d) {
+      if (d.startDate.isAfter(monthEnd)) return false; // started after this month
+      if (d.status == DebtStatus.active) return true;
+      if (d.settledAt == null) return true; // treated as active
+      return !d.settledAt!.isBefore(monthStart); // settled this month or later
+    }
+
     final debts = allDebts
-        .where(
-          (d) => d.type == DebtType.borrowing && d.status == DebtStatus.active,
-        )
+        .where((d) => d.type == DebtType.borrowing && debtVisibleThisMonth(d))
         .toList();
     final receivables = allDebts
-        .where(
-          (d) => d.type == DebtType.lending && d.status == DebtStatus.active,
-        )
+        .where((d) => d.type == DebtType.lending && debtVisibleThisMonth(d))
         .toList();
     final activePayments = allPayments
         .where((p) => p.status == PaymentStatus.active)
@@ -1144,7 +1080,10 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
               SliverToBoxAdapter(
                 child: _BudgetSummaryBar(
                   monthBudgets: monthBudgets,
+                  spentByCategory: spentByCategory,
                   activePayments: activePayments,
+                  activeDebts: debts,
+                  activeReceivables: receivables,
                   onCommitmentsTab: () =>
                       _showCommitmentsSheet(activePayments),
                 ),
@@ -1165,6 +1104,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                       group: group,
                       monthLabel: _monthLabel,
                       isSelected: _selectedGroup?.id == group.id,
+                      spentByCategory: spentByCategory,
                       onSelect: () => setState(() {
                         _selectedGroup = _selectedGroup?.id == group.id
                             ? null
@@ -1334,12 +1274,18 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
 
 class _BudgetSummaryBar extends StatelessWidget {
   final List<Budget> monthBudgets;
+  final Map<String, double> spentByCategory;
   final List<PlannedPayment> activePayments;
+  final List<Debt> activeDebts;
+  final List<Debt> activeReceivables;
   final VoidCallback onCommitmentsTab;
 
   const _BudgetSummaryBar({
     required this.monthBudgets,
+    required this.spentByCategory,
     required this.activePayments,
+    required this.activeDebts,
+    required this.activeReceivables,
     required this.onCommitmentsTab,
   });
 
@@ -1349,15 +1295,49 @@ class _BudgetSummaryBar extends StatelessWidget {
 
     double incomeReceived = 0;
     double expenseSpent = 0;
+    double plannedIncome = 0;
+    double plannedExpenses = 0;
+
+    // Budget targets
     for (final b in monthBudgets) {
       if (b.budgetType == BudgetType.income) {
-        incomeReceived += b.totalIncomeReceived;
+        for (final cat in b.categories) {
+          incomeReceived += spentByCategory[cat.financeCategoryId] ?? 0.0;
+        }
+        plannedIncome += b.budgetTarget;
       } else {
-        expenseSpent += b.totalExpensesSpent;
+        for (final cat in b.categories) {
+          expenseSpent += spentByCategory[cat.financeCategoryId] ?? 0.0;
+        }
+        plannedExpenses += b.budgetTarget;
       }
     }
+
+    // Receivables: expected incoming payments from people who owe the user
+    for (final r in activeReceivables) {
+      if (r.monthlyPaymentAmount > 0) {
+        plannedIncome += r.monthlyPaymentAmount;
+      }
+    }
+
+    // Debts: expected outgoing payments the user owes
+    for (final d in activeDebts) {
+      if (d.monthlyPaymentAmount > 0) {
+        plannedExpenses += d.monthlyPaymentAmount;
+      }
+    }
+
+    // Planned payments: recurring/scheduled expense commitments
+    for (final p in activePayments) {
+      plannedExpenses += p.amount;
+    }
+
     final net = incomeReceived - expenseSpent;
     final netColor = net >= 0 ? AppColors.success : AppColors.error;
+
+    // Planned net (how much should be left if plan is followed)
+    final plannedNet = plannedIncome - plannedExpenses;
+    final plannedNetColor = plannedNet >= 0 ? AppColors.success : AppColors.error;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -1367,6 +1347,7 @@ class _BudgetSummaryBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Actual row
           Row(
             children: [
               _SummaryChip(
@@ -1388,23 +1369,83 @@ class _BudgetSummaryBar extends StatelessWidget {
               ),
             ],
           ),
-          if (activePayments.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            ActionChip(
-              visualDensity: VisualDensity.compact,
-              avatar: CircleAvatar(
-                radius: 9,
-                backgroundColor: theme.colorScheme.primary,
-                child: Text(
-                  '${activePayments.length}',
-                  style: const TextStyle(fontSize: 9, color: Colors.white),
-                ),
+          const SizedBox(height: 6),
+          // Planned row
+          Row(
+            children: [
+              _SummaryChip(
+                label: 'Planned Inc.',
+                value: _fmt(plannedIncome),
+                valueColor: AppColors.success.withValues(alpha: 0.7),
+                isPlanned: true,
               ),
-              label: const Text('Upcoming Commitments',
-                  style: TextStyle(fontSize: 12)),
-              onPressed: onCommitmentsTab,
-            ),
-          ],
+              const SizedBox(width: 8),
+              _SummaryChip(
+                label: 'Planned Exp.',
+                value: _fmt(plannedExpenses),
+                valueColor: AppColors.error.withValues(alpha: 0.7),
+                isPlanned: true,
+              ),
+              const SizedBox(width: 8),
+              _SummaryChip(
+                label: plannedNet >= 0 ? 'Planned Left' : 'Planned Over',
+                value: _fmt(plannedNet.abs()),
+                valueColor: plannedNetColor.withValues(alpha: 0.7),
+                isPlanned: true,
+              ),
+            ],
+          ),
+          () {
+            final debtCount = activeDebts.where((d) => d.monthlyPaymentAmount > 0).length;
+            final receivableCount = activeReceivables.where((r) => r.monthlyPaymentAmount > 0).length;
+            final total = activePayments.length + debtCount + receivableCount;
+            if (total == 0) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  if (activePayments.isNotEmpty)
+                    ActionChip(
+                      visualDensity: VisualDensity.compact,
+                      avatar: CircleAvatar(
+                        radius: 9,
+                        backgroundColor: theme.colorScheme.primary,
+                        child: Text(
+                          '${activePayments.length}',
+                          style: const TextStyle(fontSize: 9, color: Colors.white),
+                        ),
+                      ),
+                      label: const Text('Planned Payments', style: TextStyle(fontSize: 12)),
+                      onPressed: onCommitmentsTab,
+                    ),
+                  if (debtCount > 0)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      avatar: const CircleAvatar(
+                        radius: 9,
+                        backgroundColor: AppColors.error,
+                        child: Icon(Icons.arrow_upward, size: 10, color: Colors.white),
+                      ),
+                      label: Text('$debtCount Debt${debtCount != 1 ? 's' : ''}',
+                          style: const TextStyle(fontSize: 12)),
+                    ),
+                  if (receivableCount > 0)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      avatar: const CircleAvatar(
+                        radius: 9,
+                        backgroundColor: AppColors.success,
+                        child: Icon(Icons.arrow_downward, size: 10, color: Colors.white),
+                      ),
+                      label: Text('$receivableCount Receivable${receivableCount != 1 ? 's' : ''}',
+                          style: const TextStyle(fontSize: 12)),
+                    ),
+                ],
+              ),
+            );
+          }(),
         ],
       ),
     );
@@ -1415,11 +1456,13 @@ class _SummaryChip extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
+  final bool isPlanned;
 
   const _SummaryChip({
     required this.label,
     required this.value,
     this.valueColor,
+    this.isPlanned = false,
   });
 
   @override
@@ -1429,22 +1472,46 @@ class _SummaryChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest
-              .withValues(alpha: 0.4),
+          color: isPlanned
+              ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2)
+              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(8),
+          border: isPlanned
+              ? Border.all(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  width: 0.5,
+                )
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textTertiary)),
+            Row(
+              children: [
+                if (isPlanned) ...[
+                  Icon(Icons.schedule_outlined,
+                      size: 9, color: AppColors.textTertiary),
+                  const SizedBox(width: 2),
+                ],
+                Expanded(
+                  child: Text(
+                    label,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textTertiary,
+                      fontSize: isPlanned ? 9 : null,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 2),
             Text(
               value,
               style: AppTextStyles.bodySmall.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: isPlanned ? FontWeight.w500 : FontWeight.w700,
                 color: valueColor ?? AppColors.textPrimary,
+                fontSize: isPlanned ? 11 : null,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -1698,6 +1765,7 @@ class _BudgetGroupCard extends StatelessWidget {
   final Budget group;
   final String monthLabel;
   final bool isSelected;
+  final Map<String, double> spentByCategory;
   final VoidCallback onSelect;
   final VoidCallback onEditGroup;
   final VoidCallback onAddRow;
@@ -1709,6 +1777,7 @@ class _BudgetGroupCard extends StatelessWidget {
     required this.group,
     required this.monthLabel,
     required this.isSelected,
+    required this.spentByCategory,
     required this.onSelect,
     required this.onEditGroup,
     required this.onAddRow,
@@ -1722,7 +1791,8 @@ class _BudgetGroupCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isIncome = group.budgetType == BudgetType.income;
     final totalPlanned = group.budgetTarget;
-    final totalActual = group.totalSpent;
+    final totalActual = group.categories.fold(
+        0.0, (sum, cat) => sum + (spentByCategory[cat.financeCategoryId] ?? 0.0));
     final diff = totalActual - totalPlanned; // positive = over/extra
     final progress = totalPlanned > 0
         ? (totalActual / totalPlanned).clamp(0.0, 1.0)
@@ -1885,7 +1955,7 @@ class _BudgetGroupCard extends StatelessWidget {
                 ),
                 SizedBox(
                   width: 80,
-                  child: Text('PLANNED',
+                  child: Text(isIncome ? 'EXPECTED' : 'PLANNED',
                       textAlign: TextAlign.right,
                       style: TextStyle(
                           fontSize: 10,
@@ -1896,7 +1966,7 @@ class _BudgetGroupCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 SizedBox(
                   width: 72,
-                  child: Text('SPENT',
+                  child: Text(isIncome ? 'RECEIVED' : 'SPENT',
                       textAlign: TextAlign.right,
                       style: TextStyle(
                           fontSize: 10,
@@ -1910,6 +1980,7 @@ class _BudgetGroupCard extends StatelessWidget {
         ...group.categories.map((cat) => _CategoryRow(
               key: ValueKey(cat.id ?? cat.financeCategoryId),
               category: cat,
+              spentAmount: spentByCategory[cat.financeCategoryId] ?? 0.0,
               isIncomeGroup: isIncome,
               accentColor: AppColors.accent,
               onDetailTap: () => onCategoryDetailTap(cat),
@@ -1926,6 +1997,7 @@ class _BudgetGroupCard extends StatelessWidget {
 
 class _CategoryRow extends StatefulWidget {
   final BudgetCategory category;
+  final double spentAmount;
   final bool isIncomeGroup;
   final Color accentColor;
   final VoidCallback onDetailTap;
@@ -1935,6 +2007,7 @@ class _CategoryRow extends StatefulWidget {
   const _CategoryRow({
     super.key,
     required this.category,
+    required this.spentAmount,
     required this.isIncomeGroup,
     required this.accentColor,
     required this.onDetailTap,
@@ -2019,7 +2092,7 @@ class _CategoryRowState extends State<_CategoryRow> {
   @override
   Widget build(BuildContext context) {
     final planned = widget.category.targetAmount;
-    final actual = widget.category.spentAmount ?? 0.0;
+    final actual = widget.spentAmount;
     final progress = planned > 0 ? (actual / planned).clamp(0.0, 1.0) : 0.0;
     final isOver = actual > planned;
     final isIncome = widget.isIncomeGroup;
@@ -2220,7 +2293,7 @@ class _CategoryDetailContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final planned = category.targetAmount;
-    final actual = category.spentAmount ?? 0.0;
+    final actual = transactions.fold(0.0, (sum, t) => sum + t.amount);
     final diff = actual - planned; // positive = over/extra
     final isOver = diff > 0;
     // Income: over = green (good). Expense: over = red (bad).
@@ -2927,7 +3000,7 @@ class _SideSummaryPanelState extends State<_SideSummaryPanel>
             controller: _tabController,
             children: group == null
                 ? [
-                    _AllSummaryTab(budgets: widget.allBudgets),
+                    _AllSummaryTab(budgets: widget.allBudgets, transactions: widget.allTransactions),
                     _AllTransactionsTab(transactions: widget.allTransactions),
                   ]
                 : [
@@ -2956,8 +3029,9 @@ class _ChartItem {
 
 class _AllSummaryTab extends StatelessWidget {
   final List<Budget> budgets;
+  final List<Transaction> transactions;
 
-  const _AllSummaryTab({required this.budgets});
+  const _AllSummaryTab({required this.budgets, required this.transactions});
 
   static const _incomePalette = [
     Color(0xFF12B886),
@@ -2991,13 +3065,22 @@ class _AllSummaryTab extends StatelessWidget {
       );
     }
 
+    // Build spent-per-financeCategoryId map from actual transactions
+    final Map<String, double> spentByCategory = {};
+    for (final t in transactions) {
+      if (t.financeCategoryId != null) {
+        spentByCategory[t.financeCategoryId!] =
+            (spentByCategory[t.financeCategoryId!] ?? 0.0) + t.amount;
+      }
+    }
+
     // Flatten categories per type
     final incomeItems = budgets
         .where((b) => b.budgetType == BudgetType.income)
         .expand((b) => b.categories)
         .map((c) => _ChartItem(
               c.financeCategory?.name ?? '—',
-              c.spentAmount ?? 0,
+              spentByCategory[c.financeCategoryId] ?? 0.0,
             ))
         .where((i) => i.value > 0)
         .toList();
@@ -3007,7 +3090,7 @@ class _AllSummaryTab extends StatelessWidget {
         .expand((b) => b.categories)
         .map((c) => _ChartItem(
               c.financeCategory?.name ?? '—',
-              c.spentAmount ?? 0,
+              spentByCategory[c.financeCategoryId] ?? 0.0,
             ))
         .where((i) => i.value > 0)
         .toList();
@@ -4499,7 +4582,6 @@ class _CommitmentTile extends StatelessWidget {
       text: payment.amount.toStringAsFixed(2),
     );
     String? selectedAccountId;
-    String? selectedCategoryId;
 
     final result = await showDialog<bool>(
       context: context,
@@ -4540,33 +4622,6 @@ class _CommitmentTile extends StatelessWidget {
                 loadingBuilder: (_) => const CircularProgressIndicator(),
                 errorBuilder: (_, m) => Text(m),
               ),
-              const SizedBox(height: 12),
-              AsyncStreamBuilder<List<FinanceCategory>>(
-                state: categoryController,
-                builder: (_, cats) {
-                  final exp = cats
-                      .where((c) => c.type == CategoryType.expense)
-                      .toList();
-                  return DropdownButtonFormField<String>(
-                    initialValue: selectedCategoryId,
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: exp
-                        .map(
-                          (c) => DropdownMenuItem(
-                            value: c.id,
-                            child: Text(c.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => selectedCategoryId = v,
-                  );
-                },
-                loadingBuilder: (_) => const CircularProgressIndicator(),
-                errorBuilder: (_, m) => Text(m),
-              ),
             ],
           ),
         ),
@@ -4590,27 +4645,12 @@ class _CommitmentTile extends StatelessWidget {
                 );
                 return;
               }
-              if (selectedCategoryId == null) {
-                ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  const SnackBar(content: Text('Select a category')),
-                );
-                return;
-              }
               try {
-                await supabaseService.client.rpc(
-                  'create_planned_payment_transaction',
-                  params: {
-                    'p_user_id': supabaseService.userId,
-                    'p_account_id': selectedAccountId,
-                    'p_finance_category_id': selectedCategoryId,
-                    'p_amount': amount,
-                    'p_type': 'expense',
-                    'p_description': 'Paid: ${payment.name}',
-                    'p_date': DateTime.now().toIso8601String(),
-                    'p_notes': null,
-                    'p_planned_payment_id': payment.id,
-                    'p_fee': 0.0,
-                    'p_fee_description': null,
+                await ApiClient.instance.post(
+                  '/planned-payments/${payment.id}/pay',
+                  data: {
+                    'paidDate': DateTime.now().toIso8601String(),
+                    'createTransaction': true,
                   },
                 );
                 plannedPaymentController.loadPlannedPayments();

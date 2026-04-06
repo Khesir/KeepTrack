@@ -6,6 +6,8 @@ import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
+import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/presentation/screens/budget_month_screen.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/accounts/accounts_tab_new.dart';
@@ -263,7 +265,19 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         ? Colors.white.withOpacity(0.08)
         : Colors.black.withOpacity(0.06);
     final authController = locator.get<AuthController>();
-    final user = authController.currentUser;
+
+    return StreamBuilder<AsyncState<User?>>(
+      stream: authController.stream,
+      initialData: authController.state,
+      builder: (context, snapshot) {
+        final state = snapshot.data;
+        final user = state is AsyncData<User?> ? state.data : authController.currentUser;
+        return _buildProfileTile(theme, borderColor, authController, user);
+      },
+    );
+  }
+
+  Widget _buildProfileTile(ThemeData theme, Color borderColor, AuthController authController, User? user) {
 
     return Container(
       padding: const EdgeInsets.all(12),

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
-import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
-import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
 import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../../../core/theme/app_theme.dart';
 import '../../../../../../core/ui/responsive/desktop_aware_screen.dart';
@@ -27,7 +25,6 @@ class GoalsTabNew extends StatefulWidget {
 class _GoalsTabNewState extends State<GoalsTabNew> {
   late final GoalController _controller;
   late final AccountController _accountController;
-  late final FinanceCategoryController _categoryController;
   late final SupabaseService _supabaseService;
   String _selectedFilter = 'All';
   Goal? _selectedGoal;
@@ -37,10 +34,8 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
     super.initState();
     _controller = locator.get<GoalController>();
     _accountController = locator.get<AccountController>();
-    _categoryController = locator.get<FinanceCategoryController>();
     _supabaseService = locator.get<SupabaseService>();
     _accountController.loadAccounts();
-    _categoryController.loadCategories();
   }
 
   void _showGoalDialog({Goal? goal}) {
@@ -67,7 +62,6 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
     );
     final feeController = TextEditingController();
     String? selectedAccountId;
-    String? selectedCategoryId;
 
     final result = await showDialog<bool>(
       context: context,
@@ -147,27 +141,6 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
-                  AsyncStreamBuilder<List<FinanceCategory>>(
-                    state: _categoryController,
-                    builder: (context, categories) {
-                      final expenseCategories =
-                          categories.where((c) => c.type == CategoryType.expense).toList();
-                      return DropdownButtonFormField<String>(
-                        initialValue: selectedCategoryId,
-                        decoration: InputDecoration(
-                          labelText: 'Category',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                        items: expenseCategories
-                            .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
-                            .toList(),
-                        onChanged: (v) => setDialogState(() => selectedCategoryId = v),
-                      );
-                    },
-                  ),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -192,27 +165,14 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                             );
                             return;
                           }
-                          if (selectedCategoryId == null) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please select a category')),
-                            );
-                            return;
-                          }
                           try {
                             final fee = double.tryParse(feeController.text) ?? 0;
-                            await _supabaseService.client.rpc(
-                              'create_goal_payment_transaction',
-                              params: {
-                                'p_user_id': _supabaseService.userId,
-                                'p_account_id': selectedAccountId,
-                                'p_finance_category_id': selectedCategoryId,
-                                'p_amount': amount,
-                                'p_type': 'expense',
-                                'p_description': 'Goal: ${goal.name}',
-                                'p_date': DateTime.now().toIso8601String(),
-                                'p_notes': null,
-                                'p_goal_id': goal.id,
-                                'p_fee': fee,
+                            await ApiClient.instance.post(
+                              '/goals/${goal.id}/contribute',
+                              data: {
+                                'accountId': selectedAccountId,
+                                'amount': amount,
+                                if (fee > 0) 'fee': fee,
                               },
                             );
                             _controller.loadGoals();
