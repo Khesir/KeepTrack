@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#1976D2",
     "theme_color": "#1976D2",
-    "description": "Your personal productivity hub - track finances, tasks, and goals.",
+    "description": "Your personal finance tracker - manage budgets, expenses, and accounts.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
