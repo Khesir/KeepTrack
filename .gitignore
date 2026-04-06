@@ -1,5 +1,6 @@
 .env
 .env.prod
+.vscode/launch.json
 
 # Miscellaneous
 *.class

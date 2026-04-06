@@ -1,7 +1,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keep_track/core/cache/cache_factory.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
@@ -26,9 +25,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   DILogger.enable();
-
-  // Load .env file
-  await dotenv.load(fileName: '.env');
 
   // Initialize Hive for local cache (mobile/desktop only)
   await Hive.initFlutter();

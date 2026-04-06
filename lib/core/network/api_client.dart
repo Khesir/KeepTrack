@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'auth_interceptor.dart';
 
 class ApiClient {
@@ -12,8 +11,10 @@ class ApiClient {
   }
 
   static Dio _build() {
-    final baseUrl =
-        dotenv.env['API_BASE_URL'] ?? 'http://localhost:3000/api/v1';
+    const baseUrl = String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'http://localhost:3000/api/v1',
+    );
 
     final dio = Dio(
       BaseOptions(

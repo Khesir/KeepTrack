@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:keep_track/core/auth/auth_tokens.dart';
 import 'package:keep_track/core/auth/token_storage.dart';
@@ -29,14 +28,16 @@ class AuthService {
 
   // ── Google Sign-In ────────────────────────────────────────────────────────
 
+  static const _googleClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+
   GoogleSignIn get _gsi => _googleSignIn ??= kIsWeb
       ? GoogleSignIn(
           scopes: ['email', 'profile', 'openid'],
-          clientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+          clientId: _googleClientId.isEmpty ? null : _googleClientId,
         )
       : GoogleSignIn(
           scopes: ['email', 'profile', 'openid'],
-          serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+          serverClientId: _googleClientId.isEmpty ? null : _googleClientId,
         );
 
   Future<Result<User>> signInWithGoogle() async {
@@ -190,7 +191,7 @@ class AuthService {
   // ── Dev bypass ────────────────────────────────────────────────────────────
 
   Future<bool> _isDevMode() async {
-    final v = dotenv.env['DEV_BYPASS'] ?? 'false';
+    const v = String.fromEnvironment('DEV_BYPASS', defaultValue: 'false');
     return v.toLowerCase() == 'true';
   }
 
@@ -204,12 +205,12 @@ class AuthService {
   }
 
   Future<Result<User>> _devBypass({required bool isAdmin}) async {
-    final email = isAdmin
-        ? (dotenv.env['ADMIN_EMAIL'] ?? 'admin@personalcodex.app')
-        : (dotenv.env['DEV_EMAIL'] ?? 'dev@personalcodex.app');
-    final password = isAdmin
-        ? (dotenv.env['ADMIN_PASSWORD'] ?? 'admin123456')
-        : (dotenv.env['DEV_PASSWORD'] ?? 'dev123456');
+    const adminEmail = String.fromEnvironment('ADMIN_EMAIL', defaultValue: 'admin@personalcodex.app');
+    const devEmail = String.fromEnvironment('DEV_EMAIL', defaultValue: 'dev@personalcodex.app');
+    const adminPassword = String.fromEnvironment('ADMIN_PASSWORD', defaultValue: 'admin123456');
+    const devPassword = String.fromEnvironment('DEV_PASSWORD', defaultValue: 'dev123456');
+    final email = isAdmin ? adminEmail : devEmail;
+    final password = isAdmin ? adminPassword : devPassword;
 
     AppLogger.warning('DEV BYPASS — signing in as $email');
     return signInWithEmail(email: email, password: password);

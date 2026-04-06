@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/state.dart';
@@ -603,7 +602,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // For mobile/web, check env variable
-      return dotenv.env['DEV_BYPASS'] == 'true';
+      const devBypass = String.fromEnvironment('DEV_BYPASS', defaultValue: 'false');
+      return devBypass == 'true';
     } catch (e) {
       return false;
     }
