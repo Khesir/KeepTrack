@@ -35,6 +35,8 @@ abstract class LocalCache {
 
   Future<void> clear(String box);
 
+  Future<void> clearAll();
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   Future<void> init();

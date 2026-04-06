@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:keep_track/core/auth/auth_tokens.dart';
 import 'package:keep_track/core/auth/token_storage.dart';
+import 'package:keep_track/core/cache/local_cache.dart';
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/error/failure.dart';
 import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/logging/app_logger.dart';
@@ -176,13 +178,14 @@ class AuthService {
       if (refresh != null) {
         await _dio
             .post('/auth/logout', data: {'refreshToken': refresh})
-            .catchError((_) {});
+            .catchError((_) => Response(requestOptions: RequestOptions()));
       }
       if (_googleSignIn != null && await _gsi.isSignedIn()) {
         await _gsi.disconnect();
       }
     } catch (_) {}
     await _tokens.clear();
+    await locator.get<LocalCache>().clearAll();
     _currentUser = null;
     _stateController.add(null);
     return Result.success(null);

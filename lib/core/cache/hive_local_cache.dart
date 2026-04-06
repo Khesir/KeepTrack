@@ -103,6 +103,13 @@ class HiveLocalCache implements LocalCache {
   }
 
   @override
+  Future<void> clearAll() async {
+    for (final b in _boxes.values) {
+      await b.clear();
+    }
+  }
+
+  @override
   Future<void> dispose() async {
     for (final b in _boxes.values) {
       await b.close();

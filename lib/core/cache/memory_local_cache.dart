@@ -83,6 +83,11 @@ class MemoryLocalCache implements LocalCache {
   }
 
   @override
+  Future<void> clearAll() async {
+    _store.clear();
+  }
+
+  @override
   Future<void> dispose() async {
     _store.clear();
   }
