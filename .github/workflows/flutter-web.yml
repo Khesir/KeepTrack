@@ -26,8 +26,11 @@ jobs:
             --dart-define=API_BASE_URL=${{ secrets.API_BASE_URL }} \
             --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: build/web
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        run: vercel deploy build/web --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
