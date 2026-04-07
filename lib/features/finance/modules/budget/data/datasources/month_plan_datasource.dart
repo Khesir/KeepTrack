@@ -14,4 +14,7 @@ abstract class MonthPlanDataSource {
 
   /// Delete the month plan row AND all budgets (+ their categories) for [month].
   Future<void> deleteMonthPlanWithBudgets(String id, String month);
+
+  /// Link [budgetId] to this plan's budgetIds list.
+  Future<void> addBudgetToMonthPlan(String planId, String budgetId);
 }

@@ -33,4 +33,7 @@ abstract class MonthPlanRepository {
 
   /// Delete the month plan AND all budgets (+ categories) for [month].
   Future<Result<void>> deleteMonthPlanWithBudgets(String id, String month);
+
+  /// Link [budgetId] to this plan's budgetIds list.
+  Future<Result<void>> addBudgetToMonthPlan(String planId, String budgetId);
 }

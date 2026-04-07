@@ -14,6 +14,8 @@ class MonthPlan {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  final List<String> budgetIds; // Raw IDs from month_plan.budgetIds
+
   const MonthPlan({
     this.id,
     required this.month,
@@ -21,6 +23,7 @@ class MonthPlan {
     this.accountId,
     this.notes,
     this.budgets = const [],
+    this.budgetIds = const [],
     this.createdAt,
     this.updatedAt,
   });
@@ -60,6 +63,7 @@ class MonthPlan {
     String? accountId,
     String? notes,
     List<Budget>? budgets,
+    List<String>? budgetIds,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -70,6 +74,7 @@ class MonthPlan {
       accountId: accountId ?? this.accountId,
       notes: notes ?? this.notes,
       budgets: budgets ?? this.budgets,
+      budgetIds: budgetIds ?? this.budgetIds,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

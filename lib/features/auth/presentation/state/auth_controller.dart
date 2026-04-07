@@ -5,6 +5,8 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/features/auth/data/services/auth_service.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/finance/data/services/finance_initialization_service.dart';
+import 'package:keep_track/features/finance/presentation/state/budget_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
 
 class AuthController extends StreamState<AsyncState<User?>> {
   final AuthService _authService;
@@ -28,10 +30,16 @@ class AuthController extends StreamState<AsyncState<User?>> {
           if (_lastInitializedUserId != user.id) {
             _lastInitializedUserId = user.id;
             _initializeUserData(user.id);
+            // Reload finance controllers so the new user's data is fetched
+            locator.get<BudgetController>().loadBudgetsWithSpentAmounts();
+            locator.get<MonthPlanController>().loadMonthPlans();
           }
         } else {
           AppLogger.info('Auth state changed: User signed out');
           _lastInitializedUserId = null;
+          // Clear finance state so the next user cannot see this user's data
+          locator.get<BudgetController>().clear();
+          locator.get<MonthPlanController>().clear();
           emit(const AsyncData(null));
         }
       },

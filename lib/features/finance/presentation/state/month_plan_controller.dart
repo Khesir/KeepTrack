@@ -72,4 +72,22 @@ class MonthPlanController extends StreamState<AsyncState<List<MonthPlan>>> {
     });
     return copied!;
   }
+
+  /// Link [budgetId] to the month plan for [month].
+  /// Finds the plan in current state by month, calls the API, and is a no-op
+  /// if no plan exists yet (the budget will still be shown via its month field).
+  Future<void> addBudgetToMonthPlan(String month, String budgetId) async {
+    final current = data ?? [];
+    final plan = current.cast<MonthPlan?>().firstWhere(
+      (p) => p?.month == month,
+      orElse: () => null,
+    );
+    if (plan?.id == null) return; // no plan to link to yet
+    await _repository.addBudgetToMonthPlan(plan!.id!, budgetId);
+  }
+
+  /// Clear all month plan state (called on sign-out to prevent data leaking to next user)
+  void clear() {
+    emit(const AsyncData([]));
+  }
 }

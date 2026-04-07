@@ -100,4 +100,15 @@ class MonthPlanDataSourceRest implements MonthPlanDataSource {
       throw UnknownFailure(message: 'Failed to delete month plan with budgets', originalError: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<void> addBudgetToMonthPlan(String planId, String budgetId) async {
+    try {
+      await _dio.post('/month-plans/$planId/budgets', data: {'budgetId': budgetId});
+    } on DioException catch (e) {
+      throw mapDioError(e);
+    } catch (e, st) {
+      throw UnknownFailure(message: 'Failed to add budget to month plan', originalError: e, stackTrace: st);
+    }
+  }
 }

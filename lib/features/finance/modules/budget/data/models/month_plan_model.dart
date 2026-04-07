@@ -10,6 +10,7 @@ class MonthPlanModel extends MonthPlan {
     super.accountId,
     super.notes,
     super.budgets = const [],
+    super.budgetIds = const [],
     super.createdAt,
     super.updatedAt,
   });
@@ -30,6 +31,11 @@ class MonthPlanModel extends MonthPlan {
 
   /// Create model from JSON (NestJS camelCase response, budgets loaded separately)
   factory MonthPlanModel.fromJson(Map<String, dynamic> json) {
+    final rawIds = json['budgetIds'];
+    final parsedIds = rawIds is List
+        ? rawIds.map((e) => e.toString()).toList()
+        : <String>[];
+
     return MonthPlanModel(
       id: json['id'] as String?,
       month: json['month'] as String,
@@ -37,6 +43,7 @@ class MonthPlanModel extends MonthPlan {
       accountId: json['accountId'] as String?,
       notes: json['notes'] as String?,
       budgets: const [],
+      budgetIds: parsedIds,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : null,

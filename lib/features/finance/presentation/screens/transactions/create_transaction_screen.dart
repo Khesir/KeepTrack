@@ -132,7 +132,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   List<_CategoryGroup> _getGroupedCategories(
     List<FinanceCategory> allCategories,
   ) {
-    final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
+    // Use the selected transaction date's month, not DateTime.now()
+    final txnMonth = DateFormat('yyyy-MM').format(_selectedDate);
 
     final CategoryType targetType = switch (_selectedType) {
       TransactionType.income => CategoryType.income,
@@ -155,7 +156,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     final monthBudgets = allBudgets
         .where(
           (b) =>
-              b.month == currentMonth &&
+              b.month == txnMonth &&
               b.periodType == BudgetPeriodType.monthly &&
               b.status == BudgetStatus.active &&
               b.budgetType == targetBudgetType,
@@ -182,11 +183,16 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       }
     }
 
-    final others = typedCategories
-        .where((c) => c.id != null && !seenIds.contains(c.id))
-        .toList();
-    if (others.isNotEmpty) {
-      groups.add(_CategoryGroup('Other', others));
+    // Only show unbudgeted categories in "Other" when a plan exists for this
+    // month — avoids dumping all finance_categories as "Other" when there is
+    // no month plan yet.
+    if (monthBudgets.isNotEmpty) {
+      final others = typedCategories
+          .where((c) => c.id != null && !seenIds.contains(c.id))
+          .toList();
+      if (others.isNotEmpty) {
+        groups.add(_CategoryGroup('Other', others));
+      }
     }
 
     return groups;

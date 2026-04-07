@@ -180,4 +180,9 @@ class BudgetController extends StreamState<AsyncState<List<Budget>>> {
     }
     return {};
   }
+
+  /// Clear all budget state (called on sign-out to prevent data leaking to next user)
+  void clear() {
+    emit(const AsyncData([]));
+  }
 }

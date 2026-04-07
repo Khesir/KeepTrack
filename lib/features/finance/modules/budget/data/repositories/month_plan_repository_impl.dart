@@ -113,4 +113,16 @@ class MonthPlanRepositoryImpl implements MonthPlanRepository {
       );
     }
   }
+
+  @override
+  Future<Result<void>> addBudgetToMonthPlan(String planId, String budgetId) async {
+    try {
+      await dataSource.addBudgetToMonthPlan(planId, budgetId);
+      return Result.success(null);
+    } catch (e) {
+      return Result.error(
+        UnknownFailure(message: 'Failed to add budget to month plan: $e'),
+      );
+    }
+  }
 }

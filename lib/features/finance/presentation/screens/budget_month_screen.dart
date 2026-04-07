@@ -76,10 +76,15 @@ List<_CategoryGroup> _buildGroupedCategories({
     }
   }
 
-  final others =
-      typedCats.where((c) => c.id != null && !seenIds.contains(c.id)).toList();
-  if (others.isNotEmpty) {
-    groups.add(_CategoryGroup('Other', others));
+  // Only show unbudgeted categories in "Other" when a plan exists for this
+  // month — avoids dumping all finance_categories as "Other" when there is
+  // no month plan yet.
+  if (monthBudgets.isNotEmpty) {
+    final others =
+        typedCats.where((c) => c.id != null && !seenIds.contains(c.id)).toList();
+    if (others.isNotEmpty) {
+      groups.add(_CategoryGroup('Other', others));
+    }
   }
 
   return groups;
@@ -251,9 +256,6 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
     _transactionController.loadTransactionsByDateRange(start, end);
   }
 
-  List<Budget> _budgetsForMonth(List<Budget> all, String key) => all
-      .where((b) => b.month == key && b.status == BudgetStatus.active)
-      .toList();
 
   // ── Dialogs / sheets ─────────────────────────────────────────────────────
 
@@ -359,6 +361,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
         monthKey: _monthKey,
         monthLabel: _monthLabel,
         budgetController: _budgetController,
+        monthPlanController: _monthPlanController,
         supabaseService: _supabaseService,
       ),
     );
@@ -388,67 +391,6 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
         supabaseService: _supabaseService,
       ),
     );
-  }
-
-  Future<void> _copyFromPreviousMonth(List<Budget> allBudgets) async {
-    final prevBudgets = allBudgets
-        .where((b) =>
-            b.month == _prevMonthKey &&
-            b.periodType == BudgetPeriodType.monthly &&
-            b.status == BudgetStatus.active)
-        .toList();
-
-    if (prevBudgets.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No budget found for $_prevMonthLabel')),
-        );
-      }
-      return;
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Copying budget from $_prevMonthLabel…'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-
-    for (final prev in prevBudgets) {
-      // Create the group shell (no categories yet)
-      final created = await _budgetController.createBudget(
-        Budget(
-          month: _monthKey,
-          title: prev.title,
-          budgetType: prev.budgetType,
-          periodType: BudgetPeriodType.monthly,
-          status: BudgetStatus.active,
-          userId: prev.userId,
-        ),
-      );
-
-      // Copy each category from the previous month
-      for (final cat in prev.categories) {
-        await _budgetController.addCategory(
-          created.id!,
-          BudgetCategory(
-            budgetId: created.id!,
-            financeCategoryId: cat.financeCategoryId,
-            targetAmount: cat.targetAmount,
-            financeCategory: cat.financeCategory,
-            userId: cat.userId,
-          ),
-        );
-      }
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Budget copied! Adjust amounts as needed.')),
-      );
-    }
   }
 
   Future<void> _confirmDeleteCategory(Budget group, BudgetCategory cat) async {
@@ -865,32 +807,54 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AsyncStreamBuilder<List<Budget>>(
-        state: _budgetController,
-        builder: (context, allBudgets) {
-          return AsyncStreamBuilder<List<Transaction>>(
-            state: _transactionController,
-            builder: (context, allTransactions) {
-              return AsyncStreamBuilder<List<Debt>>(
-                state: _debtController,
-                builder: (context, allDebts) {
-                  return AsyncStreamBuilder<List<PlannedPayment>>(
-                    state: _plannedPaymentController,
-                    builder: (context, allPayments) {
-                      return _buildBody(
-                        allBudgets: allBudgets,
-                        allTransactions: allTransactions,
-                        allDebts: allDebts,
-                        allPayments: allPayments,
+      body: AsyncStreamBuilder<List<MonthPlan>>(
+        state: _monthPlanController,
+        builder: (context, allMonthPlans) {
+          return AsyncStreamBuilder<List<Budget>>(
+            state: _budgetController,
+            builder: (context, allBudgets) {
+              return AsyncStreamBuilder<List<Transaction>>(
+                state: _transactionController,
+                builder: (context, allTransactions) {
+                  return AsyncStreamBuilder<List<Debt>>(
+                    state: _debtController,
+                    builder: (context, allDebts) {
+                      return AsyncStreamBuilder<List<PlannedPayment>>(
+                        state: _plannedPaymentController,
+                        builder: (context, allPayments) {
+                          return _buildBody(
+                            allMonthPlans: allMonthPlans,
+                            allBudgets: allBudgets,
+                            allTransactions: allTransactions,
+                            allDebts: allDebts,
+                            allPayments: allPayments,
+                          );
+                        },
+                        loadingBuilder: (_) => _buildBody(
+                          allMonthPlans: allMonthPlans,
+                          allBudgets: allBudgets,
+                          allTransactions: allTransactions,
+                          allDebts: const [],
+                          allPayments: const [],
+                        ),
+                        errorBuilder: (_, __) => _buildBody(
+                          allMonthPlans: allMonthPlans,
+                          allBudgets: allBudgets,
+                          allTransactions: allTransactions,
+                          allDebts: const [],
+                          allPayments: const [],
+                        ),
                       );
                     },
                     loadingBuilder: (_) => _buildBody(
+                      allMonthPlans: allMonthPlans,
                       allBudgets: allBudgets,
                       allTransactions: allTransactions,
                       allDebts: const [],
                       allPayments: const [],
                     ),
                     errorBuilder: (_, __) => _buildBody(
+                      allMonthPlans: allMonthPlans,
                       allBudgets: allBudgets,
                       allTransactions: allTransactions,
                       allDebts: const [],
@@ -898,18 +862,9 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                     ),
                   );
                 },
-                loadingBuilder: (_) => _buildBody(
-                  allBudgets: allBudgets,
-                  allTransactions: allTransactions,
-                  allDebts: const [],
-                  allPayments: const [],
-                ),
-                errorBuilder: (_, __) => _buildBody(
-                  allBudgets: allBudgets,
-                  allTransactions: allTransactions,
-                  allDebts: const [],
-                  allPayments: const [],
-                ),
+                loadingBuilder: (_) =>
+                    const Center(child: CircularProgressIndicator()),
+                errorBuilder: (_, msg) => Center(child: Text('Error: $msg')),
               );
             },
             loadingBuilder: (_) =>
@@ -948,6 +903,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
   }
 
   Widget _buildBody({
+    required List<MonthPlan> allMonthPlans,
     required List<Budget> allBudgets,
     required List<Transaction> allTransactions,
     required List<Debt> allDebts,
@@ -970,12 +926,24 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
       }
     }
 
-    final monthBudgets = _budgetsForMonth(allBudgets, _monthKey)
-      ..sort((a, b) {
-        // Income always before expense
-        if (a.budgetType == b.budgetType) return 0;
-        return a.budgetType == BudgetType.income ? -1 : 1;
-      });
+    // month_plan is the authority — no plan means no budgets to show
+    final monthPlan = allMonthPlans.cast<MonthPlan?>().firstWhere(
+      (p) => p?.month == _monthKey,
+      orElse: () => null,
+    );
+    final hasMonthPlan = monthPlan != null;
+
+    // Only show budgets explicitly listed in the month_plan's budgetIds
+    final allowedIds = monthPlan?.budgetIds.toSet() ?? {};
+    final monthBudgets = hasMonthPlan
+        ? (allBudgets
+            .where((b) => b.id != null && allowedIds.contains(b.id))
+            .toList()
+            ..sort((a, b) {
+              if (a.budgetType == b.budgetType) return 0;
+              return a.budgetType == BudgetType.income ? -1 : 1;
+            }))
+        : <Budget>[];
 
     // Show a debt/receivable in this month if:
     // - It started on or before the end of this month (debt existed by this month)
@@ -1089,7 +1057,7 @@ class _BudgetMonthScreenState extends State<BudgetMonthScreen> {
                 ),
               ),
 
-              if (monthBudgets.isEmpty)
+              if (!hasMonthPlan)
                 SliverToBoxAdapter(
                   child: _EmptyBudgetState(
                     monthLabel: _monthLabel,
@@ -1620,8 +1588,15 @@ class _StartPlanningSheetState extends State<_StartPlanningSheet> {
     }
   }
 
-  void _startFresh() {
+  Future<void> _startFresh() async {
     Navigator.pop(context);
+    // Ensure a MonthPlan record exists for this month before creating budget groups
+    try {
+      await widget.monthPlanController.getOrCreateMonthPlan(widget.monthKey);
+    } catch (_) {
+      // Non-blocking: proceed to budget creation even if month plan creation fails
+    }
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1629,6 +1604,7 @@ class _StartPlanningSheetState extends State<_StartPlanningSheet> {
         monthKey: widget.monthKey,
         monthLabel: widget.monthLabel,
         budgetController: widget.budgetController,
+        monthPlanController: widget.monthPlanController,
         supabaseService: widget.supabaseService,
       ),
     );
@@ -3345,12 +3321,14 @@ class _CreateGroupSheet extends StatefulWidget {
   final String monthKey;
   final String monthLabel;
   final BudgetController budgetController;
+  final MonthPlanController monthPlanController;
   final SupabaseService supabaseService;
 
   const _CreateGroupSheet({
     required this.monthKey,
     required this.monthLabel,
     required this.budgetController,
+    required this.monthPlanController,
     required this.supabaseService,
   });
 
@@ -3378,7 +3356,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await widget.budgetController.createBudget(
+      final created = await widget.budgetController.createBudget(
         Budget(
           month: widget.monthKey,
           title: _titleCtrl.text.trim().isEmpty
@@ -3390,6 +3368,13 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
           userId: widget.supabaseService.userId,
         ),
       );
+      // Link the new budget to the month plan so budgetIds stays in sync
+      if (created.id != null) {
+        await widget.monthPlanController.addBudgetToMonthPlan(
+          widget.monthKey,
+          created.id!,
+        );
+      }
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
