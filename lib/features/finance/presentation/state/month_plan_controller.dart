@@ -83,7 +83,13 @@ class MonthPlanController extends StreamState<AsyncState<List<MonthPlan>>> {
       orElse: () => null,
     );
     if (plan?.id == null) return; // no plan to link to yet
-    await _repository.addBudgetToMonthPlan(plan!.id!, budgetId);
+    await executeSilent(() async {
+      final result = await _repository.addBudgetToMonthPlan(plan!.id!, budgetId);
+      result.unwrap();
+      // Reload month plans so the new budget group appears immediately
+      final refreshed = await _repository.getMonthPlans();
+      return refreshed.unwrap();
+    });
   }
 
   /// Clear all month plan state (called on sign-out to prevent data leaking to next user)

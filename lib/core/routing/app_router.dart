@@ -253,8 +253,8 @@ extension NavigationExtensions on BuildContext {
     return AppRouter.push(this, AppRoutes.budgetDetail, arguments: budget);
   }
 
-  Future<void> goToBudgetCreate() {
-    return AppRouter.push(this, AppRoutes.budgetCreate);
+  Future<bool?> goToBudgetCreate() {
+    return AppRouter.push<bool>(this, AppRoutes.budgetCreate);
   }
 
   // Transaction

@@ -1364,10 +1364,10 @@ class _BudgetSummaryBar extends StatelessWidget {
             ],
           ),
           () {
-            final debtCount = activeDebts.where((d) => d.monthlyPaymentAmount > 0).length;
-            final receivableCount = activeReceivables.where((r) => r.monthlyPaymentAmount > 0).length;
-            final total = activePayments.length + debtCount + receivableCount;
-            if (total == 0) return const SizedBox.shrink();
+            final debtCount = activeDebts.length;
+            final receivableCount = activeReceivables.length;
+            final hasAny = activePayments.isNotEmpty || debtCount > 0 || receivableCount > 0;
+            if (!hasAny) return const SizedBox.shrink();
             return Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Wrap(
@@ -1388,28 +1388,36 @@ class _BudgetSummaryBar extends StatelessWidget {
                       label: const Text('Planned Payments', style: TextStyle(fontSize: 12)),
                       onPressed: onCommitmentsTab,
                     ),
-                  if (debtCount > 0)
-                    Chip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: const CircleAvatar(
-                        radius: 9,
-                        backgroundColor: AppColors.error,
-                        child: Icon(Icons.arrow_upward, size: 10, color: Colors.white),
-                      ),
-                      label: Text('$debtCount Debt${debtCount != 1 ? 's' : ''}',
-                          style: const TextStyle(fontSize: 12)),
+                  Chip(
+                    visualDensity: VisualDensity.compact,
+                    avatar: CircleAvatar(
+                      radius: 9,
+                      backgroundColor: debtCount > 0 ? AppColors.error : AppColors.textTertiary,
+                      child: const Icon(Icons.arrow_upward, size: 10, color: Colors.white),
                     ),
-                  if (receivableCount > 0)
-                    Chip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: const CircleAvatar(
-                        radius: 9,
-                        backgroundColor: AppColors.success,
-                        child: Icon(Icons.arrow_downward, size: 10, color: Colors.white),
+                    label: Text(
+                      '$debtCount Debt${debtCount != 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: debtCount > 0 ? null : AppColors.textTertiary,
                       ),
-                      label: Text('$receivableCount Receivable${receivableCount != 1 ? 's' : ''}',
-                          style: const TextStyle(fontSize: 12)),
                     ),
+                  ),
+                  Chip(
+                    visualDensity: VisualDensity.compact,
+                    avatar: CircleAvatar(
+                      radius: 9,
+                      backgroundColor: receivableCount > 0 ? AppColors.success : AppColors.textTertiary,
+                      child: const Icon(Icons.arrow_downward, size: 10, color: Colors.white),
+                    ),
+                    label: Text(
+                      '$receivableCount Receivable${receivableCount != 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: receivableCount > 0 ? null : AppColors.textTertiary,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -2046,7 +2054,7 @@ class _CategoryRowState extends State<_CategoryRow> {
     final amount = double.tryParse(_amountCtrl.text);
     // Revert if invalid or unchanged
     if (amount == null ||
-        amount <= 0 ||
+        amount < 0 ||
         amount == widget.category.targetAmount) {
       _amountCtrl.text = widget.category.targetAmount.toStringAsFixed(2);
       if (mounted) setState(() => _editing = false);
@@ -3375,7 +3383,19 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
           created.id!,
         );
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        // Capture messenger before closing the sheet so the snackbar
+        // shows on the parent screen, not the dialog being dismissed.
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context);
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Budget group created!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -3679,7 +3699,7 @@ class _EditCategorySheetState extends State<_EditCategorySheet> {
           const SnackBar(content: Text('Enter a category name')));
       return;
     }
-    if (amount == null || amount <= 0) {
+    if (amount == null || amount < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Enter a valid amount')));
       return;
@@ -4276,7 +4296,7 @@ class _AddCategorySheetState extends State<_AddCategorySheet> {
       return;
     }
     final amount = double.tryParse(_amountController.text);
-    if (amount == null || amount <= 0) {
+    if (amount == null || amount < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Enter a valid amount')));
       return;

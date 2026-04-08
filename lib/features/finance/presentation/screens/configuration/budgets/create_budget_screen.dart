@@ -197,7 +197,11 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Budget updated successfully!')),
+            const SnackBar(
+              content: Text('Budget updated successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
           );
         }
       } else {
@@ -233,18 +237,13 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
           await _controller.addCategory(createdBudget.id!, categoryWithIds);
         }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Budget created successfully!')),
-          );
-        }
       }
 
       // Silently refresh budgets after save
       await _controller.refreshBudgetsWithSpentAmounts();
 
       if (mounted) {
-        context.goBack();
+        context.goBack(true);
       }
     } catch (e) {
       if (mounted) {

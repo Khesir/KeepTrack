@@ -35,9 +35,18 @@ class _BudgetManagementScreenState
   }
 
   void _createBudget() {
-    context.goToBudgetCreate().then(
-      (_) => _controller.refreshBudgetsWithSpentAmounts(),
-    );
+    context.goToBudgetCreate().then((created) {
+      _controller.refreshBudgetsWithSpentAmounts();
+      if (created == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Budget created successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    });
   }
 
   void _openBudget(Budget budget) {

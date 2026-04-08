@@ -104,8 +104,11 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
           floatingActionButton: isDesktop
               ? null
               : FloatingActionButton.extended(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/budget-management');
+                  onPressed: () async {
+                    await Navigator.pushNamed(context, '/budget-management');
+                    if (mounted) {
+                      _controller.refreshBudgetsWithSpentAmounts();
+                    }
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('Manage Budgets'),
@@ -147,8 +150,11 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
             if (isDesktop) ...[
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/budget-management');
+                onPressed: () async {
+                  await Navigator.pushNamed(context, '/budget-management');
+                  if (mounted) {
+                    _controller.refreshBudgetsWithSpentAmounts();
+                  }
                 },
                 icon: const Icon(Icons.add),
                 label: const Text('Create Budget'),
@@ -197,8 +203,11 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                     ),
                     if (isDesktop)
                       ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/budget-management');
+                        onPressed: () async {
+                          await Navigator.pushNamed(context, '/budget-management');
+                          if (mounted) {
+                            _controller.refreshBudgetsWithSpentAmounts();
+                          }
                         },
                         icon: const Icon(Icons.add, size: 20),
                         label: const Text('Manage Budgets'),
