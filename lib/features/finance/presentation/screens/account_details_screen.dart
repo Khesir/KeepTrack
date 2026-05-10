@@ -50,7 +50,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     _transactionController.loadTransactionsByAccount(widget.account.id!);
   }
 
-  List<DailyAccountData> _processTransactionsToDaily(List<Transaction> transactions) {
+  List<DailyAccountData> _processTransactionsToDaily(
+    List<Transaction> transactions,
+  ) {
     final Map<String, DailyAccountData> dailyMap = {};
 
     if (_daysToShow == 0) {
@@ -61,10 +63,20 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
 
         if (existing == null) {
           dailyMap[dateKey] = DailyAccountData(
-            date: DateTime(transaction.date.year, transaction.date.month, transaction.date.day),
-            income: transaction.type == TransactionType.income ? transaction.amount : 0,
-            expense: transaction.type == TransactionType.expense ? transaction.amount : 0,
-            transfer: transaction.type == TransactionType.transfer ? transaction.amount : 0,
+            date: DateTime(
+              transaction.date.year,
+              transaction.date.month,
+              transaction.date.day,
+            ),
+            income: transaction.type == TransactionType.income
+                ? transaction.amount
+                : 0,
+            expense: transaction.type == TransactionType.expense
+                ? transaction.amount
+                : 0,
+            transfer: transaction.type == TransactionType.transfer
+                ? transaction.amount
+                : 0,
           );
         } else {
           switch (transaction.type) {
@@ -154,7 +166,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     return result;
   }
 
-  Widget _buildBody(BuildContext context, bool isDesktop, Color accountColor, IconData accountIcon) {
+  Widget _buildBody(
+    BuildContext context,
+    bool isDesktop,
+    Color accountColor,
+    IconData accountIcon,
+  ) {
     return AsyncStreamBuilder<List<Transaction>>(
       state: _transactionController,
       loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
@@ -167,7 +184,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
             Text('Error: $message'),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => _transactionController.loadTransactionsByAccount(widget.account.id!),
+              onPressed: () => _transactionController.loadTransactionsByAccount(
+                widget.account.id!,
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -175,9 +194,13 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       ),
       builder: (context, transactions) {
         // Filter transactions for this account
-        final accountTransactions = transactions.where((t) =>
-            t.accountId == widget.account.id ||
-            t.toAccountId == widget.account.id).toList();
+        final accountTransactions = transactions
+            .where(
+              (t) =>
+                  t.accountId == widget.account.id ||
+                  t.toAccountId == widget.account.id,
+            )
+            .toList();
 
         // Sort by date descending
         accountTransactions.sort((a, b) => b.date.compareTo(a.date));
@@ -267,7 +290,11 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     );
   }
 
-  Widget _buildAccountInfoCard(Color accountColor, IconData accountIcon, bool isDesktop) {
+  Widget _buildAccountInfoCard(
+    Color accountColor,
+    IconData accountIcon,
+    bool isDesktop,
+  ) {
     return Card(
       elevation: 0,
       child: Container(
@@ -309,7 +336,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         widget.account.accountType.toString().split('.').last,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -319,7 +349,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
             const SizedBox(height: 24),
             Text(
               'Current Balance',
-              style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -337,7 +370,11 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(Icons.account_balance, color: Colors.white70, size: 16),
+                  const Icon(
+                    Icons.account_balance,
+                    color: Colors.white70,
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     widget.account.bankAccountNumber!,
@@ -410,7 +447,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -436,13 +475,14 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
 
   Widget _buildBarGraph(List<Transaction> transactions, bool isDesktop) {
     final data = _processTransactionsToDaily(transactions);
-    final maxAmount = data.fold<double>(
-      0,
-      (max, d) {
-        final dayMax = [d.income, d.expense, d.transfer].reduce((a, b) => a > b ? a : b);
-        return dayMax > max ? dayMax : max;
-      },
-    );
+    final maxAmount = data.fold<double>(0, (max, d) {
+      final dayMax = [
+        d.income,
+        d.expense,
+        d.transfer,
+      ].reduce((a, b) => a > b ? a : b);
+      return dayMax > max ? dayMax : max;
+    });
 
     return Card(
       elevation: 0,
@@ -460,9 +500,14 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButton<int>(
@@ -514,13 +559,17 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                           Icon(
                             Icons.bar_chart,
                             size: 48,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.3),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'No transactions in this period',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -528,35 +577,54 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
-                        final selectedCount = _selectedTypes.length;
+                        final selectedCount = finalSelectedTypes.length;
                         final barWidth = selectedCount > 0
-                            ? (constraints.maxWidth - (data.length - 1) * 6) / (data.length * selectedCount)
-                            : (constraints.maxWidth - (data.length - 1) * 6) / (data.length * 3);
+                            ? (constraints.maxWidth - (data.length - 1) * 6) /
+                                  (data.length * selectedCount)
+                            : (constraints.maxWidth - (data.length - 1) * 6) /
+                                  (data.length * 3);
                         final clampedBarWidth = barWidth.clamp(3.0, 20.0);
 
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: data.map((dayData) {
-                            final incomeHeight = maxAmount > 0 && _selectedTypes.contains('income')
-                                ? (dayData.income / maxAmount) * (isDesktop ? 160 : 120)
+                            final incomeHeight =
+                                maxAmount > 0 &&
+                                    finalSelectedTypes.contains('income')
+                                ? (dayData.income / maxAmount) *
+                                      (isDesktop ? 160 : 120)
                                 : 0.0;
-                            final expenseHeight = maxAmount > 0 && _selectedTypes.contains('expense')
-                                ? (dayData.expense / maxAmount) * (isDesktop ? 160 : 120)
+                            final expenseHeight =
+                                maxAmount > 0 &&
+                                    _selectedTypes.contains('expense')
+                                ? (dayData.expense / maxAmount) *
+                                      (isDesktop ? 160 : 120)
                                 : 0.0;
-                            final transferHeight = maxAmount > 0 && _selectedTypes.contains('transfer')
-                                ? (dayData.transfer / maxAmount) * (isDesktop ? 160 : 120)
+                            final transferHeight =
+                                maxAmount > 0 &&
+                                    _selectedTypes.contains('transfer')
+                                ? (dayData.transfer / maxAmount) *
+                                      (isDesktop ? 160 : 120)
                                 : 0.0;
 
-                            final tooltipLines = <String>[DateFormat('MMM d').format(dayData.date)];
+                            final tooltipLines = <String>[
+                              DateFormat('MMM d').format(dayData.date),
+                            ];
                             if (_selectedTypes.contains('income')) {
-                              tooltipLines.add('Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}');
+                              tooltipLines.add(
+                                'Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}',
+                              );
                             }
                             if (_selectedTypes.contains('expense')) {
-                              tooltipLines.add('Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}');
+                              tooltipLines.add(
+                                'Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}',
+                              );
                             }
                             if (_selectedTypes.contains('transfer')) {
-                              tooltipLines.add('Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}');
+                              tooltipLines.add(
+                                'Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}',
+                              );
                             }
 
                             return Tooltip(
@@ -568,46 +636,63 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       // Income bar
-                                      if (_selectedTypes.contains('income'))
+                                      if (finalSelectedTypes.contains('income'))
                                         AnimatedContainer(
-                                          duration: const Duration(milliseconds: 300),
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
                                           width: clampedBarWidth,
                                           height: incomeHeight,
                                           decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(0.8),
-                                            borderRadius: const BorderRadius.vertical(
-                                              top: Radius.circular(3),
+                                            color: Colors.green.withOpacity(
+                                              0.8,
                                             ),
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(3),
+                                                ),
                                           ),
                                         ),
-                                      if (_selectedTypes.contains('income') && _selectedTypes.length > 1)
+                                      if (_selectedTypes.contains('income') &&
+                                          _selectedTypes.length > 1)
                                         const SizedBox(width: 1),
                                       // Expense bar
-                                      if (_selectedTypes.contains('expense'))
+                                      if (finalSelectedTypes.contains(
+                                        'expense',
+                                      ))
                                         AnimatedContainer(
-                                          duration: const Duration(milliseconds: 300),
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
                                           width: clampedBarWidth,
                                           height: expenseHeight,
                                           decoration: BoxDecoration(
                                             color: Colors.red.withOpacity(0.8),
-                                            borderRadius: const BorderRadius.vertical(
-                                              top: Radius.circular(3),
-                                            ),
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(3),
+                                                ),
                                           ),
                                         ),
-                                      if (_selectedTypes.contains('expense') && _selectedTypes.contains('transfer'))
+                                      if (_selectedTypes.contains('expense') &&
+                                          _selectedTypes.contains('transfer'))
                                         const SizedBox(width: 1),
                                       // Transfer bar
-                                      if (_selectedTypes.contains('transfer'))
+                                      if (finalSelectedTypes.contains(
+                                        'transfer',
+                                      ))
                                         AnimatedContainer(
-                                          duration: const Duration(milliseconds: 300),
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
                                           width: clampedBarWidth,
                                           height: transferHeight,
                                           decoration: BoxDecoration(
                                             color: Colors.blue.withOpacity(0.8),
-                                            borderRadius: const BorderRadius.vertical(
-                                              top: Radius.circular(3),
-                                            ),
+                                            borderRadius:
+                                                const BorderRadius.vertical(
+                                                  top: Radius.circular(3),
+                                                ),
                                           ),
                                         ),
                                     ],
@@ -617,10 +702,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                                     DateFormat('d').format(dayData.date),
                                     style: TextStyle(
                                       fontSize: 9,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.5),
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.5),
                                     ),
                                   ),
                                 ],
@@ -662,7 +746,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
   }
 
   Widget _buildFilterChip(String type, String label, Color color) {
-    final isSelected = _selectedTypes.contains(type);
+    final isSelected = finalSelectedTypes.contains(type);
     return FilterChip(
       label: Text(
         label,
@@ -676,10 +760,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       onSelected: (selected) {
         setState(() {
           if (selected) {
-            _selectedTypes.add(type);
+            finalSelectedTypes.add(type);
           } else {
-            if (_selectedTypes.length > 1) {
-              _selectedTypes.remove(type);
+            if (finalSelectedTypes.length > 1) {
+              finalSelectedTypes.remove(type);
             }
           }
         });
@@ -693,7 +777,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     );
   }
 
-  Widget _buildTransactionsList(List<Transaction> transactions, bool isDesktop) {
+  Widget _buildTransactionsList(
+    List<Transaction> transactions,
+    bool isDesktop,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -724,13 +811,17 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     Icon(
                       Icons.receipt_long,
                       size: 48,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.3),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'No transactions yet',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -786,11 +877,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     }
 
     final String? accountLabel = switch (transaction.type) {
-      TransactionType.income || TransactionType.expense =>
-        _accountName(transaction.accountId),
-      TransactionType.transfer => transaction.accountId == widget.account.id
-          ? 'To: ${_accountName(transaction.toAccountId) ?? '—'}'
-          : 'From: ${_accountName(transaction.accountId) ?? '—'}',
+      TransactionType.income ||
+      TransactionType.expense => _accountName(transaction.accountId),
+      TransactionType.transfer =>
+        transaction.accountId == widget.account.id
+            ? 'To: ${_accountName(transaction.toAccountId) ?? '—'}'
+            : 'From: ${_accountName(transaction.accountId) ?? '—'}',
     };
 
     return Card(
@@ -824,16 +916,15 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                 accountLabel,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.5),
                 ),
               ),
           ],
         ),
         trailing: Text(
-          '$prefix${NumberFormat.currency(
-            symbol: currencyFormatter.currencySymbol,
-            decimalDigits: 2,
-          ).format(transaction.amount)}',
+          '$prefix${NumberFormat.currency(symbol: currencyFormatter.currencySymbol, decimalDigits: 2).format(transaction.amount)}',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,

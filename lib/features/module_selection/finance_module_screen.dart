@@ -9,7 +9,7 @@ import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
-import 'package:keep_track/features/finance/presentation/screens/budget_month_screen.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_month_screen.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/accounts/accounts_tab_new.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/goals/goals_tab.dart';
 import 'package:keep_track/features/logs/logs_screen.dart';
@@ -32,7 +32,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
 
   // 0=Budget, 1=Accounts, 2=Goals, 3=Logs, 4=Insights
   final List<Widget> _allScreens = const [
-    BudgetMonthScreen(), // Index 0 - Budget tab
+    // BudgetMonthScreen(), // Index 0 - Budget tab
     AccountsTabNew(), // Index 1 - Accounts tab
     GoalsTabNew(), // Index 2 - Goals tab
     LogsScreen(), // Index 3
@@ -165,10 +165,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             icon: Icon(Icons.account_balance_wallet),
             label: 'Accounts',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.flag),
-            label: 'Goals',
-          ),
+          NavigationDestination(icon: Icon(Icons.flag), label: 'Goals'),
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
             label: 'Insights',
@@ -271,14 +268,20 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       initialData: authController.state,
       builder: (context, snapshot) {
         final state = snapshot.data;
-        final user = state is AsyncData<User?> ? state.data : authController.currentUser;
+        final user = state is AsyncData<User?>
+            ? state.data
+            : authController.currentUser;
         return _buildProfileTile(theme, borderColor, authController, user);
       },
     );
   }
 
-  Widget _buildProfileTile(ThemeData theme, Color borderColor, AuthController authController, User? user) {
-
+  Widget _buildProfileTile(
+    ThemeData theme,
+    Color borderColor,
+    AuthController authController,
+    User? user,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -389,7 +392,9 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                   Text(
                     user?.email ?? 'No email',
                     style: AppTextStyles.caption.copyWith(
-                      color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
+                      color:
+                          theme.textTheme.bodySmall?.color ??
+                          theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -400,7 +405,9 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             Icon(
               Icons.more_vert,
               size: 20,
-              color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
+              color:
+                  theme.textTheme.bodySmall?.color ??
+                  theme.colorScheme.onSurface.withOpacity(0.6),
             ),
           ],
         ),
@@ -413,8 +420,11 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final isActive = _currentIndex == index;
     final activeColor = isDark ? const Color(0xFF27272A) : AppColors.secondary;
-    final textColor = theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
-    final secondaryTextColor = theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6);
+    final textColor =
+        theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
+    final secondaryTextColor =
+        theme.textTheme.bodySmall?.color ??
+        theme.colorScheme.onSurface.withOpacity(0.6);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
@@ -441,7 +451,6 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       ),
     );
   }
-
 
   Widget _buildTopBar() {
     final theme = Theme.of(context);
