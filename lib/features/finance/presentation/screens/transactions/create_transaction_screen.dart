@@ -12,7 +12,7 @@ import '../../../modules/finance_category/domain/entities/finance_category.dart'
 import '../../../modules/finance_category/domain/entities/finance_category_enums.dart';
 import '../../../modules/transaction/domain/entities/transaction.dart';
 import '../../state/account_controller.dart';
-import '../../state/budget_controller.dart';
+import '../../../modules/budget/presentation/controllers/budget_controller.dart';
 import '../../state/finance_category_controller.dart';
 import '../../state/transaction_controller.dart';
 
@@ -141,8 +141,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       TransactionType.transfer => CategoryType.transfer,
     };
 
-    final typedCategories =
-        allCategories.where((c) => c.type == targetType).toList();
+    final typedCategories = allCategories
+        .where((c) => c.type == targetType)
+        .toList();
 
     final budgetState = _budgetController.state;
     final allBudgets = budgetState is AsyncData<List<Budget>>
@@ -221,7 +222,10 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text('Select Category', style: theme.textTheme.titleLarge),
+                child: Text(
+                  'Select Category',
+                  style: theme.textTheme.titleLarge,
+                ),
               ),
               const Divider(height: 1),
               Flexible(
@@ -253,8 +257,11 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                             selectedTileColor: colorScheme.primaryContainer
                                 .withValues(alpha: 0.3),
                             trailing: _selectedCategoryId == cat.id
-                                ? Icon(Icons.check,
-                                    size: 18, color: colorScheme.primary)
+                                ? Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color: colorScheme.primary,
+                                  )
                                 : null,
                             onTap: () {
                               setState(() {
@@ -406,9 +413,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to create: $e')));
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);
@@ -506,8 +513,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     _isCreating
                         ? 'Creating...'
                         : _isTransfer
-                            ? 'Create Transfer'
-                            : 'Create Transaction',
+                        ? 'Create Transfer'
+                        : 'Create Transaction',
                   ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 52),
@@ -535,9 +542,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant),
-        ),
+        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
       ),
       child: Column(
         children: [
@@ -615,7 +620,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     ),
                   ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Enter an amount';
+                    if (value == null || value.isEmpty)
+                      return 'Enter an amount';
                     final amount = double.tryParse(value);
                     if (amount == null || amount <= 0) return 'Invalid amount';
                     return null;
@@ -655,7 +661,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         }
 
         return DropdownButtonFormField<String>(
-          initialValue: _selectedAccountId != null &&
+          initialValue:
+              _selectedAccountId != null &&
                   accounts.any((acc) => acc.id == _selectedAccountId)
               ? _selectedAccountId
               : null,
@@ -695,8 +702,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
               )
               .toList(),
           onChanged: (value) => setState(() => _selectedAccountId = value),
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Please select an account' : null,
+          validator: (value) => value == null || value.isEmpty
+              ? 'Please select an account'
+              : null,
           menuMaxHeight: 300,
         );
       },
@@ -721,7 +729,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           );
         }
         return DropdownButtonFormField<String>(
-          initialValue: _fromAccountId != null &&
+          initialValue:
+              _fromAccountId != null &&
                   accounts.any((a) => a.id == _fromAccountId)
               ? _fromAccountId
               : null,
@@ -740,7 +749,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                          child: Text(a.name, overflow: TextOverflow.ellipsis)),
+                        child: Text(a.name, overflow: TextOverflow.ellipsis),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(a.balance)}',
@@ -773,8 +783,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       errorBuilder: (context, message) => const SizedBox.shrink(),
       builder: (context, accounts) {
         return DropdownButtonFormField<String>(
-          initialValue: _toAccountId != null &&
-                  accounts.any((a) => a.id == _toAccountId)
+          initialValue:
+              _toAccountId != null && accounts.any((a) => a.id == _toAccountId)
               ? _toAccountId
               : null,
           isExpanded: true,
@@ -792,7 +802,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                          child: Text(a.name, overflow: TextOverflow.ellipsis)),
+                        child: Text(a.name, overflow: TextOverflow.ellipsis),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(a.balance)}',
@@ -835,8 +846,9 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           TransactionType.transfer => CategoryType.transfer,
         };
 
-        final typedCategories =
-            categories.where((c) => c.type == targetType).toList();
+        final typedCategories = categories
+            .where((c) => c.type == targetType)
+            .toList();
 
         if (typedCategories.isEmpty) {
           return Text(
@@ -932,8 +944,10 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           filled: true,
           fillColor: colorScheme.surfaceContainerHighest,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
         ),
         child: Row(
           children: [
@@ -984,8 +998,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     hasFee
                         ? 'Fee: ${currencyFormatter.currencySymbol}${_feeController.text}'
                         : _isTransfer
-                            ? 'Add Transfer Fee (Optional)'
-                            : 'Add Fee (Optional)',
+                        ? 'Add Transfer Fee (Optional)'
+                        : 'Add Fee (Optional)',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: hasFee
                           ? colorScheme.primary

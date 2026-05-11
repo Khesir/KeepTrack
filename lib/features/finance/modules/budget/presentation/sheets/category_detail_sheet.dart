@@ -3,7 +3,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../../transaction/domain/entities/transaction.dart';
 import '../../domain/entities/budget_category.dart';
-import '../widget/category_detail_content.dart';
+import '../widgets/category_detail_content.dart';
 
 class CategoryDetailSheet extends StatelessWidget {
   final BudgetCategory category;
@@ -11,6 +11,7 @@ class CategoryDetailSheet extends StatelessWidget {
   final bool isIncomeGroup;
 
   const CategoryDetailSheet({
+    super.key,
     required this.category,
     required this.transactions,
     this.isIncomeGroup = false,

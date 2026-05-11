@@ -3,7 +3,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';
-import '../utils/currency_formatter.dart';
+import '../helpers/currency_formatter.dart';
 import 'category_row.dart';
 import 'ghost_add_row.dart';
 

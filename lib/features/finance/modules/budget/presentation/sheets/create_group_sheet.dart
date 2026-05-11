@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../../../../../shared/infrastructure/supabase/supabase_service.dart';
-import '../../../../presentation/state/budget_controller.dart';
+import '../controllers/budget_controller.dart';
 import '../../../../presentation/state/month_plan_controller.dart';
 import '../../domain/entities/budget.dart';
 

@@ -5,7 +5,7 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/features/auth/data/services/auth_service.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/finance/data/services/finance_initialization_service.dart';
-import 'package:keep_track/features/finance/presentation/state/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
 
 class AuthController extends StreamState<AsyncState<User?>> {

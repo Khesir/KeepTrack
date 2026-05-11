@@ -12,7 +12,7 @@ import 'package:keep_track/features/finance/modules/budget/domain/repositories/m
 import 'package:keep_track/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
 import 'package:keep_track/features/finance/modules/finance_category/data/datasources/rest/finance_category_datasource_rest.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/repositories/finance_repository.dart';
-import 'package:keep_track/features/finance/presentation/state/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 
 import '../../core/di/service_locator.dart';
 import 'modules/budget/data/datasources/budget_datasource.dart';
@@ -52,34 +52,47 @@ void setupFinanceDependencies() {
 
   // Data sources
   locator.registerFactory<AccountDataSource>(() => AccountDataSourceRest());
-  locator.registerFactory<TransactionDataSource>(() => TransactionDataSourceRest());
+  locator.registerFactory<TransactionDataSource>(
+    () => TransactionDataSourceRest(),
+  );
   locator.registerFactory<GoalDataSource>(() => GoalDataSourceRest());
   locator.registerFactory<DebtDataSource>(() => DebtDataSourceRest());
-  locator.registerFactory<PlannedPaymentDataSource>(() => PlannedPaymentDataSourceRest());
-  locator.registerFactory<FinanceCategoryDataSource>(() => FinanceCategoryDataSourceRest());
-  locator.registerLazySingleton<BudgetCategoryDataSource>(() => BudgetCategoryDataSourceRest());
+  locator.registerFactory<PlannedPaymentDataSource>(
+    () => PlannedPaymentDataSourceRest(),
+  );
+  locator.registerFactory<FinanceCategoryDataSource>(
+    () => FinanceCategoryDataSourceRest(),
+  );
+  locator.registerLazySingleton<BudgetCategoryDataSource>(
+    () => BudgetCategoryDataSourceRest(),
+  );
   locator.registerFactory<BudgetDataSource>(() => BudgetDataSourceRest());
   locator.registerFactory<MonthPlanDataSource>(() => MonthPlanDataSourceRest());
 
   // Repositories
   locator.registerFactory<FinanceCategoryRepository>(() {
-    return FinanceCategoryRepositoryImpl(locator.get<FinanceCategoryDataSource>());
+    return FinanceCategoryRepositoryImpl(
+      locator.get<FinanceCategoryDataSource>(),
+    );
   });
-  locator.registerLazySingleton<BudgetRepository>(() => BudgetRepositoryImpl(
-    locator.get<BudgetDataSource>(),
-    locator.get<BudgetCategoryDataSource>(),
-  ));
+  locator.registerLazySingleton<BudgetRepository>(
+    () => BudgetRepositoryImpl(
+      locator.get<BudgetDataSource>(),
+      locator.get<BudgetCategoryDataSource>(),
+    ),
+  );
   locator.registerLazySingleton<MonthPlanRepository>(
     () => MonthPlanRepositoryImpl(locator.get<MonthPlanDataSource>()),
   );
-  locator.registerFactory<AccountRepository>(() => AccountRepositoryImpl(
-    locator.get<AccountDataSource>(),
-    cache,
-  ));
-  locator.registerFactory<TransactionRepository>(() => TransactionRepositoryImpl(
-    locator.get<TransactionDataSource>(),
-    locator.get<AccountRepository>(),
-  ));
+  locator.registerFactory<AccountRepository>(
+    () => AccountRepositoryImpl(locator.get<AccountDataSource>(), cache),
+  );
+  locator.registerFactory<TransactionRepository>(
+    () => TransactionRepositoryImpl(
+      locator.get<TransactionDataSource>(),
+      locator.get<AccountRepository>(),
+    ),
+  );
   locator.registerFactory<GoalRepository>(() {
     return GoalRepositoryImpl(locator.get<GoalDataSource>());
   });
@@ -87,12 +100,16 @@ void setupFinanceDependencies() {
     return DebtRepositoryImpl(locator.get<DebtDataSource>());
   });
   locator.registerFactory<PlannedPaymentRepository>(() {
-    return PlannedPaymentRepositoryImpl(locator.get<PlannedPaymentDataSource>());
+    return PlannedPaymentRepositoryImpl(
+      locator.get<PlannedPaymentDataSource>(),
+    );
   });
 
   // Services
   locator.registerFactory<FinanceInitializationService>(() {
-    return FinanceInitializationService(locator.get<FinanceCategoryRepository>());
+    return FinanceInitializationService(
+      locator.get<FinanceCategoryRepository>(),
+    );
   });
 
   // Controllers

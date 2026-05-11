@@ -3,7 +3,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../../transaction/domain/entities/transaction.dart';
 import '../../domain/entities/budget.dart';
-import '../utils/currency_formatter.dart';
+import '../helpers/currency_formatter.dart';
 
 class _ChartItem {
   final String name;

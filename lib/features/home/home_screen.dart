@@ -12,7 +12,7 @@ import 'package:keep_track/features/finance/modules/account/domain/entities/acco
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/home/widgets/admin_panel_widget.dart';
 
@@ -169,14 +169,17 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
       ),
       builder: (context, transactions) {
         // Process real transaction data into daily aggregates
-        final List<DailyFinanceData> data = _processTransactionsToDaily(transactions);
-        final maxAmount = data.fold<double>(
-          0,
-          (max, d) {
-            final dayMax = [d.income, d.expense, d.transfer].reduce((a, b) => a > b ? a : b);
-            return dayMax > max ? dayMax : max;
-          },
+        final List<DailyFinanceData> data = _processTransactionsToDaily(
+          transactions,
         );
+        final maxAmount = data.fold<double>(0, (max, d) {
+          final dayMax = [
+            d.income,
+            d.expense,
+            d.transfer,
+          ].reduce((a, b) => a > b ? a : b);
+          return dayMax > max ? dayMax : max;
+        });
 
         return Card(
           elevation: 0,
@@ -192,13 +195,21 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                   children: [
                     const Text(
                       'Daily Income & Expense',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     // Days selector
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: DropdownButton<int>(
@@ -249,13 +260,17 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                               Icon(
                                 Icons.bar_chart,
                                 size: 48,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.3),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 'No transactions in this period',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                             ],
@@ -263,38 +278,60 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                         )
                       : LayoutBuilder(
                           builder: (context, constraints) {
-                            final barWidth = (constraints.maxWidth - (data.length - 1) * 6) / (data.length * 3);
+                            final barWidth =
+                                (constraints.maxWidth - (data.length - 1) * 6) /
+                                (data.length * 3);
                             final clampedBarWidth = barWidth.clamp(3.0, 16.0);
 
                             final selectedCount = _selectedTypes.length;
                             final adjustedBarWidth = selectedCount > 0
-                                ? (constraints.maxWidth - (data.length - 1) * 6) / (data.length * selectedCount)
+                                ? (constraints.maxWidth -
+                                          (data.length - 1) * 6) /
+                                      (data.length * selectedCount)
                                 : clampedBarWidth;
-                            final adjustedClampedBarWidth = adjustedBarWidth.clamp(3.0, 20.0);
+                            final adjustedClampedBarWidth = adjustedBarWidth
+                                .clamp(3.0, 20.0);
 
                             return Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: data.map((dayData) {
-                                final incomeHeight = maxAmount > 0 && _selectedTypes.contains('income')
-                                    ? (dayData.income / maxAmount) * (isDesktop ? 160 : 120)
+                                final incomeHeight =
+                                    maxAmount > 0 &&
+                                        _selectedTypes.contains('income')
+                                    ? (dayData.income / maxAmount) *
+                                          (isDesktop ? 160 : 120)
                                     : 0.0;
-                                final expenseHeight = maxAmount > 0 && _selectedTypes.contains('expense')
-                                    ? (dayData.expense / maxAmount) * (isDesktop ? 160 : 120)
+                                final expenseHeight =
+                                    maxAmount > 0 &&
+                                        _selectedTypes.contains('expense')
+                                    ? (dayData.expense / maxAmount) *
+                                          (isDesktop ? 160 : 120)
                                     : 0.0;
-                                final transferHeight = maxAmount > 0 && _selectedTypes.contains('transfer')
-                                    ? (dayData.transfer / maxAmount) * (isDesktop ? 160 : 120)
+                                final transferHeight =
+                                    maxAmount > 0 &&
+                                        _selectedTypes.contains('transfer')
+                                    ? (dayData.transfer / maxAmount) *
+                                          (isDesktop ? 160 : 120)
                                     : 0.0;
 
-                                final tooltipLines = <String>[DateFormat('MMM d').format(dayData.date)];
+                                final tooltipLines = <String>[
+                                  DateFormat('MMM d').format(dayData.date),
+                                ];
                                 if (_selectedTypes.contains('income')) {
-                                  tooltipLines.add('Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}');
+                                  tooltipLines.add(
+                                    'Income: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.income)}',
+                                  );
                                 }
                                 if (_selectedTypes.contains('expense')) {
-                                  tooltipLines.add('Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}');
+                                  tooltipLines.add(
+                                    'Expense: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.expense)}',
+                                  );
                                 }
                                 if (_selectedTypes.contains('transfer')) {
-                                  tooltipLines.add('Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}');
+                                  tooltipLines.add(
+                                    'Transfer: ${currencyFormatter.currencySymbol}${NumberFormat('#,##0').format(dayData.transfer)}',
+                                  );
                                 }
 
                                 return Tooltip(
@@ -303,49 +340,77 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
                                       Row(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
                                         children: [
                                           // Income bar
                                           if (_selectedTypes.contains('income'))
                                             AnimatedContainer(
-                                              duration: const Duration(milliseconds: 300),
+                                              duration: const Duration(
+                                                milliseconds: 300,
+                                              ),
                                               width: adjustedClampedBarWidth,
                                               height: incomeHeight,
                                               decoration: BoxDecoration(
-                                                color: Colors.green.withValues(alpha: 0.8),
-                                                borderRadius: const BorderRadius.vertical(
-                                                  top: Radius.circular(3),
+                                                color: Colors.green.withValues(
+                                                  alpha: 0.8,
                                                 ),
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                      top: Radius.circular(3),
+                                                    ),
                                               ),
                                             ),
-                                          if (_selectedTypes.contains('income') && _selectedTypes.length > 1)
+                                          if (_selectedTypes.contains(
+                                                'income',
+                                              ) &&
+                                              _selectedTypes.length > 1)
                                             const SizedBox(width: 1),
                                           // Expense bar
-                                          if (_selectedTypes.contains('expense'))
+                                          if (_selectedTypes.contains(
+                                            'expense',
+                                          ))
                                             AnimatedContainer(
-                                              duration: const Duration(milliseconds: 300),
+                                              duration: const Duration(
+                                                milliseconds: 300,
+                                              ),
                                               width: adjustedClampedBarWidth,
                                               height: expenseHeight,
                                               decoration: BoxDecoration(
-                                                color: Colors.red.withValues(alpha: 0.8),
-                                                borderRadius: const BorderRadius.vertical(
-                                                  top: Radius.circular(3),
+                                                color: Colors.red.withValues(
+                                                  alpha: 0.8,
                                                 ),
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                      top: Radius.circular(3),
+                                                    ),
                                               ),
                                             ),
-                                          if (_selectedTypes.contains('expense') && _selectedTypes.contains('transfer'))
+                                          if (_selectedTypes.contains(
+                                                'expense',
+                                              ) &&
+                                              _selectedTypes.contains(
+                                                'transfer',
+                                              ))
                                             const SizedBox(width: 1),
                                           // Transfer bar
-                                          if (_selectedTypes.contains('transfer'))
+                                          if (_selectedTypes.contains(
+                                            'transfer',
+                                          ))
                                             AnimatedContainer(
-                                              duration: const Duration(milliseconds: 300),
+                                              duration: const Duration(
+                                                milliseconds: 300,
+                                              ),
                                               width: adjustedClampedBarWidth,
                                               height: transferHeight,
                                               decoration: BoxDecoration(
-                                                color: Colors.blue.withValues(alpha: 0.8),
-                                                borderRadius: const BorderRadius.vertical(
-                                                  top: Radius.circular(3),
+                                                color: Colors.blue.withValues(
+                                                  alpha: 0.8,
                                                 ),
+                                                borderRadius:
+                                                    const BorderRadius.vertical(
+                                                      top: Radius.circular(3),
+                                                    ),
                                               ),
                                             ),
                                         ],
@@ -356,7 +421,10 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                                         DateFormat('d').format(dayData.date),
                                         style: TextStyle(
                                           fontSize: 9,
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
                                         ),
                                       ),
                                     ],
@@ -379,7 +447,8 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                           Colors.green,
                         ),
                       ),
-                    if (_selectedTypes.contains('income') && _selectedTypes.length > 1)
+                    if (_selectedTypes.contains('income') &&
+                        _selectedTypes.length > 1)
                       const SizedBox(width: 8),
                     if (_selectedTypes.contains('expense'))
                       Expanded(
@@ -389,7 +458,8 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                           Colors.red,
                         ),
                       ),
-                    if (_selectedTypes.contains('expense') && _selectedTypes.contains('transfer'))
+                    if (_selectedTypes.contains('expense') &&
+                        _selectedTypes.contains('transfer'))
                       const SizedBox(width: 8),
                     if (_selectedTypes.contains('transfer'))
                       Expanded(
@@ -410,7 +480,9 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
   }
 
   /// Process transactions into daily income/expense/transfer aggregates
-  List<DailyFinanceData> _processTransactionsToDaily(List<Transaction> transactions) {
+  List<DailyFinanceData> _processTransactionsToDaily(
+    List<Transaction> transactions,
+  ) {
     final Map<String, DailyFinanceData> dailyMap = {};
 
     // Initialize all days in the range with zero values
@@ -563,11 +635,13 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
       // Generate somewhat realistic dummy data
       final baseIncome = (random + i * 1000) % 500 + 100;
       final baseExpense = (random + i * 500) % 400 + 50;
-      data.add(DailyFinanceData(
-        date: date,
-        income: baseIncome.toDouble() * (1 + (i % 3) * 0.3),
-        expense: baseExpense.toDouble() * (1 + (i % 4) * 0.25),
-      ));
+      data.add(
+        DailyFinanceData(
+          date: date,
+          income: baseIncome.toDouble() * (1 + (i % 3) * 0.3),
+          expense: baseExpense.toDouble() * (1 + (i % 4) * 0.25),
+        ),
+      );
     }
 
     return data;

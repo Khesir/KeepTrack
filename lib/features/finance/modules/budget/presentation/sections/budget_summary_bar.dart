@@ -4,7 +4,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import '../../../debt/domain/entities/debt.dart';
 import '../../../planned_payment/domain/entities/planned_payment.dart';
 import '../../domain/entities/budget.dart';
-import '../utils/currency_formatter.dart';
+import '../helpers/currency_formatter.dart';
 
 class BudgetSummaryBar extends StatelessWidget {
   final List<Budget> monthBudgets;

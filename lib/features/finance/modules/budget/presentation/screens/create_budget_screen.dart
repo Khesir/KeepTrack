@@ -5,21 +5,17 @@ import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../../../core/routing/app_router.dart';
-import '../../../../modules/budget/domain/entities/budget.dart';
-import '../../../../modules/budget/domain/entities/budget_category.dart';
-import '../../../../modules/finance_category/domain/entities/finance_category.dart';
-import '../../../state/budget_controller.dart';
-import '../../../state/finance_category_controller.dart';
+import '../../domain/entities/budget.dart';
+import '../../domain/entities/budget_category.dart';
+import '../../../finance_category/domain/entities/finance_category.dart';
+import '../controllers/budget_controller.dart';
+import '../../../../presentation/state/finance_category_controller.dart';
 
 class CreateBudgetScreen extends StatefulWidget {
   final Budget? existingBudget;
   final String? initialMonth;
 
-  const CreateBudgetScreen({
-    super.key,
-    this.existingBudget,
-    this.initialMonth,
-  });
+  const CreateBudgetScreen({super.key, this.existingBudget, this.initialMonth});
 
   @override
   State<CreateBudgetScreen> createState() => _CreateBudgetScreenState();
@@ -236,7 +232,6 @@ class _CreateBudgetScreenState extends State<CreateBudgetScreen> {
           );
           await _controller.addCategory(createdBudget.id!, categoryWithIds);
         }
-
       }
 
       // Silently refresh budgets after save

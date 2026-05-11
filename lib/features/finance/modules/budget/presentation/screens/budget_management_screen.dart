@@ -6,8 +6,8 @@ import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import '../../../../../../core/ui/scoped_screen.dart';
 import '../../../../../../core/routing/app_router.dart';
-import '../../../../modules/budget/domain/entities/budget.dart';
-import '../../../state/budget_controller.dart';
+import '../../domain/entities/budget.dart';
+import '../controllers/budget_controller.dart';
 
 /// Budget list screen - Shows all monthly budgets
 class BudgetManagementScreen extends ScopedScreen {

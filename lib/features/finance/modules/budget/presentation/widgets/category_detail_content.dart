@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
-import 'package:keep_track/features/finance/modules/budget/presentation/utils/currency_formatter.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/helpers/currency_formatter.dart';
 
 import '../../../transaction/domain/entities/transaction.dart';
 import '../../domain/entities/budget_category.dart';

@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import '../../../../modules/budget/domain/entities/budget.dart';
-import '../../../state/budget_controller.dart';
+import '../../domain/entities/budget.dart';
+import '../controllers/budget_controller.dart';
 
 /// Budgets Tab with Progress Tracking
 class BudgetsTabNew extends StatefulWidget {
@@ -51,7 +51,9 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
       builder: (context, isDesktop) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
-        final desktopBg = isDark ? const Color(0xFF09090B) : AppColors.backgroundSecondary;
+        final desktopBg = isDark
+            ? const Color(0xFF09090B)
+            : AppColors.backgroundSecondary;
 
         return Scaffold(
           backgroundColor: isDesktop ? desktopBg : null,
@@ -204,7 +206,10 @@ class _BudgetsTabNewState extends State<BudgetsTabNew> {
                     if (isDesktop)
                       ElevatedButton.icon(
                         onPressed: () async {
-                          await Navigator.pushNamed(context, '/budget-management');
+                          await Navigator.pushNamed(
+                            context,
+                            '/budget-management',
+                          );
                           if (mounted) {
                             _controller.refreshBudgetsWithSpentAmounts();
                           }

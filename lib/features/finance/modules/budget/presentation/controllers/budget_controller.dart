@@ -1,8 +1,8 @@
 import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/state/stream_state.dart';
-import '../../modules/budget/domain/entities/budget.dart';
-import '../../modules/budget/domain/entities/budget_category.dart';
-import '../../modules/budget/domain/repositories/budget_repository.dart';
+import '../../domain/entities/budget.dart';
+import '../../domain/entities/budget_category.dart';
+import '../../domain/repositories/budget_repository.dart';
 
 /// Controller for managing budgets
 class BudgetController extends StreamState<AsyncState<List<Budget>>> {

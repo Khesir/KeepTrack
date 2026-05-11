@@ -12,9 +12,9 @@ import '../../features/finance/modules/transaction/domain/entities/transaction.d
 import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
 import '../../features/finance/presentation/screens/account_details_screen.dart';
 import '../../features/finance/modules/account/domain/entities/account.dart';
-import '../../features/finance/presentation/screens/configuration/budgets/budget_management_screen.dart';
-import '../../features/finance/presentation/screens/configuration/budgets/create_budget_screen.dart';
-import '../../features/finance/presentation/screens/configuration/budgets/budget_detail_screen.dart';
+import '../../features/finance/modules/budget/presentation/screens/budget_management_screen.dart';
+import '../../features/finance/modules/budget/presentation/screens/create_budget_screen.dart';
+import '../../features/finance/modules/budget/presentation/screens/budget_detail_screen.dart';
 import '../../features/finance/presentation/screens/configuration/categories/category_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/goals/goals_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/debts/debts_management_screen.dart';

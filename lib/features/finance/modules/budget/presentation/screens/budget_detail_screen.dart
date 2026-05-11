@@ -9,11 +9,11 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
-import '../../../../modules/budget/domain/entities/budget.dart';
-import '../../../../modules/budget/domain/entities/budget_category.dart';
-import '../../../state/account_controller.dart';
-import '../../../state/budget_controller.dart';
-import '../../../state/transaction_controller.dart';
+import '../../domain/entities/budget.dart';
+import '../../domain/entities/budget_category.dart';
+import '../../../../presentation/state/account_controller.dart';
+import '../controllers/budget_controller.dart';
+import '../../../../presentation/state/transaction_controller.dart';
 
 /// Budget detail screen - Shows details of a specific budget
 class BudgetDetailScreen extends ScopedScreen {

@@ -30,9 +30,7 @@ class SideSummaryPanel extends ScopedScreen {
   final void Function(BudgetCategory) onCategoryDetailTap;
   final Future<void> Function(Budget, BudgetCategory, double) onUpdateAmount;
 
-  const SideSummaryPanel(
-    this.onEditCategory,
-    this.onEditDebt, {
+  const SideSummaryPanel({
     super.key,
     required this.selectedGroup,
     required this.selectedCategory,
@@ -48,6 +46,8 @@ class SideSummaryPanel extends ScopedScreen {
     required this.onAddCategory,
     required this.onCategoryDetailTap,
     required this.onUpdateAmount,
+    this.onEditCategory,
+    this.onEditDebt,
   });
 
   @override
