@@ -7,7 +7,10 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_month_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/helpers/currency_formatter.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/sections/budget_screen_body.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/state/budget_screen_data.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/payment_enums.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
@@ -54,14 +57,7 @@ class BudgetMonthScreen extends ScopedScreen {
 }
 
 class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
-  late final BudgetController _budgetController;
-  late final MonthPlanController _monthPlanController;
-  late final DebtController _debtController;
-  late final PlannedPaymentController _plannedPaymentController;
-  late final FinanceCategoryController _categoryController;
-  late final AccountController _accountController;
-  late final TransactionController _transactionController;
-  late final SupabaseService _supabaseService;
+  late final BudgetMonthController _controller;
 
   DateTime _currentMonth = DateTime.now();
   Budget? _selectedGroup;
@@ -72,113 +68,109 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
   @override
   void initState() {
     super.initState();
-    _budgetController = locator.get<BudgetController>();
-    _monthPlanController = locator.get<MonthPlanController>();
-    _debtController = locator.get<DebtController>();
-    _plannedPaymentController = locator.get<PlannedPaymentController>();
-    _categoryController = locator.get<FinanceCategoryController>();
-    _accountController = locator.get<AccountController>();
-    _transactionController = locator.get<TransactionController>();
-    _supabaseService = locator.get<SupabaseService>();
+    _controller = BudgetMonthController(
+      budgetController: getService<BudgetController>(),
+      monthPlanController: getService<MonthPlanController>(),
+      debtController: getService<DebtController>(),
+      plannedPaymentController: getService<PlannedPaymentController>(),
+      transactionController: getService<TransactionController>(),
+    );
+
+    _controller.init();
     _loadMonthTransactions();
+  }
+
+  @override
+  void onDispose() {
+    _controller.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AsyncStreamBuilder<List<MonthPlan>>(
-        state: _monthPlanController,
-        builder: (context, allMonthPlans) {
-          return AsyncStreamBuilder<List<Budget>>(
-            state: _budgetController,
-            builder: (context, allBudgets) {
-              return AsyncStreamBuilder<List<Transaction>>(
-                state: _transactionController,
-                builder: (context, allTransactions) {
-                  return AsyncStreamBuilder<List<Debt>>(
-                    state: _debtController,
-                    builder: (context, allDebts) {
-                      return AsyncStreamBuilder<List<PlannedPayment>>(
-                        state: _plannedPaymentController,
-                        builder: (context, allPayments) {
-                          return _buildBody(
-                            allMonthPlans: allMonthPlans,
-                            allBudgets: allBudgets,
-                            allTransactions: allTransactions,
-                            allDebts: allDebts,
-                            allPayments: allPayments,
-                          );
-                        },
-                        loadingBuilder: (_) => _buildBody(
-                          allMonthPlans: allMonthPlans,
-                          allBudgets: allBudgets,
-                          allTransactions: allTransactions,
-                          allDebts: const [],
-                          allPayments: const [],
-                        ),
-                        errorBuilder: (_, __) => _buildBody(
-                          allMonthPlans: allMonthPlans,
-                          allBudgets: allBudgets,
-                          allTransactions: allTransactions,
-                          allDebts: const [],
-                          allPayments: const [],
-                        ),
-                      );
-                    },
-                    loadingBuilder: (_) => _buildBody(
-                      allMonthPlans: allMonthPlans,
-                      allBudgets: allBudgets,
-                      allTransactions: allTransactions,
-                      allDebts: const [],
-                      allPayments: const [],
-                    ),
-                    errorBuilder: (_, __) => _buildBody(
-                      allMonthPlans: allMonthPlans,
-                      allBudgets: allBudgets,
-                      allTransactions: allTransactions,
-                      allDebts: const [],
-                      allPayments: const [],
-                    ),
-                  );
-                },
-                loadingBuilder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-                errorBuilder: (_, msg) => Center(child: Text('Error: $msg')),
-              );
-            },
-            loadingBuilder: (_) =>
-                const Center(child: CircularProgressIndicator()),
-            errorBuilder: (_, msg) => Center(child: Text('Error: $msg')),
-          );
-        },
+      body: AsyncStreamBuilder<BudgetScreenData>(
+        state: _controller,
+        builder: (context, data) => BudgetScreenBody(
+          data: data,
+          currentMonth: _currentMonth,
+          monthLabel: _monthLabel,
+          monthKey: _monthKey,
+          // Selection State
+          selectedGroup: _selectedGroup,
+          selectedCategory: _selectedCategory,
+          selectedCategoryGroup: _selectedCategoryGroup,
+          selectedDebt: _selectedDebt,
+          // month nav
+          onPrevMonth: _prevMonth,
+          onNextMonth: _nextMonth,
+          // selection callbacks
+          onGroupSelect: (g) => setState(() => _selectedGroup = g),
+          onDebtSelect: (d) => setState(() => _selectedDebt = d),
+          onCategorySelect: (group, cat) => setState(() {
+            _selectedCategory = cat;
+            _selectedCategoryGroup = group;
+          }),
+          onClearCategory: () => setState(() {
+            _selectedCategory = null;
+            _selectedCategoryGroup = null;
+          }),
+          onClearGroup: () => setState(() {
+            _selectedGroup = null;
+            _selectedCategory = null;
+            _selectedCategoryGroup = null;
+          }),
+          // action callbacks — wired to sheets/dialogs next
+          onAddCategory: (group) {}, // TODO: _sheets.showAddCategory
+          onEditCategory: (group, cat) {}, // TODO: _sheets.showEditCategory
+          onEditGroup: (group) {}, // TODO: _sheets.showEditGroup
+          onCreateGroup: () {}, // TODO: _sheets.showCreateGroup
+          onStartPlanning: (budgets) {}, // TODO: _sheets.showStartPlanning
+          onDeletePlan: (budgets) {}, // TODO: _sheets.showDeletePlan
+          onShowCommitments: (payments) {}, // TODO: _sheets.showCommitments
+          onDebtPay: (debt) {}, // TODO: _sheets.showDebtPayment
+          onEditDebt: (debt) {}, // TODO: _sheets.showEditDebt
+          onAddDebt: (isReceivable) {}, // TODO: _sheets.showAddDebt
+          onUpdateAmount: (g, c, amt) => getService<BudgetController>()
+              .updateCategory(g.id!, c.copyWith(targetAmount: amt)),
+          onUpdateDebtPayment: (debt, amt) => getService<DebtController>()
+              .updateDebt(debt.copyWith(monthlyPaymentAmount: amt)),
+          onDebtDetailTap: (Debt debt, List<Transaction> transactions) {},
+          onCategoryDetailTap:
+              (
+                Budget group,
+                BudgetCategory cat,
+                List<Transaction> transactions,
+              ) {},
+        ),
         loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
         errorBuilder: (_, msg) => Center(child: Text('Error: $msg')),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => Dialog(
-              insetPadding: const EdgeInsets.all(16),
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 520,
-                  maxHeight: 700,
-                ),
-                child: const CreateTransactionScreen(),
-              ),
+      floatingActionButton: _buildFab(),
+    );
+  }
+
+  Widget _buildFab() {
+    return FloatingActionButton.extended(
+      onPressed: () async {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => Dialog(
+            insetPadding: const EdgeInsets.all(16),
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          );
-          if (mounted) _loadMonthTransactions();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Transaction'),
-      ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520, maxHeight: 700),
+              child: const CreateTransactionScreen(),
+            ),
+          ),
+        );
+        if (mounted) _loadMonthTransactions();
+      },
+      icon: const Icon(Icons.add),
+      label: const Text('New Transaction'),
     );
   }
 
