@@ -4,11 +4,9 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-
-import '../../../account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import '../../../debt/domain/entities/debt.dart';
 import '../../../finance_category/domain/entities/finance_category.dart';
 import '../../../finance_category/domain/entities/finance_category_enums.dart';
@@ -17,17 +15,11 @@ import '../helpers/finance_category.dart';
 
 class AddDebtSheet extends StatefulWidget {
   final bool isReceivable;
-  final AccountController accountController;
-  final FinanceCategoryController categoryController;
-  final SupabaseService supabaseService;
   final Future<void> Function(Debt debt, String? categoryId) onSave;
 
   const AddDebtSheet({
     super.key,
     required this.isReceivable,
-    required this.accountController,
-    required this.categoryController,
-    required this.supabaseService,
     required this.onSave,
   });
 
@@ -41,6 +33,8 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
   final _descCtrl = TextEditingController();
   final _monthlyCtrl = TextEditingController();
 
+  late final SavingsController _savingsController;
+  late final FinanceCategoryController _categoryController;
   late DebtType _type;
   String? _accountId;
   String? _categoryId;
@@ -51,6 +45,8 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
   @override
   void initState() {
     super.initState();
+    _savingsController = locator.get<SavingsController>();
+    _categoryController = locator.get<FinanceCategoryController>();
     _type = widget.isReceivable ? DebtType.lending : DebtType.borrowing;
   }
 
@@ -100,7 +96,6 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
         remainingAmount: amount,
         startDate: DateTime.now(),
         dueDate: _dueDate,
-        userId: widget.supabaseService.userId,
         accountId: _accountId,
         monthlyPaymentAmount: double.tryParse(_monthlyCtrl.text) ?? 0,
       );
@@ -214,19 +209,19 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
               const SizedBox(height: 4),
               Text(
                 isReceivable
-                    ? 'Records money leaving your wallet when you lend it.'
-                    : 'Records money entering your wallet when you borrow.',
+                    ? 'Records money leaving your savings when you lend it.'
+                    : 'Records money entering your savings when you borrow.',
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.textTertiary,
                 ),
               ),
               const SizedBox(height: 8),
-              AsyncStreamBuilder<List<Account>>(
-                state: widget.accountController,
-                builder: (_, accounts) => DropdownButtonFormField<String>(
+              AsyncStreamBuilder<List<SavingsBucket>>(
+                state: _savingsController,
+                builder: (_, buckets) => DropdownButtonFormField<String>(
                   initialValue: _accountId,
                   decoration: const InputDecoration(
-                    labelText: 'Account (optional)',
+                    labelText: 'Savings Bucket (optional)',
                     border: OutlineInputBorder(),
                   ),
                   items: [
@@ -234,8 +229,8 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
                       value: null,
                       child: Text('— Skip —'),
                     ),
-                    ...accounts.map(
-                      (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ...buckets.map(
+                      (b) => DropdownMenuItem(value: b.id, child: Text(b.name)),
                     ),
                   ],
                   onChanged: (v) => setState(() => _accountId = v),
@@ -247,7 +242,7 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
 
               // Category picker (grouped by budget)
               AsyncStreamBuilder<List<FinanceCategory>>(
-                state: widget.categoryController,
+                state: _categoryController,
                 builder: (_, allCats) {
                   final budgetCtrl = locator.get<BudgetController>();
                   final allBudgets = budgetCtrl.data ?? [];

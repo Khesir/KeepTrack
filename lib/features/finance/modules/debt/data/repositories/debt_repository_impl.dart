@@ -112,4 +112,26 @@ class DebtRepositoryImpl implements DebtRepository {
 
     return updateDebt(updated);
   }
+
+  @override
+  Future<Result<Debt>> payDebt(
+    String id, {
+    required String accountId,
+    required double amount,
+    double? fee,
+  }) async {
+    try {
+      final updated = await dataSource.payDebt(
+        id,
+        accountId: accountId,
+        amount: amount,
+        fee: fee,
+      );
+      return Result.success(updated);
+    } catch (e) {
+      return Result.error(
+        UnknownFailure(message: 'Failed to pay debt', originalError: e),
+      );
+    }
+  }
 }

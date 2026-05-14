@@ -3,8 +3,6 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart'
     show FinanceCategory;
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-
 import '../../../../../../core/state/stream_state.dart';
 import '../../../../presentation/state/finance_category_controller.dart';
 import '../../../finance_category/domain/entities/finance_category_enums.dart';
@@ -13,14 +11,12 @@ import '../../domain/entities/budget.dart';
 class AddCategorySheet extends StatefulWidget {
   final Budget group;
   final FinanceCategoryController categoryController;
-  final SupabaseService supabaseService;
   final Future<void> Function(BudgetCategory) onSave;
 
   const AddCategorySheet({
     super.key,
     required this.group,
     required this.categoryController,
-    required this.supabaseService,
     required this.onSave,
   });
 
@@ -168,11 +164,7 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
       } else {
         // Create a new FinanceCategory in the DB
         await widget.categoryController.createCategory(
-          FinanceCategory(
-            name: name,
-            type: catType,
-            userId: widget.supabaseService.userId,
-          ),
+          FinanceCategory(name: name, type: catType),
         );
         // Find the freshly created category in the updated cache
         final updatedState = widget.categoryController.state;

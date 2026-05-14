@@ -22,4 +22,12 @@ abstract class DebtDataSource {
 
   /// Fetch debts filtered by status
   Future<List<DebtModel>> fetchDebtsByStatus(String status);
+
+  /// Record a payment against a debt. Returns the updated debt.
+  Future<DebtModel> payDebt(
+    String id, {
+    required String accountId,
+    required double amount,
+    double? fee,
+  });
 }

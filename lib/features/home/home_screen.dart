@@ -8,10 +8,10 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/responsive/desktop_aware_screen.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/core/routing/app_router.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/home/widgets/admin_panel_widget.dart';
@@ -25,7 +25,7 @@ class HomeScreen extends ScopedScreen {
 
 class _HomeScreenState extends ScopedScreenState<HomeScreen>
     with AppLayoutControlled {
-  late final AccountController _accountController;
+  late final SavingsController _savingsController;
   late final BudgetController _budgetController;
   late final TransactionController _transactionController;
   int _daysToShow = 15; // Adjustable days for bar graph
@@ -33,7 +33,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
 
   @override
   void registerServices() {
-    _accountController = locator.get<AccountController>();
+    _savingsController = locator.get<SavingsController>();
     _budgetController = locator.get<BudgetController>();
     _transactionController = locator.get<TransactionController>();
   }
@@ -41,7 +41,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
   @override
   void onReady() {
     configureLayout(title: 'Home', showBottomNav: true);
-    _accountController.loadAccounts();
+    _savingsController.loadSavings();
     _budgetController.loadBudgets();
     _loadTransactionsForGraph();
   }
@@ -648,8 +648,8 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
   }
 
   Widget _buildFinanceSnapshot(bool isDesktop) {
-    return AsyncStreamBuilder<List<Account>>(
-      state: _accountController,
+    return AsyncStreamBuilder<List<SavingsBucket>>(
+      state: _savingsController,
       loadingBuilder: (_) => Card(
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -667,11 +667,8 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
           child: Text('Error loading finance data: $message'),
         ),
       ),
-      builder: (context, accounts) {
-        final totalBalance = accounts.fold<double>(
-          0.0,
-          (sum, account) => sum + account.balance,
-        );
+      builder: (context, buckets) {
+        final totalBalance = buckets.fold<double>(0.0, (sum, b) => sum + b.balance);
 
         return AsyncStreamBuilder<List<Budget>>(
           state: _budgetController,
@@ -685,17 +682,13 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
             ),
           ),
           errorBuilder: (context, message) =>
-              _buildFinanceCard(totalBalance, accounts.length, []),
+              _buildFinanceCard(totalBalance, buckets.length, []),
           builder: (context, budgets) {
             final activeBudgets =
                 budgets.where((b) => b.status == BudgetStatus.active).toList()
                   ..sort((a, b) => b.month.compareTo(a.month));
 
-            return _buildFinanceCard(
-              totalBalance,
-              accounts.length,
-              activeBudgets,
-            );
+            return _buildFinanceCard(totalBalance, buckets.length, activeBudgets);
           },
         );
       },
@@ -704,7 +697,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
 
   Widget _buildFinanceCard(
     double totalBalance,
-    int accountCount,
+    int savingsCount,
     List<Budget> budgets,
   ) {
     return Card(
@@ -735,13 +728,13 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.account_balance_wallet,
+                        Icons.savings,
                         size: 16,
                         color: Colors.green[700],
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '$accountCount Accounts',
+                        '$savingsCount Savings',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.green[700],
@@ -755,7 +748,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
             ),
             const SizedBox(height: 16),
 
-            // Account Balance
+            // Total Savings Balance
             Text(
               '${currencyFormatter.currencySymbol}${NumberFormat('#,##0.00').format(totalBalance)}',
               style: const TextStyle(

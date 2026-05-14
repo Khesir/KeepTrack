@@ -27,18 +27,6 @@ class TransactionDataSourceRest implements TransactionDataSource {
   }
 
   @override
-  Future<List<Transaction>> getTransactionsByAccount(String accountId) async {
-    try {
-      final res = await _dio.get('/transactions', queryParameters: {'accountId': accountId});
-      return _parseList(res.data);
-    } on DioException catch (e) {
-      throw mapDioError(e);
-    } catch (e, st) {
-      throw UnknownFailure(message: 'Failed to fetch transactions by account', originalError: e, stackTrace: st);
-    }
-  }
-
-  @override
   Future<List<Transaction>> getTransactionsByBudget(String budgetId) async {
     try {
       final res = await _dio.get('/transactions', queryParameters: {'budgetId': budgetId});

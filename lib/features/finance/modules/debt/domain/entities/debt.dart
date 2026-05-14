@@ -14,7 +14,6 @@ class Debt {
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? settledAt;
   final String? userId;
-  final String? accountId; // Account/wallet this debt is associated with
   final String? transactionId; // Initial transaction when debt was created
   final double monthlyPaymentAmount; // Fixed amount due each payment period
   final double feeAmount; // Total fees associated with the debt
@@ -36,7 +35,6 @@ class Debt {
     this.updatedAt,
     this.settledAt,
     this.userId,
-    this.accountId,
     this.transactionId,
     this.monthlyPaymentAmount = 0,
     this.feeAmount = 0,
@@ -92,7 +90,6 @@ class Debt {
     DateTime? updatedAt,
     DateTime? settledAt,
     String? userId,
-    String? accountId,
     String? transactionId,
     double? monthlyPaymentAmount,
     double? feeAmount,
@@ -114,7 +111,6 @@ class Debt {
       updatedAt: updatedAt ?? this.updatedAt,
       settledAt: settledAt ?? this.settledAt,
       userId: userId ?? this.userId,
-      accountId: accountId ?? this.accountId,
       transactionId: transactionId ?? this.transactionId,
       monthlyPaymentAmount: monthlyPaymentAmount ?? this.monthlyPaymentAmount,
       feeAmount: feeAmount ?? this.feeAmount,

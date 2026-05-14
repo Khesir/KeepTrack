@@ -5,12 +5,10 @@ import '../../../../../modules/goal/domain/entities/goal.dart';
 
 class GoalsManagementDialog extends StatefulWidget {
   final Goal? goal;
-  final String userId;
   final Function(Goal) onSave;
 
   const GoalsManagementDialog({
     this.goal,
-    required this.userId,
     required this.onSave,
     super.key,
   });
@@ -101,7 +99,6 @@ class _GoalsManagementScreenState extends State<GoalsManagementDialog> {
         colorHex: colorHex,
         status: selectedStatus,
         monthlyContribution: monthlyContribution,
-        userId: widget.userId,
       );
 
       widget.onSave(goalEntity);

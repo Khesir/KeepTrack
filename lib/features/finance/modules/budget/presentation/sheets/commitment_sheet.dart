@@ -1,30 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/network/api_client.dart';
-import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-
 import '../../../planned_payment/domain/entities/planned_payment.dart';
 import '../helpers/currency_formatter.dart';
 
 class CommitmentsSheet extends StatelessWidget {
   final List<PlannedPayment> payments;
-  final AccountController accountController;
-  final FinanceCategoryController categoryController;
-  final SupabaseService supabaseService;
   final PlannedPaymentController plannedPaymentController;
 
   const CommitmentsSheet({
     super.key,
     required this.payments,
-    required this.accountController,
-    required this.categoryController,
-    required this.supabaseService,
     required this.plannedPaymentController,
   });
 
@@ -68,9 +56,6 @@ class CommitmentsSheet extends StatelessWidget {
                   const Divider(height: 1, indent: 16, endIndent: 16),
               itemBuilder: (context, i) => _CommitmentTile(
                 payment: payments[i],
-                accountController: accountController,
-                categoryController: categoryController,
-                supabaseService: supabaseService,
                 plannedPaymentController: plannedPaymentController,
               ),
             ),
@@ -83,16 +68,10 @@ class CommitmentsSheet extends StatelessWidget {
 
 class _CommitmentTile extends StatelessWidget {
   final PlannedPayment payment;
-  final AccountController accountController;
-  final FinanceCategoryController categoryController;
-  final SupabaseService supabaseService;
   final PlannedPaymentController plannedPaymentController;
 
   const _CommitmentTile({
     required this.payment,
-    required this.accountController,
-    required this.categoryController,
-    required this.supabaseService,
     required this.plannedPaymentController,
   });
 
@@ -139,48 +118,18 @@ class _CommitmentTile extends StatelessWidget {
     final amountCtrl = TextEditingController(
       text: payment.amount.toStringAsFixed(2),
     );
-    String? selectedAccountId;
 
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: Text('Record: ${payment.name}'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: amountCtrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  prefixText: '₱',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              AsyncStreamBuilder<List<Account>>(
-                state: accountController,
-                builder: (_, accounts) => DropdownButtonFormField<String>(
-                  initialValue: selectedAccountId,
-                  decoration: const InputDecoration(
-                    labelText: 'Account',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: accounts
-                      .map(
-                        (a) =>
-                            DropdownMenuItem(value: a.id, child: Text(a.name)),
-                      )
-                      .toList(),
-                  onChanged: (v) => selectedAccountId = v,
-                ),
-                loadingBuilder: (_) => const CircularProgressIndicator(),
-                errorBuilder: (_, m) => Text(m),
-              ),
-            ],
+        content: TextField(
+          controller: amountCtrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Amount',
+            prefixText: '₱',
+            border: OutlineInputBorder(),
           ),
         ),
         actions: [
@@ -194,12 +143,6 @@ class _CommitmentTile extends StatelessWidget {
               if (amount == null || amount <= 0) {
                 ScaffoldMessenger.of(dialogCtx).showSnackBar(
                   const SnackBar(content: Text('Enter a valid amount')),
-                );
-                return;
-              }
-              if (selectedAccountId == null) {
-                ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  const SnackBar(content: Text('Select an account')),
                 );
                 return;
               }

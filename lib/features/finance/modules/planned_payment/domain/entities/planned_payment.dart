@@ -11,7 +11,6 @@ class PlannedPayment {
   final DateTime nextPaymentDate;
   final DateTime? lastPaymentDate;
   final DateTime? endDate; // Optional end date - auto-close when reached
-  final String? accountId; // Link to Account
   final PaymentStatus status;
   final String? notes;
   final DateTime? createdAt; // Optional - Supabase auto-generates
@@ -32,7 +31,6 @@ class PlannedPayment {
     required this.nextPaymentDate,
     this.lastPaymentDate,
     this.endDate,
-    this.accountId,
     this.status = PaymentStatus.active,
     this.notes,
     this.createdAt,
@@ -92,7 +90,6 @@ class PlannedPayment {
     DateTime? nextPaymentDate,
     DateTime? lastPaymentDate,
     DateTime? endDate,
-    String? accountId,
     PaymentStatus? status,
     String? notes,
     DateTime? createdAt,
@@ -111,7 +108,6 @@ class PlannedPayment {
       nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
       lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
       endDate: endDate ?? this.endDate,
-      accountId: accountId ?? this.accountId,
       status: status ?? this.status,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,

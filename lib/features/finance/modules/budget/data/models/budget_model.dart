@@ -14,7 +14,6 @@ class BudgetModel extends Budget {
     super.notes,
     super.customTargetAmount,
     super.userId,
-    super.accountId,
     super.createdAt,
     super.updatedAt,
     super.closedAt,
@@ -35,7 +34,6 @@ class BudgetModel extends Budget {
       notes: budget.notes,
       customTargetAmount: budget.customTargetAmount,
       userId: budget.userId,
-      accountId: budget.accountId,
       createdAt: budget.createdAt,
       updatedAt: budget.updatedAt,
       closedAt: budget.closedAt,
@@ -83,7 +81,6 @@ class BudgetModel extends Budget {
           ? (json['customTargetAmount'] as num).toDouble()
           : null,
       userId: json['userId'] as String?,
-      accountId: json['accountId'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : null,
@@ -106,7 +103,6 @@ class BudgetModel extends Budget {
       'status': status.name,
       if (notes != null) 'notes': notes,
       if (customTargetAmount != null) 'customTargetAmount': customTargetAmount,
-      if (accountId != null) 'accountId': accountId,
     };
   }
 
@@ -122,7 +118,6 @@ class BudgetModel extends Budget {
       if (notes != null) 'notes': notes,
       if (customTargetAmount != null) 'customTargetAmount': customTargetAmount,
       if (userId != null) 'userId': userId,
-      if (accountId != null) 'accountId': accountId,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (closedAt != null) 'closedAt': closedAt!.toIso8601String(),
@@ -142,7 +137,6 @@ class BudgetModel extends Budget {
       notes: notes,
       customTargetAmount: customTargetAmount,
       userId: userId,
-      accountId: accountId,
       createdAt: createdAt,
       updatedAt: updatedAt,
       closedAt: closedAt,

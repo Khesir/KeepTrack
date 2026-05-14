@@ -4,8 +4,6 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
 import '../../../../modules/debt/domain/entities/debt.dart';
 import '../../../state/debt_controller.dart';
 import 'debt_history_screen.dart';
@@ -23,23 +21,17 @@ class DebtsTabNew extends StatefulWidget {
 
 class _DebtsTabNewState extends State<DebtsTabNew> {
   late final DebtController _controller;
-  late final AccountController _accountController;
   String _selectedFilter = 'All'; // All, Lending, Borrowing
 
   @override
   void initState() {
     super.initState();
     _controller = locator.get<DebtController>();
-    _accountController = locator.get<AccountController>();
-
-    // Load accounts
-    _accountController.loadAccounts();
   }
 
   Future<void> _showRecordPaymentDialog(Debt debt) async {
     final amountController = TextEditingController();
     final feeController = TextEditingController();
-    String? selectedAccountId;
 
     // Determine transaction type based on debt type
     final isLending = debt.type == DebtType.lending;
@@ -88,30 +80,6 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
               ),
               const SizedBox(height: 16),
 
-              // Account Selector
-              AsyncStreamBuilder<List<Account>>(
-                state: _accountController,
-                builder: (context, accounts) {
-                  return DropdownButtonFormField<String>(
-                    value: selectedAccountId,
-                    decoration: InputDecoration(
-                      labelText: 'Account',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    items: accounts
-                        .map(
-                          (account) => DropdownMenuItem(
-                            value: account.id,
-                            child: Text(account.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => selectedAccountId = value,
-                  );
-                },
-              ),
             ],
           ),
         ),
@@ -141,19 +109,11 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 return;
               }
 
-              if (selectedAccountId == null) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Please select an account')),
-                );
-                return;
-              }
-
               try {
                 final fee = double.tryParse(feeController.text) ?? 0;
                 await ApiClient.instance.post(
                   '/debts/${debt.id}/pay',
                   data: {
-                    'accountId': selectedAccountId,
                     'amount': amount,
                     if (fee > 0) 'fee': fee,
                   },

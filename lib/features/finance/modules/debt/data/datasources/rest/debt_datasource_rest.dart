@@ -97,4 +97,25 @@ class DebtDataSourceRest implements DebtDataSource {
       throw UnknownFailure(message: 'Failed to fetch debts by status', originalError: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<DebtModel> payDebt(
+    String id, {
+    required String accountId,
+    required double amount,
+    double? fee,
+  }) async {
+    try {
+      final res = await _dio.post('/debts/$id/pay', data: {
+        'accountId': accountId,
+        'amount': amount,
+        if (fee != null && fee > 0) 'fee': fee,
+      });
+      return DebtModel.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw mapDioError(e);
+    } catch (e, st) {
+      throw UnknownFailure(message: 'Failed to pay debt', originalError: e, stackTrace: st);
+    }
+  }
 }

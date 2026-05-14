@@ -16,8 +16,6 @@ import 'core/settings/domain/entities/app_settings.dart';
 import 'core/settings/presentation/settings_controller.dart';
 import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
-import 'features/auth/data/services/auth_service.dart';
-import 'shared/infrastructure/supabase/supabase_service.dart';
 import 'features/finance/finance_di.dart';
 import 'features/notifications/notifications_di.dart';
 
@@ -49,11 +47,6 @@ void main() async {
 void _setupDependencies(SharedPreferences sharedPreferences) {
   // Core local cache
   locator.registerLazySingleton<LocalCache>(() => createLocalCache());
-
-  // Compatibility shim for screens still using SupabaseService
-  locator.registerLazySingleton<SupabaseService>(
-    () => SupabaseService(locator.get<AuthService>()),
-  );
 
   // Sync manager
   locator.registerLazySingleton<SyncManager>(

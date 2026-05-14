@@ -10,7 +10,7 @@ import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_month_screen.dart';
-import 'package:keep_track/features/finance/presentation/screens/tabs/accounts/accounts_tab_new.dart';
+import 'package:keep_track/features/finance/presentation/screens/tabs/savings/savings_tab.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/goals/goals_tab.dart';
 import 'package:keep_track/features/logs/logs_screen.dart';
 import 'package:keep_track/features/profile/presentation/profile_screen.dart';
@@ -30,10 +30,10 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   int _currentIndex = 0;
   final _layoutController = AppLayoutController();
 
-  // 0=Budget, 1=Accounts, 2=Goals, 3=Logs, 4=Insights
+  // 0=Budget, 1=Savings, 2=Goals, 3=Logs, 4=Insights
   final List<Widget> _allScreens = const [
     // BudgetMonthScreen(), // Index 0 - Budget tab
-    AccountsTabNew(), // Index 1 - Accounts tab
+    SavingsTab(), // Index 1 - Savings tab
     GoalsTabNew(), // Index 2 - Goals tab
     LogsScreen(), // Index 3
     ProfileScreen(), // Index 4 - Insights
@@ -162,8 +162,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             label: 'Budget',
           ),
           NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet),
-            label: 'Accounts',
+            icon: Icon(Icons.savings),
+            label: 'Savings',
           ),
           NavigationDestination(icon: Icon(Icons.flag), label: 'Goals'),
           NavigationDestination(
@@ -196,7 +196,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _buildNavItem('Budget', Icons.calendar_month, 0),
-                _buildNavItem('Accounts', Icons.account_balance_wallet, 1),
+                _buildNavItem('Savings', Icons.savings, 1),
                 _buildNavItem('Goals', Icons.flag, 2),
                 _buildNavItem('Logs', Icons.bug_report, 3),
                 _buildNavItem('Insights', Icons.insights_outlined, 4),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
-import '../../../../../../shared/infrastructure/supabase/supabase_service.dart';
 import '../controllers/budget_controller.dart';
 import '../../../../presentation/state/month_plan_controller.dart';
 import '../../domain/entities/budget.dart';
@@ -11,14 +10,12 @@ class CreateGroupSheet extends StatefulWidget {
   final String monthLabel;
   final BudgetController budgetController;
   final MonthPlanController monthPlanController;
-  final SupabaseService supabaseService;
 
   const CreateGroupSheet({
     required this.monthKey,
     required this.monthLabel,
     required this.budgetController,
     required this.monthPlanController,
-    required this.supabaseService,
   });
 
   @override
@@ -54,7 +51,6 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
           budgetType: _budgetType,
           periodType: BudgetPeriodType.monthly,
           status: BudgetStatus.active,
-          userId: widget.supabaseService.userId,
         ),
       );
       // Link the new budget to the month plan so budgetIds stays in sync

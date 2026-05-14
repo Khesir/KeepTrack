@@ -7,7 +7,6 @@ class MonthPlanModel extends MonthPlan {
     super.id,
     required super.month,
     super.userId,
-    super.accountId,
     super.notes,
     super.budgets = const [],
     super.budgetIds = const [],
@@ -21,7 +20,6 @@ class MonthPlanModel extends MonthPlan {
       id: plan.id,
       month: plan.month,
       userId: plan.userId,
-      accountId: plan.accountId,
       notes: plan.notes,
       budgets: plan.budgets,
       createdAt: plan.createdAt,
@@ -40,7 +38,6 @@ class MonthPlanModel extends MonthPlan {
       id: json['id'] as String?,
       month: json['month'] as String,
       userId: json['userId'] as String?,
-      accountId: json['accountId'] as String?,
       notes: json['notes'] as String?,
       budgets: const [],
       budgetIds: parsedIds,
@@ -57,7 +54,6 @@ class MonthPlanModel extends MonthPlan {
   Map<String, dynamic> toApiJson() {
     return {
       'month': month,
-      if (accountId != null) 'accountId': accountId,
       if (notes != null) 'notes': notes,
     };
   }
@@ -68,7 +64,6 @@ class MonthPlanModel extends MonthPlan {
       if (id != null) 'id': id,
       'month': month,
       if (userId != null) 'userId': userId,
-      if (accountId != null) 'accountId': accountId,
       if (notes != null) 'notes': notes,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
@@ -81,7 +76,6 @@ class MonthPlanModel extends MonthPlan {
       id: id,
       month: month,
       userId: userId,
-      accountId: accountId,
       notes: notes,
       budgets: newBudgets,
       createdAt: createdAt,

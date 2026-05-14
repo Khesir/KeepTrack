@@ -32,36 +32,6 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
     });
   }
 
-  /// Load transactions by account with stale-while-revalidate caching.
-  /// - If cached: emits cached data immediately (no loading spinner), then
-  ///   silently refreshes in the background and emits fresh data.
-  /// - If no cache: shows loading, fetches, stores result, emits data.
-  Future<void> loadTransactionsByAccount(String accountId) async {
-    final cached = _cache.getByAccount(accountId);
-    if (cached != null) {
-      // Serve cache immediately — no loading flash
-      emit(AsyncData(cached));
-      // Refresh in background
-      try {
-        final fresh = await _repository
-            .getTransactionsByAccount(accountId)
-            .then((r) => r.unwrap());
-        _cache.setByAccount(accountId, fresh);
-        emit(AsyncData(fresh));
-      } catch (_) {
-        // Keep showing cached data if refresh fails
-      }
-    } else {
-      await execute(() async {
-        final transactions = await _repository
-            .getTransactionsByAccount(accountId)
-            .then((r) => r.unwrap());
-        _cache.setByAccount(accountId, transactions);
-        return transactions;
-      });
-    }
-  }
-
   /// Load transactions by budget
   Future<void> loadTransactionsByBudget(String budgetId) async {
     await execute(() async {

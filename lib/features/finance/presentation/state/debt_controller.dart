@@ -144,4 +144,21 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
           .then((r) => r.unwrap());
     });
   }
+
+  /// Record a payment against a debt. Returns the updated debt.
+  Future<Debt> payDebt(
+    String id, {
+    required String accountId,
+    required double amount,
+    double? fee,
+  }) async {
+    final updated = await _debtRepository
+        .payDebt(id, accountId: accountId, amount: amount, fee: fee)
+        .then((r) => r.unwrap());
+    await executeSilent(() async {
+      final current = data ?? [];
+      return current.map((d) => d.id == id ? updated : d).toList();
+    });
+    return updated;
+  }
 }

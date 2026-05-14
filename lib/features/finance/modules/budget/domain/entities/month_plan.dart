@@ -8,7 +8,6 @@ class MonthPlan {
   final String? id; // Supabase auto-generated
   final String month; // Format: YYYY-MM (e.g., "2025-03")
   final String? userId;
-  final String? accountId;
   final String? notes;
   final List<Budget> budgets; // All budgets for this month
   final DateTime? createdAt;
@@ -20,7 +19,6 @@ class MonthPlan {
     this.id,
     required this.month,
     this.userId,
-    this.accountId,
     this.notes,
     this.budgets = const [],
     this.budgetIds = const [],
@@ -60,7 +58,6 @@ class MonthPlan {
     String? id,
     String? month,
     String? userId,
-    String? accountId,
     String? notes,
     List<Budget>? budgets,
     List<String>? budgetIds,
@@ -71,7 +68,6 @@ class MonthPlan {
       id: id ?? this.id,
       month: month ?? this.month,
       userId: userId ?? this.userId,
-      accountId: accountId ?? this.accountId,
       notes: notes ?? this.notes,
       budgets: budgets ?? this.budgets,
       budgetIds: budgetIds ?? this.budgetIds,

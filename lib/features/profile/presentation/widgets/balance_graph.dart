@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 
 class BalanceGraph extends StatefulWidget {
@@ -15,16 +15,15 @@ class BalanceGraph extends StatefulWidget {
 }
 
 class _BalanceGraphState extends State<BalanceGraph> {
-  late final AccountController _accountController;
+  late final SavingsController _savingsController;
   late final TransactionController _transactionController;
-  String? _selectedAccountId; // null means 'All Accounts'
 
   @override
   void initState() {
     super.initState();
-    _accountController = locator.get<AccountController>();
+    _savingsController = locator.get<SavingsController>();
     _transactionController = locator.get<TransactionController>();
-    _accountController.loadAccounts();
+    _savingsController.loadSavings();
 
     // Load transactions for the last 30 days
     final now = DateTime.now();
@@ -34,8 +33,8 @@ class _BalanceGraphState extends State<BalanceGraph> {
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Account>>(
-      state: _accountController,
+    return AsyncStreamBuilder<List<SavingsBucket>>(
+      state: _savingsController,
       loadingBuilder: (_) => Card(
         elevation: 0,
         child: Container(
@@ -48,33 +47,10 @@ class _BalanceGraphState extends State<BalanceGraph> {
         elevation: 0,
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Text('Error loading accounts: $message'),
+          child: Text('Error loading savings: $message'),
         ),
       ),
-      builder: (context, accounts) {
-        if (accounts.isEmpty) {
-          return Card(
-            elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No accounts found',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
+      builder: (context, buckets) {
         return AsyncStreamBuilder<List<Transaction>>(
           state: _transactionController,
           loadingBuilder: (_) => Card(
@@ -85,34 +61,17 @@ class _BalanceGraphState extends State<BalanceGraph> {
               child: const CircularProgressIndicator(),
             ),
           ),
-          errorBuilder: (context, message) => _buildGraphCard(
-            accounts,
-            [],
-          ),
-          builder: (context, transactions) {
-            return _buildGraphCard(accounts, transactions);
-          },
+          errorBuilder: (context, message) => _buildGraphCard(buckets, []),
+          builder: (context, transactions) => _buildGraphCard(buckets, transactions),
         );
       },
     );
   }
 
-  Widget _buildGraphCard(List<Account> accounts, List<Transaction> transactions) {
-    // Build dropdown items
-    final dropdownItems = [
-      DropdownMenuItem<String?>(
-        value: null,
-        child: Text('All Accounts'),
-      ),
-      ...accounts.map((account) => DropdownMenuItem<String?>(
-        value: account.id,
-        child: Text(account.name),
-      )),
-    ];
-
+  Widget _buildGraphCard(List<SavingsBucket> buckets, List<Transaction> transactions) {
+    final currentBalance = buckets.fold(0.0, (sum, b) => sum + b.balance);
     // Calculate balance trend data
-    final balanceData = _calculateBalanceTrend(accounts, transactions);
-    final currentBalance = _getCurrentBalance(accounts);
+    final balanceData = _calculateBalanceTrend(currentBalance, transactions);
 
     // Calculate percentage change
     final percentageChange = balanceData.length >= 2
@@ -126,44 +85,9 @@ class _BalanceGraphState extends State<BalanceGraph> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Account filter dropdown
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Balance Trend',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButton<String?>(
-                    value: _selectedAccountId,
-                    underline: const SizedBox(),
-                    icon: const Icon(Icons.arrow_drop_down, size: 20),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    items: dropdownItems,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedAccountId = newValue;
-                      });
-                    },
-                  ),
-                ),
-              ],
+            const Text(
+              'Balance Trend',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 20),
 
@@ -335,45 +259,16 @@ class _BalanceGraphState extends State<BalanceGraph> {
     );
   }
 
-  double _getCurrentBalance(List<Account> accounts) {
-    if (_selectedAccountId == null) {
-      // All accounts
-      return accounts.fold(0.0, (sum, account) => sum + account.balance);
-    } else {
-      // Specific account
-      final account = accounts.firstWhere(
-        (a) => a.id == _selectedAccountId,
-        orElse: () => accounts.first,
-      );
-      return account.balance;
-    }
-  }
-
   List<BalanceDataPoint> _calculateBalanceTrend(
-    List<Account> accounts,
+    double currentBalance,
     List<Transaction> transactions,
   ) {
-    if (accounts.isEmpty) return [];
-
-    final currentBalance = _getCurrentBalance(accounts);
     final now = DateTime.now();
-    final daysToShow = 30;
-    final dataPoints = 15;
+    const daysToShow = 30;
+    const dataPoints = 15;
 
-    // Filter transactions by selected account
-    List<Transaction> relevantTransactions;
-    if (_selectedAccountId == null) {
-      // All accounts - use all transactions
-      relevantTransactions = transactions;
-    } else {
-      // Specific account
-      relevantTransactions = transactions
-          .where((t) => t.accountId == _selectedAccountId)
-          .toList();
-    }
-
-    // Sort transactions by date (oldest first)
-    relevantTransactions.sort((a, b) => a.date.compareTo(b.date));
+    final relevantTransactions = List<Transaction>.from(transactions)
+      ..sort((a, b) => a.date.compareTo(b.date));
 
     // Calculate balance at each data point
     final balanceHistory = <BalanceDataPoint>[];
@@ -393,7 +288,6 @@ class _BalanceGraphState extends State<BalanceGraph> {
               balanceAtDate -= transaction.amount;
               break;
             case TransactionType.expense:
-            case TransactionType.transfer:
               balanceAtDate += transaction.amount;
               break;
           }

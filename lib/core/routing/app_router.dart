@@ -9,9 +9,6 @@ import 'package:keep_track/features/settings/setting_page.dart';
 import 'package:keep_track/features/settings/subpages/app_configuration_finance_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
-import '../../features/finance/presentation/screens/configuration/accounts/account_management.dart';
-import '../../features/finance/presentation/screens/account_details_screen.dart';
-import '../../features/finance/modules/account/domain/entities/account.dart';
 import '../../features/finance/modules/budget/presentation/screens/budget_management_screen.dart';
 import '../../features/finance/modules/budget/presentation/screens/create_budget_screen.dart';
 import '../../features/finance/modules/budget/presentation/screens/budget_detail_screen.dart';
@@ -45,8 +42,6 @@ class AppRoutes {
   static const String settingsConfigFinance = '/settings/config-finance';
 
   // Finance Management
-  static const String accountManagement = '/account-management';
-  static const String accountDetail = '/account-detail';
   static const String categoryManagement = '/category-management';
   static const String budgetManagement = '/budget-management';
   static const String goalsManagement = '/goals-management';
@@ -139,22 +134,6 @@ class AppRouter {
         );
 
       // Finance Management
-      case AppRoutes.accountManagement:
-        return MaterialPageRoute(
-          builder: (_) => const AccountManagementScreen(),
-          settings: settings,
-        );
-      case AppRoutes.accountDetail:
-        final account = settings.arguments as Account?;
-        if (account == null) {
-          return MaterialPageRoute(
-            builder: (_) => UnknownRouteScreen(routeName: settings.name ?? ''),
-          );
-        }
-        return MaterialPageRoute(
-          builder: (_) => AccountDetailsScreen(account: account),
-          settings: settings,
-        );
       case AppRoutes.categoryManagement:
         return MaterialPageRoute(
           builder: (_) => const CategoryManagementScreen(),
@@ -189,7 +168,6 @@ class AppRouter {
             initialDescription: args?['initialDescription'] as String?,
             initialAmount: args?['initialAmount'] as double?,
             initialCategoryId: args?['initialCategoryId'] as String?,
-            initialAccountId: args?['initialAccountId'] as String?,
             initialType: args?['initialType'] as TransactionType?,
           ),
           settings: settings,
@@ -262,7 +240,6 @@ extension NavigationExtensions on BuildContext {
     String? initialDescription,
     double? initialAmount,
     String? initialCategoryId,
-    String? initialAccountId,
     TransactionType? initialType,
   }) {
     return AppRouter.push(
@@ -273,7 +250,6 @@ extension NavigationExtensions on BuildContext {
           'initialDescription': initialDescription,
         if (initialAmount != null) 'initialAmount': initialAmount,
         if (initialCategoryId != null) 'initialCategoryId': initialCategoryId,
-        if (initialAccountId != null) 'initialAccountId': initialAccountId,
         if (initialType != null) 'initialType': initialType,
       },
     );

@@ -29,4 +29,12 @@ abstract class DebtRepository {
 
   /// Mark a debt as settled
   Future<Result<Debt>> settleDebt(String id);
+
+  /// Record a payment against a debt. Returns the updated debt.
+  Future<Result<Debt>> payDebt(
+    String id, {
+    required String accountId,
+    required double amount,
+    double? fee,
+  });
 }

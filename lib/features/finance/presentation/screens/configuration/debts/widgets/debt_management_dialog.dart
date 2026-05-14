@@ -2,23 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 
 class DebtManagementDialog extends StatefulWidget {
   final Debt? debt;
-  final String userId;
-  final List<Account> accounts;
+  final List<SavingsBucket> savingsBuckets;
 
   final Function(Debt, String?) onSave;
 
   const DebtManagementDialog({
     this.debt,
-    required this.userId,
-    required this.accounts,
+    required this.savingsBuckets,
     required this.onSave,
     super.key,
   });
@@ -80,7 +78,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     selectedType = d?.type ?? DebtType.lending;
     selectedStatus = d?.status ?? DebtStatus.active;
     selectedPaymentFrequency = d?.paymentFrequency ?? PaymentFrequency.monthly;
-    selectedAccountId = d?.accountId ?? widget.accounts.firstOrNull?.id;
+    selectedAccountId = d?.accountId ?? widget.savingsBuckets.firstOrNull?.id;
 
     _categoryController = locator.get<FinanceCategoryController>();
     _categoryController.loadCategories();
@@ -111,12 +109,6 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter the original amount')),
       );
-      return;
-    }
-    if (selectedAccountId == null && !isEdit) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select an account')));
       return;
     }
     if (selectedCategoryId == null && !isEdit) {
@@ -150,7 +142,6 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
         notes: notesController.text.trim().isNotEmpty
             ? notesController.text.trim()
             : null,
-        userId: widget.userId,
         accountId: selectedAccountId,
         transactionId: widget.debt?.transactionId,
         monthlyPaymentAmount: monthlyPayment,
@@ -212,7 +203,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              if (widget.accounts.isEmpty)
+              if (widget.savingsBuckets.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -225,7 +216,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
-                          'No accounts available. Please create an account first.',
+                          'No savings buckets available. Please create one first.',
                           style: TextStyle(fontSize: 12),
                         ),
                       ),
@@ -236,26 +227,26 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
                 DropdownButtonFormField<String>(
                   value: selectedAccountId,
                   decoration: const InputDecoration(
-                    labelText: 'Account/Wallet',
+                    labelText: 'Savings Bucket',
                     border: OutlineInputBorder(),
-                    hintText: 'Select an account',
+                    hintText: 'Select a savings bucket',
                   ),
-                  items: widget.accounts
+                  items: widget.savingsBuckets
                       .map(
-                        (account) => DropdownMenuItem(
-                          value: account.id,
+                        (bucket) => DropdownMenuItem(
+                          value: bucket.id,
                           child: Row(
                             children: [
                               Icon(
-                                Icons.account_balance_wallet,
+                                Icons.savings,
                                 size: 16,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(width: 8),
-                              Text(account.name),
+                              Text(bucket.name),
                               const SizedBox(width: 8),
                               Text(
-                                '(\$${account.balance.toStringAsFixed(2)})',
+                                '(₱${bucket.balance.toStringAsFixed(2)})',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Theme.of(context).colorScheme.onSurface

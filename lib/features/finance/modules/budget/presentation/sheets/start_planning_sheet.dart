@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
-import '../../../../../../shared/infrastructure/supabase/supabase_service.dart';
 import '../controllers/budget_controller.dart';
 import '../../../../presentation/state/month_plan_controller.dart';
 import 'create_group_sheet.dart';
@@ -14,7 +13,6 @@ class StartPlanningSheet extends StatefulWidget {
   final bool hasPrevBudgets;
   final MonthPlanController monthPlanController;
   final BudgetController budgetController;
-  final SupabaseService supabaseService;
 
   const StartPlanningSheet({
     super.key,
@@ -25,7 +23,6 @@ class StartPlanningSheet extends StatefulWidget {
     required this.hasPrevBudgets,
     required this.monthPlanController,
     required this.budgetController,
-    required this.supabaseService,
   });
 
   @override
@@ -72,7 +69,6 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
         monthLabel: widget.monthLabel,
         budgetController: widget.budgetController,
         monthPlanController: widget.monthPlanController,
-        supabaseService: widget.supabaseService,
       ),
     );
   }

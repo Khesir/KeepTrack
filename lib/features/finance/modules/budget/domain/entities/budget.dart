@@ -16,7 +16,6 @@ class Budget {
   final String? notes;
   final double? customTargetAmount; // Optional custom target (overrides calculated from categories)
   final String? userId; // User identifier (UUID)
-  final String? accountId; // Account identifier (UUID)
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? closedAt;
@@ -32,7 +31,6 @@ class Budget {
     this.notes,
     this.customTargetAmount,
     this.userId,
-    this.accountId,
     this.createdAt,
     this.updatedAt,
     this.closedAt,
@@ -137,7 +135,6 @@ class Budget {
     String? notes,
     double? customTargetAmount,
     String? userId,
-    String? accountId,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? closedAt,
@@ -153,7 +150,6 @@ class Budget {
       notes: notes ?? this.notes,
       customTargetAmount: customTargetAmount ?? this.customTargetAmount,
       userId: userId ?? this.userId,
-      accountId: accountId ?? this.accountId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       closedAt: closedAt ?? this.closedAt,
@@ -167,15 +163,14 @@ class Budget {
           runtimeType == other.runtimeType &&
           id == other.id &&
           month == other.month &&
-          userId == other.userId &&
-          accountId == other.accountId;
+          userId == other.userId;
 
   @override
-  int get hashCode => Object.hash(id, month, userId, accountId);
+  int get hashCode => Object.hash(id, month, userId);
 
   @override
   String toString() =>
-      'Budget(id: $id, month: $month, title: $title, type: $budgetType, period: $periodType, userId: $userId, accountId: $accountId, status: $status)';
+      'Budget(id: $id, month: $month, title: $title, type: $budgetType, period: $periodType, userId: $userId, status: $status)';
 }
 
 enum BudgetStatus {
