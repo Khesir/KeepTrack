@@ -21,6 +21,7 @@ class DebtModel extends Debt {
     super.feeAmount,
     super.nextPaymentDate,
     super.paymentFrequency,
+    super.budgetProfileId,
   });
 
   /// Convert from JSON (NestJS camelCase response)
@@ -65,6 +66,7 @@ class DebtModel extends Debt {
         (e) => e.name == json['paymentFrequency'],
         orElse: () => PaymentFrequency.monthly,
       ),
+      budgetProfileId: json['budgetProfileId'] as String?,
     );
   }
 
@@ -86,6 +88,7 @@ class DebtModel extends Debt {
       'feeAmount': feeAmount,
       if (nextPaymentDate != null) 'nextPaymentDate': nextPaymentDate!.toIso8601String(),
       'paymentFrequency': paymentFrequency.name,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
     };
   }
 
@@ -134,6 +137,7 @@ class DebtModel extends Debt {
       feeAmount: debt.feeAmount,
       nextPaymentDate: debt.nextPaymentDate,
       paymentFrequency: debt.paymentFrequency,
+      budgetProfileId: debt.budgetProfileId,
     );
   }
 }

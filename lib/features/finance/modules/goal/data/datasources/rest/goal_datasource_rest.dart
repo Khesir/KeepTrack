@@ -14,9 +14,10 @@ class GoalDataSourceRest implements GoalDataSource {
       (data as List).map((j) => GoalModel.fromJson(j as Map<String, dynamic>)).toList();
 
   @override
-  Future<List<GoalModel>> fetchGoals() async {
+  Future<List<GoalModel>> fetchGoals({String? budgetProfileId}) async {
     try {
-      final res = await _dio.get('/goals');
+      final res = await _dio.get('/goals',
+        queryParameters: budgetProfileId != null ? {'budgetProfileId': budgetProfileId} : null);
       return _parseList(res.data);
     } on DioException catch (e) {
       throw mapDioError(e);
@@ -83,6 +84,28 @@ class GoalDataSourceRest implements GoalDataSource {
       throw mapDioError(e);
     } catch (e, st) {
       throw UnknownFailure(message: 'Failed to fetch goals by status', originalError: e, stackTrace: st);
+    }
+  }
+
+  Future<GoalModel> contributeToGoal(String id, double amount) async {
+    try {
+      final res = await _dio.post('/goals/$id/contribute', data: {'amount': amount});
+      return GoalModel.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw mapDioError(e);
+    } catch (e, st) {
+      throw UnknownFailure(message: 'Failed to contribute to goal', originalError: e, stackTrace: st);
+    }
+  }
+
+  Future<GoalModel> withdrawFromGoal(String id, double amount) async {
+    try {
+      final res = await _dio.post('/goals/$id/withdraw', data: {'amount': amount});
+      return GoalModel.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw mapDioError(e);
+    } catch (e, st) {
+      throw UnknownFailure(message: 'Failed to withdraw from goal', originalError: e, stackTrace: st);
     }
   }
 }

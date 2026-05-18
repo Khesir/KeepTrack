@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
-import '../../modules/budget/presentation/screens/budgets_tab_new.dart';
+import 'tabs/budget/budget_tab_screen.dart';
 import 'tabs/debts/debts_tab_new.dart';
 import 'tabs/goals/goals_tab.dart';
 import 'tabs/planned_payments/planned_payments_tab.dart';
@@ -100,7 +100,7 @@ class _FinanceMainScreenState extends ScopedScreenState<FinanceMainScreen>
           child: TabBarView(
             controller: _tabController,
             children: const [
-              BudgetsTabNew(),
+              BudgetTabScreen(),
               GoalsTabNew(),
               DebtsTabNew(),
               PlannedPaymentsTabNew(),

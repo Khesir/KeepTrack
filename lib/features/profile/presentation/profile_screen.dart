@@ -7,10 +7,18 @@ import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/helpers/budget_month_filter.dart';
+import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
+import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
+import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
-
-String _fmtI(double v) => '₱${NumberFormat('#,##0').format(v)}';
-String _fmtD(double v) => '₱${NumberFormat('#,##0.00').format(v)}';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
+import 'profile_insight_sections.dart';
 
 class ProfileScreen extends ScopedScreen {
   const ProfileScreen({super.key});
@@ -19,86 +27,160 @@ class ProfileScreen extends ScopedScreen {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ScopedScreenState<ProfileScreen>
-    with AppLayoutControlled {
+class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayoutControlled {
   late final MonthPlanController _monthPlanController;
+  late final BudgetController _budgetController;
+  late final TransactionController _txController;
+  late final SavingsController _savingsController;
+  late final DebtController _debtController;
+  late final SubscriptionController _subController;
   int _selectedMonthIndex = 0;
 
   @override
   void registerServices() {
     _monthPlanController = locator.get<MonthPlanController>();
+    _budgetController = locator.get<BudgetController>();
+    _txController = locator.get<TransactionController>();
+    _savingsController = locator.get<SavingsController>();
+    _debtController = locator.get<DebtController>();
+    _subController = locator.get<SubscriptionController>();
   }
 
   @override
   void onReady() {
     configureLayout(title: 'Insights', showBottomNav: true);
+    _budgetController.loadBudgets();
+    _savingsController.loadSavings();
+    final now = DateTime.now();
+    _txController.loadTransactionsByDateRange(
+      DateTime(now.year, now.month, 1),
+      DateTime(now.year, now.month + 1, 1),
+    );
+  }
+
+  void _selectMonth(int index, List<MonthPlan> plans) {
+    setState(() => _selectedMonthIndex = index);
+    final m = plans[index].month;
+    if (m == null) return;
+    final parts = m.split('-');
+    if (parts.length != 2) return;
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    if (year == null || month == null) return;
+    _txController.loadTransactionsByDateRange(
+      DateTime(year, month, 1),
+      DateTime(year, month + 1, 1),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return AsyncStreamBuilder<List<MonthPlan>>(
       state: _monthPlanController,
-      builder: (context, plans) {
+      builder: (_, plans) {
         if (plans.isEmpty) return _buildEmpty();
-
-        // Plans are sorted newest first from the controller
         final displayPlans = plans.take(6).toList();
-        final selected = displayPlans[_selectedMonthIndex.clamp(0, displayPlans.length - 1)];
+        final idx = _selectedMonthIndex.clamp(0, displayPlans.length - 1);
+        final selected = displayPlans[idx];
 
-        return CustomScrollView(
-          slivers: [
-            // Month selector
-            SliverToBoxAdapter(
-              child: _MonthSelector(
-                plans: displayPlans,
-                selectedIndex: _selectedMonthIndex,
-                onSelect: (i) => setState(() => _selectedMonthIndex = i),
-              ),
-            ),
+        return AsyncStreamBuilder<List<Budget>>(
+          state: _budgetController,
+          builder: (_, allBudgets) {
+            final monthBudgets = allBudgets
+                .where((b) => b.month == selected.month && b.status == BudgetStatus.active)
+                .toList();
 
-            // Summary cards
-            SliverToBoxAdapter(
-              child: _SummarySection(plan: selected),
-            ),
-
-            // Budget group breakdown
-            SliverToBoxAdapter(
-              child: _GroupBreakdownSection(plan: selected),
-            ),
-
-            // Month trend
-            SliverToBoxAdapter(
-              child: _MonthTrendSection(plans: displayPlans),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
+            return AsyncStreamBuilder<List<Transaction>>(
+              state: _txController,
+              builder: (_, txs) {
+                final spent = BudgetMonthFilter.buildSpentByCategory(txs);
+                return AsyncStreamBuilder<List<SavingsBucket>>(
+                  state: _savingsController,
+                  builder: (_, buckets) => AsyncStreamBuilder<List<Debt>>(
+                    state: _debtController,
+                    builder: (_, debts) => AsyncStreamBuilder<List<Subscription>>(
+                      state: _subController,
+                      builder: (_, subs) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, debts, subs),
+                      loadingBuilder: (_) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, debts, []),
+                      errorBuilder: (_, __) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, debts, []),
+                    ),
+                    loadingBuilder: (_) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, [], []),
+                    errorBuilder: (_, __) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, [], []),
+                  ),
+                  loadingBuilder: (_) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, [], [], []),
+                  errorBuilder: (_, __) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, [], [], []),
+                );
+              },
+              loadingBuilder: (_) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, {}, [], [], []),
+              errorBuilder: (_, __) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, {}, [], [], []),
+            );
+          },
+          loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+          errorBuilder: (_, __) => const Center(child: CircularProgressIndicator()),
         );
       },
       loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
-      errorBuilder: (_, msg) => Center(
-        child: Text(msg, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error)),
-      ),
+      errorBuilder: (_, msg) => Center(child: Text(msg, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error))),
     );
   }
 
-  Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.bar_chart_outlined, size: 56, color: AppColors.textTertiary),
-          const SizedBox(height: 16),
-          Text('No budget data yet', style: AppTextStyles.h4),
-          const SizedBox(height: 6),
-          Text(
-            'Start planning a month to see insights',
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-          ),
+  Widget _buildContent(
+    List<MonthPlan> plans,
+    int idx,
+    MonthPlan selected,
+    List<Budget> monthBudgets,
+    List<Budget> allBudgets,
+    Map<String, double> spentByCategory,
+    List<SavingsBucket> buckets,
+    List<Debt> debts,
+    List<Subscription> subs,
+  ) {
+    final totalSavings = buckets.fold(0.0, (s, b) => s + b.balance);
+    final totalDebt = debts.where((d) => d.type == DebtType.borrowing).fold(0.0, (s, d) => s + d.remainingAmount);
+    final totalReceivables = debts.where((d) => d.type == DebtType.lending).fold(0.0, (s, d) => s + d.remainingAmount);
+    final activeSubs = subs.where((s) => s.status == SubscriptionStatus.active).toList();
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: _MonthSelector(
+          plans: plans, selectedIndex: idx,
+          onSelect: (i) => _selectMonth(i, plans),
+        )),
+        const SliverToBoxAdapter(child: _AiInsightCard()),
+        if (monthBudgets.isNotEmpty) ...[
+          SliverToBoxAdapter(child: InsightSpendingSection(allBudgets: monthBudgets, spentByCategory: spentByCategory)),
+          SliverToBoxAdapter(child: InsightBudgetBarsSection(allBudgets: monthBudgets, spentByCategory: spentByCategory)),
         ],
-      ),
+        if (buckets.isNotEmpty)
+          SliverToBoxAdapter(child: InsightSavingsSection(buckets: buckets, total: totalSavings)),
+        if (plans.length > 1)
+          SliverToBoxAdapter(child: InsightTrendSection(plans: plans, allBudgets: allBudgets)),
+        if (debts.isNotEmpty)
+          SliverToBoxAdapter(child: InsightDebtSection(
+            debts: debts.where((d) => d.type == DebtType.borrowing && d.status == DebtStatus.active).toList(),
+            receivables: debts.where((d) => d.type == DebtType.lending && d.status == DebtStatus.active).toList(),
+            totalDebt: totalDebt, totalReceivables: totalReceivables,
+          )),
+        if (activeSubs.isNotEmpty)
+          SliverToBoxAdapter(child: InsightSubscriptionsSection(subs: activeSubs)),
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+      ],
     );
   }
+
+  Widget _buildEmpty() => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.bar_chart_outlined, size: 56, color: AppColors.textTertiary),
+        const SizedBox(height: 16),
+        Text('No data yet', style: AppTextStyles.h4),
+        const SizedBox(height: 6),
+        Text('Start planning a month to see insights',
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+      ],
+    ),
+  );
 }
 
 // ─── Month Selector ───────────────────────────────────────────────────────────
@@ -108,11 +190,7 @@ class _MonthSelector extends StatelessWidget {
   final int selectedIndex;
   final void Function(int) onSelect;
 
-  const _MonthSelector({
-    required this.plans,
-    required this.selectedIndex,
-    required this.onSelect,
-  });
+  const _MonthSelector({required this.plans, required this.selectedIndex, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -123,9 +201,13 @@ class _MonthSelector extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         itemCount: plans.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final label = _monthLabel(plans[i].month);
+        itemBuilder: (_, i) {
           final selected = i == selectedIndex;
+          final planMonth = plans[i].month;
+          final parts = planMonth?.split('-') ?? [];
+          final label = parts.length == 2
+              ? DateFormat('MMM yyyy').format(DateTime(int.parse(parts[0]), int.parse(parts[1])))
+              : (planMonth ?? '');
           return GestureDetector(
             onTap: () => onSelect(i),
             child: AnimatedContainer(
@@ -136,438 +218,73 @@ class _MonthSelector extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               alignment: Alignment.center,
-              child: Text(
-                label,
-                style: AppTextStyles.caption.copyWith(
-                  color: selected ? AppColors.textOnPrimary : AppColors.textSecondary,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
+              child: Text(label, style: AppTextStyles.caption.copyWith(
+                color: selected ? AppColors.textOnPrimary : AppColors.textSecondary,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              )),
             ),
           );
         },
       ),
     );
   }
-
-  String _monthLabel(String month) {
-    final parts = month.split('-');
-    if (parts.length != 2) return month;
-    final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-    return DateFormat('MMM yyyy').format(dt);
-  }
 }
 
-// ─── Summary Section ──────────────────────────────────────────────────────────
+// ─── AI Insight Placeholder ───────────────────────────────────────────────────
 
-class _SummarySection extends StatelessWidget {
-  final MonthPlan plan;
-  const _SummarySection({required this.plan});
+class _AiInsightCard extends StatelessWidget {
+  const _AiInsightCard();
 
   @override
   Widget build(BuildContext context) {
-    final allBudgets = plan.budgets.where((b) => b.status == BudgetStatus.active).toList();
-    final totalPlannedIncome = allBudgets
-        .where((b) => b.budgetType == BudgetType.income)
-        .fold(0.0, (s, b) => s + b.budgetTarget);
-    final totalPlannedExpenses = allBudgets
-        .where((b) => b.budgetType == BudgetType.expense)
-        .fold(0.0, (s, b) => s + b.budgetTarget);
-    final totalActualIncome = allBudgets
-        .where((b) => b.budgetType == BudgetType.income)
-        .fold(0.0, (s, b) => s + b.totalSpent);
-    final totalActualExpenses = allBudgets
-        .where((b) => b.budgetType == BudgetType.expense)
-        .fold(0.0, (s, b) => s + b.totalSpent);
-    final balance = totalActualIncome - totalActualExpenses;
-    final isPositive = balance >= 0;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Balance hero
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            decoration: BoxDecoration(
-              color: isPositive
-                  ? AppColors.success.withValues(alpha: 0.08)
-                  : AppColors.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isPositive
-                    ? AppColors.success.withValues(alpha: 0.2)
-                    : AppColors.error.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Net Balance',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${isPositive ? '+' : ''}${_fmtD(balance)}',
-                        style: AppTextStyles.h2.copyWith(
-                          color: isPositive ? AppColors.success : AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  isPositive ? Icons.trending_up : Icons.trending_down,
-                  color: isPositive ? AppColors.success : AppColors.error,
-                  size: 32,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Income / Expense tiles
-          Row(
-            children: [
-              Expanded(
-                child: _StatTile(
-                  label: 'Income',
-                  actual: totalActualIncome,
-                  planned: totalPlannedIncome,
-                  color: AppColors.success,
-                  icon: Icons.arrow_downward,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _StatTile(
-                  label: 'Expenses',
-                  actual: totalActualExpenses,
-                  planned: totalPlannedExpenses,
-                  color: AppColors.error,
-                  icon: Icons.arrow_upward,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final String label;
-  final double actual;
-  final double planned;
-  final Color color;
-  final IconData icon;
-
-  const _StatTile({
-    required this.label,
-    required this.actual,
-    required this.planned,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = planned > 0 ? (actual / planned).clamp(0.0, 1.0) : 0.0;
-    final over = planned > 0 && actual > planned;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 13, color: color),
-              const SizedBox(width: 5),
-              Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _fmtI(actual),
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'of ${_fmtI(planned)}',
-            style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 3,
-              backgroundColor: AppColors.border,
-              valueColor: AlwaysStoppedAnimation<Color>(over ? AppColors.warning : color),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Group Breakdown ──────────────────────────────────────────────────────────
-
-class _GroupBreakdownSection extends StatelessWidget {
-  final MonthPlan plan;
-  const _GroupBreakdownSection({required this.plan});
-
-  @override
-  Widget build(BuildContext context) {
-    final budgets = plan.budgets
-        .where((b) => b.status == BudgetStatus.active && b.categories.isNotEmpty)
-        .toList()
-      ..sort((a, b) => b.totalSpent.compareTo(a.totalSpent));
-
-    if (budgets.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Budget Groups', style: AppTextStyles.h4),
-          const SizedBox(height: 12),
-          ...budgets.map((b) => _BudgetGroupRow(budget: b)),
-        ],
-      ),
-    );
-  }
-}
-
-class _BudgetGroupRow extends StatelessWidget {
-  final Budget budget;
-  const _BudgetGroupRow({required this.budget});
-
-  @override
-  Widget build(BuildContext context) {
-    final isIncome = budget.budgetType == BudgetType.income;
-    final planned = budget.budgetTarget;
-    final actual = budget.totalSpent;
-    final over = actual > planned && planned > 0;
-    final progress = planned > 0 ? (actual / planned).clamp(0.0, 1.0) : 0.0;
-    final color = isIncome ? AppColors.success : AppColors.accent;
-    final progressColor = over ? AppColors.warning : color;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(10),
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF1E1B4B), const Color(0xFF312E81)]
+                : [const Color(0xFF4F46E5), const Color(0xFF7C3AED)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    budget.title ?? 'Untitled',
-                    style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                Text(
-                  _fmtI(actual),
-                  style: AppTextStyles.bodySmall.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: over ? AppColors.warning : AppColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  ' / ${_fmtI(planned)}',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
             ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 4,
-                backgroundColor: AppColors.border,
-                valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Text('AI Insights', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                      child: const Text('Coming soon', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                    ),
+                  ]),
+                  const SizedBox(height: 4),
+                  const Text('Personalized financial insights powered by AI are on the way.',
+                      style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
+                ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-// ─── Month Trend ──────────────────────────────────────────────────────────────
-
-class _MonthTrendSection extends StatelessWidget {
-  final List<MonthPlan> plans;
-  const _MonthTrendSection({required this.plans});
-
-  @override
-  Widget build(BuildContext context) {
-    // Show last 6 months in chronological order (oldest first)
-    final ordered = plans.reversed.toList();
-
-    // Find max value for scaling
-    double maxVal = 0;
-    for (final p in ordered) {
-      final income = p.budgets.where((b) => b.budgetType == BudgetType.income).fold(0.0, (s, b) => s + b.totalSpent);
-      final expense = p.budgets.where((b) => b.budgetType == BudgetType.expense).fold(0.0, (s, b) => s + b.totalSpent);
-      if (income > maxVal) maxVal = income;
-      if (expense > maxVal) maxVal = expense;
-    }
-    if (maxVal == 0) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('6-Month Trend', style: AppTextStyles.h4),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              _LegendDot(color: AppColors.success, label: 'Income'),
-              const SizedBox(width: 12),
-              _LegendDot(color: AppColors.error, label: 'Expenses'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 120,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: ordered.map((p) {
-                final income = p.budgets.where((b) => b.budgetType == BudgetType.income).fold(0.0, (s, b) => s + b.totalSpent);
-                final expense = p.budgets.where((b) => b.budgetType == BudgetType.expense).fold(0.0, (s, b) => s + b.totalSpent);
-                return Expanded(
-                  child: _BarGroup(
-                    month: _shortMonth(p.month),
-                    incomeRatio: income / maxVal,
-                    expenseRatio: expense / maxVal,
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _shortMonth(String month) {
-    final parts = month.split('-');
-    if (parts.length != 2) return month;
-    final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-    return DateFormat('MMM').format(dt);
-  }
-}
-
-class _BarGroup extends StatelessWidget {
-  final String month;
-  final double incomeRatio;
-  final double expenseRatio;
-
-  const _BarGroup({
-    required this.month,
-    required this.incomeRatio,
-    required this.expenseRatio,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _Bar(ratio: incomeRatio, color: AppColors.success),
-              const SizedBox(width: 2),
-              _Bar(ratio: expenseRatio, color: AppColors.error),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            month,
-            style: AppTextStyles.caption.copyWith(
-              fontSize: 9,
-              color: AppColors.textTertiary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Bar extends StatelessWidget {
-  final double ratio;
-  final Color color;
-  const _Bar({required this.ratio, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final h = (ratio * 90).clamp(2.0, 90.0);
-    return Container(
-      width: 10,
-      height: h,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.8),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
-      ),
-    );
-  }
-}
-
-class _LegendDot extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _LegendDot({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 4),
-        Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-      ],
     );
   }
 }

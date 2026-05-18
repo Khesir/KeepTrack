@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/state/stream_builder_widget.dart';
 
 class AppConfigurationFinancePage extends StatelessWidget {
   const AppConfigurationFinancePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unused_local_variable
-    final colorScheme = Theme.of(context).colorScheme;
+    final settingsController = locator.get<SettingsController>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Configuration')),
@@ -15,15 +18,6 @@ class AppConfigurationFinancePage extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
           _buildSection(context, 'Financial Management', [
-            _buildTile(
-              context,
-              icon: Icons.account_balance_wallet_rounded,
-              title: 'Manage Accounts',
-              subtitle: 'Add, edit, and delete financial accounts',
-              color: Colors.blue,
-
-              onTap: () => Navigator.pushNamed(context, '/account-management'),
-            ),
             _buildTile(
               context,
               icon: Icons.pie_chart_rounded,
@@ -78,7 +72,85 @@ class AppConfigurationFinancePage extends StatelessWidget {
               onTap: () => Navigator.pushNamed(context, '/create'),
             ),
           ]),
+          const SizedBox(height: 16),
+          _buildSection(context, 'Developer', [
+            AsyncStreamBuilder<AppSettings>(
+              state: settingsController,
+              builder: (context, settings) => _buildOfflineToggle(
+                context,
+                enabled: settings.forceOfflineMode,
+                onChanged: (value) => settingsController.setForceOfflineMode(value),
+              ),
+            ),
+          ]),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineToggle(
+    BuildContext context, {
+    required bool enabled,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = enabled ? Colors.orange : Colors.grey;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: enabled ? Colors.orange.withValues(alpha: 0.4) : colorScheme.outlineVariant,
+          width: enabled ? 1.5 : 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                enabled ? Icons.wifi_off : Icons.wifi,
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Force Offline Mode',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    enabled
+                        ? 'App is offline — all writes go to Hive cache'
+                        : 'App is online — syncing with backend',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: enabled ? Colors.orange : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: enabled,
+              onChanged: onChanged,
+              activeColor: Colors.orange,
+            ),
+          ],
+        ),
       ),
     );
   }

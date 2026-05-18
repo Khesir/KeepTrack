@@ -76,4 +76,31 @@ class FinanceCategoryController
       return null;
     }
   }
+
+  /// Returns the ID of a category matching [name] and [type], creating one if
+  /// none exists. Falls back to any non-archived category of the same type.
+  Future<String?> findOrCreate({
+    required String name,
+    required CategoryType type,
+    required String userId,
+  }) async {
+    final cats = data ?? [];
+    for (final c in cats) {
+      if (c.type == type && c.name == name && !c.isArchive) return c.id;
+    }
+    for (final c in cats) {
+      if (c.type == type && !c.isArchive) return c.id;
+    }
+    await createCategory(
+      FinanceCategory(name: name, type: type, userId: userId),
+    );
+    final updated = data ?? [];
+    for (final c in updated) {
+      if (c.type == type && !c.isArchive) return c.id;
+    }
+    return null;
+  }
+
+  Future<String?> findOrCreateSavingsCategory(String userId) =>
+      findOrCreate(name: 'Savings', type: CategoryType.savings, userId: userId);
 }

@@ -3,7 +3,6 @@ import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../controllers/budget_controller.dart';
 import '../../../../presentation/state/month_plan_controller.dart';
-import 'create_group_sheet.dart';
 
 class StartPlanningSheet extends StatefulWidget {
   final String monthKey;
@@ -53,24 +52,14 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
   }
 
   Future<void> _startFresh() async {
-    Navigator.pop(context);
-    // Ensure a MonthPlan record exists for this month before creating budget groups
+    setState(() => _loading = true);
     try {
       await widget.monthPlanController.getOrCreateMonthPlan(widget.monthKey);
+      await widget.budgetController.refreshBudgetsWithSpentAmounts();
+      if (mounted) Navigator.pop(context);
     } catch (_) {
-      // Non-blocking: proceed to budget creation even if month plan creation fails
+      if (mounted) setState(() => _loading = false);
     }
-    if (!mounted) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => CreateGroupSheet(
-        monthKey: widget.monthKey,
-        monthLabel: widget.monthLabel,
-        budgetController: widget.budgetController,
-        monthPlanController: widget.monthPlanController,
-      ),
-    );
   }
 
   @override

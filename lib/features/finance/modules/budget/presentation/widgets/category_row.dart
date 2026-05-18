@@ -12,6 +12,7 @@ class CategoryRow extends StatefulWidget {
   final VoidCallback onDetailTap;
   final VoidCallback onEditTap;
   final Future<void> Function(double) onUpdateAmount;
+  final Future<void> Function(double)? onPay;
 
   const CategoryRow({
     super.key,
@@ -22,6 +23,7 @@ class CategoryRow extends StatefulWidget {
     required this.onDetailTap,
     required this.onEditTap,
     required this.onUpdateAmount,
+    this.onPay,
   });
 
   @override
@@ -74,6 +76,41 @@ class CategoryRowState extends State<CategoryRow> {
       extentOffset: _amountCtrl.text.length,
     );
   });
+
+  Future<void> _showPayDialog() async {
+    final ctrl = TextEditingController();
+    final name = widget.category.financeCategory?.name ?? 'Category';
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Pay — $name'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'Amount',
+            prefixText: '${formatCurrency(0).substring(0, 1)} ',
+            border: const OutlineInputBorder(),
+          ),
+          onSubmitted: (_) => Navigator.pop(ctx),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              final amount = double.tryParse(ctrl.text);
+              if (amount == null || amount <= 0) return;
+              Navigator.pop(ctx);
+              await widget.onPay!(amount);
+            },
+            child: const Text('Pay'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+  }
 
   Future<void> _commitEdit() async {
     final amount = double.tryParse(_amountCtrl.text);
@@ -218,6 +255,23 @@ class CategoryRowState extends State<CategoryRow> {
                     ),
                   ),
                 ),
+
+                if (widget.onPay != null) ...[
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 42,
+                    child: TextButton(
+                      onPressed: _showPayDialog,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(42, 28),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: widget.accentColor,
+                      ),
+                      child: const Text('Pay', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 4),

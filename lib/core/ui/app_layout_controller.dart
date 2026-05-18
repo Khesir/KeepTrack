@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Controls the main app layout (AppBar, FAB, etc.)
 /// Screens can use this to customize the layout
@@ -47,7 +48,7 @@ class AppLayoutController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reset to defaults
+  /// Reset to defaults — deferred so it never fires while the tree is locked
   void reset() {
     _title = '';
     _actions = [];
@@ -55,7 +56,9 @@ class AppLayoutController extends ChangeNotifier {
     _showBottomNav = true;
     _showSettings = true;
     fabPosition = FabPosition.endDocked;
-    notifyListeners();
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 }
 

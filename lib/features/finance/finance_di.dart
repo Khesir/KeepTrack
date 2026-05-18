@@ -3,6 +3,10 @@ import 'package:keep_track/features/finance/modules/savings/data/datasources/res
 import 'package:keep_track/features/finance/modules/savings/data/datasources/savings_datasource.dart';
 import 'package:keep_track/features/finance/modules/savings/data/repositories/savings_repository_impl.dart';
 import 'package:keep_track/features/finance/modules/savings/domain/repositories/savings_repository.dart';
+import 'modules/transaction_plan/data/datasources/rest/transaction_plan_datasource_rest.dart';
+import 'modules/transaction_plan/data/datasources/transaction_plan_datasource.dart';
+import 'modules/transaction_plan/data/repositories/transaction_plan_repository_impl.dart';
+import 'modules/transaction_plan/domain/repositories/transaction_plan_repository.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/modules/finance_category/data/datasources/finance_category_datasource.dart';
 import 'package:keep_track/features/finance/modules/finance_category/data/datasources/rest/finance_category_datasource_rest.dart';
@@ -26,12 +30,20 @@ import 'modules/planned_payment/data/datasources/planned_payment_datasource.dart
 import 'modules/planned_payment/data/datasources/rest/planned_payment_datasource_rest.dart';
 import 'modules/planned_payment/data/repositories/planned_payment_repository_impl.dart';
 import 'modules/planned_payment/domain/repositories/planned_payment_repository.dart';
+import 'modules/subscriptions/data/datasources/rest/subscription_datasource_rest.dart';
+import 'modules/subscriptions/data/datasources/subscription_datasource.dart';
+import 'modules/subscriptions/data/repositories/subscription_repository_impl.dart';
+import 'modules/subscriptions/domain/repositories/subscription_repository.dart';
 import 'presentation/state/finance_category_controller.dart';
 import 'presentation/state/savings_controller.dart';
+import 'presentation/state/subscription_controller.dart';
+import 'presentation/state/transaction_plan_controller.dart';
 import 'presentation/state/transaction_cache.dart';
 import 'presentation/state/transaction_controller.dart';
 import 'presentation/state/goal_controller.dart';
 import 'presentation/state/debt_controller.dart';
+import 'presentation/state/budget_profile_controller.dart';
+import 'modules/budget_profile/data/datasources/rest/budget_profile_datasource_rest.dart';
 import 'presentation/state/planned_payment_controller.dart';
 import 'data/services/finance_initialization_service.dart';
 
@@ -42,6 +54,8 @@ void setupFinanceDependencies() {
 
   // Data sources
   locator.registerFactory<SavingsDataSource>(() => SavingsDataSourceRest());
+  locator.registerFactory<TransactionPlanDataSource>(() => TransactionPlanDataSourceRest());
+  locator.registerFactory<SubscriptionDataSource>(() => SubscriptionDataSourceRest());
   locator.registerFactory<TransactionDataSource>(
     () => TransactionDataSourceRest(),
   );
@@ -62,6 +76,12 @@ void setupFinanceDependencies() {
   });
   locator.registerFactory<SavingsRepository>(
     () => SavingsRepositoryImpl(locator.get<SavingsDataSource>()),
+  );
+  locator.registerFactory<TransactionPlanRepository>(
+    () => TransactionPlanRepositoryImpl(locator.get<TransactionPlanDataSource>()),
+  );
+  locator.registerFactory<SubscriptionRepository>(
+    () => SubscriptionRepositoryImpl(locator.get<SubscriptionDataSource>()),
   );
   locator.registerFactory<TransactionRepository>(
     () => TransactionRepositoryImpl(locator.get<TransactionDataSource>()),
@@ -91,6 +111,12 @@ void setupFinanceDependencies() {
   locator.registerFactory<SavingsController>(() {
     return SavingsController(locator.get<SavingsRepository>());
   });
+  locator.registerFactory<SubscriptionController>(() {
+    return SubscriptionController(locator.get<SubscriptionRepository>());
+  });
+  locator.registerFactory<TransactionPlanController>(() {
+    return TransactionPlanController(locator.get<TransactionPlanRepository>());
+  });
   locator.registerFactory<TransactionController>(() {
     return TransactionController(
       locator.get<TransactionRepository>(),
@@ -99,8 +125,11 @@ void setupFinanceDependencies() {
           locator.get<BudgetController>().refreshBudgetsWithSpentAmounts(),
     );
   });
+  locator.registerLazySingleton<BudgetProfileController>(
+    () => BudgetProfileController(BudgetProfileDataSourceRest()),
+  );
   locator.registerFactory<GoalController>(() {
-    return GoalController(locator.get<GoalRepository>());
+    return GoalController(locator.get<GoalRepository>(), GoalDataSourceRest());
   });
   locator.registerFactory<DebtController>(() {
     return DebtController(locator.get<DebtRepository>());

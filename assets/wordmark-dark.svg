@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="120" viewBox="0 0 480 120">
+  <rect width="480" height="120" rx="16" fill="#1E1E1C"/>
+  <!-- Icon background -->
+  <rect x="10" y="10" width="100" height="100" rx="22" fill="#F1EFE8"/>
+  <!-- Ears -->
+  <path d="M32 52 L24 24 L50 42Z" fill="#B4B2A9"/>
+  <path d="M34 50 L28 28 L48 40Z" fill="#888780"/>
+  <path d="M88 52 L96 24 L70 42Z" fill="#B4B2A9"/>
+  <path d="M86 50 L92 28 L72 40Z" fill="#888780"/>
+  <!-- Head -->
+  <ellipse cx="60" cy="68" rx="32" ry="30" fill="#2C2C2A"/>
+  <ellipse cx="60" cy="76" rx="22" ry="19" fill="#444441"/>
+  <!-- Eyes -->
+  <circle cx="50" cy="62" r="7" fill="#F1EFE8"/>
+  <circle cx="70" cy="62" r="7" fill="#F1EFE8"/>
+  <circle cx="52" cy="59" r="2.5" fill="#2C2C2A"/>
+  <circle cx="72" cy="59" r="2.5" fill="#2C2C2A"/>
+  <!-- Nose -->
+  <ellipse cx="60" cy="76" rx="4" ry="3" fill="#888780"/>
+  <!-- Mouth -->
+  <path d="M53 83 Q60 90 67 83" fill="none" stroke="#888780" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Wordmark text -->
+  <text x="130" y="58" font-family="'DM Sans', system-ui, sans-serif" font-size="36" font-weight="600" fill="#F1EFE8" letter-spacing="-0.5">Keep Track</text>
+  <text x="132" y="82" font-family="'DM Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#888780" letter-spacing="0.5">zero-based budgeting</text>
+</svg>

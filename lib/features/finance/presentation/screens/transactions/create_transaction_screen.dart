@@ -6,10 +6,12 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import '../../../modules/budget/domain/entities/budget.dart';
+import '../../../modules/budget_profile/domain/entities/budget_profile.dart';
 import '../../../modules/finance_category/domain/entities/finance_category.dart';
 import '../../../modules/finance_category/domain/entities/finance_category_enums.dart';
 import '../../../modules/transaction/domain/entities/transaction.dart';
 import '../../../modules/budget/presentation/controllers/budget_controller.dart';
+import '../../state/budget_profile_controller.dart';
 import '../../state/finance_category_controller.dart';
 import '../../state/transaction_controller.dart';
 
@@ -42,6 +44,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   late final TransactionController _transactionController;
   late final FinanceCategoryController _categoryController;
   late final BudgetController _budgetController;
+  late final BudgetProfileController _profileController;
 
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
@@ -54,6 +57,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   String? _selectedCategoryId;
   FinanceCategory? _selectedCategory;
   String? _selectedBudgetId;
+  String? _selectedProfileId;
 
   DateTime _selectedDate = DateTime.now();
   bool _isCreating = false;
@@ -65,6 +69,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     _transactionController = locator.get<TransactionController>();
     _categoryController = locator.get<FinanceCategoryController>();
     _budgetController = locator.get<BudgetController>();
+    _profileController = locator.get<BudgetProfileController>();
 
     if (widget.initialDescription != null) {
       _descriptionController.text = widget.initialDescription!;
@@ -115,8 +120,21 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         ? CategoryType.income
         : CategoryType.expense;
 
+    // Exclude archived and non income/expense types; filter by profile if selected
+    Set<String>? profileCategoryIds;
+    if (_selectedProfileId != null) {
+      final bs = _budgetController.state;
+      if (bs is AsyncData<List<Budget>>) {
+        profileCategoryIds = bs.data
+            .where((b) => b.budgetProfileId == _selectedProfileId)
+            .expand((b) => b.categories.map((c) => c.financeCategoryId))
+            .toSet();
+      }
+    }
+
     final typedCategories = allCategories
-        .where((c) => c.type == targetType)
+        .where((c) => c.type == targetType && !c.isArchive)
+        .where((c) => profileCategoryIds == null || (c.id != null && profileCategoryIds!.contains(c.id)))
         .toList();
 
     final budgetState = _budgetController.state;
@@ -304,6 +322,13 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   Future<void> _createTransaction() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_selectedProfileId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a budget profile')),
+      );
+      return;
+    }
+
     if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a category')),
@@ -375,8 +400,12 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 children: [
-                  _buildCategorySelector(colorScheme, theme),
+                  _buildProfileSelector(colorScheme),
                   const SizedBox(height: 12),
+                  if (_selectedProfileId != null) ...[
+                    _buildCategorySelector(colorScheme, theme),
+                    const SizedBox(height: 12),
+                  ],
                   _buildDateRow(theme, colorScheme),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -543,6 +572,41 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileSelector(ColorScheme colorScheme) {
+    final s = _profileController.state;
+    final profiles = s is AsyncData<List<BudgetProfile>> ? s.data : <BudgetProfile>[];
+
+    final selectedName = profiles.where((p) => p.id == _selectedProfileId).firstOrNull?.name;
+
+    return InkWell(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => SimpleDialog(
+          title: const Text('Select Budget'),
+          children: profiles.map((p) => SimpleDialogOption(
+            onPressed: () { setState(() { _selectedProfileId = p.id; _selectedCategory = null; _selectedCategoryId = null; }); Navigator.pop(context); },
+            child: Row(children: [
+              Text(p.name),
+              if (_selectedProfileId == p.id) ...[const Spacer(), const Icon(Icons.check_rounded, size: 16)],
+            ]),
+          )).toList(),
+        ),
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Budget *',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: colorScheme.surfaceContainerHighest,
+          suffixIcon: const Icon(Icons.unfold_more_rounded, size: 18),
+        ),
+        child: Text(selectedName ?? 'Select a budget',
+            style: TextStyle(color: selectedName != null ? colorScheme.primary : colorScheme.onSurfaceVariant)),
       ),
     );
   }

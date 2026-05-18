@@ -6,14 +6,16 @@ class MonthHeader extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback? onSummaryTap;
-  final VoidCallback? onDelete;
+  final VoidCallback? onSettings;
+  final VoidCallback? onToggleView;
 
   const MonthHeader({
     required this.monthLabel,
     required this.onPrev,
     required this.onNext,
     this.onSummaryTap,
-    this.onDelete,
+    this.onSettings,
+    this.onToggleView,
   });
 
   @override
@@ -35,12 +37,19 @@ class MonthHeader extends StatelessWidget {
             onPressed: onSummaryTap,
             tooltip: 'Summary & Transactions',
           ),
-        if (onDelete != null)
+        if (onToggleView != null)
           IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: onDelete,
-            tooltip: 'Delete plan',
-            color: AppColors.textTertiary,
+            icon: const Icon(Icons.view_list_outlined),
+            onPressed: onToggleView,
+            tooltip: 'Switch to Simple',
+            color: AppColors.textSecondary,
+          ),
+        if (onSettings != null)
+          IconButton(
+            icon: const Icon(Icons.more_vert_rounded),
+            onPressed: onSettings,
+            tooltip: 'Budget settings',
+            color: AppColors.textSecondary,
           ),
       ],
     );

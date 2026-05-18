@@ -5,7 +5,8 @@ import 'budget_model.dart';
 class MonthPlanModel extends MonthPlan {
   MonthPlanModel({
     super.id,
-    required super.month,
+    super.month,
+    super.budgetProfileId,
     super.userId,
     super.notes,
     super.budgets = const [],
@@ -19,6 +20,7 @@ class MonthPlanModel extends MonthPlan {
     return MonthPlanModel(
       id: plan.id,
       month: plan.month,
+      budgetProfileId: plan.budgetProfileId,
       userId: plan.userId,
       notes: plan.notes,
       budgets: plan.budgets,
@@ -36,7 +38,8 @@ class MonthPlanModel extends MonthPlan {
 
     return MonthPlanModel(
       id: json['id'] as String?,
-      month: json['month'] as String,
+      month: json['month'] as String?,
+      budgetProfileId: json['budgetProfileId'] as String?,
       userId: json['userId'] as String?,
       notes: json['notes'] as String?,
       budgets: const [],
@@ -53,7 +56,8 @@ class MonthPlanModel extends MonthPlan {
   /// NestJS API request body
   Map<String, dynamic> toApiJson() {
     return {
-      'month': month,
+      if (month != null) 'month': month,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
       if (notes != null) 'notes': notes,
     };
   }

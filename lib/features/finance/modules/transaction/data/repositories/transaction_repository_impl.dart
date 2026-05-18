@@ -21,6 +21,12 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<Result<List<Transaction>>> getTransactionsBySavings(String savingsId) async {
+    final transactions = await _dataSource.getTransactionsBySavings(savingsId);
+    return Result.success(transactions);
+  }
+
+  @override
   Future<Result<List<Transaction>>> getTransactionsByCategory(String categoryId) async {
     final transactions = await _dataSource.getTransactionsByCategory(categoryId);
     return Result.success(transactions);

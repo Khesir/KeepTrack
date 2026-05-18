@@ -1,6 +1,9 @@
 library;
 
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keep_track/core/cache/cache_factory.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
@@ -10,7 +13,9 @@ import 'package:keep_track/core/theme/theme.dart';
 import 'package:keep_track/features/module_selection/finance_module_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/di/di_logger.dart';
+import 'core/navigation/app_navigator.dart';
 import 'core/routing/app_router.dart';
+import 'core/ui/desktop_title_bar.dart';
 import 'core/settings/data/repositories/settings_repository.dart';
 import 'core/settings/domain/entities/app_settings.dart';
 import 'core/settings/presentation/settings_controller.dart';
@@ -22,7 +27,19 @@ import 'features/notifications/notifications_di.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  DILogger.enable();
+  if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      titleBarStyle: TitleBarStyle.hidden,
+      minimumSize: Size(940, 600),
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
+  if (kDebugMode) DILogger.enable();
 
   // Initialize Hive for local cache (mobile/desktop only)
   await Hive.initFlutter();
@@ -102,8 +119,26 @@ class _PersonalCodexAppState extends State<PersonalCodexApp> {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: settings.themeMode.toThemeMode(),
+          navigatorKey: AppNavigator.key,
           onGenerateRoute: AppRouter.onGenerateRoute,
           home: const AuthGuard(child: FinanceModuleScreen()),
+          builder: (context, child) {
+            if (!kIsWeb && DesktopTitleBar.isDesktopPlatform) {
+              return Overlay(
+                initialEntries: [
+                  OverlayEntry(
+                    builder: (_) => Column(
+                      children: [
+                        const DesktopTitleBar(),
+                        Expanded(child: child ?? const SizedBox()),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
+            return child ?? const SizedBox();
+          },
         );
       },
     );

@@ -2,6 +2,8 @@ import 'package:keep_track/features/finance/modules/budget/domain/entities/budge
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 
 class BudgetScreenData {
@@ -10,6 +12,8 @@ class BudgetScreenData {
   final List<Transaction> transactions;
   final List<Debt> debts;
   final List<PlannedPayment> payments;
+  final List<Subscription> subscriptions;
+  final List<SavingsBucket> savingsBuckets;
 
   const BudgetScreenData({
     required this.monthPlans,
@@ -17,6 +21,8 @@ class BudgetScreenData {
     required this.transactions,
     required this.debts,
     required this.payments,
+    this.subscriptions = const [],
+    this.savingsBuckets = const [],
   });
 
   BudgetScreenData copyWith({
@@ -25,12 +31,16 @@ class BudgetScreenData {
     List<Transaction>? transactions,
     List<Debt>? debts,
     List<PlannedPayment>? payments,
+    List<Subscription>? subscriptions,
+    List<SavingsBucket>? savingsBuckets,
   }) => BudgetScreenData(
     monthPlans: monthPlans ?? this.monthPlans,
     budgets: budgets ?? this.budgets,
     transactions: transactions ?? this.transactions,
     debts: debts ?? this.debts,
     payments: payments ?? this.payments,
+    subscriptions: subscriptions ?? this.subscriptions,
+    savingsBuckets: savingsBuckets ?? this.savingsBuckets,
   );
 
   static BudgetScreenData empty() => const BudgetScreenData(
@@ -39,5 +49,7 @@ class BudgetScreenData {
     transactions: [],
     debts: [],
     payments: [],
+    subscriptions: [],
+    savingsBuckets: [],
   );
 }

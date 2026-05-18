@@ -3,8 +3,8 @@ import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.da
 
 /// Repository interface for managing debts (lending and borrowing)
 abstract class DebtRepository {
-  /// Get all debts for the current user
-  Future<Result<List<Debt>>> getDebts();
+  /// Get all debts, optionally scoped to a budget profile
+  Future<Result<List<Debt>>> getDebts({String? budgetProfileId});
 
   /// Get a specific debt by ID
   Future<Result<Debt>> getDebtById(String id);
@@ -33,7 +33,6 @@ abstract class DebtRepository {
   /// Record a payment against a debt. Returns the updated debt.
   Future<Result<Debt>> payDebt(
     String id, {
-    required String accountId,
     required double amount,
     double? fee,
   });

@@ -14,9 +14,10 @@ class DebtDataSourceRest implements DebtDataSource {
       (data as List).map((j) => DebtModel.fromJson(j as Map<String, dynamic>)).toList();
 
   @override
-  Future<List<DebtModel>> fetchDebts() async {
+  Future<List<DebtModel>> fetchDebts({String? budgetProfileId}) async {
     try {
-      final res = await _dio.get('/debts');
+      final res = await _dio.get('/debts',
+        queryParameters: budgetProfileId != null ? {'budgetProfileId': budgetProfileId} : null);
       return _parseList(res.data);
     } on DioException catch (e) {
       throw mapDioError(e);
@@ -101,13 +102,11 @@ class DebtDataSourceRest implements DebtDataSource {
   @override
   Future<DebtModel> payDebt(
     String id, {
-    required String accountId,
     required double amount,
     double? fee,
   }) async {
     try {
       final res = await _dio.post('/debts/$id/pay', data: {
-        'accountId': accountId,
         'amount': amount,
         if (fee != null && fee > 0) 'fee': fee,
       });

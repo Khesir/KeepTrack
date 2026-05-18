@@ -15,10 +15,10 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     loadDebts();
   }
 
-  /// Load all debts
-  Future<void> loadDebts() async {
+  /// Load all debts, optionally scoped to a budget profile
+  Future<void> loadDebts({String? budgetProfileId}) async {
     await execute(() async {
-      final debts = await _debtRepository.getDebts().then((r) => r.unwrap());
+      final debts = await _debtRepository.getDebts(budgetProfileId: budgetProfileId).then((r) => r.unwrap());
       // Schedule notifications for debts with due dates
       _scheduleDebtNotifications(debts);
       return debts;
@@ -148,12 +148,11 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
   /// Record a payment against a debt. Returns the updated debt.
   Future<Debt> payDebt(
     String id, {
-    required String accountId,
     required double amount,
     double? fee,
   }) async {
     final updated = await _debtRepository
-        .payDebt(id, accountId: accountId, amount: amount, fee: fee)
+        .payDebt(id, amount: amount, fee: fee)
         .then((r) => r.unwrap());
     await executeSilent(() async {
       final current = data ?? [];

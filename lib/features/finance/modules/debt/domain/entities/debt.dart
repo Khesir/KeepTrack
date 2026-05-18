@@ -15,10 +15,11 @@ class Debt {
   final DateTime? settledAt;
   final String? userId;
   final String? transactionId; // Initial transaction when debt was created
-  final double monthlyPaymentAmount; // Fixed amount due each payment period
-  final double feeAmount; // Total fees associated with the debt
-  final DateTime? nextPaymentDate; // When next payment is due
-  final PaymentFrequency paymentFrequency; // Payment frequency
+  final double monthlyPaymentAmount;
+  final double feeAmount;
+  final DateTime? nextPaymentDate;
+  final PaymentFrequency paymentFrequency;
+  final String? budgetProfileId;
 
   Debt({
     this.id,
@@ -40,6 +41,7 @@ class Debt {
     this.feeAmount = 0,
     this.nextPaymentDate,
     this.paymentFrequency = PaymentFrequency.monthly,
+    this.budgetProfileId,
   });
 
   /// Calculate repayment progress (0.0 to 1.0)
@@ -95,6 +97,7 @@ class Debt {
     double? feeAmount,
     DateTime? nextPaymentDate,
     PaymentFrequency? paymentFrequency,
+    String? budgetProfileId,
   }) {
     return Debt(
       id: id ?? this.id,
@@ -116,6 +119,7 @@ class Debt {
       feeAmount: feeAmount ?? this.feeAmount,
       nextPaymentDate: nextPaymentDate ?? this.nextPaymentDate,
       paymentFrequency: paymentFrequency ?? this.paymentFrequency,
+      budgetProfileId: budgetProfileId ?? this.budgetProfileId,
     );
   }
 

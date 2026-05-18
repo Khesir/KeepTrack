@@ -16,6 +16,7 @@ class Budget {
   final String? notes;
   final double? customTargetAmount; // Optional custom target (overrides calculated from categories)
   final String? userId; // User identifier (UUID)
+  final String? budgetProfileId; // Optional link to a BudgetProfile
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? closedAt;
@@ -31,6 +32,7 @@ class Budget {
     this.notes,
     this.customTargetAmount,
     this.userId,
+    this.budgetProfileId,
     this.createdAt,
     this.updatedAt,
     this.closedAt,
@@ -135,6 +137,7 @@ class Budget {
     String? notes,
     double? customTargetAmount,
     String? userId,
+    String? budgetProfileId,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? closedAt,
@@ -150,6 +153,7 @@ class Budget {
       notes: notes ?? this.notes,
       customTargetAmount: customTargetAmount ?? this.customTargetAmount,
       userId: userId ?? this.userId,
+      budgetProfileId: budgetProfileId ?? this.budgetProfileId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       closedAt: closedAt ?? this.closedAt,

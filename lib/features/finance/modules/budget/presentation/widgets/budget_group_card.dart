@@ -18,6 +18,8 @@ class BudgetGroupCard extends StatelessWidget {
   final void Function(BudgetCategory) onCategoryDetailTap;
   final void Function(BudgetCategory) onCategoryEditTap;
   final Future<void> Function(BudgetCategory, double) onUpdateAmount;
+  final Future<void> Function(BudgetCategory, double)? onCategoryPay;
+  final int? dragIndex;
 
   const BudgetGroupCard({
     super.key,
@@ -31,6 +33,8 @@ class BudgetGroupCard extends StatelessWidget {
     required this.onCategoryDetailTap,
     required this.onCategoryEditTap,
     required this.onUpdateAmount,
+    this.onCategoryPay,
+    this.dragIndex,
   });
 
   @override
@@ -153,6 +157,17 @@ class BudgetGroupCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       constraints: const BoxConstraints(),
                     ),
+                    if (dragIndex != null)
+                      ReorderableDragStartListener(
+                        index: dragIndex!,
+                        child: const MouseRegion(
+                          cursor: SystemMouseCursors.grab,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Icon(Icons.drag_handle, size: 16, color: AppColors.textTertiary),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -239,6 +254,7 @@ class BudgetGroupCard extends StatelessWidget {
             onDetailTap: () => onCategoryDetailTap(cat),
             onEditTap: () => onCategoryEditTap(cat),
             onUpdateAmount: (amount) => onUpdateAmount(cat, amount),
+            onPay: onCategoryPay != null ? (amount) => onCategoryPay!(cat, amount) : null,
           ),
         ),
         GhostAddRow(label: 'Add Category', onTap: onAddRow),

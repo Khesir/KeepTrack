@@ -17,7 +17,6 @@ import '../../features/finance/presentation/screens/configuration/goals/goals_ma
 import '../../features/finance/presentation/screens/configuration/debts/debts_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/planned_payments/planned_payments_management_screen.dart';
 import '../../features/finance/presentation/screens/transactions/create_transaction_screen.dart';
-import '../../features/finance/presentation/screens/transactions/create_transfer_transaction_screen.dart';
 import '../../features/finance/presentation/screens/finance_main_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 
@@ -51,7 +50,6 @@ class AppRoutes {
 
   // Transaction
   static const String transactionCreate = '/create';
-  static const String transferCreate = '/transfer/create';
 }
 
 /// App router - handles all route generation
@@ -170,12 +168,6 @@ class AppRouter {
             initialCategoryId: args?['initialCategoryId'] as String?,
             initialType: args?['initialType'] as TransactionType?,
           ),
-          settings: settings,
-        );
-
-      case AppRoutes.transferCreate:
-        return MaterialPageRoute(
-          builder: (_) => const CreateTransferTransactionScreen(),
           settings: settings,
         );
 

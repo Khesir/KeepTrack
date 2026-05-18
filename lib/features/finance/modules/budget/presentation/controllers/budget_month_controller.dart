@@ -8,9 +8,13 @@ import 'package:keep_track/features/finance/modules/budget/presentation/state/bu
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 
 class BudgetMonthController extends StreamState<AsyncState<BudgetScreenData>> {
@@ -19,6 +23,8 @@ class BudgetMonthController extends StreamState<AsyncState<BudgetScreenData>> {
   final DebtController _debtController;
   final PlannedPaymentController _plannedPaymentController;
   final TransactionController _transactionController;
+  final SubscriptionController _subscriptionController;
+  final SavingsController _savingsController;
 
   List<StreamSubscription> _subscriptions = [];
 
@@ -28,20 +34,26 @@ class BudgetMonthController extends StreamState<AsyncState<BudgetScreenData>> {
     required DebtController debtController,
     required PlannedPaymentController plannedPaymentController,
     required TransactionController transactionController,
+    required SubscriptionController subscriptionController,
+    required SavingsController savingsController,
   }) : _budgetController = budgetController,
        _monthPlanController = monthPlanController,
        _debtController = debtController,
        _plannedPaymentController = plannedPaymentController,
        _transactionController = transactionController,
+       _subscriptionController = subscriptionController,
+       _savingsController = savingsController,
        super(const AsyncLoading());
 
   void init() {
-    // latest known values -- start as loading
-    AsyncState<List<MonthPlan>> plans = const AsyncLoading();
-    AsyncState<List<Budget>> budget = const AsyncLoading();
-    AsyncState<List<Transaction>> transaction = const AsyncLoading();
-    AsyncState<List<Debt>> debts = const AsyncLoading();
-    AsyncState<List<PlannedPayment>> payments = const AsyncLoading();
+    // Seed from current state so re-subscribing after navigation restores data immediately
+    AsyncState<List<MonthPlan>> plans = _monthPlanController.state;
+    AsyncState<List<Budget>> budget = _budgetController.state;
+    AsyncState<List<Transaction>> transaction = _transactionController.state;
+    AsyncState<List<Debt>> debts = _debtController.state;
+    AsyncState<List<PlannedPayment>> payments = _plannedPaymentController.state;
+    AsyncState<List<Subscription>> subs = _subscriptionController.state;
+    AsyncState<List<SavingsBucket>> savings = _savingsController.state;
 
     void combine() {
       emit(
@@ -52,10 +64,15 @@ class BudgetMonthController extends StreamState<AsyncState<BudgetScreenData>> {
             transactions: _unwrap(transaction),
             debts: _unwrap(debts),
             payments: _unwrap(payments),
+            subscriptions: _unwrap(subs),
+            savingsBuckets: _unwrap(savings),
           ),
         ),
       );
     }
+
+    // Emit immediately with current state so screen renders on re-entry
+    combine();
 
     _subscriptions = [
       _monthPlanController.stream.listen((s) {
@@ -68,7 +85,7 @@ class BudgetMonthController extends StreamState<AsyncState<BudgetScreenData>> {
       }),
       _transactionController.stream.listen((s) {
         transaction = s;
-        combine(); // transaction can emit mid-load, always combine
+        combine();
       }),
       _debtController.stream.listen((s) {
         debts = s;
@@ -76,6 +93,14 @@ class BudgetMonthController extends StreamState<AsyncState<BudgetScreenData>> {
       }),
       _plannedPaymentController.stream.listen((s) {
         payments = s;
+        combine();
+      }),
+      _subscriptionController.stream.listen((s) {
+        subs = s;
+        combine();
+      }),
+      _savingsController.stream.listen((s) {
+        savings = s;
         combine();
       }),
     ];

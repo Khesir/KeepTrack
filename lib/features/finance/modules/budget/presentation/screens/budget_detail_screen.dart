@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/state/state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../domain/entities/budget.dart';

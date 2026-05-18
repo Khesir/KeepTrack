@@ -18,6 +18,8 @@ class GoalModel extends Goal {
     super.userId,
     super.managementFeePercent,
     super.withdrawalFeePercent,
+    super.savingsBucketId,
+    super.budgetProfileId,
   });
 
   /// Convert from JSON (NestJS camelCase response)
@@ -53,6 +55,8 @@ class GoalModel extends Goal {
           (json['managementFeePercent'] as num?)?.toDouble() ?? 0,
       withdrawalFeePercent:
           (json['withdrawalFeePercent'] as num?)?.toDouble() ?? 0,
+      savingsBucketId: json['savingsBucketId'] as String?,
+      budgetProfileId: json['budgetProfileId'] as String?,
     );
   }
 
@@ -71,6 +75,8 @@ class GoalModel extends Goal {
       if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
       'managementFeePercent': managementFeePercent,
       'withdrawalFeePercent': withdrawalFeePercent,
+      if (savingsBucketId != null) 'savingsBucketId': savingsBucketId,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
     };
   }
 
@@ -91,6 +97,7 @@ class GoalModel extends Goal {
       if (userId != null) 'userId': userId,
       'managementFeePercent': managementFeePercent,
       'withdrawalFeePercent': withdrawalFeePercent,
+      if (savingsBucketId != null) 'savingsBucketId': savingsBucketId,
     };
   }
 
@@ -113,6 +120,8 @@ class GoalModel extends Goal {
       userId: goal.userId,
       managementFeePercent: goal.managementFeePercent,
       withdrawalFeePercent: goal.withdrawalFeePercent,
+      savingsBucketId: goal.savingsBucketId,
+      budgetProfileId: goal.budgetProfileId,
     );
   }
 }

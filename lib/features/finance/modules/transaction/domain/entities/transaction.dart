@@ -18,6 +18,8 @@ class Transaction {
   final String? goalId;
   final String? plannedPaymentId;
   final String? refundedTransactionId;
+  final String? savingsId;
+  final String? subscriptionId;
 
   Transaction({
     this.id,
@@ -37,6 +39,8 @@ class Transaction {
     this.goalId,
     this.plannedPaymentId,
     this.refundedTransactionId,
+    this.savingsId,
+    this.subscriptionId,
   });
 
   Transaction copyWith({
@@ -57,6 +61,8 @@ class Transaction {
     String? goalId,
     String? plannedPaymentId,
     String? refundedTransactionId,
+    String? savingsId,
+    String? subscriptionId,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -76,6 +82,8 @@ class Transaction {
       goalId: goalId ?? this.goalId,
       plannedPaymentId: plannedPaymentId ?? this.plannedPaymentId,
       refundedTransactionId: refundedTransactionId ?? this.refundedTransactionId,
+      savingsId: savingsId ?? this.savingsId,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
     );
   }
 

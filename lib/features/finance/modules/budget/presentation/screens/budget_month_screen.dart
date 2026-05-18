@@ -21,10 +21,17 @@ import 'package:keep_track/features/finance/presentation/state/month_plan_contro
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/state/budget_section_type.dart';
+import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
-import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_screen.dart';
+import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_sheet.dart';
 import '../sheets/add_category_sheet.dart';
 import '../sheets/add_debts_sheet.dart';
+import '../sheets/add_subscription_sheet.dart';
 import '../sheets/category_detail_sheet.dart';
 import '../sheets/commitment_sheet.dart';
 import '../sheets/create_group_sheet.dart';
@@ -35,7 +42,11 @@ import '../sheets/start_planning_sheet.dart';
 import '../widgets/debt_detail_content.dart';
 
 class BudgetMonthScreen extends ScopedScreen {
-  const BudgetMonthScreen({super.key});
+  final VoidCallback? onToggleView;
+  final VoidCallback? onOpenSettings;
+  final String? budgetProfileId;
+
+  const BudgetMonthScreen({super.key, this.onToggleView, this.onOpenSettings, this.budgetProfileId});
 
   @override
   State<BudgetMonthScreen> createState() => _BudgetMonthScreenState();
@@ -49,8 +60,13 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
   late final PlannedPaymentController _plannedPaymentController;
   late final TransactionController _transactionController;
   late final FinanceCategoryController _categoryController;
+  late final SubscriptionController _subscriptionController;
+  late final SavingsController _savingsController;
 
   DateTime _currentMonth = DateTime.now();
+  List<String> _itemOrder = [];
+  List<String> _selectedSavingsIds = [];
+  Map<String, double> _plannedSavingsAmounts = {};
   Budget? _selectedGroup;
   BudgetCategory? _selectedCategory;
   Budget? _selectedCategoryGroup;
@@ -64,6 +80,8 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
     _plannedPaymentController = locator.get<PlannedPaymentController>();
     _transactionController = locator.get<TransactionController>();
     _categoryController = locator.get<FinanceCategoryController>();
+    _subscriptionController = locator.get<SubscriptionController>();
+    _savingsController = locator.get<SavingsController>();
 
     _controller = BudgetMonthController(
       budgetController: _budgetController,
@@ -71,13 +89,91 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
       debtController: _debtController,
       plannedPaymentController: _plannedPaymentController,
       transactionController: _transactionController,
+      subscriptionController: _subscriptionController,
+      savingsController: _savingsController,
     );
   }
 
   @override
   void onReady() {
+    _savingsController.loadSavings();
     _controller.init();
     _loadMonthTransactions();
+    _loadSectionOrder();
+    _loadSelectedSavingsIds();
+    _loadPlannedSavingsAmounts();
+  }
+
+  Future<void> _loadSectionOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList('budget_item_order');
+    if (saved != null && mounted) {
+      setState(() => _itemOrder = saved);
+    }
+  }
+
+  Future<void> _loadSelectedSavingsIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList('budget_savings_$_monthKey') ?? [];
+    if (mounted) setState(() => _selectedSavingsIds = saved);
+  }
+
+  Future<void> _saveSelectedSavingsIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('budget_savings_$_monthKey', _selectedSavingsIds);
+  }
+
+  Future<void> _loadPlannedSavingsAmounts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) => k.startsWith('budget_savings_planned_${_monthKey}_'));
+    final map = <String, double>{};
+    for (final k in keys) {
+      final bucketId = k.replaceFirst('budget_savings_planned_${_monthKey}_', '');
+      map[bucketId] = prefs.getDouble(k) ?? 0;
+    }
+    if (mounted) setState(() => _plannedSavingsAmounts = map);
+  }
+
+  Future<void> _savePlannedAmount(String bucketId, double amount) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('budget_savings_planned_${_monthKey}_$bucketId', amount);
+  }
+
+  void _reconcileItemOrder(BudgetScreenData data) {
+    final groupIds = data.budgets
+        .where((g) => g.id != null)
+        .map((g) => g.id!)
+        .toSet();
+    final allKeys = {...groupIds, ...kSectionKeys};
+
+    List<String> next;
+    if (_itemOrder.isEmpty) {
+      next = [...groupIds, ...kSectionKeys];
+    } else {
+      final kept = _itemOrder.where((k) => allKeys.contains(k)).toList();
+      final newItems = allKeys.difference(kept.toSet()).toList();
+      final insertBefore = kept.indexWhere((k) => kSectionKeys.contains(k));
+      final pos = insertBefore >= 0 ? insertBefore : kept.length;
+      kept.insertAll(pos, newItems.where((k) => !kSectionKeys.contains(k)));
+      kept.addAll(newItems.where((k) => kSectionKeys.contains(k)));
+      next = kept;
+    }
+
+    if (next.join(',') != _itemOrder.join(',')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _itemOrder = next);
+      });
+    }
+  }
+
+  Future<void> _reorderItems(int oldIndex, int newIndex) async {
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+      final item = _itemOrder.removeAt(oldIndex);
+      _itemOrder.insert(newIndex, item);
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('budget_item_order', _itemOrder);
   }
 
   @override
@@ -90,8 +186,15 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
     return Scaffold(
       body: AsyncStreamBuilder<BudgetScreenData>(
         state: _controller,
-        builder: (context, data) => BudgetScreenBody(
-          data: data,
+        builder: (context, data) {
+          _reconcileItemOrder(data);
+          final filteredData = data.copyWith(
+            savingsBuckets: data.savingsBuckets
+                .where((b) => b.id != null && _selectedSavingsIds.contains(b.id))
+                .toList(),
+          );
+          return BudgetScreenBody(
+          data: filteredData,
           currentMonth: _currentMonth,
           monthLabel: _monthLabel,
           monthKey: _monthKey,
@@ -123,19 +226,32 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
           onEditCategory: _showEditCategorySheet,
           onEditGroup: _showEditGroupSheet,
           onCreateGroup: _showCreateGroupSheet,
+          onToggleView: widget.onToggleView,
+          onOverrideSettings: widget.onOpenSettings,
+          budgetProfileId: widget.budgetProfileId,
           onStartPlanning: _showStartPlanningSheet,
           onDeletePlan: _confirmDeletePlan,
           onShowCommitments: _showCommitmentsSheet,
           onDebtPay: _showDebtPaymentDialog,
           onEditDebt: _showEditDebtSheet,
           onAddDebt: (isReceivable) => _showAddDebtSheet(isReceivable: isReceivable),
+          onAddSubscription: _showAddSubscriptionSheet,
+          onPaySubscription: _paySubscription,
+          onManageSavings: () => _showSavingsManageSheet(data.savingsBuckets),
+          onDepositSavings: _showDepositDialog,
+          onSetPlannedSavings: _setPlannedAmount,
+          plannedSavingsAmounts: _plannedSavingsAmounts,
+          itemOrder: _itemOrder,
+          onItemReorder: _reorderItems,
           onUpdateAmount: (g, c, amt) =>
               _budgetController.updateCategory(g.id!, c.copyWith(targetAmount: amt)),
+          onCategoryPay: _payCategoryAmount,
           onUpdateDebtPayment: (debt, amt) =>
               _debtController.updateDebt(debt.copyWith(monthlyPaymentAmount: amt)),
           onDebtDetailTap: _showDebtDetailSheet,
           onCategoryDetailTap: _showCategoryDetail,
-        ),
+        );
+        },
         loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
         errorBuilder: (_, msg) => Center(child: Text('Error: $msg')),
       ),
@@ -145,26 +261,14 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
 
   Widget _buildFab() {
     return FloatingActionButton.extended(
-      onPressed: () async {
-        await showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => Dialog(
-            insetPadding: const EdgeInsets.all(16),
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520, maxHeight: 700),
-              child: const CreateTransactionScreen(),
-            ),
-          ),
-        );
-        if (mounted) _loadMonthTransactions();
-      },
+      onPressed: () => CreateTransactionSheet.show(
+        context,
+        onCreated: _loadMonthTransactions,
+      ),
       icon: const Icon(Icons.add),
       label: const Text('New Transaction'),
+      backgroundColor: AppColors.accent,
+      foregroundColor: Colors.white,
     );
   }
 }
@@ -194,8 +298,12 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
       _selectedCategory = null;
       _selectedCategoryGroup = null;
       _selectedDebt = null;
+      _selectedSavingsIds = [];
+      _plannedSavingsAmounts = {};
     });
     _loadMonthTransactions();
+    _loadSelectedSavingsIds();
+    _loadPlannedSavingsAmounts();
   }
 
   void _nextMonth() {
@@ -205,8 +313,12 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
       _selectedCategory = null;
       _selectedCategoryGroup = null;
       _selectedDebt = null;
+      _selectedSavingsIds = [];
+      _plannedSavingsAmounts = {};
     });
     _loadMonthTransactions();
+    _loadSelectedSavingsIds();
+    _loadPlannedSavingsAmounts();
   }
 
   void _loadMonthTransactions() {
@@ -614,11 +726,149 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       isScrollControlled: true,
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
-        onSave: (debt) async {
+        onSave: (debt, _) async {
           await _debtController.createDebtOnly(debt);
         },
       ),
     );
+  }
+
+  void _showAddSubscriptionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddSubscriptionSheet(
+        onSave: (sub) => _subscriptionController.createSubscription(sub),
+      ),
+    );
+  }
+
+  void _showSavingsManageSheet(List<SavingsBucket> allBuckets) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheet) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.5,
+          maxChildSize: 0.85,
+          builder: (_, scrollCtrl) => Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    Text('Manage Savings', style: AppTextStyles.h4),
+                    const Spacer(),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: allBuckets.isEmpty
+                    ? Center(child: Text('No savings buckets found', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)))
+                    : ListView.separated(
+                        controller: scrollCtrl,
+                        itemCount: allBuckets.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
+                        itemBuilder: (_, i) {
+                          final b = allBuckets[i];
+                          final isSelected = _selectedSavingsIds.contains(b.id);
+                          return CheckboxListTile(
+                            value: isSelected,
+                            title: Text(b.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                            subtitle: Text(formatCurrency(b.balance), style: AppTextStyles.caption.copyWith(color: AppColors.success)),
+                            onChanged: (_) {
+                              final next = isSelected
+                                  ? _selectedSavingsIds.where((id) => id != b.id).toList()
+                                  : [..._selectedSavingsIds, b.id!];
+                              setState(() => _selectedSavingsIds = next);
+                              setSheet(() {});
+                              _saveSelectedSavingsIds();
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDepositDialog(SavingsBucket bucket) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Deposit — ${bucket.name}'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Amount', border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              final amount = double.tryParse(ctrl.text);
+              if (amount == null || amount <= 0) return;
+              Navigator.pop(ctx);
+              await _savingsController.updateSavingsBucket(
+                bucket.copyWith(balance: bucket.balance + amount),
+              );
+            },
+            child: const Text('Deposit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _setPlannedAmount(SavingsBucket bucket, double amount) {
+    if (bucket.id == null) return;
+    setState(() => _plannedSavingsAmounts = {..._plannedSavingsAmounts, bucket.id!: amount});
+    _savePlannedAmount(bucket.id!, amount);
+  }
+
+  Future<void> _payCategoryAmount(Budget group, BudgetCategory cat, double amount) async {
+    final isIncome = group.budgetType == BudgetType.income;
+    final tx = Transaction(
+      amount: amount,
+      type: isIncome ? TransactionType.income : TransactionType.expense,
+      financeCategoryId: cat.financeCategoryId,
+      budgetId: group.id,
+      date: DateTime.now(),
+      description: cat.financeCategory?.name,
+    );
+    await _transactionController.createTransaction(tx);
+    _budgetController.refreshBudgetsWithSpentAmounts();
+  }
+
+  Future<void> _paySubscription(Subscription sub) async {
+    try {
+      await _subscriptionController.pay(sub.id!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${sub.name} marked as paid')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
   }
 
   void _showEditDebtSheet(Debt debt) {

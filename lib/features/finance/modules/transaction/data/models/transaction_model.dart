@@ -19,6 +19,8 @@ class TransactionModel extends Transaction {
     super.goalId,
     super.plannedPaymentId,
     super.refundedTransactionId,
+    super.savingsId,
+    super.subscriptionId,
   });
 
   factory TransactionModel.fromEntity(Transaction transaction) {
@@ -40,6 +42,8 @@ class TransactionModel extends Transaction {
       goalId: transaction.goalId,
       plannedPaymentId: transaction.plannedPaymentId,
       refundedTransactionId: transaction.refundedTransactionId,
+      savingsId: transaction.savingsId,
+      subscriptionId: transaction.subscriptionId,
     );
   }
 
@@ -65,6 +69,8 @@ class TransactionModel extends Transaction {
       goalId: json['goalId'] as String?,
       plannedPaymentId: json['plannedPaymentId'] as String?,
       refundedTransactionId: json['refundedTransactionId'] as String?,
+      savingsId: json['savingsId'] as String?,
+      subscriptionId: json['subscriptionId'] as String?,
     );
   }
 
@@ -83,6 +89,8 @@ class TransactionModel extends Transaction {
       if (goalId != null) 'goalId': goalId,
       if (plannedPaymentId != null) 'plannedPaymentId': plannedPaymentId,
       if (refundedTransactionId != null) 'refundedTransactionId': refundedTransactionId,
+      if (savingsId != null) 'savingsId': savingsId,
+      if (subscriptionId != null) 'subscriptionId': subscriptionId,
     };
   }
 
@@ -105,6 +113,8 @@ class TransactionModel extends Transaction {
       if (goalId != null) 'goalId': goalId,
       if (plannedPaymentId != null) 'plannedPaymentId': plannedPaymentId,
       if (refundedTransactionId != null) 'refundedTransactionId': refundedTransactionId,
+      if (savingsId != null) 'savingsId': savingsId,
+      if (subscriptionId != null) 'subscriptionId': subscriptionId,
     };
   }
 }

@@ -2,8 +2,8 @@ import 'package:keep_track/features/finance/modules/debt/data/models/debt_model.
 
 /// Data source interface for Debt operations
 abstract class DebtDataSource {
-  /// Fetch all debts for the current user
-  Future<List<DebtModel>> fetchDebts();
+  /// Fetch all debts for the current user, optionally scoped to a budget profile
+  Future<List<DebtModel>> fetchDebts({String? budgetProfileId});
 
   /// Fetch a specific debt by ID
   Future<DebtModel?> fetchDebtById(String id);
@@ -26,7 +26,6 @@ abstract class DebtDataSource {
   /// Record a payment against a debt. Returns the updated debt.
   Future<DebtModel> payDebt(
     String id, {
-    required String accountId,
     required double amount,
     double? fee,
   });

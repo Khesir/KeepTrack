@@ -42,7 +42,7 @@ class _HomeScreenState extends ScopedScreenState<HomeScreen>
   void onReady() {
     configureLayout(title: 'Home', showBottomNav: true);
     _savingsController.loadSavings();
-    _budgetController.loadBudgets();
+    _budgetController.loadBudgetsWithSpentAmounts();
     _loadTransactionsForGraph();
   }
 

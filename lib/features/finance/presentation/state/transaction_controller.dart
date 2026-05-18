@@ -41,6 +41,14 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
     });
   }
 
+  Future<void> loadTransactionsBySavings(String savingsId) async {
+    await execute(() async {
+      return await _repository
+          .getTransactionsBySavings(savingsId)
+          .then((r) => r.unwrap());
+    });
+  }
+
   /// Load transactions by date range
   Future<void> loadTransactionsByDateRange(
     DateTime startDate,

@@ -78,7 +78,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     selectedType = d?.type ?? DebtType.lending;
     selectedStatus = d?.status ?? DebtStatus.active;
     selectedPaymentFrequency = d?.paymentFrequency ?? PaymentFrequency.monthly;
-    selectedAccountId = d?.accountId ?? widget.savingsBuckets.firstOrNull?.id;
+    selectedAccountId = widget.savingsBuckets.firstOrNull?.id;
 
     _categoryController = locator.get<FinanceCategoryController>();
     _categoryController.loadCategories();
@@ -142,7 +142,6 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
         notes: notesController.text.trim().isNotEmpty
             ? notesController.text.trim()
             : null,
-        accountId: selectedAccountId,
         transactionId: widget.debt?.transactionId,
         monthlyPaymentAmount: monthlyPayment,
         feeAmount: feeAmount,

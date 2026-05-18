@@ -4,6 +4,7 @@ import '../entities/transaction.dart';
 abstract class TransactionRepository {
   Future<Result<List<Transaction>>> getTransactions();
   Future<Result<List<Transaction>>> getTransactionsByBudget(String budgetId);
+  Future<Result<List<Transaction>>> getTransactionsBySavings(String savingsId);
   Future<Result<List<Transaction>>> getTransactionsByCategory(String categoryId);
   Future<Result<List<Transaction>>> getTransactionsByDateRange(DateTime startDate, DateTime endDate);
   Future<Result<List<Transaction>>> getRecentTransactions({int limit = 10});

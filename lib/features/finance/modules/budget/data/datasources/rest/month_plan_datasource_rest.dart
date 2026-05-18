@@ -111,4 +111,16 @@ class MonthPlanDataSourceRest implements MonthPlanDataSource {
       throw UnknownFailure(message: 'Failed to add budget to month plan', originalError: e, stackTrace: st);
     }
   }
+
+  @override
+  Future<MonthPlanModel> getOrCreatePlanForProfile(String profileId) async {
+    try {
+      final res = await _dio.post('/month-plans/profile/$profileId/get-or-create');
+      return MonthPlanModel.fromJson(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw mapDioError(e);
+    } catch (e, st) {
+      throw UnknownFailure(message: 'Failed to get or create profile plan', originalError: e, stackTrace: st);
+    }
+  }
 }
