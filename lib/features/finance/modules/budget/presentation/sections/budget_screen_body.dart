@@ -6,22 +6,22 @@ import 'package:keep_track/features/finance/modules/budget/domain/entities/month
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/payment_enums.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 
 import '../helpers/budget_month_filter.dart';
 import '../sheets/budget_settings_sheet.dart';
+import '../sections/budget_overall_summary.dart';
 import '../sections/budget_summary_bar.dart';
 import '../sections/debt_section.dart';
-import '../sections/savings_section.dart';
+import '../sections/goal_section.dart';
 import '../sections/subscription_section.dart';
 import '../state/budget_section_type.dart'; // kSectionKeys
 import '../state/budget_screen_data.dart';
 import '../state/empty_budget_state.dart';
 import '../widgets/budget_group_card.dart';
 import '../widgets/ghost_add_row.dart';
-import '../widgets/month_header.dart';
 import '../widgets/side_summary_panel.dart';
 
 class BudgetScreenBody extends StatelessWidget {
@@ -66,10 +66,10 @@ class BudgetScreenBody extends StatelessWidget {
   final Future<void> Function(Debt debt, double amount) onUpdateDebtPayment;
   final VoidCallback onAddSubscription;
   final Future<void> Function(Subscription) onPaySubscription;
-  final VoidCallback onManageSavings;
-  final void Function(SavingsBucket) onDepositSavings;
-  final void Function(SavingsBucket, double) onSetPlannedSavings;
-  final Map<String, double> plannedSavingsAmounts;
+  final VoidCallback onAddGoal;
+  final void Function(Goal) onGoalTap;
+  final int selectedTab;
+  final void Function(int) onTabSelect;
   final List<String> itemOrder;
   final void Function(int oldIndex, int newIndex) onItemReorder;
   final VoidCallback? onToggleView;
@@ -116,10 +116,10 @@ class BudgetScreenBody extends StatelessWidget {
     required this.onUpdateDebtPayment,
     required this.onAddSubscription,
     required this.onPaySubscription,
-    required this.onManageSavings,
-    required this.onDepositSavings,
-    required this.onSetPlannedSavings,
-    required this.plannedSavingsAmounts,
+    required this.onAddGoal,
+    required this.onGoalTap,
+    required this.selectedTab,
+    required this.onTabSelect,
     required this.itemOrder,
     required this.onItemReorder,
     this.onToggleView,
@@ -143,14 +143,40 @@ class BudgetScreenBody extends StatelessWidget {
       monthTransactions,
     );
 
+    final paidThisMonthByDebt = <String, double>{};
+    final contributedThisMonthByGoal = <String, double>{};
+    for (final t in monthTransactions) {
+      if (t.debtId != null) {
+        paidThisMonthByDebt[t.debtId!] = (paidThisMonthByDebt[t.debtId!] ?? 0) + t.amount;
+      }
+      if (t.goalId != null) {
+        contributedThisMonthByGoal[t.goalId!] = (contributedThisMonthByGoal[t.goalId!] ?? 0) + t.amount;
+      }
+    }
+
+    // Monthly plan (month key match — only for non-profile mode)
     final monthPlan = data.monthPlans.cast<MonthPlan?>().firstWhere(
       (p) => p?.month == monthKey,
       orElse: () => null,
     );
-    final hasMonthPlan = monthPlan != null;
+
+    // Profile plan (budgetProfileId match — profile plans have month: null)
+    final profilePlan = budgetProfileId != null
+        ? data.monthPlans.cast<MonthPlan?>().firstWhere(
+            (p) => p?.budgetProfileId == budgetProfileId,
+            orElse: () => null,
+          )
+        : null;
+
     final monthBudgets = budgetProfileId != null
         ? data.budgets.where((b) => b.budgetProfileId == budgetProfileId && b.status == BudgetStatus.active).toList()
         : BudgetMonthFilter.filterBudgets(data.budgets, monthPlan);
+
+    // Profile mode: plan exists OR budget groups already exist (started without creating plan first)
+    // Monthly mode: a month-keyed plan must exist
+    final hasMonthPlan = budgetProfileId != null
+        ? (profilePlan != null || monthBudgets.isNotEmpty)
+        : monthPlan != null;
 
     final debts = data.debts
         .where(
@@ -210,9 +236,19 @@ class BudgetScreenBody extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 600;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
 
         // ── summary panel ─────────────────────────────────────────────────────
-        Widget buildSummaryPanel() => SideSummaryPanel(
+        void settings() => (onOverrideSettings ?? () => BudgetSettingsSheet.show(
+          context,
+          monthLabel: monthLabel,
+          onEditBudget: null,
+          onDeleteBudget: () => onDeletePlan(monthBudgets),
+        ))();
+
+        Widget buildSummaryPanel({bool withActions = false}) => SideSummaryPanel(
+          onToggleView: withActions ? onToggleView : null,
+          onSettings: withActions ? settings : null,
           selectedGroup: syncedSelected,
           selectedCategory: syncedCategory,
           selectedCategoryGroup: syncedCategoryGroup,
@@ -238,128 +274,195 @@ class BudgetScreenBody extends StatelessWidget {
           onUpdateAmount: onUpdateAmount,
         );
 
-        // ── budget card ───────────────────────────────────────────────────────
-        final budgetCard = Card(
-          margin: EdgeInsets.zero,
-          elevation: 0,
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: AppColors.border),
-          ),
-          child: CustomScrollView(
-            slivers: [
-              // summary bar
+        // Gray scroll area so white group cards pop (Every Dollar style)
+        final bg = isDark ? const Color(0xFF1A1A18) : AppColors.background;
+        final panelBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+        final divColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
+
+        // ── budget group order (tab 0 only) ──────────────────────────────────
+        final budgetGroupKeys = itemOrder.where((k) => !kSectionKeys.contains(k)).toList();
+
+        void onBudgetGroupReorder(int filteredOld, int filteredNew) {
+          if (filteredNew > filteredOld) filteredNew -= 1;
+          final fullOld = itemOrder.indexOf(budgetGroupKeys[filteredOld]);
+          final fullNew = itemOrder.indexOf(budgetGroupKeys[filteredNew]);
+          onItemReorder(fullOld, fullNew);
+        }
+
+        // ── scrollable main content ───────────────────────────────────────────
+        List<Widget> contentSlivers;
+
+        if (selectedTab == 0) {
+          // Summary tab: full financial overview
+          contentSlivers = [
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            SliverToBoxAdapter(
+              child: BudgetOverallSummary(
+                monthBudgets: monthBudgets,
+                spentByCategory: spentByCategory,
+                subscriptions: monthSubscriptions,
+                debts: debts,
+                receivables: receivables,
+                goals: data.goals,
+                transactions: monthTransactions,
+                currentMonth: currentMonth,
+                isDark: isDark,
+              ),
+            ),
+          ];
+        } else if (selectedTab == 1) {
+          // Budget tab: reorderable budget groups only
+          contentSlivers = [
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+            if (!hasMonthPlan)
               SliverToBoxAdapter(
-                child: BudgetSummaryBar(
-                  monthBudgets: monthBudgets,
-                  spentByCategory: spentByCategory,
-                  activePayments: activePayments,
-                  activeDebts: debts,
-                  activeReceivables: receivables,
-                  onCommitmentsTab: () => onShowCommitments(activePayments),
+                child: EmptyBudgetState(
+                  monthLabel: monthLabel,
+                  onStart: () => onStartPlanning(data.budgets),
                 ),
               ),
-
-              // empty state (only shown when no plan and item list is empty)
-              if (!hasMonthPlan)
-                SliverToBoxAdapter(
-                  child: EmptyBudgetState(
+            SliverReorderableList(
+              itemCount: budgetGroupKeys.length,
+              onReorder: onBudgetGroupReorder,
+              proxyDecorator: (child, index, animation) => Material(
+                elevation: 4,
+                color: Colors.transparent,
+                child: child,
+              ),
+              itemBuilder: (context, index) {
+                final key = budgetGroupKeys[index];
+                return KeyedSubtree(
+                  key: ValueKey(key),
+                  child: _buildItem(
+                    context,
+                    key: key,
+                    dragIndex: index,
+                    debts: debts,
+                    receivables: receivables,
+                    monthSubscriptions: monthSubscriptions,
+                    monthBudgets: monthBudgets,
                     monthLabel: monthLabel,
-                    onStart: () => onStartPlanning(data.budgets),
+                    spentByCategory: spentByCategory,
+                    paidThisMonthByDebt: paidThisMonthByDebt,
+                    contributedThisMonthByGoal: contributedThisMonthByGoal,
+                    selectedGroup: syncedSelected,
+                    selectedDebt: selectedDebt,
+                    isWide: isWide,
+                    monthTransactions: monthTransactions,
+                    divColor: divColor,
                   ),
-                ),
-
-              // flat reorderable list: budget groups + sections
-              SliverReorderableList(
-                itemCount: itemOrder.length,
-                onReorder: onItemReorder,
-                proxyDecorator: (child, index, animation) => Material(
-                  elevation: 4,
-                  color: Colors.transparent,
-                  child: child,
-                ),
-                itemBuilder: (context, index) {
-                  final key = itemOrder[index];
-                  return KeyedSubtree(
-                    key: ValueKey(key),
-                    child: _buildItem(
-                      context,
-                      key: key,
-                      dragIndex: index,
-                      debts: debts,
-                      receivables: receivables,
-                      monthSubscriptions: monthSubscriptions,
-                      savingsBuckets: data.savingsBuckets,
-                      monthBudgets: monthBudgets,
-                      monthLabel: monthLabel,
-                      spentByCategory: spentByCategory,
-                      selectedGroup: syncedSelected,
-                      selectedDebt: selectedDebt,
-                      isWide: isWide,
-                      monthTransactions: monthTransactions,
-                    ),
-                  );
-                },
-              ),
-
-              SliverToBoxAdapter(
+                );
+              },
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                 child: GhostAddRow(label: 'Add Budget Group', onTap: onCreateGroup),
               ),
+            ),
+          ];
+        } else {
+          // Single section tab (tabs 2-5 after adding summary at 0)
+          final sectionKey = switch (selectedTab) {
+            2 => 'subscriptions',
+            3 => 'debts',
+            4 => 'receivables',
+            5 => 'goals',
+            _ => '',
+          };
+          final sectionDragIndex = itemOrder.indexOf(sectionKey);
+          contentSlivers = [
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+            SliverToBoxAdapter(
+              child: _buildItem(
+                context,
+                key: sectionKey,
+                dragIndex: sectionDragIndex >= 0 ? sectionDragIndex : 0,
+                debts: debts,
+                receivables: receivables,
+                monthSubscriptions: monthSubscriptions,
+                monthBudgets: monthBudgets,
+                monthLabel: monthLabel,
+                spentByCategory: spentByCategory,
+                paidThisMonthByDebt: paidThisMonthByDebt,
+                contributedThisMonthByGoal: contributedThisMonthByGoal,
+                selectedGroup: syncedSelected,
+                selectedDebt: selectedDebt,
+                isWide: isWide,
+                monthTransactions: monthTransactions,
+                divColor: divColor,
+              ),
+            ),
+          ];
+        }
 
-              const SliverToBoxAdapter(child: SizedBox(height: 80)),
-            ],
+        final mainScroll = CustomScrollView(
+          slivers: [
+            ...contentSlivers,
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        );
+
+        // ── Shared summary bar widget ─────────────────────────────────────────
+        Widget summaryBar({bool narrowActions = false}) => Container(
+          color: panelBg,
+          child: BudgetSummaryBar(
+            monthLabel: monthLabel,
+            onPrev: onPrevMonth,
+            onNext: onNextMonth,
+            // On narrow, show actions in the bar; on wide, they're in the side panel
+            onToggleView: narrowActions ? onToggleView : null,
+            onSummaryTap: narrowActions ? () => _showSummarySheet(context, buildSummaryPanel()) : null,
+            onSettings: narrowActions ? settings : null,
+            monthBudgets: monthBudgets,
+            spentByCategory: spentByCategory,
+            activePayments: activePayments,
+            activeDebts: debts,
+            activeReceivables: receivables,
+            onCommitmentsTab: () => onShowCommitments(activePayments),
+            selectedTab: selectedTab,
+            onTabSelect: onTabSelect,
+            budgetGroupCount: monthBudgets.length,
+            subsCount: monthSubscriptions.length,
+            debtsCount: debts.length,
+            receivablesCount: receivables.length,
+            goalsCount: data.goals.length,
           ),
         );
 
         // ── layout ────────────────────────────────────────────────────────────
+        if (isWide) {
+          // Wide: side panel covers FULL HEIGHT (including header row)
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left column: header + scrollable content
+              Expanded(
+                child: Column(
+                  children: [
+                    summaryBar(),
+                    Expanded(child: ColoredBox(color: bg, child: mainScroll)),
+                  ],
+                ),
+              ),
+              // Right: full-height sticky side panel with actions in its top bar
+              Container(
+                width: 300,
+                decoration: BoxDecoration(
+                  color: panelBg,
+                  border: Border(left: BorderSide(color: divColor, width: 0.5)),
+                ),
+                child: buildSummaryPanel(withActions: true),
+              ),
+            ],
+          );
+        }
+
+        // Narrow: header full-width, then scrollable content below
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-              child: MonthHeader(
-                monthLabel: monthLabel,
-                onPrev: onPrevMonth,
-                onNext: onNextMonth,
-                onSummaryTap: isWide
-                    ? null
-                    : () => _showSummarySheet(context, buildSummaryPanel()),
-                onToggleView: onToggleView,
-                onSettings: () => (onOverrideSettings ?? () => BudgetSettingsSheet.show(
-                  context,
-                  monthLabel: monthLabel,
-                  onEditBudget: null,
-                  onDeleteBudget: () => onDeletePlan(monthBudgets),
-                ))(),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                child: isWide
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: budgetCard),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 320,
-                            child: Card(
-                              margin: EdgeInsets.zero,
-                              elevation: 0,
-                              clipBehavior: Clip.antiAlias,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: AppColors.border),
-                              ),
-                              child: buildSummaryPanel(),
-                            ),
-                          ),
-                        ],
-                      )
-                    : budgetCard,
-              ),
-            ),
+            summaryBar(narrowActions: true),
+            Expanded(child: ColoredBox(color: bg, child: mainScroll)),
           ],
         );
       },
@@ -374,24 +477,22 @@ class BudgetScreenBody extends StatelessWidget {
     required List<Debt> debts,
     required List<Debt> receivables,
     required List<Subscription> monthSubscriptions,
-    required List<SavingsBucket> savingsBuckets,
     required List<Budget> monthBudgets,
     required String monthLabel,
     required Map<String, double> spentByCategory,
+    required Map<String, double> paidThisMonthByDebt,
+    required Map<String, double> contributedThisMonthByGoal,
     required Budget? selectedGroup,
     required Debt? selectedDebt,
     required bool isWide,
     required List<Transaction> monthTransactions,
+    required Color divColor,
   }) {
     // Budget group item
     if (!kSectionKeys.contains(key)) {
       final group = monthBudgets.where((g) => g.id == key).firstOrNull;
       if (group == null) return const SizedBox.shrink();
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Divider(height: 1),
-          BudgetGroupCard(
+      return BudgetGroupCard(
             group: group,
             monthLabel: monthLabel,
             isSelected: selectedGroup?.id == group.id,
@@ -407,80 +508,55 @@ class BudgetScreenBody extends StatelessWidget {
             },
             onUpdateAmount: (cat, amount) async => onUpdateAmount(group, cat, amount),
             onCategoryPay: (cat, amount) => onCategoryPay(group, cat, amount),
-          ),
-        ],
-      );
+          );
     }
 
-    // Section items
+    // Section items — each is now a self-contained card with its own margin
     return switch (key) {
-      'debts' => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Divider(height: 1),
-            DebtSection(
-              title: 'DEBTS',
-              debts: debts,
-              isReceivable: false,
-              selectedDebt: selectedDebt,
-              dragIndex: dragIndex,
-              onAdd: () => onAddDebt(false),
-              onPay: onDebtPay,
-              onEdit: onEditDebt,
-              onUpdateMonthlyPayment: onUpdateDebtPayment,
-              onSelect: (d) {
-                if (isWide) { onDebtSelect(selectedDebt?.id == d.id ? null : d); }
-                else { onDebtDetailTap(d, monthTransactions); }
-              },
-            ),
-          ],
+      'debts' => DebtSection(
+          title: 'Debts',
+          debts: debts,
+          isReceivable: false,
+          selectedDebt: selectedDebt,
+          paidThisMonth: paidThisMonthByDebt,
+          dragIndex: dragIndex,
+          onAdd: () => onAddDebt(false),
+          onPay: onDebtPay,
+          onEdit: onEditDebt,
+          onUpdateMonthlyPayment: onUpdateDebtPayment,
+          onSelect: (d) {
+            if (isWide) { onDebtSelect(selectedDebt?.id == d.id ? null : d); }
+            else { onDebtDetailTap(d, monthTransactions); }
+          },
         ),
-      'receivables' => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Divider(height: 1),
-            DebtSection(
-              title: 'RECEIVABLES',
-              debts: receivables,
-              isReceivable: true,
-              selectedDebt: selectedDebt,
-              dragIndex: dragIndex,
-              onAdd: () => onAddDebt(true),
-              onPay: onDebtPay,
-              onEdit: onEditDebt,
-              onUpdateMonthlyPayment: onUpdateDebtPayment,
-              onSelect: (d) {
-                if (isWide) { onDebtSelect(selectedDebt?.id == d.id ? null : d); }
-                else { onDebtDetailTap(d, monthTransactions); }
-              },
-            ),
-          ],
+      'receivables' => DebtSection(
+          title: 'Receivables',
+          debts: receivables,
+          isReceivable: true,
+          selectedDebt: selectedDebt,
+          paidThisMonth: paidThisMonthByDebt,
+          dragIndex: dragIndex,
+          onAdd: () => onAddDebt(true),
+          onPay: onDebtPay,
+          onEdit: onEditDebt,
+          onUpdateMonthlyPayment: onUpdateDebtPayment,
+          onSelect: (d) {
+            if (isWide) { onDebtSelect(selectedDebt?.id == d.id ? null : d); }
+            else { onDebtDetailTap(d, monthTransactions); }
+          },
         ),
-      'subscriptions' => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Divider(height: 1),
-            SubscriptionSection(
-              subscriptions: monthSubscriptions,
-              dragIndex: dragIndex,
-              onAdd: onAddSubscription,
-              onPay: onPaySubscription,
-            ),
-          ],
+      'subscriptions' => SubscriptionSection(
+          subscriptions: monthSubscriptions,
+          dragIndex: dragIndex,
+          onAdd: onAddSubscription,
+          onPay: onPaySubscription,
         ),
-      'savings' => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Divider(height: 1),
-            SavingsSection(
-              buckets: savingsBuckets,
-              plannedAmounts: plannedSavingsAmounts,
-              dragIndex: dragIndex,
-              onManage: onManageSavings,
-              onDeposit: onDepositSavings,
-              onSetPlanned: onSetPlannedSavings,
-            ),
-          ],
+      'goals' => GoalSection(
+          goals: data.goals,
+          contributedThisMonth: contributedThisMonthByGoal,
+          dragIndex: dragIndex,
+          onAdd: onAddGoal,
+          onGoalTap: onGoalTap,
         ),
       _ => const SizedBox.shrink(),
     };

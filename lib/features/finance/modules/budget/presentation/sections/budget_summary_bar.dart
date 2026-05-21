@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../../debt/domain/entities/debt.dart';
@@ -7,6 +8,12 @@ import '../../domain/entities/budget.dart';
 import '../helpers/currency_formatter.dart';
 
 class BudgetSummaryBar extends StatelessWidget {
+  // Month navigation
+  final String monthLabel;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+
+  // Budget data
   final List<Budget> monthBudgets;
   final Map<String, double> spentByCategory;
   final List<PlannedPayment> activePayments;
@@ -14,281 +21,298 @@ class BudgetSummaryBar extends StatelessWidget {
   final List<Debt> activeReceivables;
   final VoidCallback onCommitmentsTab;
 
+  // Tab counts
+  final int budgetGroupCount;
+  final int subsCount;
+  final int debtsCount;
+  final int receivablesCount;
+  final int goalsCount;
+
+  // Tab selection
+  final int selectedTab;
+  final void Function(int) onTabSelect;
+
+  // Narrow-only actions (hidden on wide where they live in the side panel)
+  final VoidCallback? onToggleView;
+  final VoidCallback? onSettings;
+  final VoidCallback? onSummaryTap;
+
   const BudgetSummaryBar({
     super.key,
+    required this.monthLabel,
+    required this.onPrev,
+    required this.onNext,
+    required this.selectedTab,
+    required this.onTabSelect,
     required this.monthBudgets,
     required this.spentByCategory,
     required this.activePayments,
     required this.activeDebts,
     required this.activeReceivables,
     required this.onCommitmentsTab,
+    required this.budgetGroupCount,
+    required this.subsCount,
+    required this.debtsCount,
+    required this.receivablesCount,
+    required this.goalsCount,
+    this.onToggleView,
+    this.onSettings,
+    this.onSummaryTap,
   });
+
+  String _tabTitle(String monthLabel) => switch (selectedTab) {
+    0 => 'Summary',
+    1 => monthLabel,
+    2 => 'Subscriptions',
+    3 => 'Debts',
+    4 => 'Receivables',
+    5 => 'Goals',
+    _ => monthLabel,
+  };
+
+  String _tabSubtitle(String leftLabel) => switch (selectedTab) {
+    0 => 'Financial overview',
+    1 => leftLabel,
+    2 => '$subsCount active',
+    3 => '$debtsCount active',
+    4 => '$receivablesCount active',
+    5 => '$goalsCount active',
+    _ => leftLabel,
+  };
+
+  Color _tabSubtitleColor(Color leftColor) =>
+      selectedTab == 1 ? leftColor : AppColors.textSecondary;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final divColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.35);
+    final borderColor = AppColors.border.withValues(alpha: isDark ? 0.2 : 0.6);
 
-    double incomeReceived = 0;
-    double expenseSpent = 0;
     double plannedIncome = 0;
     double plannedExpenses = 0;
-
-    // Budget targets
     for (final b in monthBudgets) {
       if (b.budgetType == BudgetType.income) {
-        for (final cat in b.categories) {
-          incomeReceived += spentByCategory[cat.financeCategoryId] ?? 0.0;
-        }
         plannedIncome += b.budgetTarget;
       } else {
-        for (final cat in b.categories) {
-          expenseSpent += spentByCategory[cat.financeCategoryId] ?? 0.0;
-        }
         plannedExpenses += b.budgetTarget;
       }
     }
 
-    // Receivables: expected incoming payments from people who owe the user
-    for (final r in activeReceivables) {
-      if (r.monthlyPaymentAmount > 0) {
-        plannedIncome += r.monthlyPaymentAmount;
-      }
-    }
-
-    // Debts: expected outgoing payments the user owes
-    for (final d in activeDebts) {
-      if (d.monthlyPaymentAmount > 0) {
-        plannedExpenses += d.monthlyPaymentAmount;
-      }
-    }
-
-    // Planned payments: recurring/scheduled expense commitments
-    for (final p in activePayments) {
-      plannedExpenses += p.amount;
-    }
-
-    final net = incomeReceived - expenseSpent;
-    final netColor = net >= 0 ? AppColors.success : AppColors.error;
-
-    // Planned net (how much should be left if plan is followed)
-    final plannedNet = plannedIncome - plannedExpenses;
-    final plannedNetColor = plannedNet >= 0
+    // Left to budget is purely budget-based (income groups vs expense groups).
+    // Debts and receivables are tracked separately and excluded here.
+    final leftToBudget = plannedIncome - plannedExpenses;
+    final leftColor = leftToBudget > 0
         ? AppColors.success
-        : AppColors.error;
+        : leftToBudget < 0
+            ? AppColors.error
+            : AppColors.textSecondary;
+    final leftLabel = leftToBudget == 0
+        ? 'On budget'
+        : '${formatCurrency(leftToBudget.abs())} left to budget';
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: theme.dividerColor)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Actual row
-          Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── Main header row ───────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _SummaryChip(
-                label: 'Income',
-                value: formatCurrency(incomeReceived),
-                valueColor: AppColors.success,
+              // Title + subtitle — updates based on selected tab
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _tabTitle(monthLabel),
+                      style: GoogleFonts.dmSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                        letterSpacing: -0.4,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _tabSubtitle(leftLabel),
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: _tabSubtitleColor(leftColor),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+
+              // Narrow-only action buttons
+              if (onSummaryTap != null)
+                IconButton(
+                  icon: Icon(Icons.bar_chart_rounded, color: AppColors.textSecondary),
+                  onPressed: onSummaryTap,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
+              if (onToggleView != null)
+                IconButton(
+                  icon: Icon(Icons.view_list_outlined, color: AppColors.textSecondary),
+                  onPressed: onToggleView,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
+              if (onSettings != null)
+                IconButton(
+                  icon: Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+                  onPressed: onSettings,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
+
               const SizedBox(width: 8),
-              _SummaryChip(
-                label: 'Expenses',
-                value: formatCurrency(expenseSpent),
-                valueColor: AppColors.error,
-              ),
-              const SizedBox(width: 8),
-              _SummaryChip(
-                label: net >= 0 ? 'Left' : 'Over',
-                value: formatCurrency(net.abs()),
-                valueColor: netColor,
+
+              // < > bordered nav buttons
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: borderColor, width: 0.5),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _NavButton(icon: Icons.chevron_left_rounded, onTap: onPrev),
+                    Container(width: 0.5, height: 28, color: borderColor),
+                    _NavButton(icon: Icons.chevron_right_rounded, onTap: onNext),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          // Planned row
-          Row(
-            children: [
-              _SummaryChip(
-                label: 'Planned Inc.',
-                value: formatCurrency(plannedIncome),
-                valueColor: AppColors.success.withValues(alpha: 0.7),
-                isPlanned: true,
-              ),
-              const SizedBox(width: 8),
-              _SummaryChip(
-                label: 'Planned Exp.',
-                value: formatCurrency(plannedExpenses),
-                valueColor: AppColors.error.withValues(alpha: 0.7),
-                isPlanned: true,
-              ),
-              const SizedBox(width: 8),
-              _SummaryChip(
-                label: plannedNet >= 0 ? 'Planned Left' : 'Planned Over',
-                value: formatCurrency(plannedNet.abs()),
-                valueColor: plannedNetColor.withValues(alpha: 0.7),
-                isPlanned: true,
-              ),
-            ],
-          ),
-          () {
-            final debtCount = activeDebts.length;
-            final receivableCount = activeReceivables.length;
-            final hasAny =
-                activePayments.isNotEmpty ||
-                debtCount > 0 ||
-                receivableCount > 0;
-            if (!hasAny) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  if (activePayments.isNotEmpty)
-                    ActionChip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: CircleAvatar(
-                        radius: 9,
-                        backgroundColor: theme.colorScheme.primary,
-                        child: Text(
-                          '${activePayments.length}',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      label: const Text(
-                        'Planned Payments',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      onPressed: onCommitmentsTab,
-                    ),
-                  Chip(
-                    visualDensity: VisualDensity.compact,
-                    avatar: CircleAvatar(
-                      radius: 9,
-                      backgroundColor: debtCount > 0
-                          ? AppColors.error
-                          : AppColors.textTertiary,
-                      child: const Icon(
-                        Icons.arrow_upward,
-                        size: 10,
-                        color: Colors.white,
-                      ),
-                    ),
-                    label: Text(
-                      '$debtCount Debt${debtCount != 1 ? 's' : ''}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: debtCount > 0 ? null : AppColors.textTertiary,
-                      ),
-                    ),
-                  ),
-                  Chip(
-                    visualDensity: VisualDensity.compact,
-                    avatar: CircleAvatar(
-                      radius: 9,
-                      backgroundColor: receivableCount > 0
-                          ? AppColors.success
-                          : AppColors.textTertiary,
-                      child: const Icon(
-                        Icons.arrow_downward,
-                        size: 10,
-                        color: Colors.white,
-                      ),
-                    ),
-                    label: Text(
-                      '$receivableCount Receivable${receivableCount != 1 ? 's' : ''}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: receivableCount > 0
-                            ? null
-                            : AppColors.textTertiary,
-                      ),
-                    ),
-                  ),
-                ],
+        ),
+
+        Divider(height: 1, color: divColor),
+
+        // ── Tab pills — responsive (wrap on narrow, scroll on wide) ──────
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final pills = [
+              _TabPill(label: 'Summary', count: 0, color: AppColors.info, selected: selectedTab == 0, onTap: () => onTabSelect(0)),
+              _TabPill(label: 'Budget', count: budgetGroupCount, color: AppColors.accent, selected: selectedTab == 1, onTap: () => onTabSelect(1)),
+              _TabPill(label: 'Subs', count: subsCount, color: AppColors.warning, selected: selectedTab == 2, onTap: () => onTabSelect(2)),
+              _TabPill(label: 'Debts', count: debtsCount, color: AppColors.error, selected: selectedTab == 3, onTap: () => onTabSelect(3)),
+              _TabPill(label: 'Receivables', count: receivablesCount, color: AppColors.success, selected: selectedTab == 4, onTap: () => onTabSelect(4)),
+              _TabPill(label: 'Goals', count: goalsCount, color: AppColors.accent, selected: selectedTab == 5, onTap: () => onTabSelect(5)),
+              if (activePayments.isNotEmpty)
+                _TabPill(label: 'Commitments', count: activePayments.length, color: AppColors.info, selected: false, onTap: onCommitmentsTab),
+            ];
+
+            if (constraints.maxWidth < 520) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                child: Wrap(spacing: 6, runSpacing: 6, children: pills),
+              );
+            }
+
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+              child: Row(
+                children: pills
+                    .map((p) => Padding(padding: const EdgeInsets.only(right: 6), child: p))
+                    .toList(),
               ),
             );
-          }(),
-        ],
-      ),
+          },
+        ),
+      ],
     );
   }
 }
 
-class _SummaryChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-  final bool isPlanned;
+class _NavButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _NavButton({required this.icon, required this.onTap});
 
-  const _SummaryChip({
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Icon(icon, size: 18, color: AppColors.textSecondary),
+    ),
+  );
+}
+
+class _TabPill extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  const _TabPill({
     required this.label,
-    required this.value,
-    this.valueColor,
-    this.isPlanned = false,
+    required this.count,
+    required this.color,
+    required this.selected,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = selected
+        ? color
+        : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white);
+    final borderColor = selected
+        ? Colors.transparent
+        : AppColors.border.withValues(alpha: isDark ? 0.2 : 1.0);
+    final textColor = selected
+        ? Colors.white
+        : (count > 0
+            ? (isDark ? AppColors.primaryForeground : AppColors.textPrimary)
+            : AppColors.textTertiary);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isPlanned
-              ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2)
-              : theme.colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.4,
-                ),
-          borderRadius: BorderRadius.circular(8),
-          border: isPlanned
-              ? Border.all(
-                  color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.5,
-                  ),
-                  width: 0.5,
-                )
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: borderColor, width: 0.5),
+          boxShadow: selected
+              ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))]
               : null,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                if (isPlanned) ...[
-                  Icon(
-                    Icons.schedule_outlined,
-                    size: 9,
-                    color: AppColors.textTertiary,
-                  ),
-                  const SizedBox(width: 2),
-                ],
-                Expanded(
-                  child: Text(
-                    label,
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textTertiary,
-                      fontSize: isPlanned ? 9 : null,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            if (!selected)
+              Container(
+                width: 6, height: 6,
+                margin: const EdgeInsets.only(right: 6),
+                decoration: BoxDecoration(
+                  color: count > 0 ? color : AppColors.textTertiary,
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: AppTextStyles.bodySmall.copyWith(
-                fontWeight: isPlanned ? FontWeight.w500 : FontWeight.w700,
-                color: valueColor ?? AppColors.textPrimary,
-                fontSize: isPlanned ? 11 : null,
               ),
-              overflow: TextOverflow.ellipsis,
+            Text(
+              count > 0 ? '$label ($count)' : label,
+              style: GoogleFonts.dmSans(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: textColor,
+              ),
             ),
           ],
         ),

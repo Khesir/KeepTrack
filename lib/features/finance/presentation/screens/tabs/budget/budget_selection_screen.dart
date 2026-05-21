@@ -85,12 +85,16 @@ class _BudgetSelectionScreenState extends State<BudgetSelectionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MainCard(
-          isDark: isDark, budgets: budgets, txs: txs, debts: debts,
-          subs: subs, goals: goals, mainProfile: mainProfile,
-          onTap: mainProfile != null ? () => widget.onProfileTap(mainProfile) : widget.onMonthlyTap,
-        ),
-        const SizedBox(height: 28),
+        // Only show the main card when a profile is explicitly pinned as main.
+        // No fallback "Monthly Budget" — users must create a real profile.
+        if (mainProfile != null) ...[
+          _MainCard(
+            isDark: isDark, budgets: budgets, txs: txs, debts: debts,
+            subs: subs, goals: goals, mainProfile: mainProfile,
+            onTap: () => widget.onProfileTap(mainProfile),
+          ),
+          const SizedBox(height: 28),
+        ],
         _BranchesList(
           isDark: isDark, profiles: otherProfiles, budgets: budgets,
           txs: txs, debts: debts, subs: subs, goals: goals,
@@ -252,9 +256,9 @@ class _MainCard extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 14),
-              _ProgressRow(label: 'Income', actual: actualIncome, planned: plannedIncome, color: AppColors.success),
+              _ProgressRow(label: 'Inflow', actual: actualIncome, planned: plannedIncome, color: AppColors.success),
               const SizedBox(height: 8),
-              _ProgressRow(label: 'Expenses', actual: actualExpenses, planned: plannedExpenses, color: AppColors.error),
+              _ProgressRow(label: 'Outflow', actual: actualExpenses, planned: plannedExpenses, color: AppColors.error),
               const SizedBox(height: 14),
               _CountPillRow(
                 isDark: isDark,
@@ -498,9 +502,9 @@ class _BranchesList extends StatelessWidget {
                       ]),
                       if (profileBudgets.isNotEmpty) ...[
                         const SizedBox(height: 10),
-                        _MiniProgressRow(label: 'Income', actual: actualIncome, planned: plannedIncome, color: AppColors.success),
+                        _MiniProgressRow(label: 'Inflow', actual: actualIncome, planned: plannedIncome, color: AppColors.success),
                         const SizedBox(height: 5),
-                        _MiniProgressRow(label: 'Expenses', actual: actualExpenses, planned: plannedExpenses, color: AppColors.error),
+                        _MiniProgressRow(label: 'Outflow', actual: actualExpenses, planned: plannedExpenses, color: AppColors.error),
                       ],
                       _CountPillRow(
                         isDark: isDark,

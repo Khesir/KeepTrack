@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../../debt/domain/entities/debt.dart';
@@ -8,6 +9,7 @@ class DebtRow extends StatefulWidget {
   final Debt debt;
   final bool isReceivable;
   final bool isSelected;
+  final double paidThisMonth;
   final VoidCallback onSelect;
   final VoidCallback onPay;
   final VoidCallback onEdit;
@@ -18,6 +20,7 @@ class DebtRow extends StatefulWidget {
     required this.debt,
     required this.isReceivable,
     required this.isSelected,
+    this.paidThisMonth = 0,
     required this.onSelect,
     required this.onPay,
     required this.onEdit,
@@ -94,17 +97,18 @@ class _DebtRowState extends State<DebtRow> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final d = widget.debt;
 
     return Material(
       color: widget.isSelected
-          ? theme.colorScheme.primary.withValues(alpha: 0.07)
+          ? AppColors.accent.withValues(alpha: isDark ? 0.1 : 0.06)
           : Colors.transparent,
       child: InkWell(
         onTap: widget.onSelect,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
               // Name + overdue
@@ -115,11 +119,10 @@ class _DebtRowState extends State<DebtRow> {
                   children: [
                     Text(
                       d.personName,
-                      style: AppTextStyles.bodySmall.copyWith(
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: widget.isSelected
-                            ? theme.colorScheme.primary
-                            : AppColors.textPrimary,
+                        color: widget.isSelected ? AppColors.accent : textPrimary,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -128,6 +131,13 @@ class _DebtRowState extends State<DebtRow> {
                         'Overdue',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.error,
+                        ),
+                      )
+                    else if (widget.paidThisMonth > 0)
+                      Text(
+                        '${widget.isReceivable ? 'collected' : 'paid'} this month',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.success,
                         ),
                       ),
                   ],
@@ -139,8 +149,11 @@ class _DebtRowState extends State<DebtRow> {
                 child: Text(
                   formatCurrency(d.remainingAmount),
                   textAlign: TextAlign.right,
-                  style: AppTextStyles.bodySmall.copyWith(
+                  style: GoogleFonts.dmMono(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.error,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
@@ -218,8 +231,11 @@ class _DebtRowState extends State<DebtRow> {
                 child: Text(
                   formatCurrency(d.paidAmount),
                   textAlign: TextAlign.right,
-                  style: AppTextStyles.bodySmall.copyWith(
+                  style: GoogleFonts.dmMono(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.success,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
@@ -227,29 +243,30 @@ class _DebtRowState extends State<DebtRow> {
               const SizedBox(width: 4),
               // Pay / Collect button
               if (d.status == DebtStatus.active)
-                SizedBox(
-                  height: 28,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                GestureDetector(
+                  onTap: widget.onPay,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (widget.isReceivable ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: (widget.isReceivable ? AppColors.success : AppColors.error).withValues(alpha: 0.3),
+                        width: 0.5,
+                      ),
                     ),
-                    onPressed: widget.onPay,
                     child: Text(
                       widget.isReceivable ? 'Collect' : 'Pay',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: widget.isReceivable
-                            ? AppColors.success
-                            : AppColors.error,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
+                        color: widget.isReceivable ? AppColors.success : AppColors.error,
                       ),
                     ),
                   ),
                 )
               else
-                const SizedBox(width: 46),
+                const SizedBox(width: 62),
             ],
           ),
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/demo/demo_mode.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
@@ -25,10 +26,12 @@ class _BalanceGraphState extends State<BalanceGraph> {
     _transactionController = locator.get<TransactionController>();
     _savingsController.loadSavings();
 
-    // Load transactions for the last 30 days
     final now = DateTime.now();
-    final startDate = now.subtract(const Duration(days: 30));
-    _transactionController.loadTransactionsByDateRange(startDate, now);
+    final startDate = DateTime(now.year, now.month, 1);
+    final endDate = DemoMode.enabled
+        ? DateTime(now.year, now.month + 1, 0, 23, 59, 59)
+        : now;
+    _transactionController.loadTransactionsByDateRange(startDate, endDate);
   }
 
   @override
@@ -191,11 +194,17 @@ class _BalanceGraphState extends State<BalanceGraph> {
             if (balanceData.isNotEmpty)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('30 days ago', style: _xAxisLabelStyle),
-                  Text('15 days ago', style: _xAxisLabelStyle),
-                  Text('Today', style: _xAxisLabelStyle),
-                ],
+                children: DemoMode.enabled
+                    ? [
+                        Text('Day 1',  style: _xAxisLabelStyle),
+                        Text('Day 16', style: _xAxisLabelStyle),
+                        Text('Day 31', style: _xAxisLabelStyle),
+                      ]
+                    : [
+                        Text('30 days ago', style: _xAxisLabelStyle),
+                        Text('15 days ago', style: _xAxisLabelStyle),
+                        Text('Today',       style: _xAxisLabelStyle),
+                      ],
               ),
           ],
         ),
@@ -264,44 +273,54 @@ class _BalanceGraphState extends State<BalanceGraph> {
     List<Transaction> transactions,
   ) {
     final now = DateTime.now();
-    const daysToShow = 30;
     const dataPoints = 15;
 
     final relevantTransactions = List<Transaction>.from(transactions)
       ..sort((a, b) => a.date.compareTo(b.date));
 
-    // Calculate balance at each data point
+    final DateTime rangeStart;
+    final DateTime rangeEnd;
+
+    if (DemoMode.enabled) {
+      rangeStart = DateTime(now.year, now.month, 1);
+      rangeEnd   = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    } else {
+      rangeStart = now.subtract(const Duration(days: 30));
+      rangeEnd   = now;
+    }
+
+    final totalMs = rangeEnd.millisecondsSinceEpoch - rangeStart.millisecondsSinceEpoch;
+
     final balanceHistory = <BalanceDataPoint>[];
 
-    for (int i = dataPoints - 1; i >= 0; i--) {
-      final targetDate = now.subtract(Duration(days: (i * daysToShow ~/ dataPoints)));
+    for (int i = 0; i < dataPoints; i++) {
+      final fraction = i / (dataPoints - 1);
+      final targetDate = DateTime.fromMillisecondsSinceEpoch(
+        rangeStart.millisecondsSinceEpoch + (totalMs * fraction).round(),
+      );
 
-      // Calculate balance by working backwards from current balance
       double balanceAtDate = currentBalance;
-
-      // Subtract/add transactions that happened after this date
-      for (final transaction in relevantTransactions) {
-        if (transaction.date.isAfter(targetDate)) {
-          // Reverse the transaction effect
-          switch (transaction.type) {
+      for (final t in relevantTransactions) {
+        if (t.date.isAfter(targetDate)) {
+          switch (t.type) {
             case TransactionType.income:
-              balanceAtDate -= transaction.amount;
+              balanceAtDate -= t.amount;
               break;
             case TransactionType.expense:
-              balanceAtDate += transaction.amount;
+              balanceAtDate += t.amount;
+              break;
+            default:
               break;
           }
         }
       }
 
-      // Ensure balance is never negative in history
       balanceHistory.add(BalanceDataPoint(
         date: targetDate,
         balance: balanceAtDate < 0 ? 0 : balanceAtDate,
       ));
     }
 
-    // If no variation, add slight variation for better visualization
     if (balanceHistory.every((b) => b.balance == balanceHistory.first.balance)) {
       return balanceHistory.map((b) => BalanceDataPoint(
         date: b.date,

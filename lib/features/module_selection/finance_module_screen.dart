@@ -16,6 +16,8 @@ import 'package:keep_track/features/finance/presentation/screens/tabs/budget/bud
 import 'package:keep_track/features/finance/presentation/screens/tabs/dashboard/dashboard_tab.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/savings/savings_tab.dart';
 import 'package:keep_track/features/finance/presentation/screens/transaction_planner_screen.dart';
+import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_sheet.dart';
+import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import '../auth/presentation/screens/auth_settings_screen.dart';
 import '../settings/setting_page.dart';
 
@@ -31,10 +33,9 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   bool _navVisible = true;
   final _layoutController = AppLayoutController();
 
-  // Built in build() so BudgetTabScreen receives current _navVisible
   List<Widget> get _screens => [
     const DashboardTab(),
-    BudgetTabScreen(navVisible: _navVisible),
+    const BudgetTabScreen(),
     const SavingsTab(),
     const TransactionPlannerScreen(),
   ];
@@ -69,6 +70,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   bool _handleScroll(ScrollNotification n) {
+    if (_currentIndex == 1) return false; // Budget tab: nav always visible
     if (n is ScrollUpdateNotification) {
       final delta = n.scrollDelta ?? 0;
       if (delta > 3 && _navVisible) {
@@ -90,6 +92,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
     });
   }
 
+  // Savings tab (index 2) has no FAB
   @override
   Widget build(BuildContext context) {
     return AppLayoutProvider(
@@ -107,6 +110,21 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
 
   Widget _buildDesktop() {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => CreateTransactionSheet.show(
+          context,
+          onCreated: () {
+            final now = DateTime.now();
+            locator.get<TransactionController>().loadTransactionsByDateRange(
+              DateTime(now.year, now.month, 1),
+              DateTime(now.year, now.month + 1, 1),
+            );
+          },
+        ),
+        backgroundColor: AppColors.accent,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
+      ),
       body: Row(
         children: [
           _AppSidebar(
@@ -149,11 +167,23 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   PreferredSizeWidget _buildMobileAppBar(bool isDark) {
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     return AppBar(
       titleSpacing: 16,
-      title: SvgPicture.asset(
-        isDark ? 'assets/wordmark-dark.svg' : 'assets/wordmark-light.svg',
-        height: 22,
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SvgPicture.asset('assets/app-icon.svg', width: 26, height: 26),
+          const SizedBox(width: 8),
+          Text(
+            'Keep Track',
+            style: GoogleFonts.dmSans(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: textPrimary,
+            ),
+          ),
+        ],
       ),
       actions: [
         _ThemeToggle(layoutController: _layoutController),
@@ -161,7 +191,11 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
           onTap: () => Navigator.pushNamed(context, '/settings'),
           child: Padding(
             padding: const EdgeInsets.all(8),
-            child: Icon(Icons.settings_outlined, size: 18, color: AppColors.textSecondary),
+            child: Icon(
+              Icons.settings_outlined,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(width: 4),
@@ -180,75 +214,111 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: Container(
-              height: 62,
-              decoration: BoxDecoration(
-                color: navBg,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.white.withValues(alpha: 0.9),
-                  width: 0.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: shadowColor,
-                    blurRadius: 24,
-                    offset: const Offset(0, 6),
-                  ),
-                  BoxShadow(
-                    color: shadowColor.withValues(alpha: shadowColor.a * 0.5),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: _navItems.asMap().entries.map((e) {
-                  final selected = e.key == _currentIndex;
-                  final color = selected
-                      ? AppColors.accent
-                      : AppColors.textTertiary;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => _switchTab(e.key),
-                      behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 180),
-                            child: Icon(
-                              selected ? e.value.activeIcon : e.value.icon,
-                              key: ValueKey(selected),
-                              size: 22,
-                              color: color,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            e.value.label,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 10,
-                              fontWeight: selected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: color,
-                            ),
-                          ),
-                        ],
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: Container(
+                    height: 62,
+                    decoration: BoxDecoration(
+                      color: navBg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.06)
+                            : Colors.white.withValues(alpha: 0.9),
+                        width: 0.5,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: shadowColor,
+                          blurRadius: 24,
+                          offset: const Offset(0, 6),
+                        ),
+                        BoxShadow(
+                          color: shadowColor.withValues(alpha: shadowColor.a * 0.5),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  );
-                }).toList(),
+                    child: Row(
+                      children: _navItems.asMap().entries.map((e) {
+                        final selected = e.key == _currentIndex;
+                        final color = selected
+                            ? AppColors.accent
+                            : AppColors.textTertiary;
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () => _switchTab(e.key),
+                            behavior: HitTestBehavior.opaque,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 180),
+                                  child: Icon(
+                                    selected ? e.value.activeIcon : e.value.icon,
+                                    key: ValueKey(selected),
+                                    size: 22,
+                                    color: color,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  e.value.label,
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 10,
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: () => CreateTransactionSheet.show(
+                context,
+                onCreated: () {
+                  final now = DateTime.now();
+                  locator.get<TransactionController>().loadTransactionsByDateRange(
+                    DateTime(now.year, now.month, 1),
+                    DateTime(now.year, now.month + 1, 1),
+                  );
+                },
+              ),
+              child: Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 26),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -331,11 +401,34 @@ class _SidebarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 14),
-      child: SvgPicture.asset(
-        isDark ? 'assets/wordmark-dark.svg' : 'assets/wordmark-light.svg',
-        height: 32,
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
+      child: Row(
+        children: [
+          SvgPicture.asset('assets/app-icon.svg', width: 36, height: 36),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Keep Track',
+                style: GoogleFonts.dmSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: textPrimary,
+                ),
+              ),
+              Text(
+                'Zero-based budgeting',
+                style: GoogleFonts.dmSans(
+                  fontSize: 10,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -464,7 +557,9 @@ class _SidebarFooterState extends State<_SidebarFooter> {
       initialData: _authController.state,
       builder: (context, snapshot) {
         final state = snapshot.data;
-        final user = state is AsyncData<User?> ? state.data : _authController.currentUser;
+        final user = state is AsyncData<User?>
+            ? state.data
+            : _authController.currentUser;
         return _FooterContent(user: user, isDark: widget.isDark);
       },
     );
@@ -588,9 +683,55 @@ class _FooterContentState extends State<_FooterContent> {
   @override
   Widget build(BuildContext context) {
     final initials = _initials(widget.user?.displayName);
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: CompositedTransformTarget(
+    final borderColor = widget.isDark
+        ? AppColors.border.withValues(alpha: 0.25)
+        : AppColors.border.withValues(alpha: 0.6);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => locator.get<SettingsController>().updateThemeMode(
+                widget.isDark ? AppThemeMode.light : AppThemeMode.dark,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: widget.isDark
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.isDark ? 'Light mode' : 'Dark mode',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Divider(height: 1, thickness: 0.5, color: borderColor),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: CompositedTransformTarget(
         link: _layerLink,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -662,6 +803,8 @@ class _FooterContentState extends State<_FooterContent> {
           ),
         ),
       ),
+      ),
+      ],
     );
   }
 

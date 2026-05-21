@@ -1,12 +1,11 @@
+import 'dart:math' show max;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
-import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/helpers/budget_month_filter.dart';
@@ -32,7 +31,6 @@ class _DashboardTabState extends State<DashboardTab> {
   late final TransactionController _txController;
   late final SubscriptionController _subController;
   late final DebtController _debtController;
-  late final AuthController _authController;
 
   @override
   void initState() {
@@ -42,7 +40,6 @@ class _DashboardTabState extends State<DashboardTab> {
     _txController = locator.get<TransactionController>();
     _subController = locator.get<SubscriptionController>();
     _debtController = locator.get<DebtController>();
-    _authController = locator.get<AuthController>();
     _savingsController.loadSavings();
     _budgetController.loadBudgets();
     final now = DateTime.now();
@@ -60,8 +57,6 @@ class _DashboardTabState extends State<DashboardTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = _authController.currentUser;
-    final firstName = user?.displayName?.split(' ').first ?? 'there';
 
     return AsyncStreamBuilder<List<SavingsBucket>>(
       state: _savingsController,
@@ -74,20 +69,20 @@ class _DashboardTabState extends State<DashboardTab> {
             builder: (_, debts) => AsyncStreamBuilder<List<Subscription>>(
               state: _subController,
               builder: (_, subs) => _buildDashboard(
-                context, isDark, firstName,
+                context, isDark,
                 buckets, budgets, txs, debts, subs,
               ),
-              loadingBuilder: (_) => _buildDashboard(context, isDark, firstName, buckets, budgets, txs, debts, []),
-              errorBuilder: (_, __) => _buildDashboard(context, isDark, firstName, buckets, budgets, txs, debts, []),
+              loadingBuilder: (_) => _buildDashboard(context, isDark, buckets, budgets, txs, debts, []),
+              errorBuilder: (_, __) => _buildDashboard(context, isDark, buckets, budgets, txs, debts, []),
             ),
-            loadingBuilder: (_) => _buildDashboard(context, isDark, firstName, buckets, budgets, txs, [], []),
-            errorBuilder: (_, __) => _buildDashboard(context, isDark, firstName, buckets, budgets, txs, [], []),
+            loadingBuilder: (_) => _buildDashboard(context, isDark, buckets, budgets, txs, [], []),
+            errorBuilder: (_, __) => _buildDashboard(context, isDark, buckets, budgets, txs, [], []),
           ),
-          loadingBuilder: (_) => _buildDashboard(context, isDark, firstName, buckets, budgets, [], [], []),
-          errorBuilder: (_, __) => _buildDashboard(context, isDark, firstName, buckets, budgets, [], [], []),
+          loadingBuilder: (_) => _buildDashboard(context, isDark, buckets, budgets, [], [], []),
+          errorBuilder: (_, __) => _buildDashboard(context, isDark, buckets, budgets, [], [], []),
         ),
-        loadingBuilder: (_) => _buildDashboard(context, isDark, firstName, buckets, [], [], [], []),
-        errorBuilder: (_, __) => _buildDashboard(context, isDark, firstName, buckets, [], [], [], []),
+        loadingBuilder: (_) => _buildDashboard(context, isDark, buckets, [], [], [], []),
+        errorBuilder: (_, __) => _buildDashboard(context, isDark, buckets, [], [], [], []),
       ),
       loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
       errorBuilder: (_, __) => const Center(child: CircularProgressIndicator()),
@@ -95,7 +90,7 @@ class _DashboardTabState extends State<DashboardTab> {
   }
 
   Widget _buildDashboard(
-    BuildContext context, bool isDark, String firstName,
+    BuildContext context, bool isDark,
     List<SavingsBucket> buckets, List<Budget> budgets,
     List<Transaction> txs, List<Debt> debts, List<Subscription> subs,
   ) {
@@ -112,26 +107,16 @@ class _DashboardTabState extends State<DashboardTab> {
     final upcomingSubs = activeSubs.where((s) => s.isUpcoming || s.isOverdue).toList()
       ..sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
     final overdueDebts = debts.where((d) => d.isOverdue).toList();
-    final hasAlerts = overdueDebts.isNotEmpty || (plannedExpenses > 0 && actualExpenses > plannedExpenses);
-    final loboAsset = hasAlerts
-        ? 'assets/lobo-thinking.svg'
-        : (totalSavings > 0 && (plannedExpenses == 0 || actualExpenses < plannedExpenses * 0.7))
-            ? 'assets/lobo-happy.svg'
-            : 'assets/lobo-waving.svg';
 
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(child: _GreetingSection(
-          isDark: isDark, firstName: firstName,
-          totalSavings: totalSavings, bucketCount: buckets.length,
-          loboAsset: loboAsset,
-        )),
         SliverToBoxAdapter(child: _MetricsRow(
           isDark: isDark,
           actualIncome: actualIncome, plannedIncome: plannedIncome,
           actualExpenses: actualExpenses, plannedExpenses: plannedExpenses,
           netDebt: totalReceivables - totalDebt,
         )),
+        SliverToBoxAdapter(child: _SpendingChart(transactions: txs, isDark: isDark)),
         if (monthBudgets.isNotEmpty)
           SliverToBoxAdapter(child: _BudgetProgressCard(
             isDark: isDark,
@@ -155,183 +140,6 @@ class _DashboardTabState extends State<DashboardTab> {
   }
 }
 
-// ─── Greeting Section (Lobo outside card) ────────────────────────────────────
-
-class _GreetingSection extends StatelessWidget {
-  final bool isDark;
-  final String firstName, loboAsset;
-  final double totalSavings;
-  final int bucketCount;
-
-  const _GreetingSection({
-    required this.isDark, required this.firstName, required this.loboAsset,
-    required this.totalSavings, required this.bucketCount,
-  });
-
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
-  String _message(String name) =>
-      '$_greeting, $name! Today is ${DateFormat('EEEE, MMMM d').format(DateTime.now())}. '
-      'Hope your day is going well. Keep tracking your spending, grow those savings buckets, '
-      'and stay ahead of your bills — every peso tracked is a step closer to financial freedom! 💪';
-
-  @override
-  Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final cardBorder = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
-    final msgColor = isDark ? AppColors.primaryForeground.withValues(alpha: 0.8) : AppColors.textSecondary;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Lobo + bubble row — Lobo on scaffold background, bubble to the right
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: SvgPicture.asset(loboAsset, height: 110),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: CustomPaint(
-                    painter: _BubblePainter(color: cardBg, borderColor: cardBorder),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-                      child: Text(
-                        _message(firstName),
-                        style: GoogleFonts.dmSans(
-                            fontSize: 12.5,
-                            color: msgColor,
-                            height: 1.65),
-                        maxLines: 5,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Savings hero — full-width card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: cardBorder, width: 0.5),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.savings_outlined, size: 20, color: AppColors.success),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Total Savings',
-                            style: GoogleFonts.dmSans(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 3),
-                        Text(
-                          currencyFormatter.format(totalSavings, decimalDigits: 2),
-                          style: GoogleFonts.dmMono(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.success,
-                              letterSpacing: -0.5,
-                              fontFeatures: const [FontFeature.tabularFigures()]),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (bucketCount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '$bucketCount bucket${bucketCount == 1 ? '' : 's'}',
-                        style: GoogleFonts.dmSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.success),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BubblePainter extends CustomPainter {
-  final Color color;
-  final Color borderColor;
-
-  const _BubblePainter({required this.color, required this.borderColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const r = 12.0;
-    const tailW = 11.0;
-    const tailH = 10.0;
-    const tailY = 26.0;
-
-    Path buildPath() => Path()
-      ..moveTo(tailW + r, 0)
-      ..lineTo(size.width - r, 0)
-      ..arcToPoint(Offset(size.width, r), radius: const Radius.circular(r))
-      ..lineTo(size.width, size.height - r)
-      ..arcToPoint(Offset(size.width - r, size.height), radius: const Radius.circular(r))
-      ..lineTo(tailW + r, size.height)
-      ..arcToPoint(Offset(tailW, size.height - r), radius: const Radius.circular(r))
-      ..lineTo(tailW, tailY + tailH)
-      ..lineTo(0, tailY + tailH / 2)
-      ..lineTo(tailW, tailY)
-      ..lineTo(tailW, r)
-      ..arcToPoint(Offset(tailW + r, 0), radius: const Radius.circular(r))
-      ..close();
-
-    final path = buildPath();
-    canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.fill);
-    canvas.drawPath(path, Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.5);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BubblePainter old) =>
-      old.color != color || old.borderColor != borderColor;
-}
-
 // ─── Metrics Row ──────────────────────────────────────────────────────────────
 
 class _MetricsRow extends StatelessWidget {
@@ -350,14 +158,14 @@ class _MetricsRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: _MetricCard(
-            isDark: isDark, label: 'Income',
+            isDark: isDark, label: 'Inflow',
             value: currencyFormatter.format(actualIncome, decimalDigits: 0),
             sub: 'of ${currencyFormatter.format(plannedIncome, decimalDigits: 0)} planned',
             color: AppColors.success, icon: Icons.arrow_downward_rounded,
           )),
           const SizedBox(width: 10),
           Expanded(child: _MetricCard(
-            isDark: isDark, label: 'Expenses',
+            isDark: isDark, label: 'Outflow',
             value: currencyFormatter.format(actualExpenses, decimalDigits: 0),
             sub: 'of ${currencyFormatter.format(plannedExpenses, decimalDigits: 0)} planned',
             color: actualExpenses > plannedExpenses && plannedExpenses > 0 ? AppColors.error : AppColors.error,
@@ -474,14 +282,14 @@ class _BudgetProgressCard extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _ProgressRow(
-              isDark: isDark, label: 'Expenses',
+              isDark: isDark, label: 'Outflow',
               actual: actualExpenses, planned: plannedExpenses,
               progress: expenseProgress, color: expenseColor,
               icon: Icons.arrow_upward_rounded,
             ),
             const SizedBox(height: 14),
             _ProgressRow(
-              isDark: isDark, label: 'Income',
+              isDark: isDark, label: 'Inflow',
               actual: actualIncome, planned: plannedIncome,
               progress: incomeProgress, color: AppColors.success,
               icon: Icons.arrow_downward_rounded,
@@ -741,6 +549,300 @@ class _TxRow extends StatelessWidget {
         Text('$sign${currencyFormatter.format(t.totalCost, decimalDigits: 2)}',
             style: GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w600, color: color, fontFeatures: const [FontFeature.tabularFigures()])),
       ]),
+    );
+  }
+}
+
+// ─── Spending / Income Chart ──────────────────────────────────────────────────
+
+class _SpendingChart extends StatefulWidget {
+  final List<Transaction> transactions;
+  final bool isDark;
+  const _SpendingChart({required this.transactions, required this.isDark});
+
+  @override
+  State<_SpendingChart> createState() => _SpendingChartState();
+}
+
+class _SpendingChartState extends State<_SpendingChart> {
+  bool _showExpenses = true;
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = now.day;
+
+    final byDay = <int, double>{};
+    for (final t in widget.transactions) {
+      if (t.date.month != now.month || t.date.year != now.year) continue;
+      final isExpense = t.type == TransactionType.expense;
+      if (_showExpenses != isExpense) continue;
+      byDay[t.date.day] = (byDay[t.date.day] ?? 0) + t.amount;
+    }
+
+    final values = List.generate(today, (i) => byDay[i + 1] ?? 0.0);
+    final total = values.fold(0.0, (s, v) => s + v);
+    final color = _showExpenses ? AppColors.error : AppColors.success;
+    final cardBg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final borderColor = widget.isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5);
+    final fg = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor, width: 0.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(
+                      _showExpenses ? 'Outflow' : 'Inflow',
+                      style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      currencyFormatter.format(total, decimalDigits: 0),
+                      style: GoogleFonts.dmMono(
+                        fontSize: 22, fontWeight: FontWeight.w700, color: color,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    if (_selectedIndex != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          'Day ${_selectedIndex! + 1}  ·  ${currencyFormatter.format(values[_selectedIndex!], decimalDigits: 2)}',
+                          style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ),
+                  ]),
+                ),
+                _ChartToggle(
+                  showExpenses: _showExpenses,
+                  isDark: widget.isDark,
+                  onToggle: (v) => setState(() { _showExpenses = v; _selectedIndex = null; }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 96,
+              child: _BarChart(
+                values: values,
+                color: color,
+                isDark: widget.isDark,
+                selectedIndex: _selectedIndex,
+                onTap: (i) => setState(() => _selectedIndex = _selectedIndex == i ? null : i),
+              ),
+            ),
+            const SizedBox(height: 4),
+            _XAxisLabels(today: today, isDark: widget.isDark),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Toggle ───────────────────────────────────────────────────────────────────
+
+class _ChartToggle extends StatelessWidget {
+  final bool showExpenses;
+  final bool isDark;
+  final void Function(bool) onToggle;
+
+  const _ChartToggle({required this.showExpenses, required this.isDark, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final trackBg = isDark ? const Color(0xFF3A3A38) : const Color(0xFFF0F0EE);
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: trackBg, borderRadius: BorderRadius.circular(10)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _ToggleChip(label: 'Outflow', selected: showExpenses, color: AppColors.error, isDark: isDark, onTap: () => onToggle(true)),
+        _ToggleChip(label: 'Inflow', selected: !showExpenses, color: AppColors.success, isDark: isDark, onTap: () => onToggle(false)),
+      ]),
+    );
+  }
+}
+
+class _ToggleChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final Color color;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ToggleChip({required this.label, required this.selected, required this.color, required this.isDark, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? (isDark ? const Color(0xFF2C2C2A) : Colors.white) : Colors.transparent,
+          borderRadius: BorderRadius.circular(7),
+          boxShadow: selected
+              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 1))]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.dmSans(
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? color : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Bar chart ────────────────────────────────────────────────────────────────
+
+class _BarChart extends StatelessWidget {
+  final List<double> values;
+  final Color color;
+  final bool isDark;
+  final int? selectedIndex;
+  final void Function(int) onTap;
+
+  const _BarChart({required this.values, required this.color, required this.isDark, required this.onTap, this.selectedIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.isEmpty) {
+      return Center(child: Text('No data yet', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textTertiary)));
+    }
+    return LayoutBuilder(builder: (_, constraints) {
+      final w = constraints.maxWidth;
+      return GestureDetector(
+        onTapUp: (d) {
+          final i = (d.localPosition.dx / (w / values.length)).floor().clamp(0, values.length - 1);
+          onTap(i);
+        },
+        child: CustomPaint(
+          size: Size(w, constraints.maxHeight),
+          painter: _BarPainter(values: values, color: color, isDark: isDark, selectedIndex: selectedIndex),
+        ),
+      );
+    });
+  }
+}
+
+class _BarPainter extends CustomPainter {
+  final List<double> values;
+  final Color color;
+  final bool isDark;
+  final int? selectedIndex;
+
+  const _BarPainter({required this.values, required this.color, required this.isDark, this.selectedIndex});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+    final maxVal = values.fold(0.0, max);
+    const topPad = 6.0;
+    final chartH = size.height - topPad;
+    final n = values.length;
+    final slotW = size.width / n;
+    final barW = (slotW * 0.52).clamp(2.0, 16.0);
+
+    // Subtle grid
+    final gridPaint = Paint()
+      ..color = (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04)
+      ..strokeWidth = 0.5;
+    for (int i = 1; i <= 3; i++) {
+      final y = topPad + chartH * (1 - i / 4);
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    if (maxVal == 0) return;
+
+    for (int i = 0; i < n; i++) {
+      final val = values[i];
+      final isSelected = selectedIndex == i;
+      final x = slotW * i + (slotW - barW) / 2;
+
+      if (val <= 0) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(Rect.fromLTWH(x, size.height - 2, barW, 2), const Radius.circular(1)),
+          Paint()..color = color.withValues(alpha: 0.1),
+        );
+        continue;
+      }
+
+      final barH = (val / maxVal) * chartH;
+      final y = topPad + chartH - barH;
+
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(x, y, barW, barH),
+          topLeft: const Radius.circular(5),
+          topRight: const Radius.circular(5),
+        ),
+        Paint()..color = isSelected ? color : color.withValues(alpha: 0.55),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BarPainter old) =>
+      old.values != values || old.selectedIndex != selectedIndex || old.color != color;
+}
+
+// ─── X-axis labels ────────────────────────────────────────────────────────────
+
+class _XAxisLabels extends StatelessWidget {
+  final int today;
+  final bool isDark;
+  const _XAxisLabels({required this.today, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final marks = <int>{1};
+    for (int d = 5; d <= today; d += 5) marks.add(d);
+    if (today > 1) marks.add(today);
+
+    return SizedBox(
+      height: 14,
+      child: LayoutBuilder(builder: (_, c) {
+        final w = c.maxWidth;
+        final slotW = w / today;
+        return Stack(
+          children: marks.map((d) {
+            final x = slotW * (d - 1) + slotW / 2;
+            return Positioned(
+              left: (x - 14).clamp(0.0, w - 28),
+              child: SizedBox(
+                width: 28,
+                child: Text(
+                  '$d',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.dmSans(fontSize: 9, color: AppColors.textTertiary),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      }),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
 
@@ -30,6 +31,10 @@ class SideSummaryPanel extends ScopedScreen {
   final void Function(BudgetCategory) onCategoryDetailTap;
   final Future<void> Function(Budget, BudgetCategory, double) onUpdateAmount;
 
+  // Top action bar buttons (shown in wide layout)
+  final VoidCallback? onToggleView;
+  final VoidCallback? onSettings;
+
   const SideSummaryPanel({
     super.key,
     required this.selectedGroup,
@@ -48,6 +53,8 @@ class SideSummaryPanel extends ScopedScreen {
     required this.onUpdateAmount,
     this.onEditCategory,
     this.onEditDebt,
+    this.onToggleView,
+    this.onSettings,
   });
 
   @override
@@ -102,9 +109,49 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? const Color(0xFF1E1E1C) : AppColors.background;
+    final headerBorder = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.5);
     final cat = widget.selectedCategory;
     final group = widget.selectedGroup;
+
+    // ── Top action bar (toggle view + settings) ─────────────────────────
+    final hasActions = widget.onToggleView != null || widget.onSettings != null;
+    final topBar = hasActions
+        ? Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2C2C2A) : Colors.white,
+              border: Border(bottom: BorderSide(color: headerBorder, width: 0.5)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Text(
+                  'Panel',
+                  style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                ),
+                const Spacer(),
+                if (widget.onToggleView != null)
+                  IconButton(
+                    icon: Icon(Icons.view_list_outlined, size: 18, color: AppColors.textSecondary),
+                    onPressed: widget.onToggleView,
+                    tooltip: 'Switch to Simple',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                if (widget.onSettings != null)
+                  IconButton(
+                    icon: Icon(Icons.more_vert_rounded, size: 18, color: AppColors.textSecondary),
+                    onPressed: widget.onSettings,
+                    tooltip: 'Budget settings',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+              ],
+            ),
+          )
+        : const SizedBox.shrink();
 
     // ── Debt detail mode ────────────────────────────────────────────────
     final debt = widget.selectedDebt;
@@ -117,12 +164,11 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          topBar,
           Container(
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.4,
-              ),
-              border: Border(top: BorderSide(color: theme.dividerColor)),
+              color: headerBg,
+              border: Border(top: BorderSide(color: headerBorder, width: 0.5)),
             ),
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             child: Row(
@@ -152,7 +198,7 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
                     debt.personName,
                     style: AppTextStyles.bodySmall.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
+                      color: AppColors.accent,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -215,19 +261,18 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          topBar,
           // Header bar with back button
           Container(
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.4,
-              ),
-              border: Border(top: BorderSide(color: theme.dividerColor)),
+              color: headerBg,
+              border: Border(top: BorderSide(color: headerBorder, width: 0.5)),
             ),
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, size: 16),
+                  icon: const Icon(Icons.arrow_back_ios_rounded, size: 14),
                   onPressed: widget.onCategoryPanelClose,
                   color: AppColors.textSecondary,
                   visualDensity: VisualDensity.compact,
@@ -240,7 +285,7 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
                     cat.financeCategory?.name ?? 'Category',
                     style: AppTextStyles.bodySmall.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
+                      color: AppColors.accent,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -282,12 +327,11 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        topBar,
         Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.4,
-            ),
-            border: Border(top: BorderSide(color: theme.dividerColor)),
+            color: headerBg,
+            border: Border(top: BorderSide(color: headerBorder, width: 0.5)),
           ),
           child: group == null
               ? TabBar(
@@ -297,6 +341,9 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
                     fontWeight: FontWeight.w600,
                   ),
                   unselectedLabelStyle: const TextStyle(fontSize: 12),
+                  indicatorColor: AppColors.accent,
+                  labelColor: AppColors.accent,
+                  unselectedLabelColor: AppColors.textSecondary,
                   tabs: const [
                     Tab(text: 'Summary'),
                     Tab(text: 'Transactions'),
@@ -312,14 +359,14 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
                           Icon(
                             Icons.folder_outlined,
                             size: 13,
-                            color: theme.colorScheme.primary,
+                            color: AppColors.accent,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               group.title ?? '',
                               style: AppTextStyles.bodySmall.copyWith(
-                                color: theme.colorScheme.primary,
+                                color: AppColors.accent,
                                 fontWeight: FontWeight.w600,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -343,6 +390,9 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
                         fontWeight: FontWeight.w600,
                       ),
                       unselectedLabelStyle: const TextStyle(fontSize: 12),
+                      indicatorColor: AppColors.accent,
+                      labelColor: AppColors.accent,
+                      unselectedLabelColor: AppColors.textSecondary,
                       tabs: const [Tab(text: 'Transactions')],
                     ),
                   ],

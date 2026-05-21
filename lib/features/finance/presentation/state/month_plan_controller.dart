@@ -103,7 +103,7 @@ class MonthPlanController extends StreamState<AsyncState<List<MonthPlan>>> {
   }
 
   /// Get or create the plan for a custom budget profile.
-  Future<MonthPlan> getOrCreatePlanForProfile(String profileId) async {
+  Future<MonthPlan?> getOrCreatePlanForProfile(String profileId) async {
     MonthPlan? plan;
     await executeSilent(() async {
       final result = await _repository.getOrCreatePlanForProfile(profileId);
@@ -114,7 +114,7 @@ class MonthPlanController extends StreamState<AsyncState<List<MonthPlan>>> {
       }
       return current.map((p) => p.budgetProfileId == profileId ? plan! : p).toList();
     });
-    return plan!;
+    return plan;
   }
 
   /// Clear all month plan state (called on sign-out to prevent data leaking to next user)

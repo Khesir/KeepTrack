@@ -136,63 +136,53 @@ class _SavingsTabState extends State<SavingsTab> {
     bool isDesktop,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Stack(
-      children: [
-        CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: _SavingsHeader(
-                total: total,
-                count: buckets.length,
-                isDark: isDark,
-                isDesktop: isDesktop,
-                onAdd: () => _openCreate(context),
-              ),
-            ),
-            if (buckets.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _EmptyState(onAdd: () => _openCreate(context)),
-              )
-            else
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  isDesktop ? 24 : 16,
-                  0,
-                  isDesktop ? 24 : 16,
-                  100,
-                ),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (_, i) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _BucketCard(
-                        bucket: buckets[i],
-                        isDark: isDark,
-                        onTap: () => _openAddEntry(context, buckets[i]),
-                        onEdit: () => _openEdit(context, buckets[i]),
-                        onViewHistory: () =>
-                            setState(() => _selectedBucket = buckets[i]),
-                      ),
-                    ),
-                    childCount: buckets.length,
-                  ),
-                ),
-              ),
-          ],
+    const h = 12.0;
+    final pad = isDesktop ? 24.0 : 16.0;
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: _SavingsHero(
+            total: total,
+            count: buckets.length,
+            isDark: isDark,
+            onAdd: () => _openCreate(context),
+          ),
         ),
-        if (!isDesktop)
-          Positioned(
-            bottom: 20,
-            right: 16,
-            child: FloatingActionButton.extended(
-              onPressed: () => _openCreate(context),
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: Text(
-                'New Bucket',
-                style: GoogleFonts.dmSans(fontWeight: FontWeight.w600),
+        if (buckets.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _EmptyState(onAdd: () => _openCreate(context)),
+          )
+        else
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(pad, 0, pad, 100),
+              child: Wrap(
+                spacing: h,
+                runSpacing: h,
+                children: [
+                  ...buckets.map((b) => SizedBox(
+                    width: 200,
+                    height: 160,
+                    child: _BucketCard(
+                      bucket: b,
+                      isDark: isDark,
+                      total: total,
+                      onTap: () => _openAddEntry(context, b),
+                      onEdit: () => _openEdit(context, b),
+                      onViewHistory: () => setState(() => _selectedBucket = b),
+                    ),
+                  )),
+                  SizedBox(
+                    width: 200,
+                    height: 160,
+                    child: _AddBucketCard(
+                      isDark: isDark,
+                      onTap: () => _openCreate(context),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -201,100 +191,84 @@ class _SavingsTabState extends State<SavingsTab> {
   }
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+// ─── Hero header ──────────────────────────────────────────────────────────────
 
-class _SavingsHeader extends StatelessWidget {
+class _SavingsHero extends StatelessWidget {
   final double total;
   final int count;
   final bool isDark;
-  final bool isDesktop;
   final VoidCallback onAdd;
 
-  const _SavingsHeader({
+  const _SavingsHero({
     required this.total,
     required this.count,
     required this.isDark,
-    required this.isDesktop,
     required this.onAdd,
   });
 
   @override
   Widget build(BuildContext context) {
-    final padding = isDesktop
-        ? const EdgeInsets.fromLTRB(24, 28, 24, 20)
-        : const EdgeInsets.fromLTRB(16, 24, 16, 16);
+    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final borderColor = isDark
+        ? AppColors.border.withValues(alpha: 0.18)
+        : AppColors.border.withValues(alpha: 0.45);
 
     return Padding(
-      padding: padding,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'TOTAL SAVED',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textTertiary,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  currencyFormatter.format(total),
-                  style: GoogleFonts.dmMono(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accent,
-                    letterSpacing: -0.5,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$count bucket${count == 1 ? '' : 's'}',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: 0.5),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.savings_rounded, color: AppColors.success, size: 24),
             ),
-          ),
-          if (isDesktop)
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: onAdd,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(10),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Savings',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add, size: 15, color: Colors.white),
-                      const SizedBox(width: 6),
-                      Text(
-                        'New Bucket',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 2),
+                  Text(
+                    currencyFormatter.format(total),
+                    style: GoogleFonts.dmMono(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.success,
+                      letterSpacing: -0.5,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$count bucket${count == 1 ? '' : 's'}',
+                    style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textTertiary),
+                  ),
+                ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -355,6 +329,7 @@ class _EmptyState extends StatelessWidget {
 class _BucketCard extends StatelessWidget {
   final SavingsBucket bucket;
   final bool isDark;
+  final double total;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onViewHistory;
@@ -362,6 +337,7 @@ class _BucketCard extends StatelessWidget {
   const _BucketCard({
     required this.bucket,
     required this.isDark,
+    required this.total,
     required this.onTap,
     required this.onEdit,
     required this.onViewHistory,
@@ -379,79 +355,120 @@ class _BucketCard extends StatelessWidget {
         : AppColors.border.withValues(alpha: 0.4);
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final icon = IconHelper.fromString(bucket.iconCodePoint);
+    final share = total > 0 ? (bucket.balance / total).clamp(0.0, 1.0) : 0.0;
 
     return Material(
-      color: cardBg,
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: borderColor, width: 0.5),
           ),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  width: 3,
-                  decoration: BoxDecoration(
-                    color: _color,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                    ),
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top band ──────────────────────────────────────────────
+              Container(
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _color,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 13),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: _color.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(icon, color: _color, size: 17),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            bucket.name,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: fg,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Icon + menu row
+                      Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: _color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            alignment: Alignment.center,
+                            child: Icon(icon, color: _color, size: 18),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          currencyFormatter.format(bucket.balance),
-                          style: GoogleFonts.dmMono(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: fg,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                          const Spacer(),
+                          PopupMenuButton<String>(
+                            iconSize: 16,
+                            padding: EdgeInsets.zero,
+                            icon: Icon(Icons.more_horiz, color: AppColors.textTertiary, size: 16),
+                            onSelected: (v) {
+                              if (v == 'edit') onEdit();
+                              if (v == 'history') onViewHistory();
+                            },
+                            itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: 'edit',
+                                child: Row(children: [
+                                  const Icon(Icons.edit_outlined, size: 14),
+                                  const SizedBox(width: 10),
+                                  Text('Edit', style: GoogleFonts.dmSans(fontSize: 13)),
+                                ]),
+                              ),
+                              PopupMenuItem(
+                                value: 'history',
+                                child: Row(children: [
+                                  const Icon(Icons.history_rounded, size: 14),
+                                  const SizedBox(width: 10),
+                                  Text('History', style: GoogleFonts.dmSans(fontSize: 13)),
+                                ]),
+                              ),
+                            ],
                           ),
+                        ],
+                      ),
+                      const Spacer(),
+                      // Balance
+                      Text(
+                        currencyFormatter.format(bucket.balance, decimalDigits: 0),
+                        style: GoogleFonts.dmMono(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: _color,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
-                        const SizedBox(width: 2),
-                        _CardMenu(onEdit: onEdit, onViewHistory: onViewHistory),
-                      ],
-                    ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        bucket.name,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: fg,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      // Share bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: share,
+                          minHeight: 3,
+                          backgroundColor: _color.withValues(alpha: 0.12),
+                          valueColor: AlwaysStoppedAnimation<Color>(_color),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -459,40 +476,59 @@ class _BucketCard extends StatelessWidget {
   }
 }
 
-class _CardMenu extends StatelessWidget {
-  final VoidCallback onEdit;
-  final VoidCallback onViewHistory;
+// ─── Add bucket ghost card ────────────────────────────────────────────────────
 
-  const _CardMenu({required this.onEdit, required this.onViewHistory});
+class _AddBucketCard extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _AddBucketCard({required this.isDark, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      iconSize: 17,
-      padding: EdgeInsets.zero,
-      icon: const Icon(Icons.more_horiz, color: AppColors.textTertiary),
-      onSelected: (v) {
-        if (v == 'edit') onEdit();
-        if (v == 'history') onViewHistory();
-      },
-      itemBuilder: (_) => [
-        PopupMenuItem(
-          value: 'edit',
-          child: Row(children: [
-            const Icon(Icons.edit_outlined, size: 14),
-            const SizedBox(width: 10),
-            Text('Edit bucket', style: GoogleFonts.dmSans(fontSize: 13)),
-          ]),
+    final borderColor = isDark
+        ? AppColors.border.withValues(alpha: 0.25)
+        : AppColors.border.withValues(alpha: 0.5);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.accent.withValues(alpha: 0.35),
+              width: 1.5,
+              style: BorderStyle.solid,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.add, color: AppColors.accent, size: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'New Bucket',
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accent,
+                ),
+              ),
+            ],
+          ),
         ),
-        PopupMenuItem(
-          value: 'history',
-          child: Row(children: [
-            const Icon(Icons.history_rounded, size: 14),
-            const SizedBox(width: 10),
-            Text('View history', style: GoogleFonts.dmSans(fontSize: 13)),
-          ]),
-        ),
-      ],
+      ),
     );
   }
 }

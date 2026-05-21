@@ -121,13 +121,6 @@ class _TransactionPlannerScreenState extends ScopedScreenState<TransactionPlanne
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddPlanSheet(),
-        backgroundColor: AppColors.accent,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.event_note_rounded, size: 18),
-        label: Text('New Plan', style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
-      ),
     );
   }
 }

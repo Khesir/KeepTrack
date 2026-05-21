@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:keep_track/core/demo/demo_mode.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/restart/app_restart_widget.dart';
 import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -10,6 +12,7 @@ import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Section model ────────────────────────────────────────────────────────────
 
@@ -821,7 +824,7 @@ class _SubscriptionPane extends StatelessWidget {
 
 // ─── Data pane ────────────────────────────────────────────────────────────────
 
-class _DataPane extends StatelessWidget {
+class _DataPane extends StatefulWidget {
   final bool isDark;
   final SettingsController controller;
   final AuthController authController;
@@ -833,12 +836,40 @@ class _DataPane extends StatelessWidget {
   });
 
   @override
+  State<_DataPane> createState() => _DataPaneState();
+}
+
+class _DataPaneState extends State<_DataPane> {
+  Future<void> _toggleDemoMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await DemoMode.setEnabled(prefs, value);
+    if (mounted) {
+      // ignore: use_build_context_synchronously
+      AppRestartWidget.of(context).restart();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
         _PaneRow(
-          isDark: isDark,
+          isDark: widget.isDark,
+          icon: Icons.science_outlined,
+          iconColor: AppColors.accent,
+          label: 'Demo Mode',
+          subtitle: DemoMode.enabled
+              ? 'Using sample data — toggle to connect your account'
+              : 'Show sample data to explore all features',
+          trailing: Switch(
+            value: DemoMode.enabled,
+            onChanged: _toggleDemoMode,
+            activeThumbColor: AppColors.accent,
+          ),
+        ),
+        _PaneRow(
+          isDark: widget.isDark,
           icon: Icons.restore_rounded,
           iconColor: AppColors.warning,
           label: 'Reset to Defaults',
@@ -865,7 +896,7 @@ class _DataPane extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () {
-              controller.resetToDefaults();
+              widget.controller.resetToDefaults();
               Navigator.pop(context);
             },
             style:

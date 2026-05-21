@@ -146,7 +146,6 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
           plans: plans, selectedIndex: idx,
           onSelect: (i) => _selectMonth(i, plans),
         )),
-        const SliverToBoxAdapter(child: _AiInsightCard()),
         if (monthBudgets.isNotEmpty) ...[
           SliverToBoxAdapter(child: InsightSpendingSection(allBudgets: monthBudgets, spentByCategory: spentByCategory)),
           SliverToBoxAdapter(child: InsightBudgetBarsSection(allBudgets: monthBudgets, spentByCategory: spentByCategory)),
@@ -230,61 +229,3 @@ class _MonthSelector extends StatelessWidget {
   }
 }
 
-// ─── AI Insight Placeholder ───────────────────────────────────────────────────
-
-class _AiInsightCard extends StatelessWidget {
-  const _AiInsightCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [const Color(0xFF1E1B4B), const Color(0xFF312E81)]
-                : [const Color(0xFF4F46E5), const Color(0xFF7C3AED)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    const Text('AI Insights', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
-                      child: const Text('Coming soon', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
-                    ),
-                  ]),
-                  const SizedBox(height: 4),
-                  const Text('Personalized financial insights powered by AI are on the way.',
-                      style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

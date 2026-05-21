@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
 class MonthHeader extends StatelessWidget {
@@ -10,6 +11,7 @@ class MonthHeader extends StatelessWidget {
   final VoidCallback? onToggleView;
 
   const MonthHeader({
+    super.key,
     required this.monthLabel,
     required this.onPrev,
     required this.onNext,
@@ -20,38 +22,62 @@ class MonthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(icon: const Icon(Icons.chevron_left), onPressed: onPrev),
-        Expanded(
-          child: Text(
-            monthLabel,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.h3,
-          ),
-        ),
-        IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext),
-        if (onSummaryTap != null)
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+      child: Row(
+        children: [
           IconButton(
-            icon: const Icon(Icons.bar_chart_rounded),
-            onPressed: onSummaryTap,
-            tooltip: 'Summary & Transactions',
+            icon: Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary),
+            onPressed: onPrev,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
-        if (onToggleView != null)
+          Expanded(
+            child: Text(
+              monthLabel,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.dmSans(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+            ),
+          ),
           IconButton(
-            icon: const Icon(Icons.view_list_outlined),
-            onPressed: onToggleView,
-            tooltip: 'Switch to Simple',
-            color: AppColors.textSecondary,
+            icon: Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+            onPressed: onNext,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
-        if (onSettings != null)
-          IconButton(
-            icon: const Icon(Icons.more_vert_rounded),
-            onPressed: onSettings,
-            tooltip: 'Budget settings',
-            color: AppColors.textSecondary,
-          ),
-      ],
+          if (onSummaryTap != null)
+            IconButton(
+              icon: Icon(Icons.bar_chart_rounded, color: AppColors.textSecondary),
+              onPressed: onSummaryTap,
+              tooltip: 'Summary & Transactions',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+          if (onToggleView != null)
+            IconButton(
+              icon: Icon(Icons.view_list_outlined, color: AppColors.textSecondary),
+              onPressed: onToggleView,
+              tooltip: 'Switch to Simple',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+          if (onSettings != null)
+            IconButton(
+              icon: Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+              onPressed: onSettings,
+              tooltip: 'Budget settings',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+        ],
+      ),
     );
   }
 }

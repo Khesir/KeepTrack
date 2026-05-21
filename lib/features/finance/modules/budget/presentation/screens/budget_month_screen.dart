@@ -12,7 +12,6 @@ import 'package:keep_track/features/finance/modules/budget/presentation/helpers/
 import 'package:keep_track/features/finance/modules/budget/presentation/sections/budget_screen_body.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/state/budget_screen_data.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/payment_enums.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
@@ -22,9 +21,9 @@ import 'package:keep_track/features/finance/presentation/state/debt_controller.d
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/state/budget_section_type.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
@@ -32,6 +31,9 @@ import 'package:keep_track/features/finance/presentation/screens/transactions/cr
 import '../sheets/add_category_sheet.dart';
 import '../sheets/add_debts_sheet.dart';
 import '../sheets/add_subscription_sheet.dart';
+import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_simple_sheets.dart'
+    show GoalDetailSheet;
 import '../sheets/category_detail_sheet.dart';
 import '../sheets/commitment_sheet.dart';
 import '../sheets/create_group_sheet.dart';
@@ -61,12 +63,11 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
   late final TransactionController _transactionController;
   late final FinanceCategoryController _categoryController;
   late final SubscriptionController _subscriptionController;
-  late final SavingsController _savingsController;
+  late final GoalController _goalController;
 
   DateTime _currentMonth = DateTime.now();
   List<String> _itemOrder = [];
-  List<String> _selectedSavingsIds = [];
-  Map<String, double> _plannedSavingsAmounts = {};
+  int _selectedTab = 0;
   Budget? _selectedGroup;
   BudgetCategory? _selectedCategory;
   Budget? _selectedCategoryGroup;
@@ -81,7 +82,7 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
     _transactionController = locator.get<TransactionController>();
     _categoryController = locator.get<FinanceCategoryController>();
     _subscriptionController = locator.get<SubscriptionController>();
-    _savingsController = locator.get<SavingsController>();
+    _goalController = locator.get<GoalController>();
 
     _controller = BudgetMonthController(
       budgetController: _budgetController,
@@ -90,18 +91,19 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
       plannedPaymentController: _plannedPaymentController,
       transactionController: _transactionController,
       subscriptionController: _subscriptionController,
-      savingsController: _savingsController,
+      goalController: _goalController,
     );
   }
 
   @override
   void onReady() {
-    _savingsController.loadSavings();
+    _monthPlanController.loadMonthPlans();
+    _debtController.loadDebts();
+    _subscriptionController.loadSubscriptions();
+    _goalController.loadGoals();
     _controller.init();
     _loadMonthTransactions();
     _loadSectionOrder();
-    _loadSelectedSavingsIds();
-    _loadPlannedSavingsAmounts();
   }
 
   Future<void> _loadSectionOrder() async {
@@ -110,33 +112,6 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
     if (saved != null && mounted) {
       setState(() => _itemOrder = saved);
     }
-  }
-
-  Future<void> _loadSelectedSavingsIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList('budget_savings_$_monthKey') ?? [];
-    if (mounted) setState(() => _selectedSavingsIds = saved);
-  }
-
-  Future<void> _saveSelectedSavingsIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('budget_savings_$_monthKey', _selectedSavingsIds);
-  }
-
-  Future<void> _loadPlannedSavingsAmounts() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => k.startsWith('budget_savings_planned_${_monthKey}_'));
-    final map = <String, double>{};
-    for (final k in keys) {
-      final bucketId = k.replaceFirst('budget_savings_planned_${_monthKey}_', '');
-      map[bucketId] = prefs.getDouble(k) ?? 0;
-    }
-    if (mounted) setState(() => _plannedSavingsAmounts = map);
-  }
-
-  Future<void> _savePlannedAmount(String bucketId, double amount) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('budget_savings_planned_${_monthKey}_$bucketId', amount);
   }
 
   void _reconcileItemOrder(BudgetScreenData data) {
@@ -188,13 +163,8 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
         state: _controller,
         builder: (context, data) {
           _reconcileItemOrder(data);
-          final filteredData = data.copyWith(
-            savingsBuckets: data.savingsBuckets
-                .where((b) => b.id != null && _selectedSavingsIds.contains(b.id))
-                .toList(),
-          );
           return BudgetScreenBody(
-          data: filteredData,
+          data: data,
           currentMonth: _currentMonth,
           monthLabel: _monthLabel,
           monthKey: _monthKey,
@@ -237,10 +207,10 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
           onAddDebt: (isReceivable) => _showAddDebtSheet(isReceivable: isReceivable),
           onAddSubscription: _showAddSubscriptionSheet,
           onPaySubscription: _paySubscription,
-          onManageSavings: () => _showSavingsManageSheet(data.savingsBuckets),
-          onDepositSavings: _showDepositDialog,
-          onSetPlannedSavings: _setPlannedAmount,
-          plannedSavingsAmounts: _plannedSavingsAmounts,
+          onAddGoal: _showAddGoalSheet,
+          onGoalTap: _showGoalDetailSheet,
+          selectedTab: _selectedTab,
+          onTabSelect: (i) => setState(() => _selectedTab = i),
           itemOrder: _itemOrder,
           onItemReorder: _reorderItems,
           onUpdateAmount: (g, c, amt) =>
@@ -298,12 +268,9 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
       _selectedCategory = null;
       _selectedCategoryGroup = null;
       _selectedDebt = null;
-      _selectedSavingsIds = [];
-      _plannedSavingsAmounts = {};
+      _selectedTab = 0;
     });
     _loadMonthTransactions();
-    _loadSelectedSavingsIds();
-    _loadPlannedSavingsAmounts();
   }
 
   void _nextMonth() {
@@ -313,12 +280,9 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
       _selectedCategory = null;
       _selectedCategoryGroup = null;
       _selectedDebt = null;
-      _selectedSavingsIds = [];
-      _plannedSavingsAmounts = {};
+      _selectedTab = 0;
     });
     _loadMonthTransactions();
-    _loadSelectedSavingsIds();
-    _loadPlannedSavingsAmounts();
   }
 
   void _loadMonthTransactions() {
@@ -743,103 +707,26 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
     );
   }
 
-  void _showSavingsManageSheet(List<SavingsBucket> allBuckets) {
+  void _showAddGoalSheet() {
+    GoalsManagementDialog.show(
+      context,
+      onSave: (goal) => _goalController.createGoal(goal),
+    );
+  }
+
+  void _showGoalDetailSheet(Goal goal) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setSheet) => DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.5,
-          maxChildSize: 0.85,
-          builder: (_, scrollCtrl) => Column(
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 36, height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Row(
-                  children: [
-                    Text('Manage Savings', style: AppTextStyles.h4),
-                    const Spacer(),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: allBuckets.isEmpty
-                    ? Center(child: Text('No savings buckets found', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)))
-                    : ListView.separated(
-                        controller: scrollCtrl,
-                        itemCount: allBuckets.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
-                        itemBuilder: (_, i) {
-                          final b = allBuckets[i];
-                          final isSelected = _selectedSavingsIds.contains(b.id);
-                          return CheckboxListTile(
-                            value: isSelected,
-                            title: Text(b.name, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                            subtitle: Text(formatCurrency(b.balance), style: AppTextStyles.caption.copyWith(color: AppColors.success)),
-                            onChanged: (_) {
-                              final next = isSelected
-                                  ? _selectedSavingsIds.where((id) => id != b.id).toList()
-                                  : [..._selectedSavingsIds, b.id!];
-                              setState(() => _selectedSavingsIds = next);
-                              setSheet(() {});
-                              _saveSelectedSavingsIds();
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      builder: (_) => GoalDetailSheet(
+        goal: goal,
+        goalController: _goalController,
+        onContribute: (currentGoal, amount) =>
+            _goalController.contributeToGoal(currentGoal.id!, amount),
+        onUpdate: (updated) => _goalController.updateGoal(updated),
       ),
     );
-  }
-
-  void _showDepositDialog(SavingsBucket bucket) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Deposit — ${bucket.name}'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Amount', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final amount = double.tryParse(ctrl.text);
-              if (amount == null || amount <= 0) return;
-              Navigator.pop(ctx);
-              await _savingsController.updateSavingsBucket(
-                bucket.copyWith(balance: bucket.balance + amount),
-              );
-            },
-            child: const Text('Deposit'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _setPlannedAmount(SavingsBucket bucket, double amount) {
-    if (bucket.id == null) return;
-    setState(() => _plannedSavingsAmounts = {..._plannedSavingsAmounts, bucket.id!: amount});
-    _savePlannedAmount(bucket.id!, amount);
   }
 
   Future<void> _payCategoryAmount(Budget group, BudgetCategory cat, double amount) async {

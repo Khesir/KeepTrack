@@ -26,16 +26,14 @@ import 'package:keep_track/features/finance/modules/finance_category/domain/enti
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
-import 'package:keep_track/features/finance/presentation/screens/configuration/savings/widget/savings_management_dialog.dart';
-import 'package:keep_track/features/finance/presentation/screens/tabs/savings/savings_bucket_detail_screen.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'budget_simple_sections.dart';
 import 'budget_simple_sheets.dart';
+import '../sections/budget_overall_summary.dart';
 import '../sheets/budget_settings_sheet.dart';
 import '../sheets/profile_start_planning_sheet.dart';
 import '../sheets/start_planning_sheet.dart';
@@ -100,12 +98,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     _monthPlanController = locator.get<MonthPlanController>();
     _budgetController.loadBudgets();
     _loadTx();
-    if (widget._isProfileMode && widget.budgetProfileId != null) {
-      _loadProfileData();
-    }
-  }
-
-  void _loadProfileData() {
+    // Always load — profile ID scopes the API query; null = all unattached items
     _debtController.loadDebts(budgetProfileId: widget.budgetProfileId);
     _subController.loadSubscriptions(budgetProfileId: widget.budgetProfileId);
     _goalController.loadGoals(budgetProfileId: widget.budgetProfileId);
@@ -416,23 +409,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     );
   }
 
-  void _showAddSavingsBucket() {
-    final userId = locator.get<AuthController>().currentUser?.id ?? '';
-    showDialog(
-      context: context,
-      builder: (_) => SavingsManagementDialog(
-        userId: userId,
-        onSave: (b) => _savingsController.createSavingsBucket(b),
-      ),
-    );
-  }
-
-  void _showSavingsBucketDetail(SavingsBucket bucket) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => SavingsBucketDetailScreen(bucket: bucket)),
-    );
-  }
 
   // ── Build ───────────────────────────────────────────────────────────────────
 
@@ -470,6 +446,17 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   Widget _build(BuildContext ctx, bool isDark, List<Budget> budgets, List<Transaction> txs,
       List<Debt> debts, List<Subscription> subs, List<Goal> goals) {
     final spentByCategory = BudgetMonthFilter.buildSpentByCategory(txs);
+
+    final paidThisMonthByDebt = <String, double>{};
+    final contributedThisMonthByGoal = <String, double>{};
+    for (final t in txs) {
+      if (t.debtId != null) {
+        paidThisMonthByDebt[t.debtId!] = (paidThisMonthByDebt[t.debtId!] ?? 0) + t.amount;
+      }
+      if (t.goalId != null) {
+        contributedThisMonthByGoal[t.goalId!] = (contributedThisMonthByGoal[t.goalId!] ?? 0) + t.amount;
+      }
+    }
     final monthBudgets = widget._isProfileMode
         ? widget.profileIsMonthly
             ? budgets.where((b) => b.budgetProfileId == widget.budgetProfileId && b.month == _monthKey && b.status == BudgetStatus.active).toList()
@@ -507,27 +494,26 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     final sortedGoals = (List.of(goals.where((g) => matchesProfile(g.budgetProfileId)))..sort((a, b) => goalOrder(a.status).compareTo(goalOrder(b.status))));
 
     final tab = widget.selectedTab;
-    final allBuckets = _savingsController.data ?? [];
-
-    // Build the tab-contextual summary card
+    // Summary tab (0) has its own full content — no separate summary card needed
+    // Tabs 1–5 each have a header card above the section list
     Widget summaryCard = switch (tab) {
-      1 => SimpleSubsSummaryCard(isDark: isDark, subs: monthSubs, month: _month),
-      2 => SimpleDebtSummaryCard(
+      0 => const SizedBox.shrink(),  // summary tab: no card (content IS the summary)
+      2 => SimpleSubsSummaryCard(isDark: isDark, subs: monthSubs, month: _month),
+      3 => SimpleDebtSummaryCard(
           isDark: isDark,
           totalOwed: sortedDebts.where((d) => d.status == DebtStatus.active).fold(0.0, (s, d) => s + d.remainingAmount),
           totalReceivable: 0,
           debtCount: sortedDebts.where((d) => d.status == DebtStatus.active).length,
           receivableCount: 0,
         ),
-      3 => SimpleDebtSummaryCard(
+      4 => SimpleDebtSummaryCard(
           isDark: isDark,
           totalOwed: 0,
           totalReceivable: sortedReceivables.where((d) => d.status == DebtStatus.active).fold(0.0, (s, d) => s + d.remainingAmount),
           debtCount: 0,
           receivableCount: sortedReceivables.where((d) => d.status == DebtStatus.active).length,
         ),
-      4 => SimpleGoalsSummaryCard(isDark: isDark, goals: sortedGoals),
-      5 => SimpleSavingsSummaryCard(isDark: isDark, buckets: allBuckets),
+      5 => SimpleGoalsSummaryCard(isDark: isDark, goals: sortedGoals),
       _ => SimpleNetCard(isDark: isDark, net: net, plannedNet: plannedNet, actualIncome: actualIncome, plannedIncome: plannedIncome, actualExpenses: actualExpenses, plannedExpenses: plannedExpenses),
     };
 
@@ -615,31 +601,49 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         isDark: isDark,
         selected: tab,
         onSelect: widget.onTabChange ?? (_) {},
+        // Tab 0 = Summary (no count), 1 = Budget, 2 = Subs, 3 = Debts, 4 = Receivables, 5 = Goals
         counts: [
+          null,
           null,
           activeSubs.length,
           sortedDebts.where((d) => d.status == DebtStatus.active).length,
           sortedReceivables.where((d) => d.status == DebtStatus.active).length,
           sortedGoals.where((g) => g.status == GoalStatus.active).length,
-          allBuckets.length,
         ],
       )),
-      SliverToBoxAdapter(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 280),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(animation),
-              child: child,
+      if (tab != 0)
+        SliverToBoxAdapter(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(animation),
+                child: child,
+              ),
             ),
+            child: KeyedSubtree(key: ValueKey(tab), child: summaryCard),
           ),
-          child: KeyedSubtree(key: ValueKey(tab), child: summaryCard),
         ),
-      ),
-      if (tab == 0) ...[
+      // Tab 0: Overall summary
+      if (tab == 0)
+        SliverToBoxAdapter(
+          child: BudgetOverallSummary(
+            monthBudgets: monthBudgets,
+            spentByCategory: spentByCategory,
+            subscriptions: activeSubs,
+            debts: sortedDebts,
+            receivables: sortedReceivables,
+            goals: sortedGoals,
+            transactions: txs,
+            currentMonth: _month,
+            isDark: isDark,
+          ),
+        ),
+      // Tab 1: Budget groups
+      if (tab == 1) ...[
         SliverToBoxAdapter(child: SimpleBudgetSection(
           isDark: isDark, label: 'INCOME', groups: incomeGroups, spentByCategory: spentByCategory, isIncome: true,
           onAddGroup: () => _showCreateGroup(true), onAddCategory: _showAddCategory,
@@ -651,36 +655,32 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           onEditGroup: _showEditGroup, onCategoryTap: _showCategoryDetail,
         )),
       ],
-      if (tab == 1)
+      if (tab == 2)
         SliverToBoxAdapter(child: SimpleSubscriptionsSection(
           isDark: isDark, subs: activeSubs, month: _month,
           onAdd: _showAddSubscription, onRowTap: _showSubDetail,
           onSkip: _skipSubscription,
         )),
-      if (tab == 2)
+      if (tab == 3)
         SliverToBoxAdapter(child: SimpleDebtsSection(
           isDark: isDark, debts: sortedDebts, receivables: const [],
+          paidThisMonth: paidThisMonthByDebt,
           onAddDebt: () => _showAddDebt(isReceivable: false),
           onAddReceivable: () => _showAddDebt(isReceivable: false),
           onRowTap: _showDebtDetail,
         )),
-      if (tab == 3)
+      if (tab == 4)
         SliverToBoxAdapter(child: SimpleDebtsSection(
           isDark: isDark, debts: const [], receivables: sortedReceivables,
+          paidThisMonth: paidThisMonthByDebt,
           onAddDebt: () => _showAddDebt(isReceivable: true),
           onAddReceivable: () => _showAddDebt(isReceivable: true),
           onRowTap: _showDebtDetail,
         )),
-      if (tab == 4)
+      if (tab == 5)
         SliverToBoxAdapter(child: SimpleGoalsSection(
           isDark: isDark, goals: sortedGoals, onAdd: _showAddGoal, onRowTap: _showGoalDetail,
-        )),
-      if (tab == 5)
-        SliverToBoxAdapter(child: SimpleSavingsSection(
-          isDark: isDark,
-          buckets: allBuckets,
-          onAdd: _showAddSavingsBucket,
-          onRowTap: _showSavingsBucketDetail,
+          contributedThisMonth: contributedThisMonthByGoal,
         )),
       const SliverToBoxAdapter(child: SizedBox(height: 100)),
     ]);
@@ -854,86 +854,89 @@ class BudgetSimpleTabBar extends StatelessWidget {
   });
 
   static const _items = [
+    (icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard_rounded, label: 'Summary'),
     (icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Budget'),
     (icon: Icons.autorenew_outlined, activeIcon: Icons.autorenew, label: 'Subs'),
     (icon: Icons.arrow_upward_rounded, activeIcon: Icons.arrow_upward_rounded, label: 'Debts'),
     (icon: Icons.arrow_downward_rounded, activeIcon: Icons.arrow_downward_rounded, label: 'Receivables'),
     (icon: Icons.flag_outlined, activeIcon: Icons.flag, label: 'Goals'),
-    (icon: Icons.savings_outlined, activeIcon: Icons.savings, label: 'Savings'),
   ];
+
+  Widget _buildPill(int i, bool narrow) {
+    final item = _items[i];
+    final isSelected = i == selected;
+    final count = i < counts.length ? counts[i] : null;
+    final label = (count != null && count > 0) ? '${item.label} ($count)' : item.label;
+    final fg = isSelected
+        ? Colors.white
+        : (isDark ? AppColors.primaryForeground : AppColors.textPrimary);
+
+    Widget pill = AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: EdgeInsets.symmetric(horizontal: narrow ? 10 : 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? AppColors.accent
+            : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white),
+        borderRadius: BorderRadius.circular(20),
+        border: isSelected
+            ? null
+            : Border.all(
+                color: isDark ? AppColors.border.withValues(alpha: 0.35) : AppColors.border,
+                width: 1,
+              ),
+        boxShadow: isSelected
+            ? [BoxShadow(color: AppColors.accent.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 2))]
+            : null,
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(isSelected ? item.activeIcon : item.icon, size: 13, color: fg),
+        const SizedBox(width: 5),
+        Text(label, style: GoogleFonts.dmSans(fontSize: 12, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: fg)),
+      ]),
+    );
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(onTap: () => onSelect(i), child: pill),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _items.asMap().entries.map((e) {
-            final i = e.key;
-            final item = e.value;
-            final isSelected = i == selected;
-            final count = i < counts.length ? counts[i] : null;
-            final label = (count != null && count > 0)
-                ? '${item.label} ($count)'
-                : item.label;
-            final fg = isSelected
-                ? Colors.white
-                : (isDark ? AppColors.primaryForeground : AppColors.textPrimary);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 520;
 
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: () => onSelect(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.accent
-                          : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white),
-                      borderRadius: BorderRadius.circular(20),
-                      border: isSelected
-                          ? null
-                          : Border.all(
-                              color: isDark
-                                  ? AppColors.border.withValues(alpha: 0.35)
-                                  : AppColors.border,
-                              width: 1,
-                            ),
-                      boxShadow: isSelected
-                          ? [BoxShadow(
-                              color: AppColors.accent.withValues(alpha: 0.25),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            )]
-                          : null,
-                    ),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(
-                        isSelected ? item.activeIcon : item.icon,
-                        size: 13,
-                        color: fg,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        label,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: fg,
-                        ),
-                      ),
-                    ]),
-                  ),
+        if (narrow) {
+          // Wrap — pills flow to next row if they don't fit
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: List.generate(_items.length, (i) => _buildPill(i, true)),
+            ),
+          );
+        }
+
+        // Wide — horizontal scroll
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(
+                _items.length,
+                (i) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _buildPill(i, false),
                 ),
               ),
-            );
-          }).toList(),
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

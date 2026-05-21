@@ -1,1 +1,1 @@
-const kSectionKeys = {'debts', 'receivables', 'subscriptions', 'savings'};
+const kSectionKeys = {'debts', 'receivables', 'subscriptions', 'goals'};

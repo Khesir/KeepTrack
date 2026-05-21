@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../domain/entities/budget_category.dart';
@@ -227,11 +228,14 @@ class CategoryRowState extends State<CategoryRow> {
                         : Text(
                             formatCurrency(planned),
                             textAlign: TextAlign.right,
-                            style: AppTextStyles.bodySmall.copyWith(
+                            style: GoogleFonts.dmMono(
+                              fontSize: 13,
                               color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
                               decoration: TextDecoration.underline,
                               decorationStyle: TextDecorationStyle.dotted,
                               decorationColor: AppColors.textTertiary,
+                              fontFeatures: const [FontFeature.tabularFigures()],
                             ),
                           ),
                   ),
@@ -245,33 +249,40 @@ class CategoryRowState extends State<CategoryRow> {
                   child: Text(
                     formatCurrency(actual),
                     textAlign: TextAlign.right,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      fontWeight: FontWeight.w500,
+                    style: GoogleFonts.dmMono(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                       color: isOver
                           ? overColor
                           : actual > 0
-                          ? AppColors.textPrimary
+                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryForeground : AppColors.textPrimary)
                           : AppColors.textTertiary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ),
 
+                // Fixed right spacer — same width as group header's edit+drag area
+                // so Planned/Spent columns stay aligned across header and all rows.
                 if (widget.onPay != null) ...[
                   const SizedBox(width: 6),
-                  SizedBox(
-                    width: 42,
-                    child: TextButton(
-                      onPressed: _showPayDialog,
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(42, 28),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: widget.accentColor,
+                  GestureDetector(
+                    onTap: _showPayDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: widget.accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: widget.accentColor.withValues(alpha: 0.3), width: 0.5),
                       ),
-                      child: const Text('Pay', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                      child: Text(
+                        'Pay',
+                        style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: widget.accentColor),
+                      ),
                     ),
                   ),
-                ],
+                ] else
+                  const SizedBox(width: 52),
               ],
             ),
             const SizedBox(height: 4),

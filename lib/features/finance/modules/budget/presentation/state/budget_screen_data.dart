@@ -1,8 +1,8 @@
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 
@@ -13,7 +13,7 @@ class BudgetScreenData {
   final List<Debt> debts;
   final List<PlannedPayment> payments;
   final List<Subscription> subscriptions;
-  final List<SavingsBucket> savingsBuckets;
+  final List<Goal> goals;
 
   const BudgetScreenData({
     required this.monthPlans,
@@ -22,7 +22,7 @@ class BudgetScreenData {
     required this.debts,
     required this.payments,
     this.subscriptions = const [],
-    this.savingsBuckets = const [],
+    this.goals = const [],
   });
 
   BudgetScreenData copyWith({
@@ -32,7 +32,7 @@ class BudgetScreenData {
     List<Debt>? debts,
     List<PlannedPayment>? payments,
     List<Subscription>? subscriptions,
-    List<SavingsBucket>? savingsBuckets,
+    List<Goal>? goals,
   }) => BudgetScreenData(
     monthPlans: monthPlans ?? this.monthPlans,
     budgets: budgets ?? this.budgets,
@@ -40,7 +40,7 @@ class BudgetScreenData {
     debts: debts ?? this.debts,
     payments: payments ?? this.payments,
     subscriptions: subscriptions ?? this.subscriptions,
-    savingsBuckets: savingsBuckets ?? this.savingsBuckets,
+    goals: goals ?? this.goals,
   );
 
   static BudgetScreenData empty() => const BudgetScreenData(
@@ -50,6 +50,6 @@ class BudgetScreenData {
     debts: [],
     payments: [],
     subscriptions: [],
-    savingsBuckets: [],
+    goals: [],
   );
 }

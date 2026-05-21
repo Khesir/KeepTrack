@@ -5,7 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/core/state/state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 
@@ -23,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _nameController = TextEditingController();
   bool _isSignUp = false;
   bool _obscurePassword = true;
+  String? _errorMessage;
 
   static const _pageBg = Color(0xFF1E1E1C);
 
@@ -43,6 +43,31 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  String _humanize(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('unauthorized') ||
+        lower.contains('invalid credentials') ||
+        lower.contains('401') ||
+        lower.contains('wrong password') ||
+        lower.contains('user not found')) {
+      return 'Incorrect email or password.';
+    }
+    if (lower.contains('email already') ||
+        lower.contains('already registered')) {
+      return 'This email is already in use.';
+    }
+    if (lower.contains('network') ||
+        lower.contains('connection') ||
+        lower.contains('socket') ||
+        lower.contains('timeout')) {
+      return 'Connection failed. Check your internet and try again.';
+    }
+    if (lower.contains('too many') || lower.contains('rate limit')) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+    return 'Something went wrong. Please try again.';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,7 +75,16 @@ class _LoginScreenState extends State<LoginScreen> {
       body: AsyncStreamBuilder<dynamic>(
         state: _authController,
         loadingBuilder: (_) => _buildLoading(),
-        errorBuilder: (_, msg) => _buildError(msg),
+        errorBuilder: (_, msg) {
+          // Stay on the form — capture error in local state and reset controller
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _errorMessage = _humanize(msg));
+              _authController.cancelSignIn();
+            }
+          });
+          return _buildPage();
+        },
         builder: (_, __) => _buildPage(),
       ),
     );
@@ -85,10 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: SvgPicture.asset('assets/wordmark-light.svg', height: 26),
-          ),
-          const SizedBox(height: 28),
           Text(
             _isSignUp ? 'Create an account' : 'Welcome back!',
             style: GoogleFonts.dmSans(
@@ -127,6 +157,48 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 16),
           _buildPasswordField(),
+          // ── Inline error banner ─────────────────────────────────────
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: AppColors.errorLight,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: AppColors.error.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 16,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _errorMessage = null),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 15,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           _buildPrimaryButton(),
           const SizedBox(height: 16),
@@ -151,6 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
               GestureDetector(
                 onTap: () => setState(() {
                   _isSignUp = !_isSignUp;
+                  _errorMessage = null;
                 }),
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
@@ -193,10 +266,7 @@ class _LoginScreenState extends State<LoginScreen> {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
-          style: GoogleFonts.dmSans(
-            fontSize: 14,
-            color: AppColors.textPrimary,
-          ),
+          style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textPrimary),
           decoration: _inputDecoration(hint),
         ),
       ],
@@ -220,14 +290,10 @@ class _LoginScreenState extends State<LoginScreen> {
         TextField(
           controller: _passwordController,
           obscureText: _obscurePassword,
-          style: GoogleFonts.dmSans(
-            fontSize: 14,
-            color: AppColors.textPrimary,
-          ),
+          style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textPrimary),
           decoration: _inputDecoration('••••••••').copyWith(
             suffixIcon: GestureDetector(
-              onTap: () =>
-                  setState(() => _obscurePassword = !_obscurePassword),
+              onTap: () => setState(() => _obscurePassword = !_obscurePassword),
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: Icon(
@@ -252,10 +318,7 @@ class _LoginScreenState extends State<LoginScreen> {
         fontSize: 14,
         color: AppColors.textTertiary,
       ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 12,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       filled: true,
       fillColor: AppColors.backgroundSecondary,
       border: OutlineInputBorder(
@@ -268,10 +331,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
-        borderSide: const BorderSide(
-          color: AppColors.inputFocus,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: AppColors.inputFocus, width: 1.5),
       ),
     );
   }
@@ -285,22 +345,18 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: AppColors.accent,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
         child: Text(
           _isSignUp ? 'Create Account' : 'Log In',
-          style: GoogleFonts.dmSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
     );
   }
 
   void _submit() {
+    setState(() => _errorMessage = null);
     if (_isSignUp) {
       _authController.signUpWithEmail(
         email: _emailController.text.trim(),
@@ -315,6 +371,39 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
     }
+  }
+
+  Widget _buildLoading() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SvgPicture.asset('assets/wordmark-light.svg', height: 50),
+          const SizedBox(height: 36),
+          const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation(AppColors.accent),
+              strokeWidth: 2,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _isSignUp ? 'Creating account…' : 'Signing in…',
+            style: GoogleFonts.dmSans(fontSize: 13, color: Colors.white54),
+          ),
+          const SizedBox(height: 20),
+          TextButton(
+            onPressed: _authController.cancelSignIn,
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.accent),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDivider() {
@@ -338,100 +427,6 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Divider(color: AppColors.border.withValues(alpha: 0.6)),
         ),
       ],
-    );
-  }
-
-  Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation(AppColors.accent),
-            strokeWidth: 2,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Signing in...',
-            style: GoogleFonts.dmSans(fontSize: 14, color: Colors.white70),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: _authController.cancelSignIn,
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.dmSans(
-                fontSize: 13,
-                color: AppColors.accent,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildError(String message) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Container(
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                size: 40,
-                color: AppColors.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Sign-in failed',
-                style: GoogleFonts.dmSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: () => setState(() {}),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  child: Text(
-                    'Try again',
-                    style: GoogleFonts.dmSans(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

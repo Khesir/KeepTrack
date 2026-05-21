@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:keep_track/core/demo/demo_mode.dart';
+import 'package:keep_track/core/restart/app_restart_widget.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
@@ -11,7 +13,9 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
 import 'package:keep_track/features/settings/settings_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
   final String? mode;
@@ -36,10 +40,28 @@ class _SettingsPageState extends State<SettingsPage> {
   static bool get _isDesktop =>
       !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
 
+  Future<void> _toggleDemoMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await DemoMode.setEnabled(prefs, value);
+    if (mounted) {
+      // ignore: use_build_context_synchronously
+      AppRestartWidget.of(context).restart();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.isDialog && _isDesktop) {
       return const SettingsDialogContent();
+    }
+
+    final isWideWeb = kIsWeb &&
+        MediaQuery.sizeOf(context).width >= ResponsiveBreakpoints.desktop;
+    if (isWideWeb) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const SettingsDialogContent(),
+      );
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -152,6 +174,18 @@ class _SettingsPageState extends State<SettingsPage> {
             // ── Data ─────────────────────────────────────────────────────
             _SectionLabel('Data'),
             _SettingsCard(isDark: isDark, children: [
+              _SettingsSwitchRow(
+                isDark: isDark,
+                icon: Icons.science_outlined,
+                iconColor: AppColors.accent,
+                label: 'Demo Mode',
+                subtitle: DemoMode.enabled
+                    ? 'Using sample data — toggle to connect your account'
+                    : 'Show sample data to explore all features',
+                value: DemoMode.enabled,
+                onChanged: _toggleDemoMode,
+              ),
+              _Divider(isDark: isDark),
               _SettingsRow(
                 isDark: isDark,
                 icon: Icons.restore_rounded,

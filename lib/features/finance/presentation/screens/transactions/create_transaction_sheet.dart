@@ -6,35 +6,31 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/modules/budget_profile/domain/entities/budget_profile.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
+import 'package:keep_track/features/finance/modules/transaction_plan/domain/entities/transaction_plan.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/transaction_plan_controller.dart';
 
 class CreateTransactionSheet extends StatefulWidget {
   final VoidCallback? onCreated;
-  final double extraBottomPadding;
 
-  const CreateTransactionSheet({super.key, this.onCreated, this.extraBottomPadding = 0});
+  const CreateTransactionSheet({super.key, this.onCreated});
 
   static Future<void> show(BuildContext context, {VoidCallback? onCreated}) {
-    // On mobile the floating nav bar is 62px + 12px bottom padding = 74px above safe area.
-    // MediaQuery doesn't account for it with extendBody:true, so we push the sheet up manually.
-    final isMobile = MediaQuery.of(context).size.width < 600;
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (_) => CreateTransactionSheet(
-        onCreated: onCreated,
-        extraBottomPadding: isMobile ? 74.0 : 0.0,
-      ),
+      builder: (_) => CreateTransactionSheet(onCreated: onCreated),
     );
   }
 
@@ -44,9 +40,11 @@ class CreateTransactionSheet extends StatefulWidget {
 
 class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
   late final TransactionController _txController;
+  late final TransactionPlanController _planController;
   late final FinanceCategoryController _catController;
   late final BudgetController _budgetController;
   late final BudgetProfileController _profileController;
+  late final AuthController _authController;
 
   TransactionType _type = TransactionType.expense;
   String _amountStr = '0';
@@ -55,6 +53,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
   final _descCtrl = TextEditingController();
   bool _loading = false;
   bool _showDesc = false;
+  bool _isPlan = false;
   bool _categoryError = false;
   bool _profileError = false;
   String? _selectedProfileId;
@@ -64,9 +63,11 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
   void initState() {
     super.initState();
     _txController = locator.get<TransactionController>();
+    _planController = locator.get<TransactionPlanController>();
     _catController = locator.get<FinanceCategoryController>();
     _budgetController = locator.get<BudgetController>();
     _profileController = locator.get<BudgetProfileController>();
+    _authController = locator.get<AuthController>();
     _catController.loadCategories();
   }
 
@@ -137,15 +138,27 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
       return;
     }
     if (_amount <= 0) return;
+    if (_isPlan && _descCtrl.text.trim().isEmpty) return;
     setState(() => _loading = true);
     try {
-      await _txController.createTransaction(Transaction(
-        amount: _amount,
-        type: _type,
-        financeCategoryId: _category!.id,
-        date: _date,
-        description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-      ));
+      if (_isPlan) {
+        await _planController.createPlan(TransactionPlan(
+          userId: _authController.currentUser?.id ?? '',
+          description: _descCtrl.text.trim(),
+          amount: _amount,
+          type: _type,
+          plannedDate: _date,
+          financeCategoryId: _category!.id,
+        ));
+      } else {
+        await _txController.createTransaction(Transaction(
+          amount: _amount,
+          type: _type,
+          financeCategoryId: _category!.id,
+          date: _date,
+          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        ));
+      }
       widget.onCreated?.call();
       if (mounted) Navigator.pop(context);
     } finally {
@@ -231,6 +244,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
       builder: (_) => _DatePickerSheet(
         selected: _date,
         isDark: isDark,
+        allowFuture: _isPlan,
         onSelect: (d) { setState(() => _date = d); Navigator.pop(context); },
       ),
     );
@@ -245,7 +259,9 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     final isToday = DateUtils.isSameDay(_date, now);
     final isYesterday = DateUtils.isSameDay(_date, now.subtract(const Duration(days: 1)));
     final dateLabel = isToday ? 'Today' : isYesterday ? 'Yesterday' : DateFormat('MMM d').format(_date);
-    final addLabel = _amount > 0 ? 'Add  ₱$_displayAmount' : 'Add Transaction';
+    final addLabel = _isPlan
+        ? (_amount > 0 ? 'Plan  ₱$_displayAmount' : 'Plan Transaction')
+        : (_amount > 0 ? 'Add  ₱$_displayAmount' : 'Add Transaction');
     final planned = _plannedAmount;
     final spent = _alreadySpent;
 
@@ -256,13 +272,27 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
           padding: const EdgeInsets.only(top: 10, bottom: 4),
           child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
         ),
-        // Type selector — no Transfer
+        // Type selector + Plan toggle
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Row(children: [
             _TypePill(label: 'Expense', color: AppColors.error, selected: _type == TransactionType.expense, onTap: () => setState(() { _type = TransactionType.expense; _category = null; _categoryError = false; })),
             const SizedBox(width: 8),
             _TypePill(label: 'Income', color: AppColors.success, selected: _type == TransactionType.income, onTap: () => setState(() { _type = TransactionType.income; _category = null; _categoryError = false; })),
+            const Spacer(),
+            _PlanTogglePill(
+              active: _isPlan,
+              onTap: () => setState(() {
+                _isPlan = !_isPlan;
+                if (_isPlan) {
+                  _showDesc = true;
+                  _date = DateTime.now().add(const Duration(days: 1));
+                } else {
+                  _showDesc = false;
+                  _date = DateTime.now();
+                }
+              }),
+            ),
           ]),
         ),
         // Amount display
@@ -304,8 +334,10 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
             ),
             const SizedBox(width: 8),
             _Chip(icon: Icons.calendar_today_outlined, label: dateLabel, color: isToday ? AppColors.textSecondary : AppColors.accent, isDark: isDark, onTap: _pickDate),
-            const SizedBox(width: 8),
-            _Chip(icon: _showDesc ? Icons.edit_off_outlined : Icons.edit_outlined, label: 'Note', color: AppColors.textSecondary, isDark: isDark, onTap: () => setState(() => _showDesc = !_showDesc)),
+            if (!_isPlan) ...[
+              const SizedBox(width: 8),
+              _Chip(icon: _showDesc ? Icons.edit_off_outlined : Icons.edit_outlined, label: 'Note', color: AppColors.textSecondary, isDark: isDark, onTap: () => setState(() => _showDesc = !_showDesc)),
+            ],
           ]),
         ),
         // Planned indicator (item 6)
@@ -315,14 +347,14 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
             child: _PlannedIndicator(spent: spent, planned: planned, color: _typeColor, isDark: isDark),
           ),
         // Description
-        if (_showDesc)
+        if (_showDesc || _isPlan)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             child: TextField(
-              controller: _descCtrl, autofocus: true, maxLines: 1,
+              controller: _descCtrl, autofocus: _isPlan, maxLines: 1,
               style: GoogleFonts.dmSans(fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'Add a note…',
+                hintText: _isPlan ? 'Name *' : 'Add a note…',
                 hintStyle: GoogleFonts.dmSans(color: AppColors.textTertiary),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -340,7 +372,9 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
             child: ElevatedButton(
               onPressed: _loading ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _amount > 0 && _category != null ? _typeColor : AppColors.textTertiary,
+                backgroundColor: _amount > 0 && _category != null
+                    ? (_isPlan ? AppColors.accent : _typeColor)
+                    : AppColors.textTertiary,
                 foregroundColor: Colors.white, elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -350,7 +384,6 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
             ),
           ),
         ),
-        SizedBox(height: widget.extraBottomPadding),
         SafeArea(top: false, child: const SizedBox.shrink()),
       ]),
     );
@@ -448,8 +481,9 @@ class _NumKey extends StatelessWidget {
 class _DatePickerSheet extends StatefulWidget {
   final DateTime selected;
   final bool isDark;
+  final bool allowFuture;
   final void Function(DateTime) onSelect;
-  const _DatePickerSheet({required this.selected, required this.isDark, required this.onSelect});
+  const _DatePickerSheet({required this.selected, required this.isDark, this.allowFuture = false, required this.onSelect});
 
   @override
   State<_DatePickerSheet> createState() => _DatePickerSheetState();
@@ -466,12 +500,17 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
 
   void _prev() => setState(() => _view = DateTime(_view.year, _view.month - 1));
   void _next() {
+    if (widget.allowFuture) {
+      setState(() => _view = DateTime(_view.year, _view.month + 1));
+      return;
+    }
     final now = DateTime.now();
     final next = DateTime(_view.year, _view.month + 1);
     if (!next.isAfter(DateTime(now.year, now.month))) setState(() => _view = next);
   }
 
   bool get _canGoNext {
+    if (widget.allowFuture) return true;
     final now = DateTime.now();
     return _view.year < now.year || (_view.year == now.year && _view.month < now.month);
   }
@@ -524,7 +563,7 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
               final date = DateTime(_view.year, _view.month, day);
               final isSelected = DateUtils.isSameDay(date, widget.selected);
               final isToday = DateUtils.isSameDay(date, now);
-              final isFuture = date.isAfter(now);
+              final isFuture = !widget.allowFuture && date.isAfter(now);
               Color textColor = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
               if (isFuture) textColor = AppColors.textTertiary;
               if (isSelected) textColor = Colors.white;
@@ -622,6 +661,37 @@ class _CategoryPicker extends StatelessWidget {
 }
 
 // ─── Shared Widgets ───────────────────────────────────────────────────────────
+
+class _PlanTogglePill extends StatelessWidget {
+  final bool active;
+  final VoidCallback onTap;
+  const _PlanTogglePill({required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: active ? AppColors.accent.withValues(alpha: 0.12) : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: active ? AppColors.accent.withValues(alpha: 0.5) : AppColors.border.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.event_note_outlined, size: 12, color: active ? AppColors.accent : AppColors.textSecondary),
+        const SizedBox(width: 5),
+        Text('Plan', style: GoogleFonts.dmSans(
+          fontSize: 12,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+          color: active ? AppColors.accent : AppColors.textSecondary,
+        )),
+      ]),
+    ),
+  );
+}
 
 class _TypePill extends StatelessWidget {
   final String label;

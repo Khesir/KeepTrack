@@ -466,7 +466,7 @@ class _MobileListView extends StatelessWidget {
           ),
         ),
         Positioned(
-          bottom: 20, right: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 16, right: 16,
           child: FloatingActionButton.extended(
             onPressed: onHistory,
             icon: const Icon(Icons.history),

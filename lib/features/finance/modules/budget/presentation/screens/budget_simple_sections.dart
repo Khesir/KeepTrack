@@ -611,10 +611,11 @@ class _SubEntry {
 class SimpleDebtsSection extends StatelessWidget {
   final bool isDark;
   final List<Debt> debts, receivables;
+  final Map<String, double> paidThisMonth;
   final VoidCallback onAddDebt, onAddReceivable;
   final void Function(Debt) onRowTap;
 
-  const SimpleDebtsSection({super.key, required this.isDark, required this.debts, required this.receivables, required this.onAddDebt, required this.onAddReceivable, required this.onRowTap});
+  const SimpleDebtsSection({super.key, required this.isDark, required this.debts, required this.receivables, required this.onAddDebt, required this.onAddReceivable, required this.onRowTap, this.paidThisMonth = const {}});
 
   @override
   Widget build(BuildContext context) {
@@ -636,11 +637,11 @@ class SimpleDebtsSection extends StatelessWidget {
           : Column(children: [
               ...debts.expand((d) => [
                 Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                _DebtRow(isDark: isDark, debt: d, textPrimary: textPrimary, onTap: () => onRowTap(d)),
+                _DebtRow(isDark: isDark, debt: d, textPrimary: textPrimary, paidThisMonth: paidThisMonth[d.id] ?? 0, onTap: () => onRowTap(d)),
               ]),
               ...receivables.expand((d) => [
                 Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                _DebtRow(isDark: isDark, debt: d, textPrimary: textPrimary, onTap: () => onRowTap(d)),
+                _DebtRow(isDark: isDark, debt: d, textPrimary: textPrimary, paidThisMonth: paidThisMonth[d.id] ?? 0, onTap: () => onRowTap(d)),
               ]),
             ]),
     );
@@ -651,9 +652,10 @@ class _DebtRow extends StatelessWidget {
   final bool isDark;
   final Debt debt;
   final Color textPrimary;
+  final double paidThisMonth;
   final VoidCallback onTap;
 
-  const _DebtRow({required this.isDark, required this.debt, required this.textPrimary, required this.onTap});
+  const _DebtRow({required this.isDark, required this.debt, required this.textPrimary, required this.onTap, this.paidThisMonth = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -694,6 +696,8 @@ class _DebtRow extends StatelessWidget {
             const SizedBox(height: 2),
             if (!isSettled && debt.isOverdue)
               Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: AppColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)), child: Text('Overdue', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.error)))
+            else if (!isSettled && paidThisMonth > 0)
+              Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)), child: Text(isReceivable ? 'Collected' : 'Paid', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.success)))
             else if (!isSettled)
               Text('Remaining', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
           ]),
@@ -843,10 +847,11 @@ class _HpBar extends StatelessWidget {
 class SimpleGoalsSection extends StatelessWidget {
   final bool isDark;
   final List<Goal> goals;
+  final Map<String, double> contributedThisMonth;
   final VoidCallback onAdd;
   final ValueChanged<Goal>? onRowTap;
 
-  const SimpleGoalsSection({super.key, required this.isDark, required this.goals, required this.onAdd, this.onRowTap});
+  const SimpleGoalsSection({super.key, required this.isDark, required this.goals, required this.onAdd, this.onRowTap, this.contributedThisMonth = const {}});
 
   @override
   Widget build(BuildContext context) {
@@ -891,6 +896,11 @@ class SimpleGoalsSection extends StatelessWidget {
                           const SizedBox(width: 6),
                           Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: statusBadge.$2.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                               child: Text(statusBadge.$1!, style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: statusBadge.$2))),
+                        ],
+                        if ((contributedThisMonth[g.id] ?? 0) > 0) ...[
+                          const SizedBox(width: 6),
+                          Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                              child: Text('contributed', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.success))),
                         ],
                         const SizedBox(width: 6),
                         Text('${(progress * 100).round()}%', style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: color)),

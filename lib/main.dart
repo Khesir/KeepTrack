@@ -12,7 +12,9 @@ import 'package:keep_track/core/sync/sync_manager.dart';
 import 'package:keep_track/core/theme/theme.dart';
 import 'package:keep_track/features/module_selection/finance_module_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'core/demo/demo_mode.dart';
 import 'core/di/di_logger.dart';
+import 'core/restart/app_restart_widget.dart';
 import 'core/navigation/app_navigator.dart';
 import 'core/routing/app_router.dart';
 import 'core/ui/desktop_title_bar.dart';
@@ -23,6 +25,8 @@ import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
 import 'features/finance/finance_di.dart';
 import 'features/notifications/notifications_di.dart';
+
+late SharedPreferences _sharedPrefs;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,10 +49,11 @@ void main() async {
   await Hive.initFlutter();
 
   // Initialize SharedPreferences
-  final sharedPreferences = await SharedPreferences.getInstance();
+  _sharedPrefs = await SharedPreferences.getInstance();
+  await DemoMode.load(_sharedPrefs);
 
   // Setup app dependencies
-  _setupDependencies(sharedPreferences);
+  _setupDependencies(_sharedPrefs);
 
   // Start offline sync manager
   final syncManager = locator.get<SyncManager>();
@@ -57,7 +62,16 @@ void main() async {
   // Initialize notifications (mobile only — safe to call on any platform)
   await initializeNotifications();
 
-  runApp(const PersonalCodexApp());
+  runApp(AppRestartWidget(
+    onRestart: reinitializeDependencies,
+    child: const PersonalCodexApp(),
+  ));
+}
+
+void reinitializeDependencies() {
+  locator.reset();
+  _setupDependencies(_sharedPrefs);
+  locator.get<SyncManager>().start();
 }
 
 /// Setup all dependencies

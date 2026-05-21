@@ -81,7 +81,7 @@ class TransactionPlanDataSourceRest implements TransactionPlanDataSource {
     try {
       final res = await _dio.post('/transaction-plans/$id/complete', data: {
         if (amount != null) 'amount': amount,
-        if (date != null) 'date': date.toIso8601String(),
+        if (date != null) 'date': DateTime.fromMillisecondsSinceEpoch(date.millisecondsSinceEpoch, isUtc: true).toIso8601String(),
       });
       return _parsePlan(res.data);
     } on DioException catch (e) {

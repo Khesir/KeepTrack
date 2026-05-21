@@ -47,7 +47,7 @@ class TransactionPlanModel extends TransactionPlan {
       'description': description,
       'amount': amount,
       'type': type.name,
-      'plannedDate': plannedDate.toIso8601String(),
+      'plannedDate': DateTime.fromMillisecondsSinceEpoch(plannedDate.millisecondsSinceEpoch, isUtc: true).toIso8601String(),
       if (financeCategoryId != null) 'financeCategoryId': financeCategoryId,
       if (budgetId != null) 'budgetId': budgetId,
       if (notes != null) 'notes': notes,
