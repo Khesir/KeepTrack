@@ -122,6 +122,8 @@ class BudgetModel extends Budget {
       if (notes != null) 'notes': notes,
       if (customTargetAmount != null) 'customTargetAmount': customTargetAmount,
       if (userId != null) 'userId': userId,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
+      'categories': categories.map((c) => c is BudgetCategoryModel ? c.toJson() : BudgetCategoryModel.fromEntity(c).toJson()).toList(),
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (closedAt != null) 'closedAt': closedAt!.toIso8601String(),
@@ -144,6 +146,7 @@ class BudgetModel extends Budget {
       createdAt: createdAt,
       updatedAt: updatedAt,
       closedAt: closedAt,
+      budgetProfileId: budgetProfileId,
     );
   }
 }

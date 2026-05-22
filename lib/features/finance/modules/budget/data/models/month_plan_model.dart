@@ -66,9 +66,11 @@ class MonthPlanModel extends MonthPlan {
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
-      'month': month,
+      if (month != null) 'month': month,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
       if (userId != null) 'userId': userId,
       if (notes != null) 'notes': notes,
+      'budgetIds': budgetIds,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };

@@ -30,6 +30,17 @@ class SavingsBucketModel extends SavingsBucket {
     };
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'userId': userId,
+      'name': name,
+      'balance': balance,
+      if (colorHex != null) 'colorHex': colorHex,
+      if (iconCodePoint != null) 'iconCodePoint': iconCodePoint,
+    };
+  }
+
   factory SavingsBucketModel.fromEntity(SavingsBucket bucket) {
     return SavingsBucketModel(
       id: bucket.id,

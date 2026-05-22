@@ -1,7 +1,9 @@
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/error/result.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import '../../modules/subscriptions/domain/entities/subscription.dart';
 import '../../modules/subscriptions/domain/repositories/subscription_repository.dart';
+import 'budget_profile_controller.dart';
 
 class SubscriptionController extends StreamState<AsyncState<List<Subscription>>> {
   final SubscriptionRepository _repository;
@@ -16,9 +18,17 @@ class SubscriptionController extends StreamState<AsyncState<List<Subscription>>>
     });
   }
 
+  String? get _activeProfileId =>
+      locator.get<BudgetProfileController>().activeProfileId;
+
   Future<void> createSubscription(Subscription subscription) async {
-    final created = await _repository.createSubscription(subscription).then((r) => r.unwrap());
-    emit(AsyncData([...data ?? [], created]));
+    final withProfile = subscription.budgetProfileId != null
+        ? subscription
+        : subscription.copyWith(budgetProfileId: _activeProfileId);
+    await executeSilent(() async {
+      await _repository.createSubscription(withProfile).then((r) => r.unwrap());
+      return await _repository.getSubscriptions().then((r) => r.unwrap());
+    });
   }
 
   Future<void> updateSubscription(Subscription subscription) async {

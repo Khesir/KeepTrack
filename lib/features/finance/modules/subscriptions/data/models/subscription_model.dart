@@ -61,6 +61,25 @@ class SubscriptionModel extends Subscription {
     };
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'userId': userId,
+      'name': name,
+      if (provider != null) 'provider': provider,
+      'amount': amount,
+      'billingCycle': billingCycle.name,
+      'status': status.name,
+      'nextBillingDate': nextBillingDate.toIso8601String(),
+      if (lastBilledDate != null) 'lastBilledDate': lastBilledDate!.toIso8601String(),
+      if (budgetCategoryId != null) 'budgetCategoryId': budgetCategoryId,
+      if (notes != null) 'notes': notes,
+      if (colorHex != null) 'colorHex': colorHex,
+      if (iconCodePoint != null) 'iconCodePoint': iconCodePoint,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
+    };
+  }
+
   factory SubscriptionModel.fromEntity(Subscription s) {
     return SubscriptionModel(
       id: s.id,

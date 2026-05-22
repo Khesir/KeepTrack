@@ -2,9 +2,11 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:keep_track/core/cache/local_cache.dart';
 import 'package:keep_track/core/demo/demo_mode.dart';
 import 'package:keep_track/core/restart/app_restart_widget.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/features/finance/data/services/finance_initialization_service.dart';
 import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -116,6 +118,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 onTap: () => _showThemeSheet(context, settings.themeMode),
               ),
               _Divider(isDark: isDark),
+              _SettingsSwitchRow(
+                isDark: isDark,
+                icon: Icons.wifi_off_rounded,
+                iconColor: AppColors.warning,
+                label: 'Offline Mode',
+                subtitle: settings.forceOfflineMode
+                    ? 'Hive only — backend disabled'
+                    : 'Online — using backend',
+                value: settings.forceOfflineMode,
+                onChanged: (v) => _controller.setForceOfflineMode(v),
+              ),
+              _Divider(isDark: isDark),
               _SettingsRow(
                 isDark: isDark,
                 icon: Icons.paid_outlined,
@@ -194,6 +208,16 @@ class _SettingsPageState extends State<SettingsPage> {
                 subtitle: 'Restore all settings to their original values',
                 onTap: () => _confirmReset(context),
               ),
+              _Divider(isDark: isDark),
+              _SettingsRow(
+                isDark: isDark,
+                icon: Icons.delete_forever_rounded,
+                iconColor: AppColors.error,
+                label: 'Wipe All Data',
+                labelColor: AppColors.error,
+                subtitle: 'Delete all financial data and restore defaults',
+                onTap: () => _confirmWipe(context),
+              ),
             ]),
             const SizedBox(height: 32),
 
@@ -268,6 +292,43 @@ class _SettingsPageState extends State<SettingsPage> {
           TextButton(
             onPressed: () async { Navigator.pop(context); await _authController.signOut(); },
             child: Text('Sign Out', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _wipeAllData(BuildContext context) async {
+    final cache = locator.get<LocalCache>();
+    for (final box in [
+      'transactions', 'budgets', 'budget_categories', 'month_plans',
+      'goals', 'debts', 'planned_payments', 'savings_buckets',
+      'subscriptions', 'transaction_plans', 'finance_categories',
+      'budget_profiles',
+    ]) {
+      await cache.clear(box);
+    }
+    await locator.get<FinanceInitializationService>().initializeDefaultCategories();
+    if (context.mounted) {
+      AppRestartWidget.of(context).restart();
+    }
+  }
+
+  void _confirmWipe(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Wipe all data?', style: AppTextStyles.h4),
+        content: Text(
+          'This will permanently delete all your transactions, budgets, goals, debts, and other financial data. Default categories will be restored. This cannot be undone.',
+          style: AppTextStyles.bodySmall,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () { Navigator.pop(context); _wipeAllData(context); },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Wipe All Data'),
           ),
         ],
       ),

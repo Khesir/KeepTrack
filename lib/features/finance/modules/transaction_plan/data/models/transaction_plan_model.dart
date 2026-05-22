@@ -54,6 +54,24 @@ class TransactionPlanModel extends TransactionPlan {
     };
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'userId': userId,
+      'description': description,
+      'amount': amount,
+      'type': type.name,
+      'plannedDate': plannedDate.toIso8601String(),
+      'status': status.name,
+      if (financeCategoryId != null) 'financeCategoryId': financeCategoryId,
+      if (budgetId != null) 'budgetId': budgetId,
+      if (notes != null) 'notes': notes,
+      if (completedTransactionId != null) 'completedTransactionId': completedTransactionId,
+      if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+    };
+  }
+
   factory TransactionPlanModel.fromEntity(TransactionPlan plan) {
     return TransactionPlanModel(
       id: plan.id,

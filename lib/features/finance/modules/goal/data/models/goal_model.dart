@@ -98,6 +98,7 @@ class GoalModel extends Goal {
       'managementFeePercent': managementFeePercent,
       'withdrawalFeePercent': withdrawalFeePercent,
       if (savingsBucketId != null) 'savingsBucketId': savingsBucketId,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
     };
   }
 

@@ -2,6 +2,18 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'local_cache.dart';
 import 'sync_status.dart';
 
+dynamic _deepCast(dynamic value) {
+  if (value is Map) {
+    return Map<String, dynamic>.fromEntries(
+      value.entries.map((e) => MapEntry(e.key.toString(), _deepCast(e.value))),
+    );
+  }
+  if (value is List) {
+    return value.map(_deepCast).toList();
+  }
+  return value;
+}
+
 /// Hive-backed local cache — used on mobile and desktop.
 /// Each "box" maps to a named Hive box.
 class HiveLocalCache implements LocalCache {
@@ -21,7 +33,7 @@ class HiveLocalCache implements LocalCache {
     final b = await _box(box);
     final raw = b.get(key);
     if (raw == null) return null;
-    final cast = raw.cast<String, dynamic>();
+    final cast = (_deepCast(raw) as Map<String, dynamic>);
     return {...extractData(cast), kSyncKey: cast[kSyncKey]};
   }
 
@@ -30,9 +42,8 @@ class HiveLocalCache implements LocalCache {
     final b = await _box(box);
     return b.values
         .map((raw) {
-          final cast = raw.cast<String, dynamic>();
+          final cast = (_deepCast(raw) as Map<String, dynamic>);
           final status = extractStatus(cast);
-          // Skip pending deletes from normal reads
           if (status == SyncStatus.pendingDelete) return null;
           return {...extractData(cast), kSyncKey: cast[kSyncKey]};
         })

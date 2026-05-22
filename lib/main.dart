@@ -1,5 +1,6 @@
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ import 'core/settings/domain/entities/app_settings.dart';
 import 'core/settings/presentation/settings_controller.dart';
 import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
+import 'features/finance/data/services/finance_initialization_service.dart';
 import 'features/finance/finance_di.dart';
 import 'features/notifications/notifications_di.dart';
 
@@ -54,6 +56,9 @@ void main() async {
 
   // Setup app dependencies
   _setupDependencies(_sharedPrefs);
+
+  // Seed default categories on first launch (no login required)
+  unawaited(locator.get<FinanceInitializationService>().initializeDefaultCategories());
 
   // Start offline sync manager
   final syncManager = locator.get<SyncManager>();

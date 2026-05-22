@@ -207,7 +207,8 @@ enum BudgetType {
 
 enum BudgetPeriodType {
   monthly,
-  oneTime;
+  oneTime,
+  profile;
 
   String get displayName {
     switch (this) {
@@ -215,6 +216,8 @@ enum BudgetPeriodType {
         return 'Monthly';
       case BudgetPeriodType.oneTime:
         return 'One-Time';
+      case BudgetPeriodType.profile:
+        return 'Profile';
     }
   }
 
@@ -224,6 +227,8 @@ enum BudgetPeriodType {
         return 'Track recurring monthly finances';
       case BudgetPeriodType.oneTime:
         return 'Budget for specific event or project';
+      case BudgetPeriodType.profile:
+        return 'Budget linked to a profile';
     }
   }
 }

@@ -39,6 +39,21 @@ class BudgetProfileModel extends BudgetProfile {
     'profileType': profileType.name,
   };
 
+  Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
+    'name': name,
+    if (description != null) 'description': description,
+    if (startDate != null) 'startDate': startDate!.toIso8601String(),
+    if (endDate != null) 'endDate': endDate!.toIso8601String(),
+    if (colorHex != null) 'colorHex': colorHex,
+    'status': status.name,
+    'profileType': profileType.name,
+    'isMain': isMain,
+    if (userId != null) 'userId': userId,
+    if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+    if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+  };
+
   factory BudgetProfileModel.fromEntity(BudgetProfile p) => BudgetProfileModel(
     id: p.id, name: p.name, description: p.description,
     startDate: p.startDate, endDate: p.endDate, colorHex: p.colorHex,

@@ -135,7 +135,11 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
         backgroundColor: Colors.transparent,
         body: BudgetSelectionScreen(
           onMonthlyTap: () {},
-          onProfileTap: (p) => setState(() { _activeProfile = p; _sheetMode = false; }),
+          onProfileTap: (p) => setState(() {
+            _activeProfile = p;
+            _sheetMode = false;
+            _profileController.selectedProfileId = p.id;
+          }),
           onNewProfile: () => showModalBottomSheet(
             context: context,
             isScrollControlled: true,

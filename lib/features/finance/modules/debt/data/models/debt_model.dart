@@ -112,6 +112,7 @@ class DebtModel extends Debt {
       'feeAmount': feeAmount,
       if (nextPaymentDate != null) 'nextPaymentDate': nextPaymentDate!.toIso8601String(),
       'paymentFrequency': paymentFrequency.name,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
     };
   }
 

@@ -7,12 +7,36 @@ import 'package:keep_track/features/finance/modules/budget_profile/domain/entiti
 class BudgetProfileController extends StreamState<AsyncState<List<BudgetProfile>>> {
   final BudgetProfileDataSourceRest _dataSource;
 
+  String? selectedProfileId;
+
+  /// Synchronous — reads from already-loaded state. Safe to call anytime.
+  String? get activeProfileId {
+    if (selectedProfileId != null) return selectedProfileId;
+    final profiles = data;
+    if (profiles == null || profiles.isEmpty) return null;
+    try {
+      return profiles.firstWhere((p) => p.isMain).id;
+    } catch (_) {
+      return profiles.first.id;
+    }
+  }
+
   BudgetProfileController(this._dataSource) : super(const AsyncLoading()) {
     loadProfiles();
   }
 
   Future<void> loadProfiles() async {
-    await execute(() async => _dataSource.getProfiles());
+    await execute(() async {
+      final profiles = await _dataSource.getProfiles();
+      if (selectedProfileId == null && profiles.isNotEmpty) {
+        final main = profiles.firstWhere(
+          (p) => p.isMain,
+          orElse: () => profiles.first,
+        );
+        selectedProfileId = main.id;
+      }
+      return profiles;
+    });
   }
 
   Future<void> createProfile(BudgetProfile profile) async {

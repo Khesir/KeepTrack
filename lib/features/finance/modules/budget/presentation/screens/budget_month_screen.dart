@@ -691,7 +691,9 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
         onSave: (debt, _) async {
-          await _debtController.createDebtOnly(debt);
+          await _debtController.createDebtOnly(
+            debt.copyWith(budgetProfileId: widget.budgetProfileId),
+          );
         },
       ),
     );
@@ -702,7 +704,9 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       context: context,
       isScrollControlled: true,
       builder: (_) => AddSubscriptionSheet(
-        onSave: (sub) => _subscriptionController.createSubscription(sub),
+        onSave: (sub) => _subscriptionController.createSubscription(
+          sub.copyWith(budgetProfileId: widget.budgetProfileId),
+        ),
       ),
     );
   }
@@ -710,7 +714,9 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
   void _showAddGoalSheet() {
     GoalsManagementDialog.show(
       context,
-      onSave: (goal) => _goalController.createGoal(goal),
+      onSave: (goal) => _goalController.createGoal(
+        goal.copyWith(budgetProfileId: widget.budgetProfileId),
+      ),
     );
   }
 

@@ -1,6 +1,14 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/feature_flags/feature_flag_panel.dart';
 import 'package:keep_track/core/navigation/app_navigator.dart';
+import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/inbox_popover_widget.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
@@ -39,6 +47,8 @@ class DesktopTitleBar extends StatelessWidget {
           Row(
             children: [
               const Spacer(),
+              _OfflineIndicator(isDark: isDark),
+              if (kDebugMode) _FeatureFlagButton(isDark: isDark),
               _InboxButton(isDark: isDark),
               _HelpButton(isDark: isDark, url: _helpUrl),
               _SettingsButton(isDark: isDark),
@@ -87,7 +97,8 @@ class _InboxButtonState extends State<_InboxButton> {
 
   @override
   void dispose() {
-    _close();
+    _overlay?.remove();
+    _overlay = null;
     super.dispose();
   }
 
@@ -102,6 +113,131 @@ class _InboxButtonState extends State<_InboxButton> {
         onTap: _toggle,
         icon: Icons.inbox_outlined,
         activeColor: AppColors.accent,
+      ),
+    );
+  }
+}
+
+class _OfflineIndicator extends StatelessWidget {
+  final bool isDark;
+  const _OfflineIndicator({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = locator.get<SettingsController>();
+
+    return StreamBuilder<AsyncState<AppSettings>>(
+      stream: settings.stream,
+      initialData: settings.state,
+      builder: (context, snapshot) {
+        final isOffline = snapshot.data is AsyncData<AppSettings>
+            ? (snapshot.data as AsyncData<AppSettings>).data.forceOfflineMode
+            : false;
+
+        if (!isOffline) return const SizedBox.shrink();
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.warning.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: AppColors.warning.withValues(alpha: 0.4),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.wifi_off_rounded, size: 11, color: AppColors.warning),
+              const SizedBox(width: 4),
+              Text(
+                'OFFLINE',
+                style: GoogleFonts.dmMono(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.warning,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FeatureFlagButton extends StatefulWidget {
+  final bool isDark;
+  const _FeatureFlagButton({required this.isDark});
+
+  @override
+  State<_FeatureFlagButton> createState() => _FeatureFlagButtonState();
+}
+
+class _FeatureFlagButtonState extends State<_FeatureFlagButton> {
+  final _layerLink = LayerLink();
+  OverlayEntry? _overlay;
+  bool _isOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKey);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKey);
+    _overlay?.remove();
+    _overlay = null;
+    super.dispose();
+  }
+
+  bool _handleKey(KeyEvent event) {
+    if (event is KeyDownEvent &&
+        HardwareKeyboard.instance.isControlPressed &&
+        HardwareKeyboard.instance.isShiftPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyF) {
+      _toggle();
+      return true;
+    }
+    return false;
+  }
+
+  void _toggle() => _isOpen ? _close() : _open();
+
+  void _open() {
+    _overlay = OverlayEntry(
+      builder: (_) => FeatureFlagPopover(
+        link: _layerLink,
+        isDark: widget.isDark,
+        onDismiss: _close,
+      ),
+    );
+    Overlay.of(context).insert(_overlay!);
+    setState(() => _isOpen = true);
+  }
+
+  void _close() {
+    _overlay?.remove();
+    _overlay = null;
+    if (mounted) setState(() => _isOpen = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: _TitleBarIconButton(
+        isDark: widget.isDark,
+        isActive: _isOpen,
+        tooltip: 'Feature Flags (Ctrl+Shift+F)',
+        onTap: _toggle,
+        icon: Icons.tune_rounded,
+        activeColor: AppColors.warning,
       ),
     );
   }
