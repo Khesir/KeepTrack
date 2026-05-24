@@ -1,6 +1,6 @@
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_state.dart';
-import '../../modules/goal/data/datasources/rest/goal_datasource_rest.dart';
+import '../../modules/goal/data/datasources/local/goal_datasource_local.dart';
 import '../../modules/goal/domain/entities/goal.dart';
 import '../../modules/goal/domain/repositories/goal_repository.dart';
 import 'budget_profile_controller.dart';
@@ -8,7 +8,7 @@ import 'budget_profile_controller.dart';
 /// Controller for managing goal list state
 class GoalController extends StreamState<AsyncState<List<Goal>>> {
   final GoalRepository _repository;
-  final GoalDataSourceRest _dataSource;
+  final GoalDataSourceLocal _dataSource;
 
   GoalController(this._repository, this._dataSource) : super(const AsyncLoading()) {
     loadGoals();

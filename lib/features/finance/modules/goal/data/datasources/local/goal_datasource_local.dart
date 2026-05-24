@@ -1,9 +1,9 @@
 import 'package:keep_track/core/cache/local_cache.dart';
+import 'package:keep_track/features/finance/modules/goal/data/datasources/goal_datasource.dart';
 import 'package:keep_track/features/finance/modules/goal/data/models/goal_model.dart';
 import 'package:uuid/uuid.dart';
-import '../rest/goal_datasource_rest.dart';
 
-class GoalDataSourceLocal extends GoalDataSourceRest {
+class GoalDataSourceLocal implements GoalDataSource {
   final LocalCache _cache;
   final _uuid = const Uuid();
 
@@ -55,7 +55,6 @@ class GoalDataSourceLocal extends GoalDataSourceRest {
     return all.where((g) => g.status.name == status).toList();
   }
 
-  @override
   Future<GoalModel> contributeToGoal(String id, double amount) async {
     final goal = await fetchGoalById(id);
     if (goal == null) throw Exception('Goal not found: $id');
@@ -66,7 +65,6 @@ class GoalDataSourceLocal extends GoalDataSourceRest {
     return updateGoal(updated);
   }
 
-  @override
   Future<GoalModel> withdrawFromGoal(String id, double amount) async {
     final goal = await fetchGoalById(id);
     if (goal == null) throw Exception('Goal not found: $id');

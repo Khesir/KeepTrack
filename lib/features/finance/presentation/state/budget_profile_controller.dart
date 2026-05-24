@@ -1,11 +1,11 @@
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
-import 'package:keep_track/features/finance/modules/budget_profile/data/datasources/rest/budget_profile_datasource_rest.dart';
+import 'package:keep_track/features/finance/modules/budget_profile/data/datasources/local/budget_profile_datasource_local.dart';
 import 'package:keep_track/features/finance/modules/budget_profile/data/models/budget_profile_model.dart';
 import 'package:keep_track/features/finance/modules/budget_profile/domain/entities/budget_profile.dart';
 
 class BudgetProfileController extends StreamState<AsyncState<List<BudgetProfile>>> {
-  final BudgetProfileDataSourceRest _dataSource;
+  final BudgetProfileDataSourceLocal _dataSource;
 
   String? selectedProfileId;
 

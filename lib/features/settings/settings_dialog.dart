@@ -13,6 +13,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/features/auth/presentation/widgets/login_dialog.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -381,19 +382,20 @@ class _ProfilePane extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, User? user) {
+    if (user == null) return _buildUnauthenticated(context);
+
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final initials = _initials(user?.displayName);
+    final initials = _initials(user.displayName);
 
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        // Avatar + name row
         Row(
           children: [
-            user?.photoUrl != null
+            user.photoUrl != null
                 ? CircleAvatar(
                     radius: 36,
-                    backgroundImage: NetworkImage(user!.photoUrl!),
+                    backgroundImage: NetworkImage(user.photoUrl!),
                   )
                 : Container(
                     width: 72,
@@ -422,8 +424,8 @@ class _ProfilePane extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user?.displayName?.isNotEmpty == true
-                        ? user!.displayName!
+                    user.displayName?.isNotEmpty == true
+                        ? user.displayName!
                         : 'No name set',
                     style: GoogleFonts.dmSans(
                       fontSize: 20,
@@ -433,7 +435,7 @@ class _ProfilePane extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user?.email ?? '',
+                    user.email,
                     style: GoogleFonts.dmSans(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -462,6 +464,84 @@ class _ProfilePane extends StatelessWidget {
           label: 'Sign Out',
           labelColor: AppColors.error,
           onTap: () => _confirmSignOut(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUnauthenticated(BuildContext context) {
+    final cardBg = isDark
+        ? Colors.white.withValues(alpha: 0.04)
+        : AppColors.backgroundSecondary;
+    final borderColor = isDark
+        ? AppColors.border.withValues(alpha: 0.15)
+        : AppColors.border.withValues(alpha: 0.4);
+    final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text(
+          'Account',
+          style: GoogleFonts.dmSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderColor, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your account',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: fg,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "You're not logged in. Sign in to sync your data across devices.",
+                      style: GoogleFonts.dmSans(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Row(
+                children: [
+                  _OutlineButton(
+                    label: 'Log in',
+                    isDark: isDark,
+                    onTap: () => LoginDialog.show(context),
+                  ),
+                  const SizedBox(width: 8),
+                  _OutlineButton(
+                    label: 'Sign up',
+                    isDark: isDark,
+                    onTap: () => LoginDialog.show(context, signUp: true),
+                    primary: true,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -504,6 +584,64 @@ class _ProfilePane extends StatelessWidget {
     final parts = name.trim().split(' ');
     if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     return name[0].toUpperCase();
+  }
+}
+
+// ─── Outline button for unauthenticated account pane ─────────────────────────
+
+class _OutlineButton extends StatefulWidget {
+  final String label;
+  final bool isDark;
+  final bool primary;
+  final VoidCallback onTap;
+
+  const _OutlineButton({
+    required this.label,
+    required this.isDark,
+    required this.onTap,
+    this.primary = false,
+  });
+
+  @override
+  State<_OutlineButton> createState() => _OutlineButtonState();
+}
+
+class _OutlineButtonState extends State<_OutlineButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.primary
+        ? AppColors.accent
+        : (widget.isDark
+            ? Colors.white.withValues(alpha: _hovered ? 0.1 : 0.06)
+            : AppColors.textPrimary.withValues(alpha: _hovered ? 0.08 : 0.05));
+    final fg = widget.primary ? Colors.white : (widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            widget.label,
+            style: GoogleFonts.dmSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -1,10 +1,9 @@
 import 'package:keep_track/core/cache/local_cache.dart';
 import 'package:keep_track/features/finance/modules/budget/data/models/budget_model.dart';
-import 'package:keep_track/features/finance/modules/budget_profile/data/datasources/rest/budget_profile_datasource_rest.dart';
 import 'package:keep_track/features/finance/modules/budget_profile/data/models/budget_profile_model.dart';
 import 'package:uuid/uuid.dart';
 
-class BudgetProfileDataSourceLocal extends BudgetProfileDataSourceRest {
+class BudgetProfileDataSourceLocal {
   final LocalCache _cache;
   final _uuid = const Uuid();
 

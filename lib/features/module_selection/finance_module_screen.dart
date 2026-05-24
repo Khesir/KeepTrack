@@ -682,10 +682,15 @@ class _FooterContentState extends State<_FooterContent> {
 
   @override
   Widget build(BuildContext context) {
-    final initials = _initials(widget.user?.displayName);
     final borderColor = widget.isDark
         ? AppColors.border.withValues(alpha: 0.25)
         : AppColors.border.withValues(alpha: 0.6);
+
+    if (widget.user == null) {
+      return _buildGuestFooter(borderColor);
+    }
+
+    final initials = _initials(widget.user?.displayName);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -732,78 +737,186 @@ class _FooterContentState extends State<_FooterContent> {
         Padding(
           padding: const EdgeInsets.all(12),
           child: CompositedTransformTarget(
-        link: _layerLink,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: _toggle,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-              decoration: BoxDecoration(
-                color: _isOpen
-                    ? (widget.isDark
-                          ? Colors.white.withValues(alpha: 0.07)
-                          : AppColors.accent.withValues(alpha: 0.06))
-                    : (widget.isDark
-                          ? Colors.white.withValues(alpha: 0.03)
-                          : AppColors.background),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: _isOpen
-                      ? AppColors.accent.withValues(alpha: 0.25)
-                      : Colors.transparent,
+            link: _layerLink,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: _toggle,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 120),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: _isOpen
+                        ? (widget.isDark
+                              ? Colors.white.withValues(alpha: 0.07)
+                              : AppColors.accent.withValues(alpha: 0.06))
+                        : (widget.isDark
+                              ? Colors.white.withValues(alpha: 0.03)
+                              : AppColors.background),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isOpen
+                          ? AppColors.accent.withValues(alpha: 0.25)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      _Avatar(initials: initials, photoUrl: widget.user?.photoUrl),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.user?.displayName ?? 'User',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: widget.isDark
+                                    ? AppColors.primaryForeground
+                                    : AppColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              widget.user?.email ?? '',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 10,
+                                color: AppColors.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      AnimatedRotation(
+                        turns: _isOpen ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 150),
+                        child: Icon(
+                          Icons.keyboard_arrow_up_rounded,
+                          size: 16,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  _Avatar(initials: initials, photoUrl: widget.user?.photoUrl),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.user?.displayName ?? 'User',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: widget.isDark
-                                ? AppColors.primaryForeground
-                                : AppColors.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          widget.user?.email ?? '',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 10,
-                            color: AppColors.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  AnimatedRotation(
-                    turns: _isOpen ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 150),
-                    child: Icon(
-                      Icons.keyboard_arrow_up_rounded,
-                      size: 16,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
               ),
             ),
           ),
         ),
-      ),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildGuestFooter(Color borderColor) {
+    final isDesktop =
+        MediaQuery.of(context).size.width >= ResponsiveBreakpoints.desktop;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => locator.get<SettingsController>().updateThemeMode(
+                widget.isDark ? AppThemeMode.light : AppThemeMode.dark,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: widget.isDark
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.isDark ? 'Light mode' : 'Dark mode',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Divider(height: 1, thickness: 0.5, color: borderColor),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () {
+                if (isDesktop) {
+                  showDialog<void>(
+                    context: context,
+                    barrierColor: Colors.black.withValues(alpha: 0.5),
+                    builder: (_) => Dialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      insetPadding: const EdgeInsets.all(48),
+                      clipBehavior: Clip.antiAlias,
+                      child: const SizedBox(
+                        width: 980,
+                        height: 680,
+                        child: SettingsPage(isDialog: true),
+                      ),
+                    ),
+                  );
+                } else {
+                  Navigator.of(context).pushNamed('/settings');
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                decoration: BoxDecoration(
+                  color: widget.isDark
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings_outlined,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Settings',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

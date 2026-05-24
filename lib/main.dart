@@ -1,6 +1,5 @@
 library;
 
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,11 +8,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keep_track/core/cache/cache_factory.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/sync/sync_manager.dart';
 import 'package:keep_track/core/theme/theme.dart';
 import 'package:keep_track/features/module_selection/finance_module_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'core/demo/demo_mode.dart';
 import 'core/di/di_logger.dart';
 import 'core/restart/app_restart_widget.dart';
 import 'core/navigation/app_navigator.dart';
@@ -24,7 +21,6 @@ import 'core/settings/domain/entities/app_settings.dart';
 import 'core/settings/presentation/settings_controller.dart';
 import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
-import 'features/finance/data/services/finance_initialization_service.dart';
 import 'features/finance/finance_di.dart';
 import 'features/notifications/notifications_di.dart';
 
@@ -52,17 +48,9 @@ void main() async {
 
   // Initialize SharedPreferences
   _sharedPrefs = await SharedPreferences.getInstance();
-  await DemoMode.load(_sharedPrefs);
 
   // Setup app dependencies
   _setupDependencies(_sharedPrefs);
-
-  // Seed default categories on first launch (no login required)
-  unawaited(locator.get<FinanceInitializationService>().initializeDefaultCategories());
-
-  // Start offline sync manager
-  final syncManager = locator.get<SyncManager>();
-  syncManager.start();
 
   // Initialize notifications (mobile only — safe to call on any platform)
   await initializeNotifications();
@@ -76,18 +64,12 @@ void main() async {
 void reinitializeDependencies() {
   locator.reset();
   _setupDependencies(_sharedPrefs);
-  locator.get<SyncManager>().start();
 }
 
 /// Setup all dependencies
 void _setupDependencies(SharedPreferences sharedPreferences) {
   // Core local cache
   locator.registerLazySingleton<LocalCache>(() => createLocalCache());
-
-  // Sync manager
-  locator.registerLazySingleton<SyncManager>(
-    () => SyncManager(locator.get<LocalCache>()),
-  );
 
   // Core settings
   locator.registerSingleton<SharedPreferences>(sharedPreferences);
