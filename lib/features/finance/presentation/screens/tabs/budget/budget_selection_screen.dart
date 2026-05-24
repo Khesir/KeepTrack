@@ -88,10 +88,19 @@ class _BudgetSelectionScreenState extends State<BudgetSelectionScreen> {
         // Only show the main card when a profile is explicitly pinned as main.
         // No fallback "Monthly Budget" — users must create a real profile.
         if (mainProfile != null) ...[
-          _MainCard(
-            isDark: isDark, budgets: budgets, txs: txs, debts: debts,
-            subs: subs, goals: goals, mainProfile: mainProfile,
-            onTap: () => widget.onProfileTap(mainProfile),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 450),
+            curve: Curves.easeOut,
+            builder: (_, v, child) => Opacity(
+              opacity: v,
+              child: Transform.translate(offset: Offset(0, (1 - v) * 16), child: child),
+            ),
+            child: _MainCard(
+              isDark: isDark, budgets: budgets, txs: txs, debts: debts,
+              subs: subs, goals: goals, mainProfile: mainProfile,
+              onTap: () => widget.onProfileTap(mainProfile),
+            ),
           ),
           const SizedBox(height: 28),
         ],
@@ -236,25 +245,30 @@ class _MainCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(
-                  '${isPositive ? '+' : ''}${currencyFormatter.format(net, decimalDigits: 0)}',
-                  style: GoogleFonts.dmMono(
-                    fontSize: 28, fontWeight: FontWeight.w700,
-                    color: isPositive ? AppColors.success : AppColors.error,
-                    letterSpacing: -0.5,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: net),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOut,
+                builder: (_, v, __) => Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text(
+                    '${isPositive ? '+' : ''}${currencyFormatter.format(v, decimalDigits: 0)}',
+                    style: GoogleFonts.dmMono(
+                      fontSize: 28, fontWeight: FontWeight.w700,
+                      color: isPositive ? AppColors.success : AppColors.error,
+                      letterSpacing: -0.5,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 7),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    isPositive ? 'surplus' : 'deficit',
-                    style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
+                  const SizedBox(width: 7),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      isPositive ? 'surplus' : 'deficit',
+                      style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
+                    ),
                   ),
-                ),
-              ]),
+                ]),
+              ),
               const SizedBox(height: 14),
               _ProgressRow(label: 'Inflow', actual: actualIncome, planned: plannedIncome, color: AppColors.success),
               const SizedBox(height: 8),
@@ -284,24 +298,29 @@ class _ProgressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = planned > 0 ? (actual / planned).clamp(0.0, 1.0) : 0.0;
-    return Column(children: [
-      Row(children: [
-        Text(label, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
-        const Spacer(),
-        Text(
-          '${currencyFormatter.format(actual, decimalDigits: 0)} / ${currencyFormatter.format(planned, decimalDigits: 0)}',
-          style: GoogleFonts.dmMono(fontSize: 11, color: AppColors.textSecondary, fontFeatures: const [FontFeature.tabularFigures()]),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOut,
+      builder: (_, v, __) => Column(children: [
+        Row(children: [
+          Text(label, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+          const Spacer(),
+          Text(
+            '${currencyFormatter.format(actual * v, decimalDigits: 0)} / ${currencyFormatter.format(planned, decimalDigits: 0)}',
+            style: GoogleFonts.dmMono(fontSize: 11, color: AppColors.textSecondary, fontFeatures: const [FontFeature.tabularFigures()]),
+          ),
+        ]),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: Stack(children: [
+            Container(height: 4, color: color.withValues(alpha: 0.12)),
+            FractionallySizedBox(widthFactor: progress * v, child: Container(height: 4, color: color)),
+          ]),
         ),
       ]),
-      const SizedBox(height: 5),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(2),
-        child: Stack(children: [
-          Container(height: 4, color: color.withValues(alpha: 0.12)),
-          FractionallySizedBox(widthFactor: progress, child: Container(height: 4, color: color)),
-        ]),
-      ),
-    ]);
+    );
   }
 }
 
@@ -315,24 +334,29 @@ class _MiniProgressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = planned > 0 ? (actual / planned).clamp(0.0, 1.0) : 0.0;
-    return Column(children: [
-      Row(children: [
-        Text(label, style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
-        const Spacer(),
-        Text(
-          '${currencyFormatter.format(actual, decimalDigits: 0)} / ${currencyFormatter.format(planned, decimalDigits: 0)}',
-          style: GoogleFonts.dmMono(fontSize: 10, color: AppColors.textTertiary, fontFeatures: const [FontFeature.tabularFigures()]),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOut,
+      builder: (_, v, __) => Column(children: [
+        Row(children: [
+          Text(label, style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
+          const Spacer(),
+          Text(
+            '${currencyFormatter.format(actual * v, decimalDigits: 0)} / ${currencyFormatter.format(planned, decimalDigits: 0)}',
+            style: GoogleFonts.dmMono(fontSize: 10, color: AppColors.textTertiary, fontFeatures: const [FontFeature.tabularFigures()]),
+          ),
+        ]),
+        const SizedBox(height: 3),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: Stack(children: [
+            Container(height: 3, color: color.withValues(alpha: 0.12)),
+            FractionallySizedBox(widthFactor: progress * v, child: Container(height: 3, color: color)),
+          ]),
         ),
       ]),
-      const SizedBox(height: 3),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(2),
-        child: Stack(children: [
-          Container(height: 3, color: color.withValues(alpha: 0.12)),
-          FractionallySizedBox(widthFactor: progress, child: Container(height: 3, color: color)),
-        ]),
-      ),
-    ]);
+    );
   }
 }
 
@@ -439,7 +463,20 @@ class _BranchesList extends StatelessWidget {
               final actualExpenses = sumSpent(false);
               final plannedExpenses = sumPlanned(false);
 
-              return GestureDetector(
+              return TweenAnimationBuilder<double>(
+                key: ValueKey(p.id),
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 500),
+                curve: Interval(
+                  (i * 0.08).clamp(0.0, 0.6),
+                  ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                  curve: Curves.easeOut,
+                ),
+                builder: (_, v, child) => Opacity(
+                  opacity: v,
+                  child: Transform.translate(offset: Offset(0, (1 - v) * 12), child: child),
+                ),
+                child: GestureDetector(
                 onTap: () => onTap(p),
                 behavior: HitTestBehavior.opaque,
                 child: Column(children: [
@@ -518,6 +555,7 @@ class _BranchesList extends StatelessWidget {
                   if (!isLast)
                     Divider(height: 1, thickness: 0.5, color: borderColor, indent: 14, endIndent: 14),
                 ]),
+              ),
               );
             }).toList(),
           ),

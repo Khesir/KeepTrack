@@ -80,7 +80,12 @@ class BudgetGroupCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_up_rounded, size: 17, color: AppColors.textTertiary),
+                        AnimatedRotation(
+                          turns: isSelected ? 0 : 0.5,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          child: Icon(Icons.keyboard_arrow_up_rounded, size: 17, color: AppColors.textTertiary),
+                        ),
                       ],
                     ),
                   ),
@@ -134,20 +139,29 @@ class BudgetGroupCard extends StatelessWidget {
           Divider(height: 1, color: borderColor),
 
           // ── Category rows ─────────────────────────────────────────────
-          ...group.categories.expand((cat) => [
-            CategoryRow(
-              key: ValueKey(cat.id ?? cat.financeCategoryId),
-              category: cat,
-              spentAmount: spentByCategory[cat.financeCategoryId] ?? 0.0,
-              isIncomeGroup: isIncome,
-              accentColor: groupColor,
-              onDetailTap: () => onCategoryDetailTap(cat),
-              onEditTap: () => onCategoryEditTap(cat),
-              onUpdateAmount: (amount) => onUpdateAmount(cat, amount),
-              onPay: onCategoryPay != null ? (amount) => onCategoryPay!(cat, amount) : null,
+          for (int i = 0; i < group.categories.length; i++) ...[
+            TweenAnimationBuilder<double>(
+              key: ValueKey(group.categories[i].id ?? group.categories[i].financeCategoryId),
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 500),
+              curve: Interval((i * 0.12).clamp(0.0, 0.7), (i * 0.12 + 0.5).clamp(0.0, 1.0), curve: Curves.easeOut),
+              builder: (_, v, child) => Opacity(
+                opacity: v,
+                child: Transform.translate(offset: Offset(0, (1 - v) * 6), child: child),
+              ),
+              child: CategoryRow(
+                category: group.categories[i],
+                spentAmount: spentByCategory[group.categories[i].financeCategoryId] ?? 0.0,
+                isIncomeGroup: isIncome,
+                accentColor: groupColor,
+                onDetailTap: () => onCategoryDetailTap(group.categories[i]),
+                onEditTap: () => onCategoryEditTap(group.categories[i]),
+                onUpdateAmount: (amount) => onUpdateAmount(group.categories[i], amount),
+                onPay: onCategoryPay != null ? (amount) => onCategoryPay!(group.categories[i], amount) : null,
+              ),
             ),
             Divider(height: 1, color: borderColor),
-          ]),
+          ],
 
           // ── Add Item — plain accent text link (Every Dollar style) ─────
           GestureDetector(

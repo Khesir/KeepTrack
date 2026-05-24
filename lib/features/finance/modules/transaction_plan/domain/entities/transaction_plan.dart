@@ -10,6 +10,7 @@ class TransactionPlan {
   final TransactionPlanStatus status;
   final String? financeCategoryId;
   final String? budgetId;
+  final String? budgetProfileId;
   final String? notes;
   final String? completedTransactionId;
   final DateTime? completedAt;
@@ -25,6 +26,7 @@ class TransactionPlan {
     this.status = TransactionPlanStatus.pending,
     this.financeCategoryId,
     this.budgetId,
+    this.budgetProfileId,
     this.notes,
     this.completedTransactionId,
     this.completedAt,
@@ -49,6 +51,7 @@ class TransactionPlan {
     TransactionPlanStatus? status,
     String? financeCategoryId,
     String? budgetId,
+    String? budgetProfileId,
     String? notes,
   }) {
     return TransactionPlan(
@@ -61,6 +64,7 @@ class TransactionPlan {
       status: status ?? this.status,
       financeCategoryId: financeCategoryId ?? this.financeCategoryId,
       budgetId: budgetId ?? this.budgetId,
+      budgetProfileId: budgetProfileId ?? this.budgetProfileId,
       notes: notes ?? this.notes,
       completedTransactionId: completedTransactionId,
       completedAt: completedAt,

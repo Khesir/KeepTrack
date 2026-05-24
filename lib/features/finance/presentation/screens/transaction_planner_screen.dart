@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -34,25 +35,33 @@ class _TransactionPlannerScreenState extends ScopedScreenState<TransactionPlanne
   late final FinanceCategoryController _catController;
 
   Map<String, FinanceCategory> _categoriesMap = {};
+  Map<String, String> _profileNames = {};
   String _historyFilter = 'All';
+  StreamSubscription? _catSub;
 
   static const _filters = ['All', 'Income', 'Expense', 'Savings', 'Goals'];
+
+  late final BudgetProfileController _profileController;
 
   @override
   void registerServices() {
     _planController = locator.get<TransactionPlanController>();
     _txController = locator.get<TransactionController>();
     _catController = locator.get<FinanceCategoryController>();
+    _profileController = locator.get<BudgetProfileController>();
   }
 
   @override
   void initState() {
     super.initState();
-    _catController.stream.listen((s) {
+    _catSub = _catController.stream.listen((s) {
+      if (!mounted) return;
       if (s is AsyncData<List<FinanceCategory>>) {
         setState(() => _categoriesMap = {for (final c in s.data) if (c.id != null) c.id!: c});
       }
     });
+    final profiles = _profileController.data ?? [];
+    _profileNames = {for (final p in profiles) if (p.id != null) p.id!: p.name};
   }
 
   @override
@@ -64,7 +73,9 @@ class _TransactionPlannerScreenState extends ScopedScreenState<TransactionPlanne
   }
 
   @override
-  void onDispose() {}
+  void onDispose() {
+    _catSub?.cancel();
+  }
 
   void _showAddPlanSheet([TransactionPlan? plan]) {
     showModalBottomSheet(
@@ -89,7 +100,16 @@ class _TransactionPlannerScreenState extends ScopedScreenState<TransactionPlanne
         plan: plan,
         onConfirm: (amount, date) async {
           await _planController.completePlan(plan.id!, amount: amount, date: date);
-          _txController.loadAllTransactions();
+          await _txController.createTransaction(Transaction(
+            userId: locator.get<AuthController>().currentUser?.id,
+            amount: amount,
+            type: plan.type,
+            description: plan.description,
+            date: date,
+            financeCategoryId: plan.financeCategoryId,
+            budgetProfileId: plan.budgetProfileId,
+            notes: plan.notes,
+          ));
         },
       ),
     );
@@ -111,6 +131,7 @@ class _TransactionPlannerScreenState extends ScopedScreenState<TransactionPlanne
             plans: plans,
             transactions: txs,
             categoriesMap: _categoriesMap,
+            profileNames: _profileNames,
             historyFilter: _historyFilter,
             filters: _filters,
             isDark: isDark,
@@ -131,6 +152,7 @@ class _Feed extends StatelessWidget {
   final List<TransactionPlan> plans;
   final List<Transaction> transactions;
   final Map<String, FinanceCategory> categoriesMap;
+  final Map<String, String> profileNames;
   final String historyFilter;
   final List<String> filters;
   final bool isDark;
@@ -141,6 +163,7 @@ class _Feed extends StatelessWidget {
 
   const _Feed({
     required this.plans, required this.transactions, required this.categoriesMap,
+    required this.profileNames,
     required this.historyFilter, required this.filters, required this.isDark,
     required this.onFilterChange, required this.onEditPlan,
     required this.onCompletePlan, required this.onCancelPlan,
@@ -199,13 +222,27 @@ class _Feed extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
-                (_, i) => _PlanCard(
-                  plan: pending[i],
-                  category: categoriesMap[pending[i].financeCategoryId],
-                  isDark: isDark,
-                  onEdit: () => onEditPlan(pending[i]),
-                  onComplete: () => onCompletePlan(pending[i]),
-                  onCancel: () => onCancelPlan(pending[i]),
+                (_, i) => TweenAnimationBuilder<double>(
+                  key: ValueKey(pending[i].id),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 450),
+                  curve: Interval(
+                    (i * 0.08).clamp(0.0, 0.6),
+                    ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                    curve: Curves.easeOut,
+                  ),
+                  builder: (_, v, child) => Opacity(
+                    opacity: v,
+                    child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                  ),
+                  child: _PlanCard(
+                    plan: pending[i],
+                    category: categoriesMap[pending[i].financeCategoryId],
+                    isDark: isDark,
+                    onEdit: () => onEditPlan(pending[i]),
+                    onComplete: () => onCompletePlan(pending[i]),
+                    onCancel: () => onCancelPlan(pending[i]),
+                  ),
                 ),
                 childCount: pending.length,
               ),
@@ -265,12 +302,26 @@ class _Feed extends StatelessWidget {
                 (_, i) {
                   final t = filtered[i];
                   final showDate = i == 0 || !_sameDay(t.date, filtered[i - 1].date);
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (showDate) _DateHeader(date: t.date, isDark: isDark),
-                      _TxRow(transaction: t, category: categoriesMap[t.financeCategoryId], isDark: isDark),
-                    ],
+                  return TweenAnimationBuilder<double>(
+                    key: ValueKey(t.id),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 450),
+                    curve: Interval(
+                      (i * 0.08).clamp(0.0, 0.6),
+                      ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                      curve: Curves.easeOut,
+                    ),
+                    builder: (_, v, child) => Opacity(
+                      opacity: v,
+                      child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (showDate) _DateHeader(date: t.date, isDark: isDark),
+                        _TxRow(transaction: t, category: categoriesMap[t.financeCategoryId], profileName: t.budgetProfileId != null ? profileNames[t.budgetProfileId] : null, isDark: isDark),
+                      ],
+                    ),
                   );
                 },
                 childCount: filtered.length,
@@ -497,8 +548,9 @@ class _DateHeader extends StatelessWidget {
 class _TxRow extends StatelessWidget {
   final Transaction transaction;
   final FinanceCategory? category;
+  final String? profileName;
   final bool isDark;
-  const _TxRow({required this.transaction, required this.category, required this.isDark});
+  const _TxRow({required this.transaction, required this.category, required this.isDark, this.profileName});
 
   @override
   Widget build(BuildContext context) {
@@ -512,6 +564,7 @@ class _TxRow extends StatelessWidget {
       if (transaction.debtId != null) ('Debt', AppColors.error),
       if (transaction.subscriptionId != null) ('Sub', AppColors.warning),
     ];
+    final profileLabel = profileName;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -525,7 +578,7 @@ class _TxRow extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(transaction.description ?? (isIn ? 'Income' : 'Expense'),
+            Text(transaction.description ?? (category != null ? (isIn ? 'Earns ${category!.name}' : 'Pays ${category!.name}') : (isIn ? 'Income' : 'Expense')),
                 style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: fg),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
@@ -542,6 +595,18 @@ class _TxRow extends StatelessWidget {
                 decoration: BoxDecoration(color: tag.$2.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                 child: Text(tag.$1, style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: tag.$2)),
               )),
+              if (profileLabel != null) ...[
+                const SizedBox(width: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.25), width: 0.5),
+                  ),
+                  child: Text(profileLabel, style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.accent)),
+                ),
+              ],
             ]),
           ]),
         ),
@@ -781,6 +846,25 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
     _catController = locator.get<FinanceCategoryController>();
     _profileController = locator.get<BudgetProfileController>();
     _budgetController = locator.get<BudgetController>();
+    _initProfile(p?.budgetProfileId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_selectedProfileId == null && mounted) {
+        setState(() => _initProfile(p?.budgetProfileId));
+      }
+    });
+  }
+
+  void _initProfile(String? preferredId) {
+    final s = _profileController.state;
+    if (s is! AsyncData<List<BudgetProfile>>) return;
+    final profiles = s.data;
+    if (profiles.isEmpty) return;
+    final resolved = preferredId != null
+        ? profiles.where((p) => p.id == preferredId).firstOrNull
+        : null;
+    final profile = resolved ?? profiles.where((p) => p.isMain).firstOrNull ?? profiles.first;
+    _selectedProfileId = profile.id;
+    _selectedProfileName = profile.name;
   }
 
   Set<String>? get _allowedCategoryIds {
@@ -799,7 +883,6 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
   void _save() {
     final amount = double.tryParse(_amountCtrl.text);
     if (_descCtrl.text.trim().isEmpty || amount == null || amount <= 0) return;
-    if (_selectedProfileId == null) { setState(() {}); return; }
     widget.onSave(TransactionPlan(
       id: widget.plan?.id,
       userId: locator.get<AuthController>().currentUser?.id ?? '',
@@ -808,6 +891,7 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
       type: _type,
       plannedDate: _date,
       financeCategoryId: _categoryId,
+      budgetProfileId: _selectedProfileId,
     ));
     Navigator.pop(context);
   }

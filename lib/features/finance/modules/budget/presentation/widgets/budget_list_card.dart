@@ -217,8 +217,11 @@ class _BudgetMiniBar extends StatelessWidget {
           child: Stack(
             children: [
               if (percentage > 0)
-                FractionallySizedBox(
-                  widthFactor: percentage,
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: percentage),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, v, child) => FractionallySizedBox(widthFactor: v, child: child),
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(

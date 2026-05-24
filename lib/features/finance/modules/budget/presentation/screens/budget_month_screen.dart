@@ -268,7 +268,6 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
       _selectedCategory = null;
       _selectedCategoryGroup = null;
       _selectedDebt = null;
-      _selectedTab = 0;
     });
     _loadMonthTransactions();
   }
@@ -280,7 +279,6 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
       _selectedCategory = null;
       _selectedCategoryGroup = null;
       _selectedDebt = null;
-      _selectedTab = 0;
     });
     _loadMonthTransactions();
   }

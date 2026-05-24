@@ -151,12 +151,17 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
           financeCategoryId: _category!.id,
         ));
       } else {
+        final desc = _descCtrl.text.trim();
+        final autoDesc = _type == TransactionType.income
+            ? 'Earns ${_category!.name}'
+            : 'Pays ${_category!.name}';
         await _txController.createTransaction(Transaction(
           amount: _amount,
           type: _type,
           financeCategoryId: _category!.id,
           date: _date,
-          description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          description: desc.isEmpty ? autoDesc : desc,
+          budgetProfileId: _selectedProfileId,
         ));
       }
       widget.onCreated?.call();

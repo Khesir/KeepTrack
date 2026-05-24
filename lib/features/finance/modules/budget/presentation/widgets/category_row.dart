@@ -286,13 +286,18 @@ class CategoryRowState extends State<CategoryRow> {
               ],
             ),
             const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 3,
-                backgroundColor: AppColors.textTertiary.withValues(alpha: 0.15),
-                valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, __) => ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: v,
+                  minHeight: 3,
+                  backgroundColor: AppColors.textTertiary.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                ),
               ),
             ),
             const SizedBox(height: 4),

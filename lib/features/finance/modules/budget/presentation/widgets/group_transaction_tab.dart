@@ -26,7 +26,21 @@ class GroupTransactionsTab extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: transactions.length,
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
-      itemBuilder: (_, i) => TransactionMiniRow(transaction: transactions[i]),
+      itemBuilder: (_, i) => TweenAnimationBuilder<double>(
+        key: ValueKey(transactions[i].id),
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 400),
+        curve: Interval(
+          (i * 0.08).clamp(0.0, 0.6),
+          (i * 0.08 + 0.4).clamp(0.0, 1.0),
+          curve: Curves.easeOut,
+        ),
+        builder: (_, v, child) => Opacity(
+          opacity: v,
+          child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child),
+        ),
+        child: TransactionMiniRow(transaction: transactions[i]),
+      ),
     );
   }
 }

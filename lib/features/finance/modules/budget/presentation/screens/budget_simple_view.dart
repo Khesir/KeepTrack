@@ -326,6 +326,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             subscriptionId: sub.id,
             financeCategoryId: categoryId,
             description: sub.name,
+            budgetProfileId: widget.budgetProfileId,
           ));
           await _subController.pay(sub.id!);
         },
@@ -340,9 +341,28 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       builder: (_) => DebtDetailSheet(
         debt: debt,
         debtController: _debtController,
-        // The backend payDebt endpoint handles transaction creation internally.
-        onPay: (amount, fee) =>
-            _debtController.payDebt(debt.id!, amount: amount, fee: fee),
+        onPay: (amount, fee) async {
+          final isReceivable = debt.type == DebtType.lending;
+          final userId = locator.get<AuthController>().currentUser?.id ?? '';
+          final categoryId = await _categoryController.findOrCreate(
+            name: isReceivable ? 'Receivables' : 'Debt Payment',
+            type: isReceivable ? CategoryType.income : CategoryType.expense,
+            userId: userId,
+          );
+          await _txController.createTransaction(Transaction(
+            amount: amount,
+            fee: fee ?? 0.0,
+            type: isReceivable ? TransactionType.income : TransactionType.expense,
+            date: DateTime.now(),
+            debtId: debt.id,
+            financeCategoryId: categoryId,
+            description: isReceivable
+                ? 'Collection from ${debt.personName}'
+                : 'Payment to ${debt.personName}',
+            budgetProfileId: widget.budgetProfileId,
+          ));
+          await _debtController.payDebt(debt.id!, amount: amount, fee: fee);
+        },
         onUpdate: (updated) => _debtController.updateDebt(updated),
       ),
     );
@@ -375,6 +395,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             savingsId: currentGoal.savingsBucketId,
             financeCategoryId: categoryId,
             description: 'Contribution to ${currentGoal.name}',
+            budgetProfileId: widget.budgetProfileId,
           ));
 
           // 2. Update goal progress (optimistic + server)
@@ -446,6 +467,10 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   Widget _build(BuildContext ctx, bool isDark, List<Budget> budgets, List<Transaction> txs,
       List<Debt> debts, List<Subscription> subs, List<Goal> goals) {
     final spentByCategory = BudgetMonthFilter.buildSpentByCategory(txs);
+    final categoryNames = <String, String>{
+      for (final c in (_categoryController.data ?? []))
+        if (c.id != null) c.id!: c.name,
+    };
 
     final paidThisMonthByDebt = <String, double>{};
     final contributedThisMonthByGoal = <String, double>{};
@@ -501,17 +526,19 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       2 => SimpleSubsSummaryCard(isDark: isDark, subs: monthSubs, month: _month),
       3 => SimpleDebtSummaryCard(
           isDark: isDark,
-          totalOwed: sortedDebts.where((d) => d.status == DebtStatus.active).fold(0.0, (s, d) => s + d.remainingAmount),
+          totalOwed: sortedDebts.where((d) => d.status == DebtStatus.active && d.remainingAmount > 0).fold(0.0, (s, d) => s + d.remainingAmount),
           totalReceivable: 0,
-          debtCount: sortedDebts.where((d) => d.status == DebtStatus.active).length,
+          debtCount: sortedDebts.where((d) => d.status == DebtStatus.active && d.remainingAmount > 0).length,
           receivableCount: 0,
+          settledDebtCount: sortedDebts.where((d) => d.status == DebtStatus.settled || d.remainingAmount <= 0).length,
         ),
       4 => SimpleDebtSummaryCard(
           isDark: isDark,
           totalOwed: 0,
-          totalReceivable: sortedReceivables.where((d) => d.status == DebtStatus.active).fold(0.0, (s, d) => s + d.remainingAmount),
+          totalReceivable: sortedReceivables.where((d) => d.status == DebtStatus.active && d.remainingAmount > 0).fold(0.0, (s, d) => s + d.remainingAmount),
           debtCount: 0,
-          receivableCount: sortedReceivables.where((d) => d.status == DebtStatus.active).length,
+          receivableCount: sortedReceivables.where((d) => d.status == DebtStatus.active && d.remainingAmount > 0).length,
+          settledReceivableCount: sortedReceivables.where((d) => d.status == DebtStatus.settled || d.remainingAmount <= 0).length,
         ),
       5 => SimpleGoalsSummaryCard(isDark: isDark, goals: sortedGoals),
       _ => SimpleNetCard(isDark: isDark, net: net, plannedNet: plannedNet, actualIncome: actualIncome, plannedIncome: plannedIncome, actualExpenses: actualExpenses, plannedExpenses: plannedExpenses),
@@ -628,7 +655,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           ),
         ),
       // Tab 0: Overall summary
-      if (tab == 0)
+      if (tab == 0) ...[
         SliverToBoxAdapter(
           child: BudgetOverallSummary(
             monthBudgets: monthBudgets,
@@ -642,6 +669,21 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             isDark: isDark,
           ),
         ),
+        SliverToBoxAdapter(
+          child: SimpleDonutInsightCard(
+            isDark: isDark,
+            budgets: monthBudgets,
+            spentByCategory: spentByCategory,
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: SimpleTransactionsSection(
+            isDark: isDark,
+            transactions: txs,
+            categoryNames: categoryNames,
+          ),
+        ),
+      ],
       // Tab 1: Budget groups
       if (tab == 1) ...[
         SliverToBoxAdapter(child: SimpleBudgetSection(
@@ -896,9 +938,22 @@ class BudgetSimpleTabBar extends StatelessWidget {
       ]),
     );
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(onTap: () => onSelect(i), child: pill),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      curve: Interval(
+        (i * 0.1).clamp(0.0, 0.5),
+        ((i * 0.1) + 0.4).clamp(0.0, 1.0),
+        curve: Curves.easeOut,
+      ),
+      builder: (_, v, child) => Opacity(
+        opacity: v,
+        child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child),
+      ),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(onTap: () => onSelect(i), child: pill),
+      ),
     );
   }
 

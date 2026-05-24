@@ -244,14 +244,18 @@ class _DebtDetailSheetState extends State<DebtDetailSheet> {
         final isReceivable = d.type == DebtType.lending;
         final color = isReceivable ? AppColors.success : AppColors.error;
 
+        final isSettled = d.status == DebtStatus.settled || d.remainingAmount <= 0;
         return _CompactFrame(
           isDark: isDark,
           title: _editMode ? 'Edit ${isReceivable ? 'Receivable' : 'Debt'}' : d.personName,
-          trailing: !_editMode ? _StatusPill(text: isReceivable ? 'Receivable' : 'Debt', color: color) : null,
+          trailing: !_editMode ? _StatusPill(
+            text: isSettled ? (isReceivable ? 'Collected' : 'Settled') : (isReceivable ? 'Receivable' : 'Debt'),
+            color: isSettled ? AppColors.success : color,
+          ) : null,
           onBack: _editMode ? () => setState(() => _editMode = false) : null,
           child: _editMode
               ? _DebtEditBody(nameCtrl: _nameCtrl, monthlyCtrl: _monthlyCtrl, notesCtrl: _notesCtrl, loading: _loading, onSave: () => _save(d), onCancel: () => setState(() => _editMode = false), isDark: isDark)
-              : _DebtViewBody(debt: d, loading: _loading, onCollect: () => _showPayDrawer(d), onEdit: () => setState(() => _editMode = true), isDark: isDark),
+              : _DebtViewBody(debt: d, loading: _loading, onCollect: isSettled ? null : () => _showPayDrawer(d), onEdit: () => setState(() => _editMode = true), isDark: isDark),
         );
       },
     );
@@ -261,9 +265,10 @@ class _DebtDetailSheetState extends State<DebtDetailSheet> {
 class _DebtViewBody extends StatelessWidget {
   final Debt debt;
   final bool loading, isDark;
-  final VoidCallback onCollect, onEdit;
+  final VoidCallback? onCollect;
+  final VoidCallback onEdit;
 
-  const _DebtViewBody({required this.debt, required this.loading, required this.onCollect, required this.onEdit, required this.isDark});
+  const _DebtViewBody({required this.debt, required this.loading, this.onCollect, required this.onEdit, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -293,12 +298,19 @@ class _DebtViewBody extends StatelessWidget {
           ]),
           if (d.originalAmount > 0) ...[
             const SizedBox(height: 10),
-            ClipRRect(borderRadius: BorderRadius.circular(3), child: LinearProgressIndicator(value: progress, minHeight: 5, backgroundColor: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border, valueColor: AlwaysStoppedAnimation<Color>(AppColors.success))),
-            const SizedBox(height: 4),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('${(progress * 100).round()}% paid', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary)),
-              Text('of ${currencyFormatter.format(d.originalAmount, decimalDigits: 2)}', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary)),
-            ]),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: progress),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, __) => Column(children: [
+                ClipRRect(borderRadius: BorderRadius.circular(3), child: LinearProgressIndicator(value: v, minHeight: 5, backgroundColor: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border, valueColor: AlwaysStoppedAnimation<Color>(AppColors.success))),
+                const SizedBox(height: 4),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('${(v * 100).round()}% paid', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary)),
+                  Text('of ${currencyFormatter.format(d.originalAmount, decimalDigits: 2)}', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary)),
+                ]),
+              ]),
+            ),
           ],
         ]),
       ),
@@ -308,7 +320,15 @@ class _DebtViewBody extends StatelessWidget {
       if (d.notes != null && d.notes!.isNotEmpty) _InfoRow(isDark: isDark, label: 'Notes', value: d.notes!),
       if (d.isOverdue) _InfoRow(isDark: isDark, label: 'Status', value: 'Payment overdue', valueColor: AppColors.error),
       const SizedBox(height: 20),
-      _ActionButton(label: isReceivable ? 'Collect Payment' : 'Record Payment', icon: Icons.payments_outlined, color: color, loading: loading, onTap: onCollect),
+      _ActionButton(
+        label: onCollect == null
+            ? (isReceivable ? 'Fully Collected' : 'Fully Paid')
+            : (isReceivable ? 'Collect Payment' : 'Record Payment'),
+        icon: Icons.payments_outlined,
+        color: color,
+        loading: loading,
+        onTap: onCollect,
+      ),
       const SizedBox(height: 8),
       _ActionButton(label: 'Edit ${isReceivable ? 'Receivable' : 'Debt'}', icon: Icons.edit_outlined, color: isDark ? AppColors.primaryForeground : AppColors.textPrimary, outlined: true, onTap: onEdit, isDark: isDark),
     ]);

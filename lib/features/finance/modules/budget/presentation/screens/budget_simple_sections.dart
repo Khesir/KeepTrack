@@ -1,3 +1,4 @@
+import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +12,7 @@ import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.da
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
+import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 
 // ─── Month Nav ────────────────────────────────────────────────────────────────
 
@@ -69,8 +71,15 @@ class SimpleNetCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(isPos ? 'Surplus' : 'Deficit', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text('${isPos ? '+' : '-'}${currencyFormatter.format(net.abs(), decimalDigits: 2)}',
-              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: netColor, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()])),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: net.abs()),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, __) => Text(
+              '${isPos ? '+' : '-'}${currencyFormatter.format(v, decimalDigits: 2)}',
+              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: netColor, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()]),
+            ),
+          ),
           if (plannedNet != 0) ...[
             const SizedBox(height: 2),
             Text('${plannedNet >= 0 ? '+' : ''}${currencyFormatter.format(plannedNet, decimalDigits: 0)} planned',
@@ -78,9 +87,21 @@ class SimpleNetCard extends StatelessWidget {
           ],
           const SizedBox(height: 14),
           Row(children: [
-            Expanded(child: _NetStat(isDark: isDark, label: 'Income', icon: Icons.arrow_downward_rounded, actual: actualIncome, planned: plannedIncome, color: AppColors.success, textPrimary: textPrimary)),
+            Expanded(child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 600),
+              curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
+              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child)),
+              child: _NetStat(isDark: isDark, label: 'Income', icon: Icons.arrow_downward_rounded, actual: actualIncome, planned: plannedIncome, color: AppColors.success, textPrimary: textPrimary),
+            )),
             const SizedBox(width: 10),
-            Expanded(child: _NetStat(isDark: isDark, label: 'Expenses', icon: Icons.arrow_upward_rounded, actual: actualExpenses, planned: plannedExpenses, color: AppColors.error, textPrimary: textPrimary)),
+            Expanded(child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 600),
+              curve: const Interval(0.2, 0.85, curve: Curves.easeOut),
+              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child)),
+              child: _NetStat(isDark: isDark, label: 'Expenses', icon: Icons.arrow_upward_rounded, actual: actualExpenses, planned: plannedExpenses, color: AppColors.error, textPrimary: textPrimary),
+            )),
           ]),
         ]),
       ),
@@ -110,7 +131,15 @@ class _NetStat extends StatelessWidget {
         Text(currencyFormatter.format(actual, decimalDigits: 0), style: GoogleFonts.dmMono(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary, fontFeatures: const [FontFeature.tabularFigures()])),
         Text('of ${currencyFormatter.format(planned, decimalDigits: 0)}', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
-        ClipRRect(borderRadius: BorderRadius.circular(2), child: LinearProgressIndicator(value: progress, minHeight: 3, backgroundColor: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border, valueColor: AlwaysStoppedAnimation<Color>(color))),
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: progress),
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeOutCubic,
+          builder: (_, v, __) => ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(value: v, minHeight: 3, backgroundColor: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border, valueColor: AlwaysStoppedAnimation<Color>(color)),
+          ),
+        ),
       ]),
     );
   }
@@ -145,15 +174,31 @@ class SimpleSubsSummaryCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Monthly Subscriptions', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text(currencyFormatter.format(monthlyTotal, decimalDigits: 2),
-              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.error, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()])),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: monthlyTotal),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, __) => Text(
+              currencyFormatter.format(v, decimalDigits: 2),
+              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.error, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()]),
+            ),
+          ),
           const SizedBox(height: 12),
           Row(children: [
-            _SummaryPill(label: '$paidCount paid', color: AppColors.success, isDark: isDark),
-            const SizedBox(width: 8),
-            _SummaryPill(label: '$dueCount due', color: dueCount > 0 ? AppColors.warning : AppColors.textTertiary, isDark: isDark),
-            const SizedBox(width: 8),
-            _SummaryPill(label: '${subs.length} total', color: AppColors.textSecondary, isDark: isDark),
+            for (int i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 500),
+                curve: Interval(i * 0.18, i * 0.18 + 0.55, curve: Curves.easeOut),
+                builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 6), child: child)),
+                child: [
+                  _SummaryPill(label: '$paidCount paid', color: AppColors.success, isDark: isDark),
+                  _SummaryPill(label: '$dueCount due', color: dueCount > 0 ? AppColors.warning : AppColors.textTertiary, isDark: isDark),
+                  _SummaryPill(label: '${subs.length} total', color: AppColors.textSecondary, isDark: isDark),
+                ][i],
+              ),
+            ],
           ]),
         ]),
       ),
@@ -166,9 +211,9 @@ class SimpleSubsSummaryCard extends StatelessWidget {
 class SimpleDebtSummaryCard extends StatelessWidget {
   final bool isDark;
   final double totalOwed, totalReceivable;
-  final int debtCount, receivableCount;
+  final int debtCount, receivableCount, settledDebtCount, settledReceivableCount;
 
-  const SimpleDebtSummaryCard({super.key, required this.isDark, required this.totalOwed, required this.totalReceivable, required this.debtCount, required this.receivableCount});
+  const SimpleDebtSummaryCard({super.key, required this.isDark, required this.totalOwed, required this.totalReceivable, required this.debtCount, required this.receivableCount, this.settledDebtCount = 0, this.settledReceivableCount = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -182,9 +227,16 @@ class SimpleDebtSummaryCard extends StatelessWidget {
     if (isDebtsOnly || isReceivablesOnly) {
       final amount = isDebtsOnly ? totalOwed : totalReceivable;
       final count = isDebtsOnly ? debtCount : receivableCount;
+      final settledCount = isDebtsOnly ? settledDebtCount : settledReceivableCount;
+      final isAllClear = count == 0 && settledCount > 0;
       final color = isDebtsOnly ? AppColors.error : AppColors.success;
+      final badgeColor = isAllClear ? AppColors.success : color;
       final label = isDebtsOnly ? 'TOTAL OWED' : 'TOTAL RECEIVABLE';
-      final countLabel = isDebtsOnly ? '$count active debt${count == 1 ? '' : 's'}' : '$count active receivable${count == 1 ? '' : 's'}';
+      final countLabel = isAllClear
+          ? (isDebtsOnly ? '$settledCount settled' : '$settledCount collected')
+          : count == 0
+              ? (isDebtsOnly ? 'No active debts' : 'No active receivables')
+              : (isDebtsOnly ? '$count active debt${count == 1 ? '' : 's'}' : '$count active receivable${count == 1 ? '' : 's'}');
 
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -195,12 +247,17 @@ class SimpleDebtSummaryCard extends StatelessWidget {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textTertiary, letterSpacing: 0.8)),
               const SizedBox(height: 4),
-              Text(currencyFormatter.format(amount), style: GoogleFonts.dmMono(fontSize: 26, fontWeight: FontWeight.w700, color: color, fontFeatures: const [FontFeature.tabularFigures()])),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: amount),
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.easeOutCubic,
+                builder: (_, v, __) => Text(currencyFormatter.format(v), style: GoogleFonts.dmMono(fontSize: 26, fontWeight: FontWeight.w700, color: color, fontFeatures: const [FontFeature.tabularFigures()])),
+              ),
             ])),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withValues(alpha: 0.2))),
-              child: Text(countLabel, style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+              decoration: BoxDecoration(color: badgeColor.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(20), border: Border.all(color: badgeColor.withValues(alpha: 0.2))),
+              child: Text(countLabel, style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: badgeColor)),
             ),
           ]),
         ),
@@ -218,13 +275,32 @@ class SimpleDebtSummaryCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Net Position', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text('${isPositive ? '+' : ''}${currencyFormatter.format(net, decimalDigits: 2)}',
-              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: isPositive ? AppColors.success : AppColors.error, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()])),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: net.abs()),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, __) => Text(
+              '${isPositive ? '+' : '-'}${currencyFormatter.format(v, decimalDigits: 2)}',
+              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: isPositive ? AppColors.success : AppColors.error, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()]),
+            ),
+          ),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: _StatMini(label: 'I Owe', value: currencyFormatter.format(totalOwed, decimalDigits: 0), count: '$debtCount active', color: AppColors.error, isDark: isDark)),
+            Expanded(child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 500),
+              curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
+              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child)),
+              child: _StatMini(label: 'I Owe', value: currencyFormatter.format(totalOwed, decimalDigits: 0), count: '$debtCount active', color: AppColors.error, isDark: isDark),
+            )),
             const SizedBox(width: 10),
-            Expanded(child: _StatMini(label: 'Owed to Me', value: currencyFormatter.format(totalReceivable, decimalDigits: 0), count: '$receivableCount active', color: AppColors.success, isDark: isDark)),
+            Expanded(child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 500),
+              curve: const Interval(0.2, 0.85, curve: Curves.easeOut),
+              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child)),
+              child: _StatMini(label: 'Owed to Me', value: currencyFormatter.format(totalReceivable, decimalDigits: 0), count: '$receivableCount active', color: AppColors.success, isDark: isDark),
+            )),
           ]),
         ]),
       ),
@@ -258,24 +334,50 @@ class SimpleGoalsSummaryCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Total Saved', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          Text(currencyFormatter.format(totalSaved, decimalDigits: 2),
-              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.accent, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()])),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: totalSaved),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, __) => Text(
+              currencyFormatter.format(v, decimalDigits: 2),
+              style: GoogleFonts.dmMono(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.accent, letterSpacing: -1, fontFeatures: const [FontFeature.tabularFigures()]),
+            ),
+          ),
           if (totalTarget > 0) ...[
             const SizedBox(height: 4),
             Text('of ${currencyFormatter.format(totalTarget, decimalDigits: 0)} target · ${(overallProgress * 100).round()}% overall',
                 style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textTertiary)),
             const SizedBox(height: 10),
-            ClipRRect(borderRadius: BorderRadius.circular(3), child: LinearProgressIndicator(
-              value: overallProgress, minHeight: 5,
-              backgroundColor: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-            )),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: overallProgress),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, __) => ClipRRect(borderRadius: BorderRadius.circular(3), child: LinearProgressIndicator(
+                value: v, minHeight: 5,
+                backgroundColor: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+              )),
+            ),
           ],
           const SizedBox(height: 12),
           Row(children: [
-            _SummaryPill(label: '$activeCount active', color: AppColors.accent, isDark: isDark),
-            const SizedBox(width: 8),
-            if (completedCount > 0) _SummaryPill(label: '$completedCount completed', color: AppColors.success, isDark: isDark),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 500),
+              curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+              builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 6), child: child)),
+              child: _SummaryPill(label: '$activeCount active', color: AppColors.accent, isDark: isDark),
+            ),
+            if (completedCount > 0) ...[
+              const SizedBox(width: 8),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 500),
+                curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
+                builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 6), child: child)),
+                child: _SummaryPill(label: '$completedCount completed', color: AppColors.success, isDark: isDark),
+              ),
+            ],
           ]),
         ]),
       ),
@@ -372,10 +474,25 @@ class SimpleBudgetSection extends StatelessWidget {
                 )
               : Column(
                   children: groups.asMap().entries.expand((e) {
+                    final i = e.key;
                     final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
                     return [
-                      if (e.key > 0) Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                      _GroupRow(isDark: isDark, budget: e.value, spentByCategory: spentByCategory, isIncome: isIncome, onAddCategory: onAddCategory, onEditGroup: onEditGroup, onCategoryTap: onCategoryTap),
+                      if (i > 0) Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
+                      TweenAnimationBuilder<double>(
+                        key: ValueKey(e.value.id),
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 450),
+                        curve: Interval(
+                          (i * 0.1).clamp(0.0, 0.5),
+                          ((i * 0.1) + 0.4).clamp(0.0, 1.0),
+                          curve: Curves.easeOut,
+                        ),
+                        builder: (_, v, child) => Opacity(
+                          opacity: v,
+                          child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                        ),
+                        child: _GroupRow(isDark: isDark, budget: e.value, spentByCategory: spentByCategory, isIncome: isIncome, onAddCategory: onAddCategory, onEditGroup: onEditGroup, onCategoryTap: onCategoryTap),
+                      ),
                     ];
                   }).toList(),
                 ),
@@ -406,10 +523,11 @@ class _GroupRowState extends State<_GroupRow> {
     final b = widget.budget;
     final isDark = widget.isDark;
     final color = widget.isIncome ? AppColors.success : AppColors.accent;
+    final overColor = widget.isIncome ? AppColors.success : AppColors.error;
     final spent = b.categories.fold(0.0, (s, c) => s + (widget.spentByCategory[c.financeCategoryId] ?? 0.0));
     final planned = b.budgetTarget;
     final over = planned > 0 && spent > planned;
-    final barColor = over ? AppColors.error : color;
+    final barColor = over ? overColor : color;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
 
@@ -432,7 +550,12 @@ class _GroupRowState extends State<_GroupRow> {
                     child: Icon(Icons.edit_outlined, size: 14, color: AppColors.textTertiary),
                   ),
                 ),
-              Text(currencyFormatter.format(spent, decimalDigits: 0), style: GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w600, color: over ? AppColors.error : textPrimary, fontFeatures: const [FontFeature.tabularFigures()])),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: spent),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutCubic,
+                builder: (_, v, __) => Text(currencyFormatter.format(v, decimalDigits: 0), style: GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w600, color: over ? overColor : textPrimary, fontFeatures: const [FontFeature.tabularFigures()])),
+              ),
               Text(' / ${currencyFormatter.format(planned, decimalDigits: 0)}', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
               const SizedBox(width: 4),
               AnimatedRotation(turns: _expanded ? 0.5 : 0, duration: const Duration(milliseconds: 150),
@@ -443,38 +566,64 @@ class _GroupRowState extends State<_GroupRow> {
           ]),
         ),
       ),
-      if (_expanded)
-        Container(
-          color: isDark ? Colors.white.withValues(alpha: 0.02) : AppColors.background.withValues(alpha: 0.5),
-          child: Column(children: [
-            ...b.categories.map((cat) {
-              final catSpent = widget.spentByCategory[cat.financeCategoryId] ?? 0.0;
-              final catPlanned = cat.targetAmount;
-              final catOver = catPlanned > 0 && catSpent > catPlanned;
-              return Column(children: [
-                Divider(height: 1, thickness: 0.5, color: divColor),
-                InkWell(
-                  onTap: widget.onCategoryTap != null ? () => widget.onCategoryTap!(b, cat, catSpent) : null,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(34, 10, 16, 10),
-                    child: Row(children: [
-                      Expanded(child: Text(cat.financeCategory?.name ?? 'Category', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      Text(currencyFormatter.format(catSpent, decimalDigits: 0), style: GoogleFonts.dmMono(fontSize: 12, fontWeight: FontWeight.w500, color: catOver ? AppColors.error : textPrimary, fontFeatures: const [FontFeature.tabularFigures()])),
-                      Text(' / ${currencyFormatter.format(catPlanned, decimalDigits: 0)}', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
-                      const SizedBox(width: 10),
-                      SizedBox(width: 52, child: _HpBar(spent: catSpent, planned: catPlanned, color: catOver ? AppColors.error : color, isDark: isDark, height: 4)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
-                    ]),
-                  ),
-                ),
-              ]);
-            }),
-            Divider(height: 1, thickness: 0.5, color: divColor),
-            if (widget.onAddCategory != null)
-              GhostAddRow(label: 'Add Category', onTap: () => widget.onAddCategory!(b)),
-          ]),
-        ),
+      AnimatedSize(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        child: _expanded
+            ? Container(
+                color: isDark ? Colors.white.withValues(alpha: 0.02) : AppColors.background.withValues(alpha: 0.5),
+                child: Column(children: [
+                  ...b.categories.asMap().entries.map((ce) {
+                    final ci = ce.key;
+                    final cat = ce.value;
+                    final catSpent = widget.spentByCategory[cat.financeCategoryId] ?? 0.0;
+                    final catPlanned = cat.targetAmount;
+                    final catOver = catPlanned > 0 && catSpent > catPlanned;
+                    return TweenAnimationBuilder<double>(
+                      key: ValueKey(cat.id),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 350),
+                      curve: Interval(
+                        (ci * 0.1).clamp(0.0, 0.5),
+                        ((ci * 0.1) + 0.4).clamp(0.0, 1.0),
+                        curve: Curves.easeOut,
+                      ),
+                      builder: (_, v, child) => Opacity(
+                        opacity: v,
+                        child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child),
+                      ),
+                      child: Column(children: [
+                        Divider(height: 1, thickness: 0.5, color: divColor),
+                        InkWell(
+                          onTap: widget.onCategoryTap != null ? () => widget.onCategoryTap!(b, cat, catSpent) : null,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(34, 10, 16, 10),
+                            child: Row(children: [
+                              Expanded(child: Text(cat.financeCategory?.name ?? 'Category', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.0, end: catSpent),
+                                duration: const Duration(milliseconds: 600),
+                                curve: Curves.easeOutCubic,
+                                builder: (_, v, __) => Text(currencyFormatter.format(v, decimalDigits: 0), style: GoogleFonts.dmMono(fontSize: 12, fontWeight: FontWeight.w500, color: catOver ? overColor : textPrimary, fontFeatures: const [FontFeature.tabularFigures()])),
+                              ),
+                              Text(' / ${currencyFormatter.format(catPlanned, decimalDigits: 0)}', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
+                              const SizedBox(width: 10),
+                              SizedBox(width: 52, child: _HpBar(spent: catSpent, planned: catPlanned, color: catOver ? overColor : color, isDark: isDark, height: 4)),
+                              const SizedBox(width: 4),
+                              Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
+                            ]),
+                          ),
+                        ),
+                      ]),
+                    );
+                  }),
+                  Divider(height: 1, thickness: 0.5, color: divColor),
+                  if (widget.onAddCategory != null)
+                    GhostAddRow(label: 'Add Category', onTap: () => widget.onAddCategory!(b)),
+                ]),
+              )
+            : const SizedBox.shrink(),
+      ),
     ]);
   }
 }
@@ -522,7 +671,9 @@ class SimpleSubscriptionsSection extends StatelessWidget {
       child: entries.isEmpty
           ? _EmptyRow(isDark: isDark, text: 'No subscriptions yet')
           : Column(
-              children: entries.expand((entry) {
+              children: entries.asMap().entries.expand((mapEntry) {
+                final i = mapEntry.key;
+                final entry = mapEntry.value;
                 final s = entry.sub;
                 final now = DateTime.now();
                 final Color badgeColor;
@@ -546,7 +697,20 @@ class SimpleSubscriptionsSection extends StatelessWidget {
 
                 return [
                   Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                  InkWell(
+                  TweenAnimationBuilder<double>(
+                    key: ValueKey(s.id),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 450),
+                    curve: Interval(
+                      (i * 0.08).clamp(0.0, 0.6),
+                      ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                      curve: Curves.easeOut,
+                    ),
+                    builder: (_, v, child) => Opacity(
+                      opacity: v,
+                      child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                    ),
+                    child: InkWell(
                     onTap: () => onRowTap(s),
                     child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 11, 12, 11),
@@ -593,6 +757,7 @@ class SimpleSubscriptionsSection extends StatelessWidget {
                       Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
                     ]),
                   )),
+                  ),
                 ];
               }).toList(),
             ),
@@ -635,14 +800,39 @@ class SimpleDebtsSection extends StatelessWidget {
       child: (debts.isEmpty && receivables.isEmpty)
           ? _EmptyRow(isDark: isDark, text: emptyLabel)
           : Column(children: [
-              ...debts.expand((d) => [
+              ...debts.asMap().entries.expand((e) => [
                 Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                _DebtRow(isDark: isDark, debt: d, textPrimary: textPrimary, paidThisMonth: paidThisMonth[d.id] ?? 0, onTap: () => onRowTap(d)),
+                TweenAnimationBuilder<double>(
+                  key: ValueKey(e.value.id),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 450),
+                  curve: Interval(
+                    (e.key * 0.08).clamp(0.0, 0.6),
+                    ((e.key * 0.08) + 0.4).clamp(0.0, 1.0),
+                    curve: Curves.easeOut,
+                  ),
+                  builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
+                  child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value)),
+                ),
               ]),
-              ...receivables.expand((d) => [
-                Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                _DebtRow(isDark: isDark, debt: d, textPrimary: textPrimary, paidThisMonth: paidThisMonth[d.id] ?? 0, onTap: () => onRowTap(d)),
-              ]),
+              ...receivables.asMap().entries.expand((e) {
+                final i = e.key + debts.length;
+                return [
+                  Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
+                  TweenAnimationBuilder<double>(
+                    key: ValueKey(e.value.id),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 450),
+                    curve: Interval(
+                      (i * 0.08).clamp(0.0, 0.6),
+                      ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                      curve: Curves.easeOut,
+                    ),
+                    builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
+                    child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value)),
+                  ),
+                ];
+              }),
             ]),
     );
   }
@@ -660,7 +850,7 @@ class _DebtRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isReceivable = debt.type == DebtType.lending;
-    final isSettled = debt.status == DebtStatus.settled;
+    final isSettled = debt.status == DebtStatus.settled || debt.remainingAmount <= 0;
     final baseColor = isReceivable ? AppColors.success : AppColors.error;
     final color = isSettled ? baseColor.withValues(alpha: 0.4) : baseColor;
     final icon = isReceivable ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
@@ -688,7 +878,7 @@ class _DebtRow extends StatelessWidget {
           ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(
-              isSettled ? 'Settled' : currencyFormatter.format(debt.remainingAmount, decimalDigits: 2),
+              isSettled ? (isReceivable ? 'Collected' : 'Settled') : currencyFormatter.format(debt.remainingAmount, decimalDigits: 2),
               style: isSettled
                   ? GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.success)
                   : GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w600, color: color, fontFeatures: const [FontFeature.tabularFigures()]),
@@ -818,25 +1008,24 @@ class _HpBar extends StatelessWidget {
     final spentRatio = planned > 0 ? (spent / planned).clamp(0.0, 1.0) : 0.0;
     final over = planned > 0 && spent > planned;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(height),
-      child: SizedBox(
-        height: height,
-        child: Stack(children: [
-          // Track (empty)
-          Container(color: trackBg),
-          // Planned extension (lighter fill up to 100%)
-          if (planned > 0 && !over)
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: over ? 1.0 : spentRatio),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, __) => ClipRRect(
+        borderRadius: BorderRadius.circular(height),
+        child: SizedBox(
+          height: height,
+          child: Stack(children: [
+            Container(color: trackBg),
+            if (planned > 0 && !over)
+              FractionallySizedBox(widthFactor: 1.0, child: Container(color: plannedColor)),
             FractionallySizedBox(
-              widthFactor: 1.0,
-              child: Container(color: plannedColor),
+              widthFactor: v,
+              child: Container(color: over ? AppColors.error : color),
             ),
-          // Spent (solid fill)
-          FractionallySizedBox(
-            widthFactor: over ? 1.0 : spentRatio,
-            child: Container(color: over ? AppColors.error : color),
-          ),
-        ]),
+          ]),
+        ),
       ),
     );
   }
@@ -868,6 +1057,7 @@ class SimpleGoalsSection extends StatelessWidget {
           ? _EmptyRow(isDark: isDark, text: 'No goals yet — tap Add Goal to get started')
           : Column(
               children: goals.asMap().entries.expand((e) {
+                final i = e.key;
                 final g = e.value;
                 final progress = g.progress.clamp(0.0, 1.0);
                 final isActive = g.status == GoalStatus.active;
@@ -883,7 +1073,17 @@ class SimpleGoalsSection extends StatelessWidget {
 
                 return [
                   Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                  InkWell(
+                  TweenAnimationBuilder<double>(
+                    key: ValueKey(g.id),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 450),
+                    curve: Interval(
+                      (i * 0.08).clamp(0.0, 0.6),
+                      ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                      curve: Curves.easeOut,
+                    ),
+                    builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
+                    child: InkWell(
                     onTap: onRowTap != null ? () => onRowTap!(g) : null,
                     child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
@@ -917,6 +1117,7 @@ class SimpleGoalsSection extends StatelessWidget {
                       const SizedBox(height: 8),
                       _HpBar(spent: g.currentAmount, planned: g.targetAmount, color: color, isDark: isDark, height: 5),
                     ]),
+                  ),
                   ),
                   ),
                 ];
@@ -1012,6 +1213,588 @@ class SimpleSavingsSection extends StatelessWidget {
                 ]);
               }),
             ]),
+    );
+  }
+}
+
+// ─── Donut Insight Card ───────────────────────────────────────────────────────
+
+class SimpleDonutInsightCard extends StatelessWidget {
+  final bool isDark;
+  final List<Budget> budgets;
+  final Map<String, double> spentByCategory;
+
+  const SimpleDonutInsightCard({
+    super.key,
+    required this.isDark,
+    required this.budgets,
+    required this.spentByCategory,
+  });
+
+  static const _palette = [
+    Color(0xFF4C6EF5), Color(0xFFF76707), Color(0xFFE64980),
+    Color(0xFF7950F2), Color(0xFF12B886), Color(0xFF1C7ED6),
+    Color(0xFFE67700), Color(0xFFAE3EC9), Color(0xFF0CA678),
+    Color(0xFF3BC9DB),
+  ];
+
+  List<_RingRow> _rows(List<Budget> groups, Map<String, double> spent) {
+    final cats = groups.expand((b) => b.categories).toList();
+    return cats.asMap().entries
+        .map((e) => _RingRow(
+              name: e.value.financeCategory?.name ?? 'Category',
+              planned: e.value.targetAmount,
+              spent: spent[e.value.financeCategoryId] ?? 0.0,
+              color: _palette[e.key % _palette.length],
+            ))
+        .where((r) => r.planned > 0 || r.spent > 0)
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final incomeGroups = budgets.where((b) => b.budgetType == BudgetType.income).toList();
+    final expenseGroups = budgets.where((b) => b.budgetType == BudgetType.expense).toList();
+
+    final incomeRows = _rows(incomeGroups, spentByCategory);
+    final expenseRows = _rows(expenseGroups, spentByCategory);
+
+    if (incomeRows.isEmpty && expenseRows.isEmpty) return const SizedBox.shrink();
+
+    final actualIncome = incomeRows.fold(0.0, (s, r) => s + r.spent);
+    final plannedIncome = incomeRows.fold(0.0, (s, r) => s + r.planned);
+    final actualExpenses = expenseRows.fold(0.0, (s, r) => s + r.spent);
+    final plannedExpenses = expenseRows.fold(0.0, (s, r) => s + r.planned);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, left: 2),
+          child: Text('INSIGHTS', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.2)),
+        ),
+        LayoutBuilder(builder: (_, constraints) {
+          final isWide = constraints.maxWidth >= 380;
+
+          final incomeCard = incomeRows.isNotEmpty
+              ? _CompactRingCard(isDark: isDark, label: 'INCOME', actual: actualIncome, planned: plannedIncome, rows: incomeRows)
+              : null;
+          final expenseCard = expenseRows.isNotEmpty
+              ? _CompactRingCard(isDark: isDark, label: 'EXPENSES', actual: actualExpenses, planned: plannedExpenses, rows: expenseRows)
+              : null;
+
+          if (isWide && incomeCard != null && expenseCard != null) {
+            return IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Expanded(child: incomeCard),
+                const SizedBox(width: 10),
+                Expanded(child: expenseCard),
+              ]),
+            );
+          }
+
+          return Column(children: [
+            if (incomeCard != null) incomeCard,
+            if (incomeCard != null && expenseCard != null) const SizedBox(height: 10),
+            if (expenseCard != null) expenseCard,
+          ]);
+        }),
+      ]),
+    );
+  }
+}
+
+class _RingRow {
+  final String name;
+  final double planned, spent;
+  final Color color;
+  const _RingRow({required this.name, required this.planned, required this.spent, required this.color});
+  double get remaining => planned - spent;
+}
+
+class _CompactRingCard extends StatefulWidget {
+  final bool isDark;
+  final String label;
+  final double actual, planned;
+  final List<_RingRow> rows;
+
+  const _CompactRingCard({
+    required this.isDark,
+    required this.label,
+    required this.actual,
+    required this.planned,
+    required this.rows,
+  });
+
+  @override
+  State<_CompactRingCard> createState() => _CompactRingCardState();
+}
+
+class _CompactRingCardState extends State<_CompactRingCard> {
+  bool _showActual = true;
+
+  void _openDetail(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RingDetailSheet(
+        isDark: widget.isDark,
+        label: widget.label,
+        actual: widget.actual,
+        planned: widget.planned,
+        rows: widget.rows,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _showActual ? widget.actual : widget.planned;
+    final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final cardBg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final border = widget.isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      builder: (_, v, child) => Opacity(
+        opacity: v,
+        child: Transform.translate(offset: Offset(0, (1 - v) * 14), child: child),
+      ),
+      child: GestureDetector(
+        onTap: () => _openDetail(context),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: border, width: 0.5),
+          ),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            _TogglePills(showActual: _showActual, onToggle: (v) => setState(() => _showActual = v)),
+            const SizedBox(height: 12),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (_, ringV, __) => SizedBox(
+                width: 110, height: 110,
+                child: CustomPaint(
+                  painter: _RingPainter(rows: widget.rows, showActual: _showActual, isDark: widget.isDark, animProgress: ringV),
+                  child: Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text(widget.label,
+                          style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                      const SizedBox(height: 2),
+                      Text(
+                        currencyFormatter.format(total * ringV, decimalDigits: 0),
+                        style: GoogleFonts.dmMono(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary, fontFeatures: const [FontFeature.tabularFigures()]),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text('View details', style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+              const SizedBox(width: 2),
+              Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textSecondary),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _RingDetailSheet extends StatefulWidget {
+  final bool isDark;
+  final String label;
+  final double actual, planned;
+  final List<_RingRow> rows;
+
+  const _RingDetailSheet({
+    required this.isDark,
+    required this.label,
+    required this.actual,
+    required this.planned,
+    required this.rows,
+  });
+
+  @override
+  State<_RingDetailSheet> createState() => _RingDetailSheetState();
+}
+
+class _RingDetailSheetState extends State<_RingDetailSheet> {
+  bool _showActual = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _showActual ? widget.actual : widget.planned;
+    final sheetBg = widget.isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final divColor = widget.isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.4,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (_, controller) => Container(
+        decoration: BoxDecoration(
+          color: sheetBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(children: [
+          Container(
+            width: 36, height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+            child: Row(children: [
+              Text(widget.label, style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
+              const Spacer(),
+              _TogglePills(showActual: _showActual, onToggle: (v) => setState(() => _showActual = v)),
+            ]),
+          ),
+          Divider(height: 1, thickness: 0.5, color: divColor),
+          Expanded(
+            child: ListView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, ringV, __) => Center(
+                    child: SizedBox(
+                      width: 150, height: 150,
+                      child: CustomPaint(
+                        painter: _RingPainter(rows: widget.rows, showActual: _showActual, isDark: widget.isDark, animProgress: ringV),
+                        child: Center(
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Text(widget.label, style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                            const SizedBox(height: 3),
+                            Text(
+                              currencyFormatter.format(total * ringV, decimalDigits: 0),
+                              style: GoogleFonts.dmMono(fontSize: 17, fontWeight: FontWeight.w700, color: textPrimary, fontFeatures: const [FontFeature.tabularFigures()]),
+                            ),
+                            Text(
+                              _showActual ? 'actual' : 'planned',
+                              style: GoogleFonts.dmSans(fontSize: 9, color: AppColors.textTertiary),
+                            ),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(children: [
+                  const Expanded(child: SizedBox()),
+                  _RingColHead('PLANNED'),
+                  const SizedBox(width: 10),
+                  _RingColHead('SPENT'),
+                  const SizedBox(width: 10),
+                  _RingColHead('LEFT'),
+                ]),
+                const SizedBox(height: 8),
+                Divider(height: 1, thickness: 0.5, color: divColor),
+                ...widget.rows.asMap().entries.map((e) {
+                  final i = e.key;
+                  final r = e.value;
+                  return TweenAnimationBuilder<double>(
+                    key: ValueKey(r.name),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 500),
+                    curve: Interval(
+                      (i * 0.08).clamp(0.0, 0.6),
+                      ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                      curve: Curves.easeOut,
+                    ),
+                    builder: (_, v, child) => Opacity(
+                      opacity: v,
+                      child: Transform.translate(offset: Offset((1 - v) * 10, 0), child: child),
+                    ),
+                    child: Column(children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        child: Row(children: [
+                          Container(width: 7, height: 7, decoration: BoxDecoration(color: r.color, shape: BoxShape.circle)),
+                          const SizedBox(width: 9),
+                          Expanded(child: Text(r.name, style: GoogleFonts.dmSans(fontSize: 12, color: textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                          _RingAmountCol(value: r.planned, color: AppColors.textTertiary),
+                          const SizedBox(width: 10),
+                          _RingAmountCol(value: r.spent, color: r.spent > r.planned && r.planned > 0 ? AppColors.error : textPrimary),
+                          const SizedBox(width: 10),
+                          _RingAmountCol(value: r.remaining, color: r.remaining < 0 ? AppColors.error : AppColors.success),
+                        ]),
+                      ),
+                      Divider(height: 1, thickness: 0.5, color: divColor),
+                    ]),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _TogglePills extends StatelessWidget {
+  final bool showActual;
+  final void Function(bool) onToggle;
+  const _TogglePills({required this.showActual, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.background;
+
+    Widget pill(String label, bool active, VoidCallback onTap) {
+      return GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: active ? AppColors.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(label, style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: active ? Colors.white : AppColors.textSecondary)),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        pill('Actual', showActual, () => onToggle(true)),
+        pill('Planned', !showActual, () => onToggle(false)),
+      ]),
+    );
+  }
+}
+
+class _RingColHead extends StatelessWidget {
+  final String text;
+  const _RingColHead(this.text);
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 56,
+    child: Text(text, textAlign: TextAlign.right,
+        style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textTertiary, letterSpacing: 0.4)),
+  );
+}
+
+class _RingAmountCol extends StatelessWidget {
+  final double value;
+  final Color color;
+  const _RingAmountCol({required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 56,
+    child: Text(
+      '${value < 0 ? '-' : ''}${currencyFormatter.format(value.abs(), decimalDigits: 0)}',
+      textAlign: TextAlign.right,
+      style: GoogleFonts.dmMono(fontSize: 11, fontWeight: FontWeight.w500, color: color, fontFeatures: const [FontFeature.tabularFigures()]),
+    ),
+  );
+}
+
+class _RingPainter extends CustomPainter {
+  final List<_RingRow> rows;
+  final bool showActual;
+  final bool isDark;
+  final double animProgress;
+
+  const _RingPainter({required this.rows, required this.showActual, required this.isDark, this.animProgress = 1.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 12;
+    const strokeWidth = 13.0;
+    const startAngle = -pi / 2;
+    const gap = 0.04;
+
+    final trackPaint = Paint()
+      ..color = isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.border.withValues(alpha: 0.45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    final values = rows.map((r) => showActual ? r.spent : r.planned).toList();
+    final total = values.fold(0.0, (s, v) => s + v);
+    if (total <= 0) return;
+
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    double angle = startAngle;
+    for (int i = 0; i < rows.length; i++) {
+      if (values[i] <= 0) continue;
+      final fullSweep = (values[i] / total) * 2 * pi;
+      final animSweep = fullSweep * animProgress;
+      arcPaint.color = rows[i].color;
+      if (animSweep > gap) canvas.drawArc(rect, angle + gap / 2, animSweep - gap, false, arcPaint);
+      angle += animSweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.rows != rows || old.showActual != showActual || old.animProgress != animProgress;
+}
+
+// ─── Transactions Section ─────────────────────────────────────────────────────
+
+class SimpleTransactionsSection extends StatefulWidget {
+  final bool isDark;
+  final List<Transaction> transactions;
+  final Map<String, String> categoryNames;
+
+  const SimpleTransactionsSection({
+    super.key,
+    required this.isDark,
+    required this.transactions,
+    this.categoryNames = const {},
+  });
+
+  @override
+  State<SimpleTransactionsSection> createState() => _SimpleTransactionsSectionState();
+}
+
+class _SimpleTransactionsSectionState extends State<SimpleTransactionsSection> {
+  static const _pageSize = 5;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    final sorted = [...widget.transactions]..sort((a, b) => b.date.compareTo(a.date));
+    final hasMore = sorted.length > _pageSize;
+    final visible = _expanded ? sorted : sorted.take(_pageSize).toList();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, left: 2),
+          child: Row(children: [
+            Text('TRANSACTIONS', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.2)),
+            if (widget.transactions.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(color: AppColors.textSecondary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                child: Text('${widget.transactions.length}', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ]),
+        ),
+        Container(
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: border, width: 0.5)),
+          child: sorted.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: Text('No transactions this period', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textTertiary))),
+                )
+              : Column(children: [
+                  ...visible.asMap().entries.map((e) {
+                    final i = e.key;
+                    final t = e.value;
+                    final isIncome = t.type == TransactionType.income;
+                    final color = isIncome ? AppColors.success : AppColors.error;
+                    final sign = isIncome ? '+' : '-';
+                    final catName = t.financeCategoryId != null ? widget.categoryNames[t.financeCategoryId] : null;
+
+                    return TweenAnimationBuilder<double>(
+                      key: ValueKey(t.id ?? i),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 450),
+                      curve: Interval(
+                        (i * 0.08).clamp(0.0, 0.6),
+                        ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                        curve: Curves.easeOut,
+                      ),
+                      builder: (_, v, child) => Opacity(
+                        opacity: v,
+                        child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                      ),
+                      child: Column(children: [
+                        if (i > 0) Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
+                          child: Row(children: [
+                            Container(
+                              width: 32, height: 32,
+                              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                              child: Icon(isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, size: 14, color: color),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(t.description ?? '—', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(
+                                [DateFormat('MMM d').format(t.date), if (catName != null) catName].join(' · '),
+                                style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary),
+                              ),
+                            ])),
+                            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                              Text(
+                                '$sign${currencyFormatter.format(t.amount, decimalDigits: 2)}',
+                                style: GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w600, color: color, fontFeatures: const [FontFeature.tabularFigures()]),
+                              ),
+                              if (t.hasFee)
+                                Text('+${currencyFormatter.format(t.fee, decimalDigits: 2)} fee', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
+                            ]),
+                          ]),
+                        ),
+                      ]),
+                    );
+                  }),
+                  if (hasMore) ...[
+                    Divider(height: 1, thickness: 0.5, color: divColor),
+                    GestureDetector(
+                      onTap: () => setState(() => _expanded = !_expanded),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Text(
+                            _expanded ? 'Show less' : 'View ${sorted.length - _pageSize} more',
+                            style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accent),
+                          ),
+                          const SizedBox(width: 4),
+                          AnimatedRotation(
+                            turns: _expanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 150),
+                            child: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.accent),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  ],
+                ]),
+        ),
+      ]),
     );
   }
 }

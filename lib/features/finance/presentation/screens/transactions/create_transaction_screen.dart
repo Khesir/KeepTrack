@@ -343,13 +343,15 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           ? 0.0
           : double.parse(_feeController.text);
 
+      final desc = _descriptionController.text.trim();
+      final autoDesc = _selectedType == TransactionType.income
+          ? 'Earns ${_selectedCategory?.name ?? ''}'
+          : 'Pays ${_selectedCategory?.name ?? ''}';
       final transaction = Transaction(
         financeCategoryId: _selectedCategoryId,
         amount: double.parse(_amountController.text),
         type: _selectedType,
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
+        description: desc.isEmpty ? autoDesc.trim() : desc,
         date: _selectedDate,
         notes: _notesController.text.trim().isEmpty
             ? null
@@ -359,6 +361,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
             ? null
             : _feeDescriptionController.text.trim(),
         budgetId: _selectedBudgetId,
+        budgetProfileId: _selectedProfileId,
       );
 
       await _transactionController.createTransaction(transaction);

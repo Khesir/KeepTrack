@@ -14,6 +14,7 @@ class Transaction {
   final String? feeDescription;
 
   final String? budgetId;
+  final String? budgetProfileId;
   final String? debtId;
   final String? goalId;
   final String? plannedPaymentId;
@@ -35,6 +36,7 @@ class Transaction {
     this.fee = 0.0,
     this.feeDescription,
     this.budgetId,
+    this.budgetProfileId,
     this.debtId,
     this.goalId,
     this.plannedPaymentId,
@@ -57,6 +59,7 @@ class Transaction {
     double? fee,
     String? feeDescription,
     String? budgetId,
+    String? budgetProfileId,
     String? debtId,
     String? goalId,
     String? plannedPaymentId,
@@ -78,6 +81,7 @@ class Transaction {
       fee: fee ?? this.fee,
       feeDescription: feeDescription ?? this.feeDescription,
       budgetId: budgetId ?? this.budgetId,
+      budgetProfileId: budgetProfileId ?? this.budgetProfileId,
       debtId: debtId ?? this.debtId,
       goalId: goalId ?? this.goalId,
       plannedPaymentId: plannedPaymentId ?? this.plannedPaymentId,

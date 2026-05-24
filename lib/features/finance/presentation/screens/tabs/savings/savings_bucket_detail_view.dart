@@ -190,13 +190,26 @@ class _SavingsBucketDetailViewState extends State<SavingsBucketDetailView> {
                               final t = txs[i];
                               final showDate = i == 0 ||
                                   !_sameDay(t.date, txs[i - 1].date);
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (showDate) _DateLabel(date: t.date),
-                                  _EntryRow(
-                                      transaction: t, isDark: isDark),
-                                ],
+                              return TweenAnimationBuilder<double>(
+                                key: ValueKey(t.id),
+                                tween: Tween(begin: 0.0, end: 1.0),
+                                duration: const Duration(milliseconds: 450),
+                                curve: Interval(
+                                  (i * 0.08).clamp(0.0, 0.6),
+                                  ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                                  curve: Curves.easeOut,
+                                ),
+                                builder: (_, v, child) => Opacity(
+                                  opacity: v,
+                                  child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (showDate) _DateLabel(date: t.date),
+                                    _EntryRow(transaction: t, isDark: isDark),
+                                  ],
+                                ),
                               );
                             },
                             childCount: txs.length,
@@ -378,7 +391,15 @@ class _BalanceSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      builder: (_, v, child) => Opacity(
+        opacity: v,
+        child: Transform.translate(offset: Offset(0, (1 - v) * 14), child: child),
+      ),
+      child: Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -402,14 +423,19 @@ class _BalanceSummary extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  currencyFormatter.format(bucket.balance),
-                  style: GoogleFonts.dmMono(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: bucketColor,
-                    letterSpacing: -0.5,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: bucket.balance),
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, v, __) => Text(
+                    currencyFormatter.format(v),
+                    style: GoogleFonts.dmMono(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: bucketColor,
+                      letterSpacing: -0.5,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ],
@@ -436,6 +462,7 @@ class _BalanceSummary extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }
@@ -513,13 +540,27 @@ class _LinkedGoalsSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: goals.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, i) => _GoalCard(
-              goal: goals[i],
-              isDark: isDark,
-              budgetName: goals[i].budgetProfileId != null
-                  ? profileNames[goals[i].budgetProfileId]
-                  : null,
-              onTap: onGoalTap,
+            itemBuilder: (_, i) => TweenAnimationBuilder<double>(
+              key: ValueKey(goals[i].id),
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 450),
+              curve: Interval(
+                (i * 0.1).clamp(0.0, 0.6),
+                ((i * 0.1) + 0.4).clamp(0.0, 1.0),
+                curve: Curves.easeOut,
+              ),
+              builder: (_, v, child) => Opacity(
+                opacity: v,
+                child: Transform.translate(offset: Offset((1 - v) * 10, 0), child: child),
+              ),
+              child: _GoalCard(
+                goal: goals[i],
+                isDark: isDark,
+                budgetName: goals[i].budgetProfileId != null
+                    ? profileNames[goals[i].budgetProfileId]
+                    : null,
+                onTap: onGoalTap,
+              ),
             ),
           ),
         ),
@@ -612,14 +653,18 @@ class _GoalCard extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5,
-              backgroundColor:
-                  _goalColor.withValues(alpha: isDark ? 0.15 : 0.10),
-              valueColor: AlwaysStoppedAnimation(_goalColor),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: progress),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, __) => ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: v,
+                minHeight: 5,
+                backgroundColor: _goalColor.withValues(alpha: isDark ? 0.15 : 0.10),
+                valueColor: AlwaysStoppedAnimation(_goalColor),
+              ),
             ),
           ),
           const SizedBox(height: 6),

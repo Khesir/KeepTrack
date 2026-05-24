@@ -161,75 +161,81 @@ class _DonutSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 160,
-          child: CustomPaint(
-            painter: _DonutChartPainter(
-              items: items,
-              palette: palette,
-              totalValue: total,
-            ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    formatCurrency(total),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w700,
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeOutCubic,
+          builder: (_, v, __) => SizedBox(
+            height: 160,
+            child: CustomPaint(
+              painter: _DonutChartPainter(
+                items: items,
+                palette: palette,
+                totalValue: total,
+                animProgress: v,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      formatCurrency(total * v),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  Text(
-                    centerLabel,
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textTertiary,
+                    Text(
+                      centerLabel,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(height: 12),
         ...items.asMap().entries.map((e) {
-          final color = palette[e.key % palette.length];
+          final i = e.key;
+          final color = palette[i % palette.length];
           final pct = total > 0
               ? (e.value.value / total * 100).toStringAsFixed(1)
               : '0.0';
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 500),
+            curve: Interval(
+              (i * 0.12).clamp(0.0, 0.7),
+              (i * 0.12 + 0.5).clamp(0.0, 1.0),
+              curve: Curves.easeOut,
+            ),
+            builder: (_, v, child) => Opacity(
+              opacity: v,
+              child: Transform.translate(offset: Offset((1 - v) * 8, 0), child: child),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    e.value.name,
-                    style: AppTextStyles.bodySmall,
-                    overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(e.value.name, style: AppTextStyles.bodySmall, overflow: TextOverflow.ellipsis),
                   ),
-                ),
-                Text(
-                  '$pct%',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
+                  Text('$pct%', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                  const SizedBox(width: 8),
+                  Text(
+                    formatCurrency(e.value.value),
+                    style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  formatCurrency(e.value.value),
-                  style: AppTextStyles.bodySmall.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }),
@@ -242,11 +248,13 @@ class _DonutChartPainter extends CustomPainter {
   final List<_ChartItem> items;
   final List<Color> palette;
   final double totalValue;
+  final double animProgress;
 
   _DonutChartPainter({
     required this.items,
     required this.palette,
     required this.totalValue,
+    this.animProgress = 1.0,
   });
 
   @override
@@ -275,14 +283,17 @@ class _DonutChartPainter extends CustomPainter {
     for (var i = 0; i < items.length; i++) {
       final val = items[i].value;
       if (val <= 0) continue;
-      final sweep = (val / totalValue) * 6.2832;
+      final fullSweep = (val / totalValue) * 6.2832;
+      final sweep = fullSweep * animProgress;
       paint.color = palette[i % palette.length];
-      canvas.drawArc(rect, startAngle, sweep - 0.03, false, paint);
-      startAngle += sweep;
+      if (sweep > 0.03) canvas.drawArc(rect, startAngle, sweep - 0.03, false, paint);
+      startAngle += fullSweep * animProgress;
     }
   }
 
   @override
   bool shouldRepaint(_DonutChartPainter old) =>
-      old.totalValue != totalValue || old.items != items;
+      old.totalValue != totalValue ||
+      old.items != items ||
+      old.animProgress != animProgress;
 }

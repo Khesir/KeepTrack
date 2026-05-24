@@ -348,16 +348,21 @@ class _AmountCell extends StatelessWidget {
   const _AmountCell({required this.value, required this.color, this.bold = false});
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 74,
-    child: Text(
-      '${value < 0 ? '-' : ''}${currencyFormatter.format(value.abs(), decimalDigits: 0)}',
-      textAlign: TextAlign.right,
-      style: GoogleFonts.dmMono(
-        fontSize: 13,
-        fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-        color: color,
-        fontFeatures: const [FontFeature.tabularFigures()],
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0, end: value),
+    duration: const Duration(milliseconds: 800),
+    curve: Curves.easeOutCubic,
+    builder: (_, v, __) => SizedBox(
+      width: 74,
+      child: Text(
+        '${v < 0 ? '-' : ''}${currencyFormatter.format(v.abs(), decimalDigits: 0)}',
+        textAlign: TextAlign.right,
+        style: GoogleFonts.dmMono(
+          fontSize: 13,
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+          color: color,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
       ),
     ),
   );

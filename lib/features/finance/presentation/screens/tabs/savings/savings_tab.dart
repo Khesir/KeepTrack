@@ -40,25 +40,21 @@ class _SavingsTabState extends State<SavingsTab> {
 
   void _openCreate(BuildContext context) {
     final userId = locator.get<AuthController>().currentUser?.id ?? '';
-    showDialog(
-      context: context,
-      builder: (_) => SavingsManagementDialog(
-        userId: userId,
-        onSave: (b) => _controller.createSavingsBucket(b),
-      ),
+    SavingsManagementDialog.show(
+      context,
+      userId: userId,
+      onSave: (b) => _controller.createSavingsBucket(b),
     );
   }
 
   void _openEdit(BuildContext context, SavingsBucket bucket) {
     final userId = locator.get<AuthController>().currentUser?.id ?? '';
-    showDialog(
-      context: context,
-      builder: (_) => SavingsManagementDialog(
-        bucket: bucket,
-        userId: userId,
-        onSave: (b) => _controller.updateSavingsBucket(b),
-        onDelete: () => _controller.deleteSavingsBucket(bucket.id!),
-      ),
+    SavingsManagementDialog.show(
+      context,
+      bucket: bucket,
+      userId: userId,
+      onSave: (b) => _controller.updateSavingsBucket(b),
+      onDelete: () => _controller.deleteSavingsBucket(bucket.id!),
     );
   }
 
@@ -162,24 +158,55 @@ class _SavingsTabState extends State<SavingsTab> {
                 spacing: h,
                 runSpacing: h,
                 children: [
-                  ...buckets.map((b) => SizedBox(
-                    width: 200,
-                    height: 160,
-                    child: _BucketCard(
-                      bucket: b,
-                      isDark: isDark,
-                      total: total,
-                      onTap: () => _openAddEntry(context, b),
-                      onEdit: () => _openEdit(context, b),
-                      onViewHistory: () => setState(() => _selectedBucket = b),
+                  ...buckets.asMap().entries.map((e) {
+                    final i = e.key;
+                    final b = e.value;
+                    return TweenAnimationBuilder<double>(
+                      key: ValueKey(b.id),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 450),
+                      curve: Interval(
+                        (i * 0.08).clamp(0.0, 0.6),
+                        ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                        curve: Curves.easeOut,
+                      ),
+                      builder: (_, v, child) => Opacity(
+                        opacity: v,
+                        child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                      ),
+                      child: SizedBox(
+                        width: 200,
+                        height: 160,
+                        child: _BucketCard(
+                          bucket: b,
+                          isDark: isDark,
+                          total: total,
+                          onTap: () => _openAddEntry(context, b),
+                          onEdit: () => _openEdit(context, b),
+                          onViewHistory: () => setState(() => _selectedBucket = b),
+                        ),
+                      ),
+                    );
+                  }),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 450),
+                    curve: Interval(
+                      (buckets.length * 0.08).clamp(0.0, 0.6),
+                      ((buckets.length * 0.08) + 0.4).clamp(0.0, 1.0),
+                      curve: Curves.easeOut,
                     ),
-                  )),
-                  SizedBox(
-                    width: 200,
-                    height: 160,
-                    child: _AddBucketCard(
-                      isDark: isDark,
-                      onTap: () => _openCreate(context),
+                    builder: (_, v, child) => Opacity(
+                      opacity: v,
+                      child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                    ),
+                    child: SizedBox(
+                      width: 200,
+                      height: 160,
+                      child: _AddBucketCard(
+                        isDark: isDark,
+                        onTap: () => _openCreate(context),
+                      ),
                     ),
                   ),
                 ],
@@ -213,7 +240,15 @@ class _SavingsHero extends StatelessWidget {
         ? AppColors.border.withValues(alpha: 0.18)
         : AppColors.border.withValues(alpha: 0.45);
 
-    return Padding(
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      builder: (_, v, child) => Opacity(
+        opacity: v,
+        child: Transform.translate(offset: Offset(0, (1 - v) * 14), child: child),
+      ),
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -249,14 +284,19 @@ class _SavingsHero extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    currencyFormatter.format(total),
-                    style: GoogleFonts.dmMono(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.success,
-                      letterSpacing: -0.5,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: total),
+                    duration: const Duration(milliseconds: 700),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, v, __) => Text(
+                      currencyFormatter.format(v),
+                      style: GoogleFonts.dmMono(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.success,
+                        letterSpacing: -0.5,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -269,6 +309,7 @@ class _SavingsHero extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -455,13 +496,18 @@ class _BucketCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       // Share bar
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: share,
-                          minHeight: 3,
-                          backgroundColor: _color.withValues(alpha: 0.12),
-                          valueColor: AlwaysStoppedAnimation<Color>(_color),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: share),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutCubic,
+                        builder: (_, v, __) => ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: v,
+                            minHeight: 3,
+                            backgroundColor: _color.withValues(alpha: 0.12),
+                            valueColor: AlwaysStoppedAnimation<Color>(_color),
+                          ),
                         ),
                       ),
                     ],

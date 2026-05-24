@@ -154,9 +154,26 @@ class _BudgetManagementScreenState
                         child: ListView.builder(
                           padding: const EdgeInsets.all(AppSpacing.md),
                           itemCount: filtered.length,
-                          itemBuilder: (_, index) => BudgetListCard(
-                            budget: filtered[index],
-                            onTap: () => _openBudget(filtered[index]),
+                          itemBuilder: (_, index) => TweenAnimationBuilder<double>(
+                            key: ValueKey(filtered[index].id),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 500),
+                            curve: Interval(
+                              (index * 0.1).clamp(0.0, 0.7),
+                              (index * 0.1 + 0.5).clamp(0.0, 1.0),
+                              curve: Curves.easeOut,
+                            ),
+                            builder: (_, v, child) => Opacity(
+                              opacity: v,
+                              child: Transform.translate(
+                                offset: Offset(0, (1 - v) * 10),
+                                child: child,
+                              ),
+                            ),
+                            child: BudgetListCard(
+                              budget: filtered[index],
+                              onTap: () => _openBudget(filtered[index]),
+                            ),
                           ),
                         ),
                       ),
