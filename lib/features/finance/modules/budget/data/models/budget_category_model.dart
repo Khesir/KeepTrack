@@ -81,7 +81,15 @@ class BudgetCategoryModel extends BudgetCategory {
     return {
       if (id != null) 'id': id,
       'budgetId': budgetId,
-      'financeCategoryId': financeCategoryId,
+      'financeCategoryId': financeCategory != null
+          ? {
+              if (financeCategory!.id != null) 'id': financeCategory!.id,
+              'name': financeCategory!.name,
+              'type': financeCategory!.type.name,
+              'isArchive': financeCategory!.isArchive,
+              if (financeCategory!.userId?.isNotEmpty ?? false) 'userId': financeCategory!.userId,
+            }
+          : financeCategoryId,
       if (userId != null) 'userId': userId,
       'targetAmount': targetAmount,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),

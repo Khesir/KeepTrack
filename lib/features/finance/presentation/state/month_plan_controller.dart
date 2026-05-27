@@ -92,6 +92,31 @@ class MonthPlanController extends StreamState<AsyncState<List<MonthPlan>>> {
     });
   }
 
+  /// Link [budgetId] to a plan directly by plan ID (for profile plans where month is null).
+  Future<void> addBudgetToPlanById(String planId, String budgetId) async {
+    await executeSilent(() async {
+      final result = await _repository.addBudgetToMonthPlan(planId, budgetId);
+      result.unwrap();
+      final refreshed = await _repository.getMonthPlans();
+      return refreshed.unwrap();
+    });
+  }
+
+  /// Get or create the plan for a custom budget profile.
+  Future<MonthPlan?> getOrCreatePlanForProfile(String profileId) async {
+    MonthPlan? plan;
+    await executeSilent(() async {
+      final result = await _repository.getOrCreatePlanForProfile(profileId);
+      plan = result.unwrap();
+      final current = data ?? [];
+      if (!current.any((p) => p.budgetProfileId == profileId)) {
+        return [...current, plan!];
+      }
+      return current.map((p) => p.budgetProfileId == profileId ? plan! : p).toList();
+    });
+    return plan;
+  }
+
   /// Clear all month plan state (called on sign-out to prevent data leaking to next user)
   void clear() {
     emit(const AsyncData([]));

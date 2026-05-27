@@ -2,8 +2,8 @@ import 'package:keep_track/features/finance/modules/goal/data/models/goal_model.
 
 /// Data source interface for Goal operations
 abstract class GoalDataSource {
-  /// Fetch all goals for the current user
-  Future<List<GoalModel>> fetchGoals();
+  /// Fetch all goals for the current user, optionally scoped to a budget profile
+  Future<List<GoalModel>> fetchGoals({String? budgetProfileId});
 
   /// Fetch a specific goal by ID
   Future<GoalModel?> fetchGoalById(String id);

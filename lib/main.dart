@@ -1,64 +1,75 @@
 library;
 
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keep_track/core/cache/cache_factory.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/sync/sync_manager.dart';
 import 'package:keep_track/core/theme/theme.dart';
 import 'package:keep_track/features/module_selection/finance_module_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/di/di_logger.dart';
+import 'core/restart/app_restart_widget.dart';
+import 'core/navigation/app_navigator.dart';
 import 'core/routing/app_router.dart';
+import 'core/ui/desktop_title_bar.dart';
 import 'core/settings/data/repositories/settings_repository.dart';
 import 'core/settings/domain/entities/app_settings.dart';
 import 'core/settings/presentation/settings_controller.dart';
 import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
-import 'features/auth/data/services/auth_service.dart';
-import 'shared/infrastructure/supabase/supabase_service.dart';
 import 'features/finance/finance_di.dart';
 import 'features/notifications/notifications_di.dart';
+
+late SharedPreferences _sharedPrefs;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  DILogger.enable();
+  if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      titleBarStyle: TitleBarStyle.hidden,
+      minimumSize: Size(940, 600),
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
+  if (kDebugMode) DILogger.enable();
 
   // Initialize Hive for local cache (mobile/desktop only)
   await Hive.initFlutter();
 
   // Initialize SharedPreferences
-  final sharedPreferences = await SharedPreferences.getInstance();
+  _sharedPrefs = await SharedPreferences.getInstance();
 
   // Setup app dependencies
-  _setupDependencies(sharedPreferences);
-
-  // Start offline sync manager
-  final syncManager = locator.get<SyncManager>();
-  syncManager.start();
+  _setupDependencies(_sharedPrefs);
 
   // Initialize notifications (mobile only — safe to call on any platform)
   await initializeNotifications();
 
-  runApp(const PersonalCodexApp());
+  runApp(AppRestartWidget(
+    onRestart: reinitializeDependencies,
+    child: const PersonalCodexApp(),
+  ));
+}
+
+void reinitializeDependencies() {
+  locator.reset();
+  _setupDependencies(_sharedPrefs);
 }
 
 /// Setup all dependencies
 void _setupDependencies(SharedPreferences sharedPreferences) {
   // Core local cache
   locator.registerLazySingleton<LocalCache>(() => createLocalCache());
-
-  // Compatibility shim for screens still using SupabaseService
-  locator.registerLazySingleton<SupabaseService>(
-    () => SupabaseService(locator.get<AuthService>()),
-  );
-
-  // Sync manager
-  locator.registerLazySingleton<SyncManager>(
-    () => SyncManager(locator.get<LocalCache>()),
-  );
 
   // Core settings
   locator.registerSingleton<SharedPreferences>(sharedPreferences);
@@ -109,8 +120,26 @@ class _PersonalCodexAppState extends State<PersonalCodexApp> {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: settings.themeMode.toThemeMode(),
+          navigatorKey: AppNavigator.key,
           onGenerateRoute: AppRouter.onGenerateRoute,
           home: const AuthGuard(child: FinanceModuleScreen()),
+          builder: (context, child) {
+            if (!kIsWeb && DesktopTitleBar.isDesktopPlatform) {
+              return Overlay(
+                initialEntries: [
+                  OverlayEntry(
+                    builder: (_) => Column(
+                      children: [
+                        const DesktopTitleBar(),
+                        Expanded(child: child ?? const SizedBox()),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
+            return child ?? const SizedBox();
+          },
         );
       },
     );

@@ -4,8 +4,6 @@ import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/gcash_theme.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/categories/widgets/category_management_dialog.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-
 import '../../../../modules/finance_category/domain/entities/finance_category_enums.dart';
 import '../../../state/finance_category_controller.dart';
 
@@ -19,12 +17,11 @@ class CategoryManagementScreen extends StatefulWidget {
 
 class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   late final FinanceCategoryController _controller;
-  late final SupabaseService supabaseService;
+
   @override
   void initState() {
     super.initState();
     _controller = locator.get<FinanceCategoryController>();
-    supabaseService = locator.get<SupabaseService>();
   }
 
   @override
@@ -37,7 +34,6 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
     showDialog(
       context: context,
       builder: (context) => CategoryManagementDialog(
-        userId: supabaseService.userId!,
         financeCategory: category,
         onSave: (savedCategory) {
           if (category != null) {

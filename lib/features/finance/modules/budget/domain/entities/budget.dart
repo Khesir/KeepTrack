@@ -16,7 +16,7 @@ class Budget {
   final String? notes;
   final double? customTargetAmount; // Optional custom target (overrides calculated from categories)
   final String? userId; // User identifier (UUID)
-  final String? accountId; // Account identifier (UUID)
+  final String? budgetProfileId; // Optional link to a BudgetProfile
   final DateTime? createdAt; // Optional - Supabase auto-generates
   final DateTime? updatedAt; // Optional - Supabase auto-generates
   final DateTime? closedAt;
@@ -32,7 +32,7 @@ class Budget {
     this.notes,
     this.customTargetAmount,
     this.userId,
-    this.accountId,
+    this.budgetProfileId,
     this.createdAt,
     this.updatedAt,
     this.closedAt,
@@ -137,7 +137,7 @@ class Budget {
     String? notes,
     double? customTargetAmount,
     String? userId,
-    String? accountId,
+    String? budgetProfileId,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? closedAt,
@@ -153,7 +153,7 @@ class Budget {
       notes: notes ?? this.notes,
       customTargetAmount: customTargetAmount ?? this.customTargetAmount,
       userId: userId ?? this.userId,
-      accountId: accountId ?? this.accountId,
+      budgetProfileId: budgetProfileId ?? this.budgetProfileId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       closedAt: closedAt ?? this.closedAt,
@@ -167,15 +167,14 @@ class Budget {
           runtimeType == other.runtimeType &&
           id == other.id &&
           month == other.month &&
-          userId == other.userId &&
-          accountId == other.accountId;
+          userId == other.userId;
 
   @override
-  int get hashCode => Object.hash(id, month, userId, accountId);
+  int get hashCode => Object.hash(id, month, userId);
 
   @override
   String toString() =>
-      'Budget(id: $id, month: $month, title: $title, type: $budgetType, period: $periodType, userId: $userId, accountId: $accountId, status: $status)';
+      'Budget(id: $id, month: $month, title: $title, type: $budgetType, period: $periodType, userId: $userId, status: $status)';
 }
 
 enum BudgetStatus {
@@ -208,7 +207,8 @@ enum BudgetType {
 
 enum BudgetPeriodType {
   monthly,
-  oneTime;
+  oneTime,
+  profile;
 
   String get displayName {
     switch (this) {
@@ -216,6 +216,8 @@ enum BudgetPeriodType {
         return 'Monthly';
       case BudgetPeriodType.oneTime:
         return 'One-Time';
+      case BudgetPeriodType.profile:
+        return 'Profile';
     }
   }
 
@@ -225,6 +227,8 @@ enum BudgetPeriodType {
         return 'Track recurring monthly finances';
       case BudgetPeriodType.oneTime:
         return 'Budget for specific event or project';
+      case BudgetPeriodType.profile:
+        return 'Budget linked to a profile';
     }
   }
 }

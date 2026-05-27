@@ -3,8 +3,8 @@ import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.da
 
 /// Repository interface for managing financial goals
 abstract class GoalRepository {
-  /// Get all goals for the current user
-  Future<Result<List<Goal>>> getGoals();
+  /// Get all goals, optionally scoped to a budget profile
+  Future<Result<List<Goal>>> getGoals({String? budgetProfileId});
 
   /// Get a specific goal by ID
   Future<Result<Goal>> getGoalById(String id);

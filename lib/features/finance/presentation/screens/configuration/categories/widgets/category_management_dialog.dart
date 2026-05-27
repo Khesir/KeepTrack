@@ -4,13 +4,11 @@ import 'package:keep_track/features/finance/modules/finance_category/domain/enti
 
 class CategoryManagementDialog extends StatefulWidget {
   final FinanceCategory? financeCategory;
-  final String userId;
 
   final Function(FinanceCategory) onSave;
 
   const CategoryManagementDialog({
     this.financeCategory,
-    required this.userId,
     required this.onSave,
     super.key,
   });
@@ -49,7 +47,6 @@ class _CategoryManagementScreenState extends State<CategoryManagementDialog> {
       final category = FinanceCategory(
         name: nameController.text.trim(),
         type: selectedType,
-        userId: widget.userId,
       );
       widget.onSave(category);
       if (mounted) {

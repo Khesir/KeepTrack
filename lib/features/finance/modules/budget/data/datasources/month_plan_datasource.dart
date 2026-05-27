@@ -17,4 +17,7 @@ abstract class MonthPlanDataSource {
 
   /// Link [budgetId] to this plan's budgetIds list.
   Future<void> addBudgetToMonthPlan(String planId, String budgetId);
+
+  /// Get or create the plan for a custom budget profile.
+  Future<MonthPlanModel> getOrCreatePlanForProfile(String profileId);
 }

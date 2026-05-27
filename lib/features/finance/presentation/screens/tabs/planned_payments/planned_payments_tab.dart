@@ -4,8 +4,6 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
 import '../../../../../../core/theme/app_theme.dart';
 import '../../../../../../core/ui/responsive/desktop_aware_screen.dart';
 import '../../../../modules/planned_payment/domain/entities/payment_enums.dart';
@@ -22,17 +20,12 @@ class PlannedPaymentsTabNew extends StatefulWidget {
 
 class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
   late final PlannedPaymentController _controller;
-  late final AccountController _accountController;
   String _selectedFilter = 'All'; // All, Active, Upcoming, Paused
 
   @override
   void initState() {
     super.initState();
     _controller = locator.get<PlannedPaymentController>();
-    _accountController = locator.get<AccountController>();
-
-    // Load accounts
-    _accountController.loadAccounts();
   }
 
   Future<void> _showRecordPaymentDialog(PlannedPayment payment) async {

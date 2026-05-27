@@ -5,10 +5,10 @@ import 'budget.dart';
 /// A MonthPlan groups all Budget objects (income and expense) for a single
 /// YYYY-MM month, enabling month-level planning and copying.
 class MonthPlan {
-  final String? id; // Supabase auto-generated
-  final String month; // Format: YYYY-MM (e.g., "2025-03")
+  final String? id;
+  final String? month; // YYYY-MM for monthly plans; null for profile plans
+  final String? budgetProfileId; // null for monthly plans; set for profile plans
   final String? userId;
-  final String? accountId;
   final String? notes;
   final List<Budget> budgets; // All budgets for this month
   final DateTime? createdAt;
@@ -18,9 +18,9 @@ class MonthPlan {
 
   const MonthPlan({
     this.id,
-    required this.month,
+    this.month,
+    this.budgetProfileId,
     this.userId,
-    this.accountId,
     this.notes,
     this.budgets = const [],
     this.budgetIds = const [],
@@ -59,8 +59,8 @@ class MonthPlan {
   MonthPlan copyWith({
     String? id,
     String? month,
+    String? budgetProfileId,
     String? userId,
-    String? accountId,
     String? notes,
     List<Budget>? budgets,
     List<String>? budgetIds,
@@ -70,8 +70,8 @@ class MonthPlan {
     return MonthPlan(
       id: id ?? this.id,
       month: month ?? this.month,
+      budgetProfileId: budgetProfileId ?? this.budgetProfileId,
       userId: userId ?? this.userId,
-      accountId: accountId ?? this.accountId,
       notes: notes ?? this.notes,
       budgets: budgets ?? this.budgets,
       budgetIds: budgetIds ?? this.budgetIds,

@@ -74,19 +74,27 @@ enum AppCurrency {
 class AppSettings {
   final AppThemeMode themeMode;
   final AppCurrency currency;
+  final bool forceOfflineMode;
+  final bool budgetSheetMode; // false = Simple (default), true = Sheet
 
   const AppSettings({
     this.themeMode = AppThemeMode.system,
     this.currency = AppCurrency.peso,
+    this.forceOfflineMode = false,
+    this.budgetSheetMode = false,
   });
 
   AppSettings copyWith({
     AppThemeMode? themeMode,
     AppCurrency? currency,
+    bool? forceOfflineMode,
+    bool? budgetSheetMode,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       currency: currency ?? this.currency,
+      forceOfflineMode: forceOfflineMode ?? this.forceOfflineMode,
+      budgetSheetMode: budgetSheetMode ?? this.budgetSheetMode,
     );
   }
 
@@ -94,6 +102,8 @@ class AppSettings {
     return {
       'themeMode': themeMode.name,
       'currency': currency.name,
+      'forceOfflineMode': forceOfflineMode,
+      'budgetSheetMode': budgetSheetMode,
     };
   }
 
@@ -107,6 +117,8 @@ class AppSettings {
         (e) => e.name == json['currency'],
         orElse: () => AppCurrency.peso,
       ),
+      forceOfflineMode: json['forceOfflineMode'] as bool? ?? false,
+      budgetSheetMode: json['budgetSheetMode'] as bool? ?? false,
     );
   }
 
@@ -116,11 +128,13 @@ class AppSettings {
       other is AppSettings &&
           runtimeType == other.runtimeType &&
           themeMode == other.themeMode &&
-          currency == other.currency;
+          currency == other.currency &&
+          forceOfflineMode == other.forceOfflineMode &&
+          budgetSheetMode == other.budgetSheetMode;
 
   @override
-  int get hashCode => Object.hash(themeMode, currency);
+  int get hashCode => Object.hash(themeMode, currency, forceOfflineMode, budgetSheetMode);
 
   @override
-  String toString() => 'AppSettings(themeMode: $themeMode, currency: $currency)';
+  String toString() => 'AppSettings(themeMode: $themeMode, currency: $currency, budgetSheetMode: $budgetSheetMode)';
 }

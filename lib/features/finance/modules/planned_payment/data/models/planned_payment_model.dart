@@ -12,7 +12,6 @@ class PlannedPaymentModel extends PlannedPayment {
     required super.nextPaymentDate,
     super.lastPaymentDate,
     super.endDate,
-    super.accountId,
     super.status,
     super.notes,
     super.createdAt,
@@ -44,7 +43,6 @@ class PlannedPaymentModel extends PlannedPayment {
       endDate: json['endDate'] != null
           ? DateTime.parse(json['endDate'] as String)
           : null,
-      accountId: json['accountId'] as String?,
       status: PaymentStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => PaymentStatus.active,
@@ -73,7 +71,6 @@ class PlannedPaymentModel extends PlannedPayment {
       'nextPaymentDate': nextPaymentDate.toIso8601String(),
       if (lastPaymentDate != null) 'lastPaymentDate': lastPaymentDate!.toIso8601String(),
       if (endDate != null) 'endDate': endDate!.toIso8601String(),
-      if (accountId != null) 'accountId': accountId,
       'status': status.name,
       if (notes != null) 'notes': notes,
       if (totalInstallments != null) 'totalInstallments': totalInstallments,
@@ -93,7 +90,6 @@ class PlannedPaymentModel extends PlannedPayment {
       'nextPaymentDate': nextPaymentDate.toIso8601String(),
       if (lastPaymentDate != null) 'lastPaymentDate': lastPaymentDate!.toIso8601String(),
       if (endDate != null) 'endDate': endDate!.toIso8601String(),
-      if (accountId != null) 'accountId': accountId,
       'status': status.name,
       if (notes != null) 'notes': notes,
       if (userId != null) 'userId': userId,
@@ -114,7 +110,6 @@ class PlannedPaymentModel extends PlannedPayment {
       nextPaymentDate: payment.nextPaymentDate,
       lastPaymentDate: payment.lastPaymentDate,
       endDate: payment.endDate,
-      accountId: payment.accountId,
       status: payment.status,
       notes: payment.notes,
       createdAt: payment.createdAt,

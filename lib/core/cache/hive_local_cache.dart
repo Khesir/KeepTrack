@@ -1,6 +1,25 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'local_cache.dart';
-import 'sync_status.dart';
+
+dynamic _deepCast(dynamic value) {
+  if (value is Map) {
+    return Map<String, dynamic>.fromEntries(
+      value.entries.map((e) => MapEntry(e.key.toString(), _deepCast(e.value))),
+    );
+  }
+  if (value is List) {
+    return value.map(_deepCast).toList();
+  }
+  return value;
+}
+
+// Unwraps legacy entries that were stored with {__data: {...}, __sync: '...'} wrapper.
+Map<String, dynamic> _unwrap(Map<String, dynamic> entry) {
+  if (entry.containsKey('__data') && entry['__data'] is Map) {
+    return _deepCast(entry['__data']) as Map<String, dynamic>;
+  }
+  return entry;
+}
 
 /// Hive-backed local cache — used on mobile and desktop.
 /// Each "box" maps to a named Hive box.
@@ -21,41 +40,14 @@ class HiveLocalCache implements LocalCache {
     final b = await _box(box);
     final raw = b.get(key);
     if (raw == null) return null;
-    final cast = raw.cast<String, dynamic>();
-    return {...extractData(cast), kSyncKey: cast[kSyncKey]};
+    return _unwrap(_deepCast(raw) as Map<String, dynamic>);
   }
 
   @override
   Future<List<Map<String, dynamic>>> getAll(String box) async {
     final b = await _box(box);
     return b.values
-        .map((raw) {
-          final cast = raw.cast<String, dynamic>();
-          final status = extractStatus(cast);
-          // Skip pending deletes from normal reads
-          if (status == SyncStatus.pendingDelete) return null;
-          return {...extractData(cast), kSyncKey: cast[kSyncKey]};
-        })
-        .whereType<Map<String, dynamic>>()
-        .toList();
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> getDirty(String box) async {
-    final b = await _box(box);
-    return b.toMap().entries
-        .where((e) {
-          final cast = (e.value as Map).cast<String, dynamic>();
-          return extractStatus(cast).isDirty;
-        })
-        .map((e) {
-          final cast = (e.value as Map).cast<String, dynamic>();
-          return {
-            'key': e.key,
-            ...extractData(cast),
-            kSyncKey: cast[kSyncKey],
-          };
-        })
+        .map((raw) => _unwrap(_deepCast(raw) as Map<String, dynamic>))
         .toList();
   }
 
@@ -63,31 +55,19 @@ class HiveLocalCache implements LocalCache {
   Future<void> put(
     String box,
     String key,
-    Map<String, dynamic> data, {
-    SyncStatus status = SyncStatus.synced,
-  }) async {
+    Map<String, dynamic> data,
+  ) async {
     final b = await _box(box);
-    await b.put(key, wrapEntry(data, status));
+    await b.put(key, data);
   }
 
   @override
   Future<void> putAll(
     String box,
-    Map<String, Map<String, dynamic>> entries, {
-    SyncStatus status = SyncStatus.synced,
-  }) async {
+    Map<String, Map<String, dynamic>> entries,
+  ) async {
     final b = await _box(box);
-    await b.putAll(
-        entries.map((k, v) => MapEntry(k, wrapEntry(v, status))));
-  }
-
-  @override
-  Future<void> setStatus(String box, String key, SyncStatus status) async {
-    final b = await _box(box);
-    final raw = b.get(key);
-    if (raw == null) return;
-    final cast = raw.cast<String, dynamic>();
-    await b.put(key, {...cast, kSyncKey: status.value});
+    await b.putAll(entries);
   }
 
   @override

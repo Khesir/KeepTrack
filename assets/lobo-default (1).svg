@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500">
+  <!-- Body -->
+  <ellipse cx="200" cy="360" rx="90" ry="100" fill="#F1EFE8"/>
+  <!-- Belly -->
+  <ellipse cx="200" cy="385" rx="55" ry="65" fill="#FFFFFF"/>
+  <!-- Tail -->
+  <path d="M285 370 Q350 400 330 450 Q310 470 290 445 Q308 420 292 395Z" fill="#D3D1C7"/>
+  <path d="M330 450 Q310 470 290 445 Q308 452 322 448Z" fill="#FFFFFF"/>
+  <!-- Left ear -->
+  <path d="M128 148 L100 60 L175 120Z" fill="#D3D1C7"/>
+  <path d="M132 144 L108 72 L170 118Z" fill="#888780"/>
+  <!-- Right ear -->
+  <path d="M272 148 L300 60 L225 120Z" fill="#D3D1C7"/>
+  <path d="M268 144 L292 72 L230 118Z" fill="#888780"/>
+  <!-- Head -->
+  <ellipse cx="200" cy="200" rx="105" ry="100" fill="#F1EFE8"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="225" rx="70" ry="60" fill="#FFFFFF"/>
+  <!-- Eyes -->
+  <circle cx="168" cy="188" r="22" fill="#2C2C2A"/>
+  <circle cx="232" cy="188" r="22" fill="#2C2C2A"/>
+  <circle cx="175" cy="180" r="7" fill="#FFFFFF"/>
+  <circle cx="239" cy="180" r="7" fill="#FFFFFF"/>
+  <!-- Nose -->
+  <ellipse cx="200" cy="228" rx="12" ry="9" fill="#888780"/>
+  <!-- Mouth -->
+  <path d="M180 244 Q200 260 220 244" fill="none" stroke="#888780" stroke-width="4" stroke-linecap="round"/>
+  <!-- Left arm -->
+  <path d="M118 330 Q80 355 92 390" fill="none" stroke="#D3D1C7" stroke-width="32" stroke-linecap="round"/>
+  <!-- Coin -->
+  <circle cx="88" cy="398" r="30" fill="#EF9F27"/>
+  <circle cx="88" cy="398" r="21" fill="#FAC775"/>
+  <text x="88" y="406" text-anchor="middle" font-size="18" font-weight="600" fill="#633806" font-family="system-ui">₱</text>
+  <!-- Right arm -->
+  <path d="M282 330 Q318 348 310 378" fill="none" stroke="#D3D1C7" stroke-width="32" stroke-linecap="round"/>
+  <!-- Legs -->
+  <ellipse cx="172" cy="458" rx="30" ry="18" fill="#B4B2A9"/>
+  <ellipse cx="228" cy="458" rx="30" ry="18" fill="#B4B2A9"/>
+</svg>
