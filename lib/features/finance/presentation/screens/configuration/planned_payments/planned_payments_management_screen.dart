@@ -4,8 +4,6 @@ import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/planned_payments/widgets/planned_payment_management_dialog.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-
 import '../../../../modules/planned_payment/domain/entities/payment_enums.dart';
 
 class PlannedPaymentsManagementScreen extends StatefulWidget {
@@ -19,13 +17,11 @@ class PlannedPaymentsManagementScreen extends StatefulWidget {
 class _PlannedPaymentsManagementScreenState
     extends State<PlannedPaymentsManagementScreen> {
   late final PlannedPaymentController _controller;
-  late final SupabaseService supabaseService;
 
   @override
   void initState() {
     super.initState();
     _controller = locator.get<PlannedPaymentController>();
-    supabaseService = locator.get<SupabaseService>();
   }
 
   @override
@@ -39,7 +35,6 @@ class _PlannedPaymentsManagementScreenState
       context: context,
       builder: (_) => PlannedPaymentManagementDialog(
         payment: payment,
-        userId: supabaseService.userId!,
         onSave: (savedPayment) {
           if (payment != null) {
             _controller.updatePlannedPayment(savedPayment);

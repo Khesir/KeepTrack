@@ -56,13 +56,9 @@ class PlannedPaymentController
 
   /// Create a new planned payment
   Future<void> createPlannedPayment(PlannedPayment payment) async {
-    await execute(() async {
-      final created = await _repository
-          .createPlannedPayment(payment)
-          .then((r) => r.unwrap());
-
-      final current = data ?? [];
-      return [...current, created];
+    await executeSilent(() async {
+      await _repository.createPlannedPayment(payment).then((r) => r.unwrap());
+      return await _repository.getPlannedPayments().then((r) => r.unwrap());
     });
   }
 

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="120" viewBox="0 0 480 120">
+  <!-- Icon background -->
+  <rect x="0" y="10" width="100" height="100" rx="22" fill="#2C2C2A"/>
+  <!-- Wolf face on icon -->
+  <!-- Ears -->
+  <path d="M22 52 L14 24 L40 42Z" fill="#D3D1C7"/>
+  <path d="M24 50 L18 28 L38 40Z" fill="#888780"/>
+  <path d="M78 52 L86 24 L60 42Z" fill="#D3D1C7"/>
+  <path d="M76 50 L82 28 L62 40Z" fill="#888780"/>
+  <!-- Head -->
+  <ellipse cx="50" cy="68" rx="32" ry="30" fill="#F1EFE8"/>
+  <ellipse cx="50" cy="76" rx="22" ry="19" fill="#FFFFFF"/>
+  <!-- Eyes -->
+  <circle cx="40" cy="62" r="7" fill="#2C2C2A"/>
+  <circle cx="60" cy="62" r="7" fill="#2C2C2A"/>
+  <circle cx="42" cy="59" r="2.5" fill="#FFFFFF"/>
+  <circle cx="62" cy="59" r="2.5" fill="#FFFFFF"/>
+  <!-- Nose -->
+  <ellipse cx="50" cy="76" rx="4" ry="3" fill="#888780"/>
+  <!-- Mouth -->
+  <path d="M43 83 Q50 90 57 83" fill="none" stroke="#888780" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Wordmark text -->
+  <text x="120" y="58" font-family="'DM Sans', system-ui, sans-serif" font-size="36" font-weight="600" fill="#2C2C2A" letter-spacing="-0.5">Keep Track</text>
+  <text x="122" y="82" font-family="'DM Sans', system-ui, sans-serif" font-size="14" font-weight="400" fill="#888780" letter-spacing="0.5">zero-based budgeting</text>
+</svg>

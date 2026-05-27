@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/demo/demo_mode.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 
 class BalanceGraph extends StatefulWidget {
@@ -15,27 +16,28 @@ class BalanceGraph extends StatefulWidget {
 }
 
 class _BalanceGraphState extends State<BalanceGraph> {
-  late final AccountController _accountController;
+  late final SavingsController _savingsController;
   late final TransactionController _transactionController;
-  String? _selectedAccountId; // null means 'All Accounts'
 
   @override
   void initState() {
     super.initState();
-    _accountController = locator.get<AccountController>();
+    _savingsController = locator.get<SavingsController>();
     _transactionController = locator.get<TransactionController>();
-    _accountController.loadAccounts();
+    _savingsController.loadSavings();
 
-    // Load transactions for the last 30 days
     final now = DateTime.now();
-    final startDate = now.subtract(const Duration(days: 30));
-    _transactionController.loadTransactionsByDateRange(startDate, now);
+    final startDate = DateTime(now.year, now.month, 1);
+    final endDate = DemoMode.enabled
+        ? DateTime(now.year, now.month + 1, 0, 23, 59, 59)
+        : now;
+    _transactionController.loadTransactionsByDateRange(startDate, endDate);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<Account>>(
-      state: _accountController,
+    return AsyncStreamBuilder<List<SavingsBucket>>(
+      state: _savingsController,
       loadingBuilder: (_) => Card(
         elevation: 0,
         child: Container(
@@ -48,33 +50,10 @@ class _BalanceGraphState extends State<BalanceGraph> {
         elevation: 0,
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Text('Error loading accounts: $message'),
+          child: Text('Error loading savings: $message'),
         ),
       ),
-      builder: (context, accounts) {
-        if (accounts.isEmpty) {
-          return Card(
-            elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No accounts found',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
+      builder: (context, buckets) {
         return AsyncStreamBuilder<List<Transaction>>(
           state: _transactionController,
           loadingBuilder: (_) => Card(
@@ -85,34 +64,17 @@ class _BalanceGraphState extends State<BalanceGraph> {
               child: const CircularProgressIndicator(),
             ),
           ),
-          errorBuilder: (context, message) => _buildGraphCard(
-            accounts,
-            [],
-          ),
-          builder: (context, transactions) {
-            return _buildGraphCard(accounts, transactions);
-          },
+          errorBuilder: (context, message) => _buildGraphCard(buckets, []),
+          builder: (context, transactions) => _buildGraphCard(buckets, transactions),
         );
       },
     );
   }
 
-  Widget _buildGraphCard(List<Account> accounts, List<Transaction> transactions) {
-    // Build dropdown items
-    final dropdownItems = [
-      DropdownMenuItem<String?>(
-        value: null,
-        child: Text('All Accounts'),
-      ),
-      ...accounts.map((account) => DropdownMenuItem<String?>(
-        value: account.id,
-        child: Text(account.name),
-      )),
-    ];
-
+  Widget _buildGraphCard(List<SavingsBucket> buckets, List<Transaction> transactions) {
+    final currentBalance = buckets.fold(0.0, (sum, b) => sum + b.balance);
     // Calculate balance trend data
-    final balanceData = _calculateBalanceTrend(accounts, transactions);
-    final currentBalance = _getCurrentBalance(accounts);
+    final balanceData = _calculateBalanceTrend(currentBalance, transactions);
 
     // Calculate percentage change
     final percentageChange = balanceData.length >= 2
@@ -126,44 +88,9 @@ class _BalanceGraphState extends State<BalanceGraph> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Account filter dropdown
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Balance Trend',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButton<String?>(
-                    value: _selectedAccountId,
-                    underline: const SizedBox(),
-                    icon: const Icon(Icons.arrow_drop_down, size: 20),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    items: dropdownItems,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedAccountId = newValue;
-                      });
-                    },
-                  ),
-                ),
-              ],
+            const Text(
+              'Balance Trend',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 20),
 
@@ -267,11 +194,17 @@ class _BalanceGraphState extends State<BalanceGraph> {
             if (balanceData.isNotEmpty)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('30 days ago', style: _xAxisLabelStyle),
-                  Text('15 days ago', style: _xAxisLabelStyle),
-                  Text('Today', style: _xAxisLabelStyle),
-                ],
+                children: DemoMode.enabled
+                    ? [
+                        Text('Day 1',  style: _xAxisLabelStyle),
+                        Text('Day 16', style: _xAxisLabelStyle),
+                        Text('Day 31', style: _xAxisLabelStyle),
+                      ]
+                    : [
+                        Text('30 days ago', style: _xAxisLabelStyle),
+                        Text('15 days ago', style: _xAxisLabelStyle),
+                        Text('Today',       style: _xAxisLabelStyle),
+                      ],
               ),
           ],
         ),
@@ -335,79 +268,59 @@ class _BalanceGraphState extends State<BalanceGraph> {
     );
   }
 
-  double _getCurrentBalance(List<Account> accounts) {
-    if (_selectedAccountId == null) {
-      // All accounts
-      return accounts.fold(0.0, (sum, account) => sum + account.balance);
-    } else {
-      // Specific account
-      final account = accounts.firstWhere(
-        (a) => a.id == _selectedAccountId,
-        orElse: () => accounts.first,
-      );
-      return account.balance;
-    }
-  }
-
   List<BalanceDataPoint> _calculateBalanceTrend(
-    List<Account> accounts,
+    double currentBalance,
     List<Transaction> transactions,
   ) {
-    if (accounts.isEmpty) return [];
-
-    final currentBalance = _getCurrentBalance(accounts);
     final now = DateTime.now();
-    final daysToShow = 30;
-    final dataPoints = 15;
+    const dataPoints = 15;
 
-    // Filter transactions by selected account
-    List<Transaction> relevantTransactions;
-    if (_selectedAccountId == null) {
-      // All accounts - use all transactions
-      relevantTransactions = transactions;
+    final relevantTransactions = List<Transaction>.from(transactions)
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    final DateTime rangeStart;
+    final DateTime rangeEnd;
+
+    if (DemoMode.enabled) {
+      rangeStart = DateTime(now.year, now.month, 1);
+      rangeEnd   = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
     } else {
-      // Specific account
-      relevantTransactions = transactions
-          .where((t) => t.accountId == _selectedAccountId)
-          .toList();
+      rangeStart = now.subtract(const Duration(days: 30));
+      rangeEnd   = now;
     }
 
-    // Sort transactions by date (oldest first)
-    relevantTransactions.sort((a, b) => a.date.compareTo(b.date));
+    final totalMs = rangeEnd.millisecondsSinceEpoch - rangeStart.millisecondsSinceEpoch;
 
-    // Calculate balance at each data point
     final balanceHistory = <BalanceDataPoint>[];
 
-    for (int i = dataPoints - 1; i >= 0; i--) {
-      final targetDate = now.subtract(Duration(days: (i * daysToShow ~/ dataPoints)));
+    for (int i = 0; i < dataPoints; i++) {
+      final fraction = i / (dataPoints - 1);
+      final targetDate = DateTime.fromMillisecondsSinceEpoch(
+        rangeStart.millisecondsSinceEpoch + (totalMs * fraction).round(),
+      );
 
-      // Calculate balance by working backwards from current balance
       double balanceAtDate = currentBalance;
-
-      // Subtract/add transactions that happened after this date
-      for (final transaction in relevantTransactions) {
-        if (transaction.date.isAfter(targetDate)) {
-          // Reverse the transaction effect
-          switch (transaction.type) {
+      for (final t in relevantTransactions) {
+        if (t.date.isAfter(targetDate)) {
+          switch (t.type) {
             case TransactionType.income:
-              balanceAtDate -= transaction.amount;
+              balanceAtDate -= t.amount;
               break;
             case TransactionType.expense:
-            case TransactionType.transfer:
-              balanceAtDate += transaction.amount;
+              balanceAtDate += t.amount;
+              break;
+            default:
               break;
           }
         }
       }
 
-      // Ensure balance is never negative in history
       balanceHistory.add(BalanceDataPoint(
         date: targetDate,
         balance: balanceAtDate < 0 ? 0 : balanceAtDate,
       ));
     }
 
-    // If no variation, add slight variation for better visualization
     if (balanceHistory.every((b) => b.balance == balanceHistory.first.balance)) {
       return balanceHistory.map((b) => BalanceDataPoint(
         date: b.date,

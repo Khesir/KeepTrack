@@ -16,12 +16,12 @@ class DebtModel extends Debt {
     super.updatedAt,
     super.settledAt,
     super.userId,
-    super.accountId,
     super.transactionId,
     super.monthlyPaymentAmount,
     super.feeAmount,
     super.nextPaymentDate,
     super.paymentFrequency,
+    super.budgetProfileId,
   });
 
   /// Convert from JSON (NestJS camelCase response)
@@ -55,7 +55,6 @@ class DebtModel extends Debt {
           ? DateTime.parse(json['settledAt'] as String)
           : null,
       userId: json['userId'] as String?,
-      accountId: json['accountId'] as String?,
       transactionId: json['transactionId'] as String?,
       monthlyPaymentAmount:
           (json['monthlyPaymentAmount'] as num?)?.toDouble() ?? 0,
@@ -67,6 +66,7 @@ class DebtModel extends Debt {
         (e) => e.name == json['paymentFrequency'],
         orElse: () => PaymentFrequency.monthly,
       ),
+      budgetProfileId: json['budgetProfileId'] as String?,
     );
   }
 
@@ -83,12 +83,12 @@ class DebtModel extends Debt {
       'status': status.name,
       if (notes != null) 'notes': notes,
       if (settledAt != null) 'settledAt': settledAt!.toIso8601String(),
-      if (accountId != null) 'accountId': accountId,
       if (transactionId != null) 'transactionId': transactionId,
       'monthlyPaymentAmount': monthlyPaymentAmount,
       'feeAmount': feeAmount,
       if (nextPaymentDate != null) 'nextPaymentDate': nextPaymentDate!.toIso8601String(),
       'paymentFrequency': paymentFrequency.name,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
     };
   }
 
@@ -107,12 +107,12 @@ class DebtModel extends Debt {
       if (notes != null) 'notes': notes,
       if (settledAt != null) 'settledAt': settledAt!.toIso8601String(),
       if (userId != null) 'userId': userId,
-      if (accountId != null) 'accountId': accountId,
       if (transactionId != null) 'transactionId': transactionId,
       'monthlyPaymentAmount': monthlyPaymentAmount,
       'feeAmount': feeAmount,
       if (nextPaymentDate != null) 'nextPaymentDate': nextPaymentDate!.toIso8601String(),
       'paymentFrequency': paymentFrequency.name,
+      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
     };
   }
 
@@ -133,12 +133,12 @@ class DebtModel extends Debt {
       updatedAt: debt.updatedAt,
       settledAt: debt.settledAt,
       userId: debt.userId,
-      accountId: debt.accountId,
       transactionId: debt.transactionId,
       monthlyPaymentAmount: debt.monthlyPaymentAmount,
       feeAmount: debt.feeAmount,
       nextPaymentDate: debt.nextPaymentDate,
       paymentFrequency: debt.paymentFrequency,
+      budgetProfileId: debt.budgetProfileId,
     );
   }
 }

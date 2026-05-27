@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
-import 'tabs/accounts/accounts_tab_new.dart';
-import 'tabs/budgets/budgets_tab_new.dart';
+import 'tabs/budget/budget_tab_screen.dart';
 import 'tabs/debts/debts_tab_new.dart';
 import 'tabs/goals/goals_tab.dart';
 import 'tabs/planned_payments/planned_payments_tab.dart';
@@ -27,7 +26,7 @@ class _FinanceMainScreenState extends ScopedScreenState<FinanceMainScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -78,11 +77,6 @@ class _FinanceMainScreenState extends ScopedScreenState<FinanceMainScreen>
             padding: const EdgeInsets.symmetric(horizontal: 8),
             tabs: const [
               Tab(
-                icon: Icon(Icons.account_balance_wallet, size: 20),
-                text: 'Accounts',
-                height: 65,
-              ),
-              Tab(
                 icon: Icon(Icons.pie_chart, size: 20),
                 text: 'Budgets',
                 height: 65,
@@ -106,8 +100,7 @@ class _FinanceMainScreenState extends ScopedScreenState<FinanceMainScreen>
           child: TabBarView(
             controller: _tabController,
             children: const [
-              AccountsTabNew(),
-              BudgetsTabNew(),
+              BudgetTabScreen(),
               GoalsTabNew(),
               DebtsTabNew(),
               PlannedPaymentsTabNew(),

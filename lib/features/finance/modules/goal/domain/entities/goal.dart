@@ -16,6 +16,8 @@ class Goal {
   final String? userId;
   final double managementFeePercent; // Recurring fee percentage (0-100)
   final double withdrawalFeePercent; // Early withdrawal penalty percentage (0-100)
+  final String? savingsBucketId;
+  final String? budgetProfileId;
 
   Goal({
     this.id,
@@ -34,6 +36,8 @@ class Goal {
     this.userId,
     this.managementFeePercent = 0,
     this.withdrawalFeePercent = 0,
+    this.savingsBucketId,
+    this.budgetProfileId,
   });
 
   /// Calculate progress percentage (0.0 to 1.0)
@@ -77,6 +81,8 @@ class Goal {
     String? userId,
     double? managementFeePercent,
     double? withdrawalFeePercent,
+    String? savingsBucketId,
+    String? budgetProfileId,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -95,6 +101,8 @@ class Goal {
       userId: userId ?? this.userId,
       managementFeePercent: managementFeePercent ?? this.managementFeePercent,
       withdrawalFeePercent: withdrawalFeePercent ?? this.withdrawalFeePercent,
+      savingsBucketId: savingsBucketId ?? this.savingsBucketId,
+      budgetProfileId: budgetProfileId ?? this.budgetProfileId,
     );
   }
 

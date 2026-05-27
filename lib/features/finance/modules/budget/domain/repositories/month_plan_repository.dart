@@ -36,4 +36,7 @@ abstract class MonthPlanRepository {
 
   /// Link [budgetId] to this plan's budgetIds list.
   Future<Result<void>> addBudgetToMonthPlan(String planId, String budgetId);
+
+  /// Get or create the plan for a custom budget profile.
+  Future<Result<MonthPlan>> getOrCreatePlanForProfile(String profileId);
 }

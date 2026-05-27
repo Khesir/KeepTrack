@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../error/failure.dart';
 
 /// Maps DioException → app Failure types
@@ -15,8 +16,15 @@ Failure mapDioError(DioException e) {
 
   final status = e.response?.statusCode;
   final body = e.response?.data;
-  final serverMsg =
-      (body is Map ? body['message']?.toString() : null) ?? e.message ?? '';
+
+  // NestJS class-validator returns message as either a String or a List
+  String? rawMsg;
+  if (body is Map) {
+    final m = body['message'];
+    rawMsg = m is List ? m.join(', ') : m?.toString();
+  }
+  final serverMsg = rawMsg ?? e.message ?? '';
+  debugPrint('[API ERROR] $status — $serverMsg | body: $body');
 
   return switch (status) {
     400 => ValidationFailure(serverMsg),

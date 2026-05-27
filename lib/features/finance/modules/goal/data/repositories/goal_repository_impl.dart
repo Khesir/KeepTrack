@@ -12,8 +12,8 @@ class GoalRepositoryImpl implements GoalRepository {
   GoalRepositoryImpl(this.dataSource);
 
   @override
-  Future<Result<List<Goal>>> getGoals() async {
-    final goals = await dataSource.fetchGoals();
+  Future<Result<List<Goal>>> getGoals({String? budgetProfileId}) async {
+    final goals = await dataSource.fetchGoals(budgetProfileId: budgetProfileId);
     return Result.success(goals);
   }
 

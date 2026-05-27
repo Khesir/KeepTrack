@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="520" viewBox="0 0 400 520">
+  <!-- Body -->
+  <ellipse cx="200" cy="360" rx="90" ry="100" fill="#F1EFE8"/>
+  <ellipse cx="200" cy="385" rx="55" ry="65" fill="#FFFFFF"/>
+  <!-- Tail down -->
+  <path d="M285 375 Q340 410 322 460 Q305 478 286 455 Q305 435 290 408Z" fill="#D3D1C7"/>
+  <path d="M322 460 Q305 478 286 455 Q304 462 316 458Z" fill="#FFFFFF"/>
+  <!-- Left ear -->
+  <path d="M128 148 L100 60 L175 120Z" fill="#D3D1C7"/>
+  <path d="M132 144 L108 72 L170 118Z" fill="#888780"/>
+  <!-- Right ear -->
+  <path d="M272 148 L300 60 L225 120Z" fill="#D3D1C7"/>
+  <path d="M268 144 L292 72 L230 118Z" fill="#888780"/>
+  <!-- Head -->
+  <ellipse cx="200" cy="200" rx="105" ry="100" fill="#F1EFE8"/>
+  <ellipse cx="200" cy="225" rx="70" ry="60" fill="#FFFFFF"/>
+  <!-- Thinking eyes -->
+  <circle cx="168" cy="188" r="22" fill="#2C2C2A"/>
+  <circle cx="232" cy="188" r="22" fill="#2C2C2A"/>
+  <circle cx="175" cy="180" r="7" fill="#FFFFFF"/>
+  <circle cx="239" cy="180" r="7" fill="#FFFFFF"/>
+  <!-- One eyebrow raised -->
+  <path d="M148 165 Q168 158 188 165" fill="none" stroke="#2C2C2A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M212 160 Q232 152 252 160" fill="none" stroke="#2C2C2A" stroke-width="4" stroke-linecap="round"/>
+  <!-- Nose -->
+  <ellipse cx="200" cy="228" rx="12" ry="9" fill="#888780"/>
+  <!-- Neutral mouth -->
+  <path d="M182 248 Q200 256 218 248" fill="none" stroke="#888780" stroke-width="4" stroke-linecap="round"/>
+  <!-- Hand on chin -->
+  <path d="M118 330 Q85 360 95 400" fill="none" stroke="#D3D1C7" stroke-width="32" stroke-linecap="round"/>
+  <ellipse cx="98" cy="410" rx="26" ry="20" fill="#D3D1C7"/>
+  <!-- Right arm down -->
+  <path d="M282 330 Q318 355 308 390" fill="none" stroke="#D3D1C7" stroke-width="32" stroke-linecap="round"/>
+  <!-- Thought bubbles -->
+  <circle cx="290" cy="145" r="10" fill="#AFA9EC" fill-opacity="0.7"/>
+  <circle cx="312" cy="118" r="15" fill="#AFA9EC" fill-opacity="0.75"/>
+  <circle cx="338" cy="88" r="22" fill="#AFA9EC" fill-opacity="0.85"/>
+  <text x="338" y="95" text-anchor="middle" font-size="18" fill="#3C3489" font-family="system-ui">?</text>
+  <!-- Legs -->
+  <ellipse cx="172" cy="458" rx="30" ry="18" fill="#B4B2A9"/>
+  <ellipse cx="228" cy="458" rx="30" ry="18" fill="#B4B2A9"/>
+</svg>

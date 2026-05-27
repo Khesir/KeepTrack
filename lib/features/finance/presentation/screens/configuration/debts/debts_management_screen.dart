@@ -3,13 +3,11 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/debts/widgets/debt_management_dialog.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
 class DebtsManagementScreen extends StatefulWidget {
   const DebtsManagementScreen({super.key});
 
@@ -19,15 +17,13 @@ class DebtsManagementScreen extends StatefulWidget {
 
 class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
   late final DebtController _debtController;
-  late final AccountController _accountController;
-  late final SupabaseService supabaseService;
+  late final SavingsController _savingsController;
 
   @override
   void initState() {
     super.initState();
     _debtController = locator.get<DebtController>();
-    _accountController = locator.get<AccountController>();
-    supabaseService = locator.get<SupabaseService>();
+    _savingsController = locator.get<SavingsController>();
   }
 
   @override
@@ -36,13 +32,12 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
     super.dispose();
   }
 
-  void _showCreateEditDialog({Debt? debt, required List<Account> accounts}) {
+  void _showCreateEditDialog({Debt? debt, required List<SavingsBucket> savingsBuckets}) {
     showDialog(
       context: context,
       builder: (context) => DebtManagementDialog(
         debt: debt,
-        userId: supabaseService.userId!,
-        accounts: accounts,
+        savingsBuckets: savingsBuckets,
         onSave: (savedDebt, categoryId) => {
           if (debt != null)
             {_debtController.updateDebt(savedDebt)}
@@ -86,13 +81,13 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Debts')),
-      body: AsyncStreamBuilder<List<Account>>(
-        state: _accountController,
-        builder: (context, accounts) {
+      body: AsyncStreamBuilder<List<SavingsBucket>>(
+        state: _savingsController,
+        builder: (context, savingsBuckets) {
           return AsyncStreamBuilder<List<Debt>>(
             state: _debtController,
             builder: (context, debts) {
-              return _buildDebtsList(debts, accounts);
+              return _buildDebtsList(debts, savingsBuckets);
             },
             loadingBuilder: (context) =>
                 const Center(child: CircularProgressIndicator()),
@@ -121,21 +116,21 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 16),
-              Text('Failed to load accounts: $message'),
+              Text('Failed to load savings: $message'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => _accountController.loadAccounts(),
+                onPressed: () => _savingsController.loadSavings(),
                 child: const Text('Retry'),
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: AsyncStreamBuilder<List<Account>>(
-        state: _accountController,
-        builder: (context, accounts) {
+      floatingActionButton: AsyncStreamBuilder<List<SavingsBucket>>(
+        state: _savingsController,
+        builder: (context, savingsBuckets) {
           return FloatingActionButton.extended(
-            onPressed: () => _showCreateEditDialog(accounts: accounts),
+            onPressed: () => _showCreateEditDialog(savingsBuckets: savingsBuckets),
             icon: const Icon(Icons.add),
             label: const Text('Add Debt'),
           );
@@ -153,7 +148,7 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
     );
   }
 
-  Widget _buildDebtsList(List<Debt> debts, List<Account> accounts) {
+  Widget _buildDebtsList(List<Debt> debts, List<SavingsBucket> savingsBuckets) {
           if (debts.isEmpty) {
             return Center(
               child: Column(
@@ -256,7 +251,7 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
                     ],
                     onSelected: (value) {
                       if (value == 'edit') {
-                        _showCreateEditDialog(debt: debt, accounts: accounts);
+                        _showCreateEditDialog(debt: debt, savingsBuckets: savingsBuckets);
                       } else if (value == 'delete') {
                         _deleteDebt(debt);
                       }

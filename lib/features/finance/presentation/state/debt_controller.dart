@@ -6,6 +6,7 @@ import 'package:keep_track/core/services/notification/platform_notification_help
 import 'package:keep_track/core/state/stream_state.dart';
 import '../../modules/debt/domain/entities/debt.dart';
 import '../../modules/debt/domain/repositories/debt_repository.dart';
+import 'budget_profile_controller.dart';
 
 /// Controller for managing debt list state
 class DebtController extends StreamState<AsyncState<List<Debt>>> {
@@ -15,10 +16,10 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     loadDebts();
   }
 
-  /// Load all debts
-  Future<void> loadDebts() async {
+  /// Load all debts, optionally scoped to a budget profile
+  Future<void> loadDebts({String? budgetProfileId}) async {
     await execute(() async {
-      final debts = await _debtRepository.getDebts().then((r) => r.unwrap());
+      final debts = await _debtRepository.getDebts(budgetProfileId: budgetProfileId).then((r) => r.unwrap());
       // Schedule notifications for debts with due dates
       _scheduleDebtNotifications(debts);
       return debts;
@@ -52,28 +53,24 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
   }
 
   /// Create a new debt with category and automatically create associated transaction
+  String? get _activeProfileId =>
+      locator.get<BudgetProfileController>().activeProfileId;
+
+  Debt _withProfile(Debt debt) =>
+      debt.budgetProfileId != null ? debt : debt.copyWith(budgetProfileId: _activeProfileId);
+
   Future<void> createDebtWithCategory(Debt debt, String? categoryId) async {
-    await execute(() async {
-      // Create debt — the NestJS backend handles any linked transaction logic
-      // via the financeCategoryId field if provided
-      final debtWithCategory = categoryId != null
-          ? debt
-          : debt;
-      await _debtRepository.createDebt(debtWithCategory).then((r) => r.unwrap());
-      await loadDebts();
-      final current = data ?? [];
-      return current;
+    await executeSilent(() async {
+      await _debtRepository.createDebt(_withProfile(debt)).then((r) => r.unwrap());
+      return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
 
   /// Create a debt record only, without an initial transaction.
-  /// Use when no wallet is involved (pre-existing or informal debt).
   Future<void> createDebtOnly(Debt debt) async {
-    await execute(() async {
-      await _debtRepository.createDebt(debt).then((r) => r.unwrap());
-      await loadDebts();
-      final current = data ?? [];
-      return current;
+    await executeSilent(() async {
+      await _debtRepository.createDebt(_withProfile(debt)).then((r) => r.unwrap());
+      return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
 
@@ -87,45 +84,33 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
 
   /// Update an existing debt
   Future<void> updateDebt(Debt debt) async {
-    await execute(() async {
+    await executeSilent(() async {
       await _debtRepository.updateDebt(debt).then((r) => r.unwrap());
-      loadDebts();
-      final current = data ?? [];
-      return current;
+      return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
 
   /// Delete a debt
   Future<void> deleteDebt(String id) async {
-    await execute(() async {
+    await executeSilent(() async {
       await _debtRepository.deleteDebt(id).then((r) => r.unwrap());
-      loadDebts();
-      final current = data ?? [];
-      return current;
+      return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
 
   /// Update debt payment (record partial payment)
   Future<void> updateDebtPayment(String id, double newRemainingAmount) async {
-    await execute(() async {
-      await _debtRepository
-          .updateDebtPayment(id, newRemainingAmount)
-          .then((r) => r.unwrap());
-      loadDebts();
-
-      final current = data ?? [];
-      return current;
+    await executeSilent(() async {
+      await _debtRepository.updateDebtPayment(id, newRemainingAmount).then((r) => r.unwrap());
+      return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
 
   /// Mark debt as settled (fully paid)
   Future<void> settleDebt(String id) async {
-    await execute(() async {
+    await executeSilent(() async {
       await _debtRepository.settleDebt(id).then((r) => r.unwrap());
-      loadDebts();
-
-      final current = data ?? [];
-      return current;
+      return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
 
@@ -143,5 +128,21 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
           .getDebtsByStatus(status)
           .then((r) => r.unwrap());
     });
+  }
+
+  /// Record a payment against a debt. Returns the updated debt.
+  Future<Debt> payDebt(
+    String id, {
+    required double amount,
+    double? fee,
+  }) async {
+    final updated = await _debtRepository
+        .payDebt(id, amount: amount, fee: fee)
+        .then((r) => r.unwrap());
+    await executeSilent(() async {
+      final current = data ?? [];
+      return current.map((d) => d.id == id ? updated : d).toList();
+    });
+    return updated;
   }
 }

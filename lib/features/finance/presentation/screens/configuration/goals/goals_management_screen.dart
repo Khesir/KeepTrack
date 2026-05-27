@@ -4,8 +4,6 @@ import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
-
 class GoalsManagementScreen extends StatefulWidget {
   const GoalsManagementScreen({super.key});
 
@@ -15,13 +13,11 @@ class GoalsManagementScreen extends StatefulWidget {
 
 class _GoalsManagementScreenState extends State<GoalsManagementScreen> {
   late final GoalController _controller;
-  late final SupabaseService supabaseService;
 
   @override
   void initState() {
     super.initState();
     _controller = locator.get<GoalController>();
-    supabaseService = locator.get<SupabaseService>();
   }
 
   @override
@@ -35,7 +31,6 @@ class _GoalsManagementScreenState extends State<GoalsManagementScreen> {
       context: context,
       builder: (context) => GoalsManagementDialog(
         goal: goal,
-        userId: supabaseService.userId!,
         onSave: (saveGoal) {
           if (goal != null) {
             _controller.updateGoal(saveGoal);

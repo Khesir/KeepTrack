@@ -8,12 +8,10 @@ import '../../../../../modules/planned_payment/domain/entities/payment_enums.dar
 
 class PlannedPaymentManagementDialog extends StatefulWidget {
   final PlannedPayment? payment;
-  final String userId;
   final Function(PlannedPayment) onSave;
 
   const PlannedPaymentManagementDialog({
     this.payment,
-    required this.userId,
     required this.onSave,
     super.key,
   });
@@ -103,7 +101,6 @@ class _PlannedPaymentManagementDialogState
         notes: notesController.text.trim().isNotEmpty
             ? notesController.text.trim()
             : null,
-        userId: widget.userId,
       );
 
       widget.onSave(paymentEntity);

@@ -125,4 +125,16 @@ class MonthPlanRepositoryImpl implements MonthPlanRepository {
       );
     }
   }
+
+  @override
+  Future<Result<MonthPlan>> getOrCreatePlanForProfile(String profileId) async {
+    try {
+      final plan = await dataSource.getOrCreatePlanForProfile(profileId);
+      return Result.success(plan);
+    } catch (e) {
+      return Result.error(
+        UnknownFailure(message: 'Failed to get or create profile plan: $e'),
+      );
+    }
+  }
 }

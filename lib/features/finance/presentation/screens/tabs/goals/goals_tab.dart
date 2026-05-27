@@ -5,11 +5,8 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
-import 'package:keep_track/features/finance/modules/account/domain/entities/account.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
-import 'package:keep_track/features/finance/presentation/state/account_controller.dart';
-import 'package:keep_track/shared/infrastructure/supabase/supabase_service.dart';
 import '../../../../../../core/theme/app_theme.dart';
 import '../../../../../../core/ui/responsive/desktop_aware_screen.dart';
 import '../../../state/goal_controller.dart';
@@ -24,8 +21,6 @@ class GoalsTabNew extends StatefulWidget {
 
 class _GoalsTabNewState extends State<GoalsTabNew> {
   late final GoalController _controller;
-  late final AccountController _accountController;
-  late final SupabaseService _supabaseService;
   String _selectedFilter = 'All';
   Goal? _selectedGoal;
 
@@ -33,9 +28,6 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
   void initState() {
     super.initState();
     _controller = locator.get<GoalController>();
-    _accountController = locator.get<AccountController>();
-    _supabaseService = locator.get<SupabaseService>();
-    _accountController.loadAccounts();
   }
 
   void _showGoalDialog({Goal? goal}) {
@@ -43,7 +35,6 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
       context: context,
       builder: (_) => GoalsManagementDialog(
         goal: goal,
-        userId: _supabaseService.userId!,
         onSave: (g) async {
           if (goal != null) {
             await _controller.updateGoal(g);
@@ -61,7 +52,6 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
       text: goal.monthlyContribution > 0 ? goal.monthlyContribution.toStringAsFixed(2) : '',
     );
     final feeController = TextEditingController();
-    String? selectedAccountId;
 
     final result = await showDialog<bool>(
       context: context,
@@ -122,25 +112,6 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                     ),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
-                  const SizedBox(height: 12),
-                  AsyncStreamBuilder<List<Account>>(
-                    state: _accountController,
-                    builder: (context, accounts) {
-                      return DropdownButtonFormField<String>(
-                        initialValue: selectedAccountId,
-                        decoration: InputDecoration(
-                          labelText: 'Account',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                        items: accounts
-                            .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
-                            .toList(),
-                        onChanged: (v) => setDialogState(() => selectedAccountId = v),
-                      );
-                    },
-                  ),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -159,18 +130,11 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                             );
                             return;
                           }
-                          if (selectedAccountId == null) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please select an account')),
-                            );
-                            return;
-                          }
                           try {
                             final fee = double.tryParse(feeController.text) ?? 0;
                             await ApiClient.instance.post(
                               '/goals/${goal.id}/contribute',
                               data: {
-                                'accountId': selectedAccountId,
                                 'amount': amount,
                                 if (fee > 0) 'fee': fee,
                               },
@@ -732,7 +696,7 @@ class _MobileListView extends StatelessWidget {
         ),
 
         Positioned(
-          bottom: 20,
+          bottom: MediaQuery.of(context).padding.bottom + 16,
           right: 16,
           child: FloatingActionButton.extended(
             onPressed: onAdd,

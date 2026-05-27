@@ -12,10 +12,9 @@ class DebtRepositoryImpl implements DebtRepository {
   DebtRepositoryImpl(this.dataSource);
 
   @override
-  Future<Result<List<Debt>>> getDebts() async {
-    final models = await dataSource.fetchDebts();
-    final debts = models;
-    return Result.success(debts);
+  Future<Result<List<Debt>>> getDebts({String? budgetProfileId}) async {
+    final models = await dataSource.fetchDebts(budgetProfileId: budgetProfileId);
+    return Result.success(models);
   }
 
   @override
@@ -111,5 +110,22 @@ class DebtRepositoryImpl implements DebtRepository {
     );
 
     return updateDebt(updated);
+  }
+
+  @override
+  Future<Result<Debt>> payDebt(
+    String id, {
+    required double amount,
+    double? fee,
+  }) async {
+    try {
+      final updated = await dataSource.payDebt(id, amount: amount, fee: fee);
+      return Result.success(updated);
+    } catch (e) {
+      if (e is Failure) return Result.error(e);
+      return Result.error(
+        UnknownFailure(message: 'Failed to pay debt', originalError: e),
+      );
+    }
   }
 }
