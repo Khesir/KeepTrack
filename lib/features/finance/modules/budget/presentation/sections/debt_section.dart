@@ -16,6 +16,7 @@ class DebtSection extends StatelessWidget {
   final void Function(Debt) onSelect;
   final Future<void> Function(Debt, double) onUpdateMonthlyPayment;
   final int? dragIndex;
+  final bool isLocked;
 
   const DebtSection({
     super.key,
@@ -30,6 +31,7 @@ class DebtSection extends StatelessWidget {
     this.selectedDebt,
     this.paidThisMonth = const {},
     this.dragIndex,
+    this.isLocked = false,
   });
 
   @override
@@ -128,6 +130,7 @@ class DebtSection extends StatelessWidget {
                 isReceivable: isReceivable,
                 isSelected: selectedDebt?.id == d.id,
                 paidThisMonth: paidThisMonth[d.id] ?? 0,
+                isLocked: isLocked,
                 onSelect: () => onSelect(d),
                 onPay: () => onPay(d),
                 onEdit: () => onEdit(d),
@@ -137,20 +140,23 @@ class DebtSection extends StatelessWidget {
             ]),
 
           // ── Add link ───────────────────────────────────────────────────
-          GestureDetector(
-            onTap: onAdd,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              child: Text(
-                addLabel,
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: accentColor,
+          if (!isLocked)
+            GestureDetector(
+              onTap: onAdd,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                child: Text(
+                  addLabel,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: accentColor,
+                  ),
                 ),
               ),
-            ),
-          ),
+            )
+          else
+            const SizedBox(height: 14),
         ],
       ),
     );

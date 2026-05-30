@@ -1,20 +1,28 @@
 import 'budget.dart';
 
+enum MonthPlanStatus {
+  active,
+  closed;
+
+  String get displayName => switch (this) {
+    MonthPlanStatus.active => 'Active',
+    MonthPlanStatus.closed => 'Closed',
+  };
+}
+
 /// MonthPlan entity - Parent container for all budget groups in a given month.
-///
-/// A MonthPlan groups all Budget objects (income and expense) for a single
-/// YYYY-MM month, enabling month-level planning and copying.
 class MonthPlan {
   final String? id;
   final String? month; // YYYY-MM for monthly plans; null for profile plans
   final String? budgetProfileId; // null for monthly plans; set for profile plans
   final String? userId;
   final String? notes;
-  final List<Budget> budgets; // All budgets for this month
+  final MonthPlanStatus status;
+  final List<Budget> budgets;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  final List<String> budgetIds; // Raw IDs from month_plan.budgetIds
+  final List<String> budgetIds;
 
   const MonthPlan({
     this.id,
@@ -22,11 +30,14 @@ class MonthPlan {
     this.budgetProfileId,
     this.userId,
     this.notes,
+    this.status = MonthPlanStatus.active,
     this.budgets = const [],
     this.budgetIds = const [],
     this.createdAt,
     this.updatedAt,
   });
+
+  bool get isClosed => status == MonthPlanStatus.closed;
 
   /// Total planned income across all income budgets
   double get totalPlannedIncome =>
@@ -62,6 +73,7 @@ class MonthPlan {
     String? budgetProfileId,
     String? userId,
     String? notes,
+    MonthPlanStatus? status,
     List<Budget>? budgets,
     List<String>? budgetIds,
     DateTime? createdAt,
@@ -73,6 +85,7 @@ class MonthPlan {
       budgetProfileId: budgetProfileId ?? this.budgetProfileId,
       userId: userId ?? this.userId,
       notes: notes ?? this.notes,
+      status: status ?? this.status,
       budgets: budgets ?? this.budgets,
       budgetIds: budgetIds ?? this.budgetIds,
       createdAt: createdAt ?? this.createdAt,

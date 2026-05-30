@@ -10,6 +10,8 @@ class SubscriptionSection extends StatelessWidget {
   final VoidCallback onAdd;
   final Future<void> Function(Subscription) onPay;
   final int? dragIndex;
+  final bool isLocked;
+  final void Function(Subscription)? onRowTap;
 
   const SubscriptionSection({
     super.key,
@@ -17,6 +19,8 @@ class SubscriptionSection extends StatelessWidget {
     required this.onAdd,
     required this.onPay,
     this.dragIndex,
+    this.isLocked = false,
+    this.onRowTap,
   });
 
   @override
@@ -107,25 +111,28 @@ class SubscriptionSection extends StatelessWidget {
             )
           else
             ...subscriptions.expand((s) => [
-              _SubscriptionRow(subscription: s, onPay: () => onPay(s), isDark: isDark, borderColor: borderColor),
+              _SubscriptionRow(subscription: s, onPay: () => onPay(s), onRowTap: onRowTap != null ? () => onRowTap!(s) : null, isDark: isDark, borderColor: borderColor, isLocked: isLocked),
               Divider(height: 1, color: borderColor),
             ]),
 
           // ── Add link ───────────────────────────────────────────────────
-          GestureDetector(
-            onTap: onAdd,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              child: Text(
-                'Add Subscription',
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.warning,
+          if (!isLocked)
+            GestureDetector(
+              onTap: onAdd,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                child: Text(
+                  'Add Subscription',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warning,
+                  ),
                 ),
               ),
-            ),
-          ),
+            )
+          else
+            const SizedBox(height: 14),
         ],
       ),
     );
@@ -135,14 +142,18 @@ class SubscriptionSection extends StatelessWidget {
 class _SubscriptionRow extends StatelessWidget {
   final Subscription subscription;
   final VoidCallback onPay;
+  final VoidCallback? onRowTap;
   final bool isDark;
   final Color borderColor;
+  final bool isLocked;
 
   const _SubscriptionRow({
     required this.subscription,
     required this.onPay,
     required this.isDark,
     required this.borderColor,
+    this.onRowTap,
+    this.isLocked = false,
   });
 
   @override
@@ -157,7 +168,9 @@ class _SubscriptionRow extends StatelessWidget {
         ? AppColors.warning
         : AppColors.textSecondary;
 
-    return Padding(
+    return InkWell(
+      onTap: onRowTap,
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       child: Row(
         children: [
@@ -218,7 +231,7 @@ class _SubscriptionRow extends StatelessWidget {
           ),
           SizedBox(
             width: 56,
-            child: s.status == SubscriptionStatus.active
+            child: s.status == SubscriptionStatus.active && !isLocked
                 ? Center(
                     child: GestureDetector(
                       onTap: onPay,
@@ -240,6 +253,6 @@ class _SubscriptionRow extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }

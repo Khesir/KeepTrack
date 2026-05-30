@@ -14,6 +14,7 @@ class DebtRow extends StatefulWidget {
   final VoidCallback onPay;
   final VoidCallback onEdit;
   final Future<void> Function(double) onUpdateMonthlyPayment;
+  final bool isLocked;
 
   const DebtRow({
     super.key,
@@ -21,6 +22,7 @@ class DebtRow extends StatefulWidget {
     required this.isReceivable,
     required this.isSelected,
     this.paidThisMonth = 0,
+    this.isLocked = false,
     required this.onSelect,
     required this.onPay,
     required this.onEdit,
@@ -160,7 +162,7 @@ class _DebtRowState extends State<DebtRow> {
               const SizedBox(width: 6),
               // Planned — tap to edit (absorb tap so row select doesn't fire)
               GestureDetector(
-                onTap: _editing ? null : _startEdit,
+                onTap: widget.isLocked || _editing ? null : _startEdit,
                 behavior: HitTestBehavior.opaque,
                 child: SizedBox(
                   width: 70,
@@ -242,7 +244,7 @@ class _DebtRowState extends State<DebtRow> {
 
               const SizedBox(width: 4),
               // Pay / Collect button
-              if (d.status == DebtStatus.active)
+              if (d.status == DebtStatus.active && !widget.isLocked)
                 GestureDetector(
                   onTap: widget.onPay,
                   child: Container(

@@ -19,13 +19,26 @@ import 'package:keep_track/features/finance/modules/transaction/domain/entities/
 class SimpleMonthNav extends StatelessWidget {
   final DateTime month;
   final bool isDark;
+  final bool isClosed;
+  final bool isCurrentMonth;
   final VoidCallback onPrev;
   final VoidCallback? onNext;
+  final VoidCallback? onBackToCurrentMonth;
   final VoidCallback? onSettings;
-
   final VoidCallback? onToggleView;
 
-  const SimpleMonthNav({super.key, required this.month, required this.isDark, required this.onPrev, this.onNext, this.onSettings, this.onToggleView});
+  const SimpleMonthNav({
+    super.key,
+    required this.month,
+    required this.isDark,
+    this.isClosed = false,
+    this.isCurrentMonth = false,
+    required this.onPrev,
+    this.onNext,
+    this.onBackToCurrentMonth,
+    this.onSettings,
+    this.onToggleView,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +48,26 @@ class SimpleMonthNav extends StatelessWidget {
       child: Row(
         children: [
           IconButton(icon: Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary), onPressed: onPrev, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36)),
-          Expanded(child: Text(DateFormat('MMMM yyyy').format(month), style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: textPrimary), textAlign: TextAlign.center)),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(DateFormat('MMMM yyyy').format(month), style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: textPrimary), textAlign: TextAlign.center),
+                if (isClosed)
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                    child: Text('Closed', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  )
+                else if (!isCurrentMonth && onBackToCurrentMonth != null)
+                  GestureDetector(
+                    onTap: onBackToCurrentMonth,
+                    child: Text('Back to current', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.accent)),
+                  ),
+              ],
+            ),
+          ),
           IconButton(icon: Icon(Icons.chevron_right_rounded, color: onNext != null ? AppColors.textSecondary : AppColors.textTertiary), onPressed: onNext, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36)),
           if (onToggleView != null)
             IconButton(icon: Icon(Icons.table_rows_outlined, color: AppColors.textSecondary), onPressed: onToggleView, padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 36, minHeight: 36), tooltip: 'Switch to Sheets'),
@@ -637,8 +669,9 @@ class SimpleSubscriptionsSection extends StatelessWidget {
   final VoidCallback onAdd;
   final void Function(Subscription) onRowTap;
   final void Function(Subscription)? onSkip;
+  final bool isLocked;
 
-  const SimpleSubscriptionsSection({super.key, required this.isDark, required this.subs, required this.month, required this.onAdd, required this.onRowTap, this.onSkip});
+  const SimpleSubscriptionsSection({super.key, required this.isDark, required this.subs, required this.month, required this.onAdd, required this.onRowTap, this.onSkip, this.isLocked = false});
 
   bool _paidThisMonth(Subscription s) {
     final d = s.lastBilledDate;
@@ -668,6 +701,7 @@ class SimpleSubscriptionsSection extends StatelessWidget {
       trailing: entries.isEmpty ? null : '$paidCount/${entries.length} paid',
       trailingColor: paidCount == entries.length && entries.isNotEmpty ? AppColors.success : null,
       onAdd: onAdd,
+      isLocked: isLocked,
       child: entries.isEmpty
           ? _EmptyRow(isDark: isDark, text: 'No subscriptions yet')
           : Column(
@@ -711,7 +745,7 @@ class SimpleSubscriptionsSection extends StatelessWidget {
                       child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
                     ),
                     child: InkWell(
-                    onTap: () => onRowTap(s),
+                    onTap: isLocked ? null : () => onRowTap(s),
                     child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 11, 12, 11),
                     child: Row(children: [
@@ -779,8 +813,9 @@ class SimpleDebtsSection extends StatelessWidget {
   final Map<String, double> paidThisMonth;
   final VoidCallback onAddDebt, onAddReceivable;
   final void Function(Debt) onRowTap;
+  final bool isLocked;
 
-  const SimpleDebtsSection({super.key, required this.isDark, required this.debts, required this.receivables, required this.onAddDebt, required this.onAddReceivable, required this.onRowTap, this.paidThisMonth = const {}});
+  const SimpleDebtsSection({super.key, required this.isDark, required this.debts, required this.receivables, required this.onAddDebt, required this.onAddReceivable, required this.onRowTap, this.paidThisMonth = const {}, this.isLocked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -797,6 +832,7 @@ class SimpleDebtsSection extends StatelessWidget {
       trailing: totalCount == 0 ? null : '$totalCount active',
       onAdd: debts.isNotEmpty || receivables.isEmpty ? onAddDebt : onAddReceivable,
       addLabel: debts.isNotEmpty || receivables.isEmpty ? 'Add Debt' : 'Add Receivable',
+      isLocked: isLocked,
       child: (debts.isEmpty && receivables.isEmpty)
           ? _EmptyRow(isDark: isDark, text: emptyLabel)
           : Column(children: [
@@ -812,7 +848,7 @@ class SimpleDebtsSection extends StatelessWidget {
                     curve: Curves.easeOut,
                   ),
                   builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
-                  child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value)),
+                  child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: isLocked ? null : () => onRowTap(e.value)),
                 ),
               ]),
               ...receivables.asMap().entries.expand((e) {
@@ -829,7 +865,7 @@ class SimpleDebtsSection extends StatelessWidget {
                       curve: Curves.easeOut,
                     ),
                     builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
-                    child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value)),
+                    child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: isLocked ? null : () => onRowTap(e.value)),
                   ),
                 ];
               }),
@@ -843,7 +879,7 @@ class _DebtRow extends StatelessWidget {
   final Debt debt;
   final Color textPrimary;
   final double paidThisMonth;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _DebtRow({required this.isDark, required this.debt, required this.textPrimary, required this.onTap, this.paidThisMonth = 0});
 
@@ -911,8 +947,9 @@ class _SimpleSection extends StatelessWidget {
   final VoidCallback onAdd;
   final Widget? extraAction;
   final Widget child;
+  final bool isLocked;
 
-  const _SimpleSection({required this.isDark, required this.label, this.trailing, this.trailingColor, required this.onAdd, this.addLabel, this.extraAction, required this.child});
+  const _SimpleSection({required this.isDark, required this.label, this.trailing, this.trailingColor, required this.onAdd, this.addLabel, this.extraAction, required this.child, this.isLocked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -933,16 +970,18 @@ class _SimpleSection extends StatelessWidget {
                   child: Text(trailing!, style: GoogleFonts.dmSans(fontSize: 10, color: trailingColor ?? AppColors.textSecondary, fontWeight: FontWeight.w600))),
             ],
             const Spacer(),
-            if (extraAction != null) ...[extraAction!, const SizedBox(width: 6)],
-            GestureDetector(
-              onTap: onAdd,
-              child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.add, size: 11, color: AppColors.accent),
-                    const SizedBox(width: 3),
-                    Text(addLabel ?? 'Add', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.accent)),
-                  ])),
-            ),
+            if (!isLocked) ...[
+              if (extraAction != null) ...[extraAction!, const SizedBox(width: 6)],
+              GestureDetector(
+                onTap: onAdd,
+                child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.add, size: 11, color: AppColors.accent),
+                      const SizedBox(width: 3),
+                      Text(addLabel ?? 'Add', style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.accent)),
+                    ])),
+              ),
+            ],
           ]),
         ),
         Container(
@@ -1039,8 +1078,9 @@ class SimpleGoalsSection extends StatelessWidget {
   final Map<String, double> contributedThisMonth;
   final VoidCallback onAdd;
   final ValueChanged<Goal>? onRowTap;
+  final bool isLocked;
 
-  const SimpleGoalsSection({super.key, required this.isDark, required this.goals, required this.onAdd, this.onRowTap, this.contributedThisMonth = const {}});
+  const SimpleGoalsSection({super.key, required this.isDark, required this.goals, required this.onAdd, this.onRowTap, this.contributedThisMonth = const {}, this.isLocked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1053,6 +1093,7 @@ class SimpleGoalsSection extends StatelessWidget {
       trailing: goals.isEmpty ? null : '${goals.where((g) => g.status == GoalStatus.active).length} active',
       onAdd: onAdd,
       addLabel: 'Add Goal',
+      isLocked: isLocked,
       child: goals.isEmpty
           ? _EmptyRow(isDark: isDark, text: 'No goals yet — tap Add Goal to get started')
           : Column(
@@ -1084,7 +1125,7 @@ class SimpleGoalsSection extends StatelessWidget {
                     ),
                     builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
                     child: InkWell(
-                    onTap: onRowTap != null ? () => onRowTap!(g) : null,
+                    onTap: !isLocked && onRowTap != null ? () => onRowTap!(g) : null,
                     child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

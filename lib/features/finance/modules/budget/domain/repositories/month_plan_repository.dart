@@ -39,4 +39,7 @@ abstract class MonthPlanRepository {
 
   /// Get or create the plan for a custom budget profile.
   Future<Result<MonthPlan>> getOrCreatePlanForProfile(String profileId);
+
+  /// Set the plan's status to closed.
+  Future<Result<MonthPlan>> closeMonthPlan(String id);
 }

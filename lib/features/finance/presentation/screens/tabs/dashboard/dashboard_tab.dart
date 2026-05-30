@@ -44,6 +44,7 @@ class _DashboardTabState extends State<DashboardTab> {
   late final TransactionPlanController _txPlanController;
 
   String? _selectedProfileId;
+  bool _showingInsights = false;
 
   @override
   void initState() {
@@ -83,6 +84,13 @@ class _DashboardTabState extends State<DashboardTab> {
         (profiles.isEmpty
             ? null
             : (profiles.where((p) => p.isMain).firstOrNull ?? profiles.first).id);
+    // Keep BudgetProfileController in sync so the global FAB knows the current profile
+    if (effectiveProfileId != null &&
+        _budgetProfileController.selectedProfileId != effectiveProfileId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _budgetProfileController.selectedProfileId = effectiveProfileId;
+      });
+    }
     return AsyncStreamBuilder<List<SavingsBucket>>(
       state: _savingsController,
       builder: (_, buckets) => AsyncStreamBuilder<List<Budget>>(
@@ -154,13 +162,41 @@ class _DashboardTabState extends State<DashboardTab> {
         .toList()
       ..sort((a, b) => a.plannedDate.compareTo(b.plannedDate));
 
+    final profileBudgets = budgets.where((b) => b.budgetProfileId == selectedProfileId).toList();
+
+    // ── Insights view ──────────────────────────────────────────────────────────
+    if (_showingInsights) {
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _InsightsHeader(
+              isDark: isDark,
+              onBack: () => setState(() => _showingInsights = false),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: DashboardInsights(
+              isDark: isDark,
+              transactions: profileTxs,
+              budgets: profileBudgets,
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ],
+      );
+    }
+
+    // ── Normal dashboard ───────────────────────────────────────────────────────
     return CustomScrollView(
       slivers: [
         if (profiles.isNotEmpty)
           SliverToBoxAdapter(child: _ProfilePills(
             profiles: profiles,
             selectedId: selectedProfileId,
-            onSelect: (id) => setState(() => _selectedProfileId = id),
+            onSelect: (id) {
+              setState(() => _selectedProfileId = id);
+              _budgetProfileController.selectedProfileId = id;
+            },
             isDark: isDark,
           )),
         SliverToBoxAdapter(child: _MonthOverviewCard(
@@ -202,11 +238,15 @@ class _DashboardTabState extends State<DashboardTab> {
             ),
           ),
         ),
-        SliverToBoxAdapter(child: DashboardInsights(
-          isDark: isDark,
-          transactions: profileTxs,
-          budgets: budgets.where((b) => b.budgetProfileId == selectedProfileId).toList(),
-        )),
+        SliverToBoxAdapter(
+          child: _InsightsEntryCard(
+            isDark: isDark,
+            hasBudgets: profileBudgets.isNotEmpty,
+            transactionCount: profileTxs.length,
+            monthLabel: DateFormat('MMMM yyyy').format(DateTime.now()),
+            onTap: () => setState(() => _showingInsights = true),
+          ),
+        ),
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
       ],
     );
@@ -1274,6 +1314,123 @@ class _FadeSlideIn extends StatelessWidget {
       child: SlideTransition(
         position: Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero).animate(curved),
         child: child,
+      ),
+    );
+  }
+}
+
+// ─── Insights Entry Card ──────────────────────────────────────────────────────
+
+class _InsightsEntryCard extends StatelessWidget {
+  final bool isDark;
+  final bool hasBudgets;
+  final int transactionCount;
+  final String monthLabel;
+  final VoidCallback onTap;
+
+  const _InsightsEntryCard({
+    required this.isDark,
+    required this.hasBudgets,
+    required this.transactionCount,
+    required this.monthLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: isDark ? 0.15 : 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.insights_rounded, size: 22, color: AppColors.accent),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Monthly Insights',
+                      style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w700, color: textPrimary),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      hasBudgets
+                          ? 'Review your budget performance & spending patterns for $monthLabel'
+                          : 'Explore your $transactionCount transaction${transactionCount == 1 ? '' : 's'} for $monthLabel',
+                      style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Insights View Header ─────────────────────────────────────────────────────
+
+class _InsightsHeader extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback onBack;
+
+  const _InsightsHeader({required this.isDark, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 12, 16, 4),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.arrow_back_rounded, size: 20, color: textPrimary),
+            onPressed: onBack,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Monthly Insights',
+                  style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w700, color: textPrimary),
+                ),
+                Text(
+                  'Spending patterns & budget performance over time',
+                  style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

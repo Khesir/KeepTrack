@@ -167,25 +167,10 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
     final hasExpenseBreakdown = expenseBudgets.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section header ──────────────────────────────────────────────────
-          Text(
-            'Monthly Insights',
-            style: GoogleFonts.dmSans(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: textPrimary,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            'Visualize spending patterns and budget performance over time.',
-            style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 14),
           _buildRangeChips(),
 
           // ── Transactions Involved + Expense Breakdown ────────────────────

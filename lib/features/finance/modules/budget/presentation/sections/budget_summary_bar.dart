@@ -32,6 +32,12 @@ class BudgetSummaryBar extends StatelessWidget {
   final int selectedTab;
   final void Function(int) onTabSelect;
 
+  // Month state
+  final bool isClosed;
+  final bool isCurrentMonth;
+  final VoidCallback? onBack;
+  final VoidCallback? onBackToCurrentMonth;
+
   // Narrow-only actions (hidden on wide where they live in the side panel)
   final VoidCallback? onToggleView;
   final VoidCallback? onSettings;
@@ -55,6 +61,10 @@ class BudgetSummaryBar extends StatelessWidget {
     required this.debtsCount,
     required this.receivablesCount,
     required this.goalsCount,
+    this.isClosed = false,
+    this.isCurrentMonth = false,
+    this.onBack,
+    this.onBackToCurrentMonth,
     this.onToggleView,
     this.onSettings,
     this.onSummaryTap,
@@ -117,38 +127,84 @@ class BudgetSummaryBar extends StatelessWidget {
       children: [
         // ── Main header row ───────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+          padding: const EdgeInsets.fromLTRB(8, 14, 12, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              if (onBack != null)
+                IconButton(
+                  icon: Icon(Icons.arrow_back_rounded, size: 20, color: textPrimary),
+                  onPressed: onBack,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
               // Title + subtitle — updates based on selected tab
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      _tabTitle(monthLabel),
-                      style: GoogleFonts.dmSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
-                        letterSpacing: -0.4,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _tabTitle(monthLabel),
+                            style: GoogleFonts.dmSans(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                              letterSpacing: -0.4,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isClosed) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.textTertiary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Closed',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      _tabSubtitle(leftLabel),
-                      style: GoogleFonts.dmSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: _tabSubtitleColor(leftColor),
+                    if (!isCurrentMonth && onBackToCurrentMonth != null)
+                      GestureDetector(
+                        onTap: onBackToCurrentMonth,
+                        child: Text(
+                          'Back to current month',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.accent,
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        _tabSubtitle(leftLabel),
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: _tabSubtitleColor(leftColor),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ],
                 ),
               ),

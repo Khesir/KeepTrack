@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_month_screen.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_simple_view.dart';
@@ -40,23 +41,95 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
 
   bool get _inBudget => _activeProfile != null;
 
-  void _back() => setState(() {
-    _activeProfile = null;
-    _sheetMode = false;
-  });
+  void _back() {
+    _profileController.selectedProfileId = null;
+    setState(() {
+      _activeProfile = null;
+      _sheetMode = false;
+    });
+  }
 
   void _toggleView() => setState(() => _sheetMode = !_sheetMode);
 
   // ── Settings ──────────────────────────────────────────────────────────────
 
-  void _openProfileSettings() {
+  void _openSettings(List<Budget> monthBudgets) {
     final profile = _activeProfile!;
-    BudgetSettingsSheet.show(
-      context,
-      monthLabel: profile.name,
-      onEditBudget: _editProfile,
-      onDeleteBudget: () => _confirmDeleteProfile(profile),
+    if (profile.isMonthly) {
+      // Monthly profile: close this month's budgets, not the whole profile
+      final allClosed = monthBudgets.isNotEmpty &&
+          monthBudgets.every((b) => b.status == BudgetStatus.closed);
+      BudgetSettingsSheet.show(
+        context,
+        monthLabel: profile.name,
+        onEditBudget: _editProfile,
+        onCloseBudget: monthBudgets.isNotEmpty && !allClosed
+            ? () => _confirmCloseMonthBudgets(profile, monthBudgets)
+            : null,
+        onDeleteBudget: () => _confirmDeleteProfile(profile),
+      );
+    } else {
+      // Custom profile: close the whole profile
+      BudgetSettingsSheet.show(
+        context,
+        monthLabel: profile.name,
+        onEditBudget: _editProfile,
+        onCloseBudget: profile.status == BudgetProfileStatus.active
+            ? () => _confirmCloseProfile(profile)
+            : null,
+        onDeleteBudget: () => _confirmDeleteProfile(profile),
+      );
+    }
+  }
+
+  Future<void> _confirmCloseMonthBudgets(BudgetProfile profile, List<Budget> monthBudgets) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Close this month\'s budget?'),
+        content: const Text('All active budget groups for this month will be marked as closed.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Close Budget')),
+        ],
+      ),
     );
+    if (confirmed != true || !mounted) return;
+    for (final b in monthBudgets) {
+      if (b.id != null && b.status == BudgetStatus.active) {
+        await _budgetController.closeBudget(b.id!);
+      }
+    }
+  }
+
+  Future<void> _confirmCloseProfile(BudgetProfile profile) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Close "${profile.name}"?'),
+        content: const Text(
+          'This profile will be marked as completed. You can still view it.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Close Budget')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await _profileController.updateProfile(
+      profile.copyWith(status: BudgetProfileStatus.completed),
+    );
+
+    final s = _profileController.state;
+    if (s is AsyncData<List<BudgetProfile>> && mounted) {
+      final updated = s.data.firstWhere(
+        (p) => p.id == profile.id,
+        orElse: () => profile.copyWith(status: BudgetProfileStatus.completed),
+      );
+      setState(() => _activeProfile = updated);
+    }
   }
 
   Future<void> _editProfile() async {
@@ -158,8 +231,10 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
     if (_sheetMode) {
       return BudgetMonthScreen(
         onToggleView: _toggleView,
-        onOpenSettings: _openProfileSettings,
+        onOpenSettings: () => _openSettings([]),
+        onBack: _back,
         budgetProfileId: _activeProfile!.id,
+        profileIsMonthly: _activeProfile!.isMonthly,
       );
     }
 
@@ -178,7 +253,7 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
         profileIsMonthly: _activeProfile!.isMonthly,
         onAddProfileGroup: _showAddProfileGroup,
         onToggleView: _toggleView,
-        onOpenSettings: _openProfileSettings,
+        onOpenSettings: _openSettings,
       ),
     );
   }
