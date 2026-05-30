@@ -66,6 +66,7 @@ class BudgetScreenBody extends StatelessWidget {
   final Future<void> Function(Debt debt, double amount) onUpdateDebtPayment;
   final VoidCallback onAddSubscription;
   final Future<void> Function(Subscription) onPaySubscription;
+  final void Function(Subscription)? onSubscriptionTap;
   final VoidCallback onAddGoal;
   final void Function(Goal) onGoalTap;
   final int selectedTab;
@@ -74,7 +75,10 @@ class BudgetScreenBody extends StatelessWidget {
   final void Function(int oldIndex, int newIndex) onItemReorder;
   final VoidCallback? onToggleView;
   final VoidCallback? onOverrideSettings;
+  final VoidCallback? onBack;
+  final VoidCallback? onBackToCurrentMonth;
   final String? budgetProfileId;
+  final bool profileIsMonthly;
   final void Function(Debt debt, List<Transaction> transactions)
   onDebtDetailTap;
   final void Function(
@@ -116,6 +120,7 @@ class BudgetScreenBody extends StatelessWidget {
     required this.onUpdateDebtPayment,
     required this.onAddSubscription,
     required this.onPaySubscription,
+    this.onSubscriptionTap,
     required this.onAddGoal,
     required this.onGoalTap,
     required this.selectedTab,
@@ -124,7 +129,10 @@ class BudgetScreenBody extends StatelessWidget {
     required this.onItemReorder,
     this.onToggleView,
     this.onOverrideSettings,
+    this.onBack,
+    this.onBackToCurrentMonth,
     this.budgetProfileId,
+    this.profileIsMonthly = false,
     required this.onDebtDetailTap,
     required this.onCategoryDetailTap,
   });
@@ -169,29 +177,40 @@ class BudgetScreenBody extends StatelessWidget {
         : null;
 
     final monthBudgets = budgetProfileId != null
-        ? data.budgets.where((b) => b.budgetProfileId == budgetProfileId && b.status == BudgetStatus.active).toList()
+        ? profileIsMonthly
+            ? data.budgets.where((b) =>
+                b.budgetProfileId == budgetProfileId &&
+                b.month == monthKey &&
+                b.status == BudgetStatus.active).toList()
+            : data.budgets.where((b) =>
+                b.budgetProfileId == budgetProfileId &&
+                b.status == BudgetStatus.active).toList()
         : BudgetMonthFilter.filterBudgets(data.budgets, monthPlan);
 
-    // Profile mode: plan exists OR budget groups already exist (started without creating plan first)
-    // Monthly mode: a month-keyed plan must exist
     final hasMonthPlan = budgetProfileId != null
-        ? (profilePlan != null || monthBudgets.isNotEmpty)
+        ? profileIsMonthly
+            ? monthBudgets.isNotEmpty
+            : (profilePlan != null || monthBudgets.isNotEmpty)
         : monthPlan != null;
 
+    // Profile scope filter — mirrors the simple view's matchesProfile logic
+    bool matchesProfile(String? itemProfileId) => budgetProfileId != null
+        ? itemProfileId == budgetProfileId
+        : itemProfileId == null;
+
+    // Month-filtered: used for Summary tab (financial overview for this month)
     final debts = data.debts
-        .where(
-          (d) =>
-              d.type == DebtType.borrowing &&
-              BudgetMonthFilter.debtVisibleInMonth(d, monthStart, monthEnd),
-        )
+        .where((d) =>
+            d.type == DebtType.borrowing &&
+            matchesProfile(d.budgetProfileId) &&
+            BudgetMonthFilter.debtVisibleInMonth(d, monthStart, monthEnd))
         .toList();
 
     final receivables = data.debts
-        .where(
-          (d) =>
-              d.type == DebtType.lending &&
-              BudgetMonthFilter.debtVisibleInMonth(d, monthStart, monthEnd),
-        )
+        .where((d) =>
+            d.type == DebtType.lending &&
+            matchesProfile(d.budgetProfileId) &&
+            BudgetMonthFilter.debtVisibleInMonth(d, monthStart, monthEnd))
         .toList();
 
     final activePayments = data.payments
@@ -201,11 +220,32 @@ class BudgetScreenBody extends StatelessWidget {
     final monthSubscriptions = data.subscriptions
         .where((s) =>
             s.status == SubscriptionStatus.active &&
+            matchesProfile(s.budgetProfileId) &&
             (s.nextBillingDate.year == currentMonth.year &&
                     s.nextBillingDate.month == currentMonth.month ||
                 s.nextBillingDate.isBefore(monthStart)))
         .toList()
       ..sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
+
+    // All-active (not month-filtered): used for tabs 2-5 and pill counts —
+    // debts, subs, receivables, and goals are not month-specific.
+    int debtOrder(DebtStatus s) => s == DebtStatus.active ? 0 : 1;
+    final allDebts = (data.debts
+        .where((d) => d.type == DebtType.borrowing && matchesProfile(d.budgetProfileId))
+        .toList()
+      ..sort((a, b) => debtOrder(a.status).compareTo(debtOrder(b.status))));
+    final allReceivables = (data.debts
+        .where((d) => d.type == DebtType.lending && matchesProfile(d.budgetProfileId))
+        .toList()
+      ..sort((a, b) => debtOrder(a.status).compareTo(debtOrder(b.status))));
+    final allSubs = data.subscriptions
+        .where((s) => s.status != SubscriptionStatus.cancelled && matchesProfile(s.budgetProfileId))
+        .toList()
+      ..sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
+
+    final filteredGoals = data.goals
+        .where((g) => matchesProfile(g.budgetProfileId))
+        .toList();
 
     // ── sync selection ────────────────────────────────────────────────────────
     final syncedSelected = selectedGroup == null
@@ -293,22 +333,30 @@ class BudgetScreenBody extends StatelessWidget {
         List<Widget> contentSlivers;
 
         if (selectedTab == 0) {
-          // Summary tab: full financial overview
+          // Summary tab: gate if no plan, otherwise full overview
           contentSlivers = [
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            SliverToBoxAdapter(
-              child: BudgetOverallSummary(
-                monthBudgets: monthBudgets,
-                spentByCategory: spentByCategory,
-                subscriptions: monthSubscriptions,
-                debts: debts,
-                receivables: receivables,
-                goals: data.goals,
-                transactions: monthTransactions,
-                currentMonth: currentMonth,
-                isDark: isDark,
+            if (!hasMonthPlan)
+              SliverToBoxAdapter(
+                child: EmptyBudgetState(
+                  monthLabel: monthLabel,
+                  onStart: () => onStartPlanning(data.budgets),
+                ),
               ),
-            ),
+            if (hasMonthPlan)
+              SliverToBoxAdapter(
+                child: BudgetOverallSummary(
+                  monthBudgets: monthBudgets,
+                  spentByCategory: spentByCategory,
+                  subscriptions: monthSubscriptions,
+                  debts: debts,
+                  receivables: receivables,
+                  goals: filteredGoals,
+                  transactions: monthTransactions,
+                  currentMonth: currentMonth,
+                  isDark: isDark,
+                ),
+              ),
           ];
         } else if (selectedTab == 1) {
           // Budget tab: reorderable budget groups only
@@ -340,6 +388,7 @@ class BudgetScreenBody extends StatelessWidget {
                     debts: debts,
                     receivables: receivables,
                     monthSubscriptions: monthSubscriptions,
+                    goals: filteredGoals,
                     monthBudgets: monthBudgets,
                     monthLabel: monthLabel,
                     spentByCategory: spentByCategory,
@@ -354,12 +403,13 @@ class BudgetScreenBody extends StatelessWidget {
                 );
               },
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                child: GhostAddRow(label: 'Add Budget Group', onTap: onCreateGroup),
+            if (hasMonthPlan)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: GhostAddRow(label: 'Add Budget Group', onTap: onCreateGroup),
+                ),
               ),
-            ),
           ];
         } else {
           // Single section tab (tabs 2-5 after adding summary at 0)
@@ -378,9 +428,10 @@ class BudgetScreenBody extends StatelessWidget {
                 context,
                 key: sectionKey,
                 dragIndex: sectionDragIndex >= 0 ? sectionDragIndex : 0,
-                debts: debts,
-                receivables: receivables,
-                monthSubscriptions: monthSubscriptions,
+                debts: allDebts,
+                receivables: allReceivables,
+                monthSubscriptions: allSubs,
+                goals: filteredGoals,
                 monthBudgets: monthBudgets,
                 monthLabel: monthLabel,
                 spentByCategory: spentByCategory,
@@ -391,6 +442,7 @@ class BudgetScreenBody extends StatelessWidget {
                 isWide: isWide,
                 monthTransactions: monthTransactions,
                 divColor: divColor,
+                isLocked: !hasMonthPlan,
               ),
             ),
           ];
@@ -404,12 +456,30 @@ class BudgetScreenBody extends StatelessWidget {
         );
 
         // ── Shared summary bar widget ─────────────────────────────────────────
+        final now = DateTime.now();
+        final isCurrentMonth = currentMonth.year == now.year && currentMonth.month == now.month;
+        final realMonthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+        final currentMonthHasPlan = budgetProfileId != null && profileIsMonthly
+            ? data.budgets.any((b) =>
+                b.budgetProfileId == budgetProfileId &&
+                b.month == realMonthKey &&
+                b.status == BudgetStatus.active)
+            : data.monthPlans.any((p) => p.month == realMonthKey);
+
+        final isMonthClosed = budgetProfileId != null && profileIsMonthly
+            ? monthBudgets.isNotEmpty && monthBudgets.every((b) => b.status == BudgetStatus.closed)
+            : monthPlan?.isClosed ?? false;
+
         Widget summaryBar({bool narrowActions = false}) => Container(
           color: panelBg,
           child: BudgetSummaryBar(
             monthLabel: monthLabel,
             onPrev: onPrevMonth,
             onNext: onNextMonth,
+            isClosed: isMonthClosed,
+            isCurrentMonth: isCurrentMonth,
+            onBack: onBack,
+            onBackToCurrentMonth: !isCurrentMonth && currentMonthHasPlan ? onBackToCurrentMonth : null,
             // On narrow, show actions in the bar; on wide, they're in the side panel
             onToggleView: narrowActions ? onToggleView : null,
             onSummaryTap: narrowActions ? () => _showSummarySheet(context, buildSummaryPanel()) : null,
@@ -423,10 +493,10 @@ class BudgetScreenBody extends StatelessWidget {
             selectedTab: selectedTab,
             onTabSelect: onTabSelect,
             budgetGroupCount: monthBudgets.length,
-            subsCount: monthSubscriptions.length,
-            debtsCount: debts.length,
-            receivablesCount: receivables.length,
-            goalsCount: data.goals.length,
+            subsCount: allSubs.length,
+            debtsCount: allDebts.where((d) => d.status == DebtStatus.active).length,
+            receivablesCount: allReceivables.where((d) => d.status == DebtStatus.active).length,
+            goalsCount: filteredGoals.length,
           ),
         );
 
@@ -477,6 +547,7 @@ class BudgetScreenBody extends StatelessWidget {
     required List<Debt> debts,
     required List<Debt> receivables,
     required List<Subscription> monthSubscriptions,
+    required List<Goal> goals,
     required List<Budget> monthBudgets,
     required String monthLabel,
     required Map<String, double> spentByCategory,
@@ -487,6 +558,7 @@ class BudgetScreenBody extends StatelessWidget {
     required bool isWide,
     required List<Transaction> monthTransactions,
     required Color divColor,
+    bool isLocked = false,
   }) {
     // Budget group item
     if (!kSectionKeys.contains(key)) {
@@ -520,6 +592,7 @@ class BudgetScreenBody extends StatelessWidget {
           selectedDebt: selectedDebt,
           paidThisMonth: paidThisMonthByDebt,
           dragIndex: dragIndex,
+          isLocked: isLocked,
           onAdd: () => onAddDebt(false),
           onPay: onDebtPay,
           onEdit: onEditDebt,
@@ -536,6 +609,7 @@ class BudgetScreenBody extends StatelessWidget {
           selectedDebt: selectedDebt,
           paidThisMonth: paidThisMonthByDebt,
           dragIndex: dragIndex,
+          isLocked: isLocked,
           onAdd: () => onAddDebt(true),
           onPay: onDebtPay,
           onEdit: onEditDebt,
@@ -548,13 +622,16 @@ class BudgetScreenBody extends StatelessWidget {
       'subscriptions' => SubscriptionSection(
           subscriptions: monthSubscriptions,
           dragIndex: dragIndex,
+          isLocked: isLocked,
           onAdd: onAddSubscription,
           onPay: onPaySubscription,
+          onRowTap: onSubscriptionTap,
         ),
       'goals' => GoalSection(
-          goals: data.goals,
+          goals: goals,
           contributedThisMonth: contributedThisMonthByGoal,
           dragIndex: dragIndex,
+          isLocked: isLocked,
           onAdd: onAddGoal,
           onGoalTap: onGoalTap,
         ),

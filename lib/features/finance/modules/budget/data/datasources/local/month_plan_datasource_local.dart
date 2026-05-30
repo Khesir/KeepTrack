@@ -146,4 +146,17 @@ class MonthPlanDataSourceLocal implements MonthPlanDataSource {
       return plan;
     }
   }
+
+  @override
+  Future<MonthPlanModel> closeMonthPlan(String id) async {
+    final data = await _cache.get(_box, id);
+    if (data == null) throw StateError('MonthPlan $id not found');
+    final plan = MonthPlanModel.fromJson(data);
+    final closed = MonthPlanModel.fromJson({
+      ...plan.toJson(),
+      'status': 'closed',
+    });
+    await _cache.put(_box, id, closed.toJson());
+    return closed;
+  }
 }

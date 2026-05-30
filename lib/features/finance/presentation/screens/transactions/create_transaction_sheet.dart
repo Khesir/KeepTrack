@@ -18,19 +18,28 @@ import 'package:keep_track/features/finance/presentation/state/budget_profile_co
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_plan_controller.dart';
+import 'scan_expenses_sheet.dart';
 
 class CreateTransactionSheet extends StatefulWidget {
   final VoidCallback? onCreated;
+  final String? initialProfileId;
 
-  const CreateTransactionSheet({super.key, this.onCreated});
+  const CreateTransactionSheet({super.key, this.onCreated, this.initialProfileId});
 
-  static Future<void> show(BuildContext context, {VoidCallback? onCreated}) {
+  static Future<void> show(
+    BuildContext context, {
+    VoidCallback? onCreated,
+    String? initialProfileId,
+  }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (_) => CreateTransactionSheet(onCreated: onCreated),
+      builder: (_) => CreateTransactionSheet(
+        onCreated: onCreated,
+        initialProfileId: initialProfileId,
+      ),
     );
   }
 
@@ -69,6 +78,19 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     _profileController = locator.get<BudgetProfileController>();
     _authController = locator.get<AuthController>();
     _catController.loadCategories();
+
+    // Pre-select profile if provided
+    if (widget.initialProfileId != null) {
+      final profiles = _profileController.data ?? [];
+      final match = profiles.cast<BudgetProfile?>().firstWhere(
+        (p) => p?.id == widget.initialProfileId,
+        orElse: () => null,
+      );
+      if (match != null) {
+        _selectedProfileId = match.id;
+        _selectedProfileName = match.name;
+      }
+    }
   }
 
   @override
@@ -175,10 +197,12 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     if (_selectedProfileId == null) return null;
     final s = _budgetController.state;
     if (s is! AsyncData<List<Budget>>) return null;
-    return s.data
+    final ids = s.data
         .where((b) => b.budgetProfileId == _selectedProfileId)
         .expand((b) => b.categories.map((c) => c.financeCategoryId))
         .toSet();
+    // If profile has no budget categories yet, fall back to showing all categories
+    return ids.isEmpty ? null : ids;
   }
 
   void _pickBudgetProfile() {
@@ -226,7 +250,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _CategoryPicker(
+      builder: (_) => TransactionCategoryPicker(
         type: _type,
         selectedId: _category?.id,
         controller: _catController,
@@ -367,6 +391,35 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
               ),
             ),
           ),
+        // Scan from image banner
+        GestureDetector(
+          onTap: () {
+            Navigator.pop(context);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScanExpensesSheet.show(context, onConfirmed: widget.onCreated);
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: isDark ? 0.12 : 0.07),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.25), width: 0.5),
+            ),
+            child: Row(children: [
+              Icon(Icons.document_scanner_outlined, size: 18, color: AppColors.accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Scan expenses from image',
+                  style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.accent),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.accent.withValues(alpha: 0.6)),
+            ]),
+          ),
+        ),
         Divider(height: 20, color: borderColor),
         // Numpad
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: _Numpad(onTap: _numTap)),
@@ -598,14 +651,14 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
 
 // ─── Category Picker ──────────────────────────────────────────────────────────
 
-class _CategoryPicker extends StatelessWidget {
+class TransactionCategoryPicker extends StatelessWidget {
   final TransactionType type;
   final String? selectedId;
   final FinanceCategoryController controller;
   final Set<String>? allowedIds;
   final bool isDark;
   final void Function(FinanceCategory) onSelect;
-  const _CategoryPicker({required this.type, required this.selectedId, required this.controller, this.allowedIds, required this.isDark, required this.onSelect});
+  const TransactionCategoryPicker({super.key, required this.type, required this.selectedId, required this.controller, this.allowedIds, required this.isDark, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {

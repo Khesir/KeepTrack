@@ -160,35 +160,38 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
   Widget _buildTopBar(bool isDark, Color headerBorder) {
     final hasActions = widget.onToggleView != null || widget.onSettings != null;
     if (!hasActions) return const SizedBox.shrink();
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2C2C2A) : Colors.white,
+        color: isDark ? const Color(0xFF242422) : Colors.white,
         border: Border(bottom: BorderSide(color: headerBorder, width: 0.5)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
+          Icon(Icons.analytics_outlined, size: 14, color: AppColors.accent),
+          const SizedBox(width: 6),
           Text(
-            'Panel',
-            style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+            'Overview',
+            style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
           ),
           const Spacer(),
           if (widget.onToggleView != null)
             IconButton(
-              icon: Icon(Icons.view_list_outlined, size: 18, color: AppColors.textSecondary),
+              icon: Icon(Icons.view_list_outlined, size: 17, color: AppColors.textSecondary),
               onPressed: widget.onToggleView,
-              tooltip: 'Switch to Simple',
+              tooltip: 'Switch to Simple view',
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
             ),
           if (widget.onSettings != null)
             IconButton(
-              icon: Icon(Icons.more_vert_rounded, size: 18, color: AppColors.textSecondary),
+              icon: Icon(Icons.more_vert_rounded, size: 17, color: AppColors.textSecondary),
               onPressed: widget.onSettings,
               tooltip: 'Budget settings',
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
             ),
         ],
       ),
@@ -207,6 +210,9 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
 
   Widget _buildDebtMode(Debt debt, Color headerBg, Color headerBorder) {
     final isReceivable = debt.type == DebtType.lending;
+    final isDark = headerBg.computeLuminance() < 0.1;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final debtColor = isReceivable ? AppColors.success : AppColors.error;
     final debtTxns = widget.allTransactions.where((t) => t.debtId == debt.id).toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
@@ -218,29 +224,28 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
             color: headerBg,
             border: Border(top: BorderSide(color: headerBorder, width: 0.5)),
           ),
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (isReceivable ? AppColors.success : AppColors.error).withValues(alpha: 0.12),
+                  color: debtColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   isReceivable ? 'RECEIVABLE' : 'DEBT',
-                  style: AppTextStyles.caption.copyWith(
-                    color: isReceivable ? AppColors.success : AppColors.error,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 9,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 9, fontWeight: FontWeight.w700,
+                    color: debtColor, letterSpacing: 0.5,
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   debt.personName,
-                  style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600, color: AppColors.accent),
+                  style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -279,6 +284,8 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
   }
 
   Widget _buildCategoryMode(BudgetCategory cat, Color headerBg, Color headerBorder) {
+    final isDark = headerBg.computeLuminance() < 0.1;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final catTxns = widget.allTransactions
         .where((t) => t.financeCategoryId == cat.financeCategoryId)
         .toList()
@@ -292,22 +299,20 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
             color: headerBg,
             border: Border(top: BorderSide(color: headerBorder, width: 0.5)),
           ),
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_rounded, size: 14),
+                icon: Icon(Icons.arrow_back_ios_rounded, size: 14, color: AppColors.textSecondary),
                 onPressed: widget.onCategoryPanelClose,
-                color: AppColors.textSecondary,
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.all(6),
                 constraints: const BoxConstraints(),
               ),
-              const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   cat.financeCategory?.name ?? 'Category',
-                  style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600, color: AppColors.accent),
+                  style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -345,6 +350,11 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
 
   Widget _buildGroupMode(Color headerBg, Color headerBorder) {
     final group = widget.selectedGroup;
+    final isDark = headerBg == const Color(0xFF1E1E1C) || headerBg.computeLuminance() < 0.1;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    final tabLabelStyle = GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600);
+    final tabUnselectedStyle = GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w400);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -357,9 +367,10 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
           child: group == null
               ? TabBar(
                   controller: _tabController,
-                  labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                  unselectedLabelStyle: const TextStyle(fontSize: 12),
+                  labelStyle: tabLabelStyle,
+                  unselectedLabelStyle: tabUnselectedStyle,
                   indicatorColor: AppColors.accent,
+                  indicatorWeight: 2,
                   labelColor: AppColors.accent,
                   unselectedLabelColor: AppColors.textSecondary,
                   tabs: const [Tab(text: 'Summary'), Tab(text: 'Transactions')],
@@ -368,22 +379,29 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                      padding: const EdgeInsets.fromLTRB(14, 8, 8, 0),
                       child: Row(
                         children: [
-                          Icon(Icons.folder_outlined, size: 13, color: AppColors.accent),
-                          const SizedBox(width: 6),
+                          Container(
+                            width: 6, height: 6,
+                            margin: const EdgeInsets.only(right: 7),
+                            decoration: BoxDecoration(
+                              color: group.budgetType == BudgetType.income ? AppColors.success : AppColors.accent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                           Expanded(
                             child: Text(
                               group.title ?? '',
-                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.dmSans(
+                                fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, size: 15),
+                            icon: Icon(Icons.close_rounded, size: 14, color: AppColors.textTertiary),
                             onPressed: widget.onClose,
-                            color: AppColors.textTertiary,
                             visualDensity: VisualDensity.compact,
                             padding: const EdgeInsets.all(8),
                             constraints: const BoxConstraints(),
@@ -393,9 +411,10 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
                     ),
                     TabBar(
                       controller: _tabController,
-                      labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                      unselectedLabelStyle: const TextStyle(fontSize: 12),
+                      labelStyle: tabLabelStyle,
+                      unselectedLabelStyle: tabUnselectedStyle,
                       indicatorColor: AppColors.accent,
+                      indicatorWeight: 2,
                       labelColor: AppColors.accent,
                       unselectedLabelColor: AppColors.textSecondary,
                       tabs: const [Tab(text: 'Transactions')],

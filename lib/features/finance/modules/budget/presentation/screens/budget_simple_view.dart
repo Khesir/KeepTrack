@@ -49,7 +49,7 @@ class BudgetSimpleView extends StatefulWidget {
   final DateTime? profileEndDate;
   final void Function(bool isIncome)? onAddProfileGroup;
   final VoidCallback? onToggleView;
-  final VoidCallback? onOpenSettings;
+  final void Function(List<Budget> monthBudgets)? onOpenSettings;
   final bool profileIsMonthly;
 
   const BudgetSimpleView({
@@ -117,8 +117,20 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     }
   }
 
-  void _prevMonth() => setState(() { _month = DateTime(_month.year, _month.month - 1); _loadTx(); });
-  void _nextMonth() => setState(() { _month = DateTime(_month.year, _month.month + 1); _loadTx(); });
+  void _prevMonth() {
+    setState(() => _month = DateTime(_month.year, _month.month - 1));
+    _loadTx();
+  }
+
+  void _nextMonth() {
+    setState(() => _month = DateTime(_month.year, _month.month + 1));
+    _loadTx();
+  }
+
+  void _backToCurrentMonth() {
+    setState(() => _month = DateTime.now());
+    _loadTx();
+  }
 
   String get _monthKey => '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
   String get _monthLabel => DateFormat('MMMM yyyy').format(_month);
@@ -157,11 +169,78 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     );
   }
 
-  void _showSettings(List<Budget> monthBudgets) {
+  void _showSettings(List<Budget> monthBudgets, MonthPlan? monthPlan) {
+    final allClosed = monthBudgets.isNotEmpty &&
+        monthBudgets.every((b) => b.status == BudgetStatus.closed);
     BudgetSettingsSheet.show(
       context,
       monthLabel: _monthLabel,
+      onCloseBudget: monthPlan != null && !monthPlan.isClosed
+          ? () => _confirmClosePlan(monthPlan)
+          : widget._isProfileMode && widget.profileIsMonthly && monthBudgets.isNotEmpty && !allClosed
+              ? () => _confirmCloseMonthBudgets(monthBudgets)
+              : null,
       onDeleteBudget: () => _confirmDeleteBudget(monthBudgets),
+    );
+  }
+
+  Future<void> _confirmClosePlan(MonthPlan plan) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Close budget for $_monthLabel?'),
+        content: const Text('This month plan will be marked as closed.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Close Budget')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || plan.id == null) return;
+    await _monthPlanController.closeMonthPlan(plan.id!);
+  }
+
+  Future<void> _confirmCloseMonthBudgets(List<Budget> monthBudgets) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Close $_monthLabel budget?'),
+        content: const Text('All active budget groups for this month will be marked as closed.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Close Budget')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    for (final b in monthBudgets) {
+      if (b.id != null && b.status == BudgetStatus.active) {
+        await _budgetController.closeBudget(b.id!);
+      }
+    }
+  }
+
+  void _showStartPlanningForMonthlyProfile(List<Budget> allBudgets) {
+    final prevMonth = DateTime(_month.year, _month.month - 1);
+    final prevKey = '${prevMonth.year}-${prevMonth.month.toString().padLeft(2, '0')}';
+    final prevLabel = DateFormat('MMMM yyyy').format(prevMonth);
+    final hasPrev = allBudgets.any((b) =>
+        b.budgetProfileId == widget.budgetProfileId &&
+        b.month == prevKey &&
+        b.status == BudgetStatus.active);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => StartPlanningSheet(
+        monthKey: _monthKey,
+        monthLabel: _monthLabel,
+        prevMonthKey: prevKey,
+        prevMonthLabel: prevLabel,
+        hasPrevBudgets: hasPrev,
+        budgetProfileId: widget.budgetProfileId,
+        monthPlanController: _monthPlanController,
+        budgetController: _budgetController,
+      ),
     );
   }
 
@@ -546,6 +625,16 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
 
     // ── Plan gate ─────────────────────────────────────────────────────────────
     final plans = _monthPlanController.data ?? [];
+
+    // Only show "Back to current" when the current real month has a plan
+    final realNow = DateTime.now();
+    final realMonthKey = '${realNow.year}-${realNow.month.toString().padLeft(2, '0')}';
+    final currentMonthHasPlan = widget._isProfileMode && widget.profileIsMonthly
+        ? budgets.any((b) =>
+            b.budgetProfileId == widget.budgetProfileId &&
+            b.month == realMonthKey &&
+            b.status == BudgetStatus.active)
+        : plans.any((p) => p.month == realMonthKey);
     final MonthPlan? monthPlan = widget._isProfileMode
         ? null
         : plans.cast<MonthPlan?>().firstWhere(
@@ -555,8 +644,16 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             (p) => p?.budgetProfileId == widget.budgetProfileId, orElse: () => null)
         : null;
     final bool hasMonthPlan = widget._isProfileMode
-        ? (profilePlan != null || monthBudgets.isNotEmpty)
+        ? widget.profileIsMonthly
+            ? monthBudgets.isNotEmpty
+            : (profilePlan != null || monthBudgets.isNotEmpty)
         : monthPlan != null;
+
+    final bool isMonthClosed = widget._isProfileMode
+        ? widget.profileIsMonthly
+            ? monthBudgets.isNotEmpty && monthBudgets.every((b) => b.status == BudgetStatus.closed)
+            : false
+        : monthPlan?.isClosed ?? false;
 
     // ── Shared header slivers ─────────────────────────────────────────────────
     final headerSlivers = <Widget>[
@@ -581,7 +678,8 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           color: widget.profileAccentColor ?? AppColors.accent,
           onBack: widget.onBack,
           onToggleView: widget.onToggleView,
-          onSettings: hasMonthPlan && widget.onOpenSettings != null ? () => widget.onOpenSettings!() : null,
+          // Always show settings for profiles (user can still edit/delete even without a plan)
+          onSettings: widget.onOpenSettings != null ? () => widget.onOpenSettings!(monthBudgets) : null,
         ))
       else if (widget._isProfileMode && widget.profileIsMonthly)
         SliverToBoxAdapter(child: _MonthlyProfileHeader(
@@ -589,46 +687,46 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           name: widget.profileName ?? '',
           color: widget.profileAccentColor ?? AppColors.accent,
           month: _month,
+          isClosed: isMonthClosed,
+          isCurrentMonth: _isCurrentMonth,
           onBack: widget.onBack,
           onPrev: _prevMonth,
-          onNext: _isCurrentMonth ? null : _nextMonth,
+          onNext: _nextMonth,
+          onBackToCurrentMonth: !_isCurrentMonth && currentMonthHasPlan ? _backToCurrentMonth : null,
           onToggleView: widget.onToggleView,
-          onSettings: hasMonthPlan && widget.onOpenSettings != null ? () => widget.onOpenSettings!() : null,
+          // Always show settings for profiles
+          onSettings: widget.onOpenSettings != null ? () => widget.onOpenSettings!(monthBudgets) : null,
         ))
       else
         SliverToBoxAdapter(child: SimpleMonthNav(
-          month: _month, isDark: isDark, onPrev: _prevMonth, onNext: _isCurrentMonth ? null : _nextMonth,
+          month: _month, isDark: isDark,
+          isClosed: isMonthClosed,
+          isCurrentMonth: _isCurrentMonth,
+          onPrev: _prevMonth, onNext: _nextMonth,
+          onBackToCurrentMonth: !_isCurrentMonth && currentMonthHasPlan ? _backToCurrentMonth : null,
           onToggleView: widget.onToggleView,
-          onSettings: hasMonthPlan ? () => (widget.onOpenSettings ?? () => _showSettings(monthBudgets))() : null,
+          onSettings: hasMonthPlan ? () => _showSettings(monthBudgets, monthPlan) : null,
         )),
     ];
 
-    // ── No plan: locked gate ──────────────────────────────────────────────────
-    if (!hasMonthPlan) {
-      return CustomScrollView(slivers: [
-        ...headerSlivers,
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: _NoPlanGate(
-            isDark: isDark,
-            label: widget._isProfileMode ? (widget.profileName ?? 'Custom Budget') : _monthLabel,
-            isProfile: widget._isProfileMode,
-            onStartPlanning: widget._isProfileMode
-                ? _startPlanningProfile
-                : _startPlanningMonthly,
-          ),
-        ),
-      ]);
-    }
+    final Widget noPlanGate = _NoPlanGate(
+      isDark: isDark,
+      label: widget._isProfileMode ? (widget.profileName ?? 'Custom Budget') : _monthLabel,
+      isProfile: widget._isProfileMode,
+      onStartPlanning: widget._isProfileMode
+          ? widget.profileIsMonthly
+              ? () => _showStartPlanningForMonthlyProfile(budgets)
+              : _startPlanningProfile
+          : () => _showStartPlanning(budgets),
+    );
 
-    // ── Normal content ────────────────────────────────────────────────────────
+    // ── Content (tab bar always visible; gate only on budget/summary tabs) ────
     return CustomScrollView(slivers: [
       ...headerSlivers,
       SliverToBoxAdapter(child: BudgetSimpleTabBar(
         isDark: isDark,
         selected: tab,
         onSelect: widget.onTabChange ?? (_) {},
-        // Tab 0 = Summary (no count), 1 = Budget, 2 = Subs, 3 = Debts, 4 = Receivables, 5 = Goals
         counts: [
           null,
           null,
@@ -638,24 +736,11 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           sortedGoals.where((g) => g.status == GoalStatus.active).length,
         ],
       )),
-      if (tab != 0)
-        SliverToBoxAdapter(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(animation),
-                child: child,
-              ),
-            ),
-            child: KeyedSubtree(key: ValueKey(tab), child: summaryCard),
-          ),
-        ),
+      // Tabs 0 & 1 require a plan — show the gate if none exists
+      if (!hasMonthPlan && (tab == 0 || tab == 1))
+        SliverFillRemaining(hasScrollBody: false, child: noPlanGate),
       // Tab 0: Overall summary
-      if (tab == 0) ...[
+      if (hasMonthPlan && tab == 0) ...[
         SliverToBoxAdapter(
           child: BudgetOverallSummary(
             monthBudgets: monthBudgets,
@@ -684,8 +769,25 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           ),
         ),
       ],
-      // Tab 1: Budget groups
-      if (tab == 1) ...[
+      // Summary card: shown first for tabs 1-5 (tab 1 requires a plan)
+      if (tab != 0 && (tab != 1 || hasMonthPlan))
+        SliverToBoxAdapter(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(animation),
+                child: child,
+              ),
+            ),
+            child: KeyedSubtree(key: ValueKey(tab), child: summaryCard),
+          ),
+        ),
+      // Tab 1: Budget groups (below summary card)
+      if (hasMonthPlan && tab == 1) ...[
         SliverToBoxAdapter(child: SimpleBudgetSection(
           isDark: isDark, label: 'INCOME', groups: incomeGroups, spentByCategory: spentByCategory, isIncome: true,
           onAddGroup: () => _showCreateGroup(true), onAddCategory: _showAddCategory,
@@ -700,6 +802,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       if (tab == 2)
         SliverToBoxAdapter(child: SimpleSubscriptionsSection(
           isDark: isDark, subs: activeSubs, month: _month,
+          isLocked: !hasMonthPlan,
           onAdd: _showAddSubscription, onRowTap: _showSubDetail,
           onSkip: _skipSubscription,
         )),
@@ -707,6 +810,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         SliverToBoxAdapter(child: SimpleDebtsSection(
           isDark: isDark, debts: sortedDebts, receivables: const [],
           paidThisMonth: paidThisMonthByDebt,
+          isLocked: !hasMonthPlan,
           onAddDebt: () => _showAddDebt(isReceivable: false),
           onAddReceivable: () => _showAddDebt(isReceivable: false),
           onRowTap: _showDebtDetail,
@@ -715,6 +819,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         SliverToBoxAdapter(child: SimpleDebtsSection(
           isDark: isDark, debts: const [], receivables: sortedReceivables,
           paidThisMonth: paidThisMonthByDebt,
+          isLocked: !hasMonthPlan,
           onAddDebt: () => _showAddDebt(isReceivable: true),
           onAddReceivable: () => _showAddDebt(isReceivable: true),
           onRowTap: _showDebtDetail,
@@ -723,6 +828,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         SliverToBoxAdapter(child: SimpleGoalsSection(
           isDark: isDark, goals: sortedGoals, onAdd: _showAddGoal, onRowTap: _showGoalDetail,
           contributedThisMonth: contributedThisMonthByGoal,
+          isLocked: !hasMonthPlan,
         )),
       const SliverToBoxAdapter(child: SizedBox(height: 100)),
     ]);
@@ -824,15 +930,19 @@ class _MonthlyProfileHeader extends StatelessWidget {
   final String name;
   final Color color;
   final DateTime month;
+  final bool isClosed;
+  final bool isCurrentMonth;
   final VoidCallback? onBack;
   final VoidCallback? onPrev;
   final VoidCallback? onNext;
+  final VoidCallback? onBackToCurrentMonth;
   final VoidCallback? onToggleView;
   final VoidCallback? onSettings;
 
   const _MonthlyProfileHeader({
     required this.isDark, required this.name, required this.color,
-    required this.month, this.onBack, this.onPrev, this.onNext,
+    required this.month, this.isClosed = false, this.isCurrentMonth = false,
+    this.onBack, this.onPrev, this.onNext, this.onBackToCurrentMonth,
     this.onToggleView, this.onSettings,
   });
 
@@ -867,6 +977,20 @@ class _MonthlyProfileHeader extends StatelessWidget {
                   onTap: onNext,
                   child: Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textSecondary),
                 ),
+              if (isClosed) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                  child: Text('Closed', style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                ),
+              ] else if (!isCurrentMonth && onBackToCurrentMonth != null) ...[
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: onBackToCurrentMonth,
+                  child: Text('Today', style: GoogleFonts.dmSans(fontSize: 9, color: AppColors.accent, fontWeight: FontWeight.w600)),
+                ),
+              ],
             ]),
           ]),
         ),

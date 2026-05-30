@@ -1,7 +1,7 @@
 import '../../domain/entities/month_plan.dart';
 import 'budget_model.dart';
 
-/// MonthPlan model - DTO for Supabase
+/// MonthPlan model - DTO for local cache
 class MonthPlanModel extends MonthPlan {
   MonthPlanModel({
     super.id,
@@ -9,13 +9,13 @@ class MonthPlanModel extends MonthPlan {
     super.budgetProfileId,
     super.userId,
     super.notes,
+    super.status = MonthPlanStatus.active,
     super.budgets = const [],
     super.budgetIds = const [],
     super.createdAt,
     super.updatedAt,
   });
 
-  /// Create model from entity
   factory MonthPlanModel.fromEntity(MonthPlan plan) {
     return MonthPlanModel(
       id: plan.id,
@@ -23,18 +23,23 @@ class MonthPlanModel extends MonthPlan {
       budgetProfileId: plan.budgetProfileId,
       userId: plan.userId,
       notes: plan.notes,
+      status: plan.status,
       budgets: plan.budgets,
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
     );
   }
 
-  /// Create model from JSON (NestJS camelCase response, budgets loaded separately)
   factory MonthPlanModel.fromJson(Map<String, dynamic> json) {
     final rawIds = json['budgetIds'];
     final parsedIds = rawIds is List
         ? rawIds.map((e) => e.toString()).toList()
         : <String>[];
+
+    final rawStatus = json['status'] as String?;
+    final status = rawStatus == 'closed'
+        ? MonthPlanStatus.closed
+        : MonthPlanStatus.active;
 
     return MonthPlanModel(
       id: json['id'] as String?,
@@ -42,6 +47,7 @@ class MonthPlanModel extends MonthPlan {
       budgetProfileId: json['budgetProfileId'] as String?,
       userId: json['userId'] as String?,
       notes: json['notes'] as String?,
+      status: status,
       budgets: const [],
       budgetIds: parsedIds,
       createdAt: json['createdAt'] != null
@@ -53,16 +59,6 @@ class MonthPlanModel extends MonthPlan {
     );
   }
 
-  /// NestJS API request body
-  Map<String, dynamic> toApiJson() {
-    return {
-      if (month != null) 'month': month,
-      if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
-      if (notes != null) 'notes': notes,
-    };
-  }
-
-  /// Cache serialisation (local storage)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
@@ -70,19 +66,20 @@ class MonthPlanModel extends MonthPlan {
       if (budgetProfileId != null) 'budgetProfileId': budgetProfileId,
       if (userId != null) 'userId': userId,
       if (notes != null) 'notes': notes,
+      'status': status.name,
       'budgetIds': budgetIds,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
   }
 
-  /// Return a new model with hydrated budgets attached
   MonthPlanModel withBudgets(List<BudgetModel> newBudgets) {
     return MonthPlanModel(
       id: id,
       month: month,
       userId: userId,
       notes: notes,
+      status: status,
       budgets: newBudgets,
       createdAt: createdAt,
       updatedAt: updatedAt,

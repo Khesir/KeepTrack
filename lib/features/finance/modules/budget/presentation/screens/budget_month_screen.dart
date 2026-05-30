@@ -32,8 +32,10 @@ import '../sheets/add_category_sheet.dart';
 import '../sheets/add_debts_sheet.dart';
 import '../sheets/add_subscription_sheet.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_simple_sheets.dart'
-    show GoalDetailSheet;
+    show GoalDetailSheet, DebtDetailSheet, SubDetailSheet;
 import '../sheets/category_detail_sheet.dart';
 import '../sheets/commitment_sheet.dart';
 import '../sheets/create_group_sheet.dart';
@@ -46,9 +48,18 @@ import '../widgets/debt_detail_content.dart';
 class BudgetMonthScreen extends ScopedScreen {
   final VoidCallback? onToggleView;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onBack;
   final String? budgetProfileId;
+  final bool profileIsMonthly;
 
-  const BudgetMonthScreen({super.key, this.onToggleView, this.onOpenSettings, this.budgetProfileId});
+  const BudgetMonthScreen({
+    super.key,
+    this.onToggleView,
+    this.onOpenSettings,
+    this.onBack,
+    this.budgetProfileId,
+    this.profileIsMonthly = false,
+  });
 
   @override
   State<BudgetMonthScreen> createState() => _BudgetMonthScreenState();
@@ -198,7 +209,10 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
           onCreateGroup: _showCreateGroupSheet,
           onToggleView: widget.onToggleView,
           onOverrideSettings: widget.onOpenSettings,
+          onBack: widget.onBack,
+          onBackToCurrentMonth: _backToCurrentMonth,
           budgetProfileId: widget.budgetProfileId,
+          profileIsMonthly: widget.profileIsMonthly,
           onStartPlanning: _showStartPlanningSheet,
           onDeletePlan: _confirmDeletePlan,
           onShowCommitments: _showCommitmentsSheet,
@@ -207,6 +221,7 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
           onAddDebt: (isReceivable) => _showAddDebtSheet(isReceivable: isReceivable),
           onAddSubscription: _showAddSubscriptionSheet,
           onPaySubscription: _paySubscription,
+          onSubscriptionTap: _showSubDetail,
           onAddGoal: _showAddGoalSheet,
           onGoalTap: _showGoalDetailSheet,
           selectedTab: _selectedTab,
@@ -225,10 +240,11 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
         loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
         errorBuilder: (_, msg) => Center(child: Text('Error: $msg')),
       ),
-      floatingActionButton: _buildFab(),
     );
   }
 
+  // keep for potential standalone use
+  // ignore: unused_element
   Widget _buildFab() {
     return FloatingActionButton.extended(
       onPressed: () => CreateTransactionSheet.show(
@@ -275,6 +291,18 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
   void _nextMonth() {
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+      _selectedGroup = null;
+      _selectedCategory = null;
+      _selectedCategoryGroup = null;
+      _selectedDebt = null;
+    });
+    _loadMonthTransactions();
+  }
+
+  void _backToCurrentMonth() {
+    final now = DateTime.now();
+    setState(() {
+      _currentMonth = now;
       _selectedGroup = null;
       _selectedCategory = null;
       _selectedCategoryGroup = null;
@@ -447,14 +475,15 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
   /// Shown when no budget exists for the month — creates the MonthPlan first,
   /// then offers "Copy from previous month" or "Start fresh".
   void _showStartPlanningSheet(List<Budget> allBudgets) {
-    final prevBudgets = allBudgets
-        .where(
-          (b) =>
-              b.month == _prevMonthKey &&
-              b.periodType == BudgetPeriodType.monthly &&
-              b.status == BudgetStatus.active,
-        )
-        .toList();
+    final prevBudgets = widget.profileIsMonthly && widget.budgetProfileId != null
+        ? allBudgets.where((b) =>
+            b.budgetProfileId == widget.budgetProfileId &&
+            b.month == _prevMonthKey &&
+            b.status == BudgetStatus.active).toList()
+        : allBudgets.where((b) =>
+            b.month == _prevMonthKey &&
+            b.periodType == BudgetPeriodType.monthly &&
+            b.status == BudgetStatus.active).toList();
 
     showModalBottomSheet(
       context: context,
@@ -465,6 +494,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
         prevMonthKey: _prevMonthKey,
         prevMonthLabel: _prevMonthLabel,
         hasPrevBudgets: prevBudgets.isNotEmpty,
+        budgetProfileId: widget.budgetProfileId,
         monthPlanController: _monthPlanController,
         budgetController: _budgetController,
       ),
@@ -658,26 +688,71 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
   }
 
   void _showDebtDetailSheet(Debt debt, List<Transaction> allTransactions) {
-    final debtTxns = allTransactions.where((t) => t.debtId == debt.id).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (_, controller) => DebtDetailContent(
-          debt: debt,
-          transactions: debtTxns,
-          scrollController: controller,
-          onPay: () {
-            Navigator.pop(context);
-            _showDebtPaymentDialog(debt);
-          },
-        ),
+      backgroundColor: Colors.transparent,
+      builder: (_) => DebtDetailSheet(
+        debt: debt,
+        debtController: _debtController,
+        onPay: (amount, fee) async {
+          final isReceivable = debt.type == DebtType.lending;
+          final userId = locator.get<AuthController>().currentUser?.id ?? '';
+          final categoryId = await _categoryController.findOrCreate(
+            name: isReceivable ? 'Receivables' : 'Debt Payment',
+            type: isReceivable ? CategoryType.income : CategoryType.expense,
+            userId: userId,
+          );
+          if (categoryId == null) return;
+          await _transactionController.createTransaction(Transaction(
+            amount: amount,
+            fee: fee ?? 0.0,
+            type: isReceivable ? TransactionType.income : TransactionType.expense,
+            date: DateTime.now(),
+            debtId: debt.id,
+            financeCategoryId: categoryId,
+            description: isReceivable
+                ? 'Collection from ${debt.personName}'
+                : 'Payment to ${debt.personName}',
+            budgetProfileId: widget.budgetProfileId,
+          ));
+          await _debtController.payDebt(debt.id!, amount: amount, fee: fee);
+          _budgetController.refreshBudgetsWithSpentAmounts();
+        },
+        onUpdate: (updated) => _debtController.updateDebt(updated),
+      ),
+    );
+  }
+
+  void _showSubDetail(Subscription sub) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SubDetailSheet(
+        sub: sub,
+        subController: _subscriptionController,
+        month: _currentMonth,
+        onPay: () async {
+          final userId = locator.get<AuthController>().currentUser?.id ?? '';
+          final categoryId = await _categoryController.findOrCreate(
+            name: 'Subscriptions',
+            type: CategoryType.expense,
+            userId: userId,
+          );
+          if (categoryId == null) return;
+          await _transactionController.createTransaction(Transaction(
+            amount: sub.amount,
+            type: TransactionType.expense,
+            date: DateTime.now(),
+            subscriptionId: sub.id,
+            financeCategoryId: categoryId,
+            description: sub.name,
+            budgetProfileId: widget.budgetProfileId,
+          ));
+          await _subscriptionController.pay(sub.id!);
+        },
+        onUpdate: (updated) => _subscriptionController.updateSubscription(updated),
       ),
     );
   }

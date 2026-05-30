@@ -5,12 +5,14 @@ import 'package:keep_track/core/theme/app_theme.dart';
 class BudgetSettingsSheet extends StatelessWidget {
   final String monthLabel;
   final VoidCallback? onEditBudget;
+  final VoidCallback? onCloseBudget;
   final VoidCallback onDeleteBudget;
 
   const BudgetSettingsSheet({
     super.key,
     required this.monthLabel,
     this.onEditBudget,
+    this.onCloseBudget,
     required this.onDeleteBudget,
   });
 
@@ -18,6 +20,7 @@ class BudgetSettingsSheet extends StatelessWidget {
     BuildContext context, {
     required String monthLabel,
     VoidCallback? onEditBudget,
+    VoidCallback? onCloseBudget,
     required VoidCallback onDeleteBudget,
   }) {
     return showModalBottomSheet(
@@ -27,6 +30,7 @@ class BudgetSettingsSheet extends StatelessWidget {
       builder: (_) => BudgetSettingsSheet(
         monthLabel: monthLabel,
         onEditBudget: onEditBudget,
+        onCloseBudget: onCloseBudget,
         onDeleteBudget: onDeleteBudget,
       ),
     );
@@ -72,6 +76,18 @@ class BudgetSettingsSheet extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               onEditBudget!();
+            },
+          ),
+        ],
+        if (onCloseBudget != null) ...[
+          Divider(height: 1, color: divColor),
+          _SettingsRow(
+            icon: Icons.check_circle_outline_rounded,
+            label: 'Close Budget',
+            color: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
+            onTap: () {
+              Navigator.pop(context);
+              onCloseBudget!();
             },
           ),
         ],

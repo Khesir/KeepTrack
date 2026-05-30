@@ -11,6 +11,7 @@ class GoalSection extends StatelessWidget {
   final VoidCallback onAdd;
   final void Function(Goal) onGoalTap;
   final int? dragIndex;
+  final bool isLocked;
 
   const GoalSection({
     super.key,
@@ -19,6 +20,7 @@ class GoalSection extends StatelessWidget {
     required this.onGoalTap,
     this.contributedThisMonth = const {},
     this.dragIndex,
+    this.isLocked = false,
   });
 
   @override
@@ -119,26 +121,29 @@ class GoalSection extends StatelessWidget {
                 goal: g,
                 isDark: isDark,
                 contributedThisMonth: contributedThisMonth[g.id] ?? 0,
-                onTap: () => onGoalTap(g),
+                onTap: isLocked ? null : () => onGoalTap(g),
               ),
               Divider(height: 1, color: borderColor),
             ]),
 
-          // ── Add link ───────────────────────────────────────────────────
-          GestureDetector(
-            onTap: onAdd,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              child: Text(
-                'Add Goal',
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.accent,
+          // ── Add link ────────────────────────────────��──────────────────
+          if (!isLocked)
+            GestureDetector(
+              onTap: onAdd,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                child: Text(
+                  'Add Goal',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accent,
+                  ),
                 ),
               ),
-            ),
-          ),
+            )
+          else
+            const SizedBox(height: 14),
         ],
       ),
     );
@@ -149,7 +154,7 @@ class _GoalRow extends StatelessWidget {
   final Goal goal;
   final bool isDark;
   final double contributedThisMonth;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _GoalRow({
     required this.goal,

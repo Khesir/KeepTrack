@@ -138,12 +138,13 @@ class CategoryRowState extends State<CategoryRow> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final planned = widget.category.targetAmount;
     final actual = widget.spentAmount;
     final progress = planned > 0 ? (actual / planned).clamp(0.0, 1.0) : 0.0;
     final isOver = actual > planned;
     final isIncome = widget.isIncomeGroup;
-    // Income: over = good (green). Expense: over = bad (red).
     final overColor = isIncome ? AppColors.success : AppColors.error;
     final progressColor = isOver
         ? overColor
@@ -165,9 +166,7 @@ class CategoryRowState extends State<CategoryRow> {
                 Expanded(
                   child: Text(
                     widget.category.financeCategory?.name ?? '—',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
+                    style: AppTextStyles.bodySmall.copyWith(color: textPrimary),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -255,7 +254,7 @@ class CategoryRowState extends State<CategoryRow> {
                       color: isOver
                           ? overColor
                           : actual > 0
-                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.primaryForeground : AppColors.textPrimary)
+                          ? textPrimary
                           : AppColors.textTertiary,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),

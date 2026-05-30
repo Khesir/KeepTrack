@@ -117,6 +117,16 @@ class MonthPlanController extends StreamState<AsyncState<List<MonthPlan>>> {
     return plan;
   }
 
+  /// Set the plan's status to closed.
+  Future<void> closeMonthPlan(String id) async {
+    await executeSilent(() async {
+      final result = await _repository.closeMonthPlan(id);
+      final closed = result.unwrap();
+      final current = data ?? [];
+      return current.map((p) => p.id == id ? closed : p).toList();
+    });
+  }
+
   /// Clear all month plan state (called on sign-out to prevent data leaking to next user)
   void clear() {
     emit(const AsyncData([]));

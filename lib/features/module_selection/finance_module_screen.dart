@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/logging/log_viewer_screen.dart';
@@ -17,6 +16,7 @@ import 'package:keep_track/features/finance/presentation/screens/tabs/dashboard/
 import 'package:keep_track/features/finance/presentation/screens/tabs/savings/savings_tab.dart';
 import 'package:keep_track/features/finance/presentation/screens/transaction_planner_screen.dart';
 import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_sheet.dart';
+import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import '../auth/presentation/screens/auth_settings_screen.dart';
 import '../settings/setting_page.dart';
@@ -92,6 +92,17 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
     });
   }
 
+  void _refreshTransactions() {
+    final now = DateTime.now();
+    locator.get<TransactionController>().loadTransactionsByDateRange(
+      DateTime(now.year, now.month, 1),
+      DateTime(now.year, now.month + 1, 1),
+    );
+  }
+
+  String? get _activeProfileId =>
+      locator.get<BudgetProfileController>().activeProfileId;
+
   // Savings tab (index 2) has no FAB
   @override
   Widget build(BuildContext context) {
@@ -111,16 +122,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   Widget _buildDesktop() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => CreateTransactionSheet.show(
-          context,
-          onCreated: () {
-            final now = DateTime.now();
-            locator.get<TransactionController>().loadTransactionsByDateRange(
-              DateTime(now.year, now.month, 1),
-              DateTime(now.year, now.month + 1, 1),
-            );
-          },
-        ),
+        onPressed: () => CreateTransactionSheet.show(context, onCreated: _refreshTransactions, initialProfileId: _activeProfileId),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
@@ -173,7 +175,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SvgPicture.asset('assets/app-icon.svg', width: 26, height: 26),
+          Image.asset('assets/icon/app_icon.png', width: 26, height: 26),
           const SizedBox(width: 8),
           Text(
             'Keep Track',
@@ -291,16 +293,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             ),
             const SizedBox(width: 10),
             GestureDetector(
-              onTap: () => CreateTransactionSheet.show(
-                context,
-                onCreated: () {
-                  final now = DateTime.now();
-                  locator.get<TransactionController>().loadTransactionsByDateRange(
-                    DateTime(now.year, now.month, 1),
-                    DateTime(now.year, now.month + 1, 1),
-                  );
-                },
-              ),
+              onTap: () => CreateTransactionSheet.show(context, onCreated: _refreshTransactions, initialProfileId: _activeProfileId),
               child: Container(
                 width: 62,
                 height: 62,
@@ -406,7 +399,7 @@ class _SidebarHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
       child: Row(
         children: [
-          SvgPicture.asset('assets/app-icon.svg', width: 36, height: 36),
+          Image.asset('assets/icon/app_icon.png', width: 36, height: 36),
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
