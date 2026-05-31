@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/gcash_theme.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
@@ -62,9 +63,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
             onPressed: () {
               _controller.deleteCategory(category.id!);
               Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Category deleted')));
+              AppToast.success(context, 'Category deleted');
             },
             child: const Text('Delete'),
           ),

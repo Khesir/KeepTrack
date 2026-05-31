@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -323,16 +324,12 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedProfileId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a budget profile')),
-      );
+      AppToast.show(context, 'Please select a budget profile');
       return;
     }
 
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category')),
-      );
+      AppToast.show(context, 'Please select a category');
       return;
     }
 
@@ -367,16 +364,12 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       await _transactionController.createTransaction(transaction);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction created successfully')),
-        );
+        AppToast.success(context, 'Transaction created successfully');
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to create: $e')));
+        AppToast.error(context, 'Failed to create: $e');
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);

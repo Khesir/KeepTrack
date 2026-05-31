@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 
 import '../controllers/budget_controller.dart';
 import '../../../../presentation/state/month_plan_controller.dart';
@@ -61,23 +62,12 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
         );
       }
       if (mounted) {
-        // Capture messenger before closing the sheet so the snackbar
-        // shows on the parent screen, not the dialog being dismissed.
-        final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Budget group created!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        AppToast.success(context, 'Budget group created!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.error(context, 'Error: $e');
         setState(() => _saving = false);
       }
     }

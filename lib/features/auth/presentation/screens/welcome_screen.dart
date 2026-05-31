@@ -44,7 +44,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Personal finance, fully private.\nYour data never leaves your device.',
+                'Zero-based budgeting, fully offline.\nGive every peso a purpose.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.dmSans(
                   fontSize: 14,

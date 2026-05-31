@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_state.dart';
@@ -66,12 +67,10 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
       final updated = await _controller.pay(sub.id!);
       if (_selected?.id == sub.id) setState(() => _selected = updated);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${sub.name} marked as paid. Next billing: ${DateFormat('MMM d, y').format(updated.nextBillingDate)}')),
-        );
+        AppToast.success(context, '${sub.name} marked as paid. Next billing: ${DateFormat('MMM d, y').format(updated.nextBillingDate)}');
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      if (mounted) AppToast.error(context, 'Failed: $e');
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 
 import '../../domain/entities/budget_category.dart';
 
@@ -71,9 +72,7 @@ class _EditAmountDialogState extends State<_EditAmountDialog> {
   Future<void> _save() async {
     final amount = double.tryParse(_controller.text);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
+      AppToast.error(context, 'Enter a valid amount');
       return;
     }
     setState(() => _saving = true);
@@ -82,9 +81,7 @@ class _EditAmountDialogState extends State<_EditAmountDialog> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.error(context, 'Error: $e');
         setState(() => _saving = false);
       }
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
 
@@ -69,6 +70,7 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
                 budgetId: created.id!,
                 financeCategoryId: cat.financeCategoryId,
                 targetAmount: cat.targetAmount,
+                financeCategory: cat.financeCategory,
               ),
             );
           }
@@ -84,8 +86,7 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed to copy: $e')));
+        AppToast.error(context, 'Failed to copy: $e');
         setState(() => _loading = false);
       }
     }

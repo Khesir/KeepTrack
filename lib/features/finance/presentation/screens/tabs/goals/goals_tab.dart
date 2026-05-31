@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -125,9 +126,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                         onPressed: () async {
                           final amount = double.tryParse(amountController.text);
                           if (amount == null || amount <= 0) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please enter a valid amount')),
-                            );
+                            AppToast.error(dialogContext, 'Please enter a valid amount');
                             return;
                           }
                           try {
@@ -143,9 +142,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                             if (dialogContext.mounted) Navigator.pop(dialogContext, true);
                           } catch (e) {
                             if (dialogContext.mounted) {
-                              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                SnackBar(content: Text('Failed to record payment: $e')),
-                              );
+                              AppToast.error(dialogContext, 'Failed to record payment: $e');
                             }
                           }
                         },
@@ -162,9 +159,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
     );
 
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment recorded successfully')),
-      );
+      AppToast.success(context, 'Payment recorded successfully');
     }
 
     amountController.dispose();

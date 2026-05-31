@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
@@ -141,9 +142,7 @@ class _CommitmentTile extends StatelessWidget {
             onPressed: () async {
               final amount = double.tryParse(amountCtrl.text);
               if (amount == null || amount <= 0) {
-                ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  const SnackBar(content: Text('Enter a valid amount')),
-                );
+                AppToast.error(dialogCtx, 'Enter a valid amount');
                 return;
               }
               try {
@@ -158,9 +157,7 @@ class _CommitmentTile extends StatelessWidget {
                 if (dialogCtx.mounted) Navigator.pop(dialogCtx, true);
               } catch (e) {
                 if (dialogCtx.mounted) {
-                  ScaffoldMessenger.of(
-                    dialogCtx,
-                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                  AppToast.error(dialogCtx, 'Failed: $e');
                 }
               }
             },
@@ -171,9 +168,7 @@ class _CommitmentTile extends StatelessWidget {
     );
 
     if (result == true && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Payment recorded')));
+      AppToast.success(context, 'Payment recorded');
     }
     amountCtrl.dispose();
   }
@@ -204,9 +199,7 @@ class _CommitmentTile extends StatelessWidget {
     if (confirmed == true && payment.id != null) {
       await plannedPaymentController.recordPayment(payment.id!);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Payment skipped')));
+        AppToast.success(context, 'Payment skipped');
       }
     }
   }

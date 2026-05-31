@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'failure.dart';
 import 'error_handler.dart';
 
@@ -289,17 +290,5 @@ void showErrorSnackBar(
   Failure failure, {
   VoidCallback? onRetry,
 }) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(failure.userMessage),
-      backgroundColor: Colors.red.shade700,
-      action: failure.isRetryable && onRetry != null
-          ? SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: onRetry,
-            )
-          : null,
-    ),
-  );
+  AppToast.error(context, failure.userMessage);
 }

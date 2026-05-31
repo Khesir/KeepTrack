@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'app_logger.dart';
 
 /// Screen that displays all app logs
@@ -63,9 +64,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     final text = _logs.map((log) => log.toString()).join('\n');
     Clipboard.setData(ClipboardData(text: text));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Logs copied to clipboard')),
-    );
+    AppToast.success(context, 'Logs copied to clipboard');
   }
 
   void _clearLogs() {
@@ -249,11 +248,7 @@ class _LogEntryTile extends StatelessWidget {
                         Clipboard.setData(ClipboardData(
                           text: '${log.message}\n\n${log.stackTrace}',
                         ));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Stack trace copied to clipboard'),
-                          ),
-                        );
+                        AppToast.success(context, 'Stack trace copied to clipboard');
                         Navigator.pop(context);
                       },
                       child: const Text('Copy'),

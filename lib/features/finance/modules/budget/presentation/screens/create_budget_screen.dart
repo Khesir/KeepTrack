@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
@@ -105,9 +106,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
 
   Future<void> _saveBudget() async {
     if (_categories.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one category')),
-      );
+      AppToast.error(context, 'Please add at least one category');
       return;
     }
 
@@ -117,13 +116,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
       if (_isEditing) {
         await _saveEdits();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Budget updated successfully!'),
-              backgroundColor: AppColors.success,
-              duration: Duration(seconds: 3),
-            ),
-          );
+          AppToast.success(context, 'Budget updated successfully!');
         }
       } else {
         await _createNew();
@@ -133,13 +126,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
       if (mounted) context.goBack(true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error ${_isEditing ? 'updating' : 'creating'} budget: $e',
-            ),
-          ),
-        );
+        AppToast.error(context, 'Error ${_isEditing ? 'updating' : 'creating'} budget: $e');
       }
     } finally {
       if (mounted) setState(() => _isCreating = false);
@@ -213,9 +200,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
         .firstWhere((b) => b?.id == budgetId, orElse: () => null);
 
     if (source == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not find source budget')),
-      );
+      AppToast.error(context, 'Could not find source budget');
       return;
     }
 
@@ -236,14 +221,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
         );
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Copied ${_categories.length} categories from '
-          '${source.title ?? formatMonthDisplay(source.month)}',
-        ),
-      ),
-    );
+    AppToast.success(context, 'Copied ${_categories.length} categories from ${source.title ?? formatMonthDisplay(source.month)}');
   }
 
   void _showCategoryDialog({BudgetCategory? editing}) {
@@ -260,12 +238,7 @@ class _CreateBudgetScreenState extends ScopedScreenState<CreateBudgetScreen> {
               (e) => e.financeCategoryId == cat.financeCategoryId,
             );
             if (isDuplicate) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('This category is already added to the budget'),
-                  backgroundColor: AppColors.warning,
-                ),
-              );
+              AppToast.show(context, 'This category is already added to the budget');
               return;
             }
           }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
@@ -38,13 +39,7 @@ class _BudgetManagementScreenState
     context.goToBudgetCreate().then((created) {
       _controller.refreshBudgetsWithSpentAmounts();
       if (created == true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Budget created successfully!'),
-            backgroundColor: AppColors.success,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        AppToast.success(context, 'Budget created successfully!');
       }
     });
   }
@@ -71,13 +66,7 @@ class _BudgetManagementScreenState
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All budgets refreshed!'),
-          backgroundColor: AppColors.success,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppToast.success(context, 'All budgets refreshed!');
     }
   }
 

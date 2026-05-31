@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/demo/demo_mode.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/restart/app_restart_widget.dart';
@@ -14,6 +15,7 @@ import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/auth/presentation/widgets/login_dialog.dart';
+import 'package:keep_track/features/settings/data/services/backup_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -994,6 +996,7 @@ class _DataPaneState extends State<_DataPane> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        _PaneLabel('Demo', leftPadding: 0),
         _PaneRow(
           isDark: widget.isDark,
           icon: Icons.science_outlined,
@@ -1008,6 +1011,40 @@ class _DataPaneState extends State<_DataPane> {
             activeThumbColor: AppColors.accent,
           ),
         ),
+        _PaneLabel('Backup & Restore', leftPadding: 0),
+        _PaneRow(
+          isDark: widget.isDark,
+          icon: Icons.file_download_outlined,
+          iconColor: AppColors.success,
+          label: 'Export to File',
+          subtitle: 'Save an encrypted backup to your device',
+          onTap: () => _exportToFile(context),
+        ),
+        _PaneRow(
+          isDark: widget.isDark,
+          icon: Icons.cloud_upload_outlined,
+          iconColor: AppColors.accent,
+          label: 'Sync to Cloud',
+          subtitle: 'Upload an encrypted backup to the server',
+          onTap: () => _syncToCloud(context),
+        ),
+        _PaneRow(
+          isDark: widget.isDark,
+          icon: Icons.file_upload_outlined,
+          iconColor: AppColors.info,
+          label: 'Import from File',
+          subtitle: 'Restore data from an encrypted backup file',
+          onTap: () => _importFromFile(context),
+        ),
+        _PaneRow(
+          isDark: widget.isDark,
+          icon: Icons.cloud_download_outlined,
+          iconColor: AppColors.info,
+          label: 'Restore from Cloud',
+          subtitle: 'Restore data from your cloud backup',
+          onTap: () => _restoreFromCloud(context),
+        ),
+        _PaneLabel('Danger Zone', leftPadding: 0),
         _PaneRow(
           isDark: widget.isDark,
           icon: Icons.restore_rounded,
@@ -1027,6 +1064,162 @@ class _DataPaneState extends State<_DataPane> {
         ),
       ],
     );
+  }
+
+  BackupService _buildBackupService() => BackupService(
+        cache: locator.get<LocalCache>(),
+        encryption: BackupEncryptionService(),
+        remote: BackupRemoteDatasource(),
+      );
+
+  Future<String?> _showPasswordDialog(BuildContext context, {bool confirm = false}) {
+    final pwdCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    var obscure = true;
+    String? error;
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(confirm ? 'Set Backup Password' : 'Enter Backup Password', style: AppTextStyles.h4),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (confirm) ...[
+              Text('Choose a password to encrypt your backup. You will need it to restore.', style: AppTextStyles.bodySmall),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: pwdCtrl,
+              obscureText: obscure,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                errorText: error,
+                suffixIcon: IconButton(
+                  icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
+                  onPressed: () => setS(() => obscure = !obscure),
+                ),
+              ),
+            ),
+            if (confirm) ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: obscure,
+                decoration: const InputDecoration(labelText: 'Confirm Password'),
+              ),
+            ],
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final pwd = pwdCtrl.text.trim();
+                if (pwd.isEmpty) { setS(() => error = 'Password cannot be empty'); return; }
+                if (confirm && pwd != confirmCtrl.text.trim()) { setS(() => error = 'Passwords do not match'); return; }
+                Navigator.pop(ctx, pwd);
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _showConfirmReplaceDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Replace all data?', style: AppTextStyles.h4),
+        content: Text(
+          'This will permanently replace all your current data with the backup. This cannot be undone.',
+          style: AppTextStyles.bodySmall,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.warning),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  void _showBackupError(BuildContext context, Object e) {
+    String message;
+    if (e is WrongPasswordException) {
+      message = 'Wrong password. The backup could not be decrypted.';
+    } else if (e is InvalidBackupException) {
+      message = 'Invalid backup file. Make sure you selected a valid .ktbak file.';
+    } else {
+      message = 'Something went wrong: $e';
+    }
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Backup Error', style: AppTextStyles.h4),
+        content: Text(message, style: AppTextStyles.bodySmall),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+      ),
+    );
+  }
+
+  Future<void> _exportToFile(BuildContext context) async {
+    final password = await _showPasswordDialog(context, confirm: true);
+    if (password == null || !context.mounted) return;
+    try {
+      final path = await _buildBackupService().exportToFile(password);
+      if (!context.mounted) return;
+      if (path != null) {
+        AppToast.success(context, 'Backup saved to $path');
+      }
+    } catch (e) {
+      _showBackupError(context, e);
+    }
+  }
+
+  Future<void> _syncToCloud(BuildContext context) async {
+    final password = await _showPasswordDialog(context, confirm: true);
+    if (password == null || !context.mounted) return;
+    try {
+      await _buildBackupService().syncToCloud(password);
+      if (!context.mounted) return;
+      AppToast.success(context, 'Backup synced to cloud');
+    } catch (e) {
+      _showBackupError(context, e);
+    }
+  }
+
+  Future<void> _importFromFile(BuildContext context) async {
+    final confirmed = await _showConfirmReplaceDialog(context);
+    if (!confirmed || !context.mounted) return;
+    final password = await _showPasswordDialog(context, confirm: false);
+    if (password == null || !context.mounted) return;
+    try {
+      final imported = await _buildBackupService().importFromFile(password);
+      if (imported && context.mounted) AppRestartWidget.of(context).restart();
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      _showBackupError(context, e);
+    }
+  }
+
+  Future<void> _restoreFromCloud(BuildContext context) async {
+    final confirmed = await _showConfirmReplaceDialog(context);
+    if (!confirmed || !context.mounted) return;
+    final password = await _showPasswordDialog(context, confirm: false);
+    if (password == null || !context.mounted) return;
+    try {
+      await _buildBackupService().restoreFromCloud(password);
+      if (context.mounted) AppRestartWidget.of(context).restart();
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      _showBackupError(context, e);
+    }
   }
 
   Future<void> _wipeAllData(BuildContext context) async {
@@ -1097,11 +1290,12 @@ class _DataPaneState extends State<_DataPane> {
 
 class _PaneLabel extends StatelessWidget {
   final String text;
-  const _PaneLabel(this.text);
+  final double leftPadding;
+  const _PaneLabel(this.text, {this.leftPadding = 24});
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+        padding: EdgeInsets.fromLTRB(leftPadding, 16, 24, 4),
         child: Text(
           text.toUpperCase(),
           style: GoogleFonts.dmSans(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/network/api_client.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -65,9 +66,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
             onPressed: () async {
               final amount = double.tryParse(amountController.text);
               if (amount == null || amount <= 0) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Please enter a valid amount')),
-                );
+                AppToast.error(dialogContext, 'Please enter a valid amount');
                 return;
               }
 
@@ -88,9 +87,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                 }
               } catch (e) {
                 if (dialogContext.mounted) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    SnackBar(content: Text('Failed to record payment: $e')),
-                  );
+                  AppToast.error(dialogContext, 'Failed to record payment: $e');
                 }
               }
             },
@@ -101,9 +98,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
     );
 
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment recorded successfully')),
-      );
+      AppToast.success(context, 'Payment recorded successfully');
     }
 
     amountController.dispose();
@@ -140,15 +135,11 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
       _controller.loadPlannedPayments();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment skipped successfully')),
-        );
+        AppToast.success(context, 'Payment skipped successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to skip payment: $e')));
+        AppToast.error(context, 'Failed to skip payment: $e');
       }
     }
   }

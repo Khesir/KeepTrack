@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/config/app_info.dart';
 import 'package:keep_track/core/services/notification/notification_service.dart';
@@ -39,12 +40,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
 
     if (!notificationService.isInitialized) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Notification service not initialized'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      AppToast.show(context, 'Notification service not initialized');
       return;
     }
 
@@ -56,12 +52,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
     );
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Test notification triggered!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    AppToast.success(context, 'Test notification triggered!');
   }
 
   void _showUpdateDialog(VersionCheckResult result) {

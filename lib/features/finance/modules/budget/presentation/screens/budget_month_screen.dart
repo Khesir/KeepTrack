@@ -34,6 +34,7 @@ import '../sheets/add_subscription_sheet.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_simple_sheets.dart'
     show GoalDetailSheet, DebtDetailSheet, SubDetailSheet;
 import '../sheets/category_detail_sheet.dart';
@@ -364,11 +365,7 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
 extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
   void _showAddCategorySheet(Budget group) {
     if (group.id == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Budget group is still saving. Please wait a moment.'),
-        ),
-      );
+      AppToast.show(context, 'Budget group is still saving. Please wait a moment.');
       return;
     }
     showModalBottomSheet(
@@ -633,19 +630,11 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
             onPressed: () async {
               final amount = double.tryParse(amountCtrl.text);
               if (amount == null || amount <= 0) {
-                ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  const SnackBar(content: Text('Enter a valid amount')),
-                );
+                AppToast.error(dialogCtx, 'Enter a valid amount');
                 return;
               }
               if (amount > debt.remainingAmount) {
-                ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Amount exceeds remaining balance of ${formatCurrency(debt.remainingAmount)}',
-                    ),
-                  ),
-                );
+                AppToast.error(dialogCtx, 'Amount exceeds remaining balance of ${formatCurrency(debt.remainingAmount)}');
                 return;
               }
               try {
@@ -660,9 +649,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
                 if (dialogCtx.mounted) Navigator.pop(dialogCtx, true);
               } catch (e) {
                 if (dialogCtx.mounted) {
-                  ScaffoldMessenger.of(
-                    dialogCtx,
-                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                  AppToast.error(dialogCtx, 'Failed: $e');
                 }
               }
             },
@@ -676,14 +663,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
     feeCtrl.dispose();
 
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isReceivable ? 'Collection recorded' : 'Payment recorded',
-          ),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      AppToast.success(context, isReceivable ? 'Collection recorded' : 'Payment recorded');
     }
   }
 
@@ -826,13 +806,11 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
     try {
       await _subscriptionController.pay(sub.id!);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${sub.name} marked as paid')),
-        );
+        AppToast.success(context, '${sub.name} marked as paid');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+        AppToast.error(context, 'Failed: $e');
       }
     }
   }
@@ -863,9 +841,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
 
     // Nothing to delete if no plan and no budgets
     if (plan == null && monthBudgets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No plan found for this month.')),
-      );
+      AppToast.show(context, 'No plan found for this month.');
       return;
     }
 
@@ -953,22 +929,12 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
 
       if (mounted) {
         Navigator.pop(context); // close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              deleteAll
-                  ? 'Plan and all budget groups deleted.'
-                  : 'Plan deleted. Budget groups kept.',
-            ),
-          ),
-        );
+        AppToast.success(context, deleteAll ? 'Plan and all budget groups deleted.' : 'Plan deleted. Budget groups kept.');
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // close loading dialog
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.error(context, 'Error: $e');
       }
     }
   }

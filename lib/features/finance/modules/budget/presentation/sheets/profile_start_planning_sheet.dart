@@ -77,6 +77,7 @@ class _ProfileStartPlanningSheetState extends State<ProfileStartPlanningSheet> {
               budgetId: created.id!,
               financeCategoryId: cat.financeCategoryId,
               targetAmount: cat.targetAmount,
+              financeCategory: cat.financeCategory,
             ),
           );
         }

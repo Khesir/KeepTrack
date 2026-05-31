@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_state.dart';
@@ -320,10 +321,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
       if (mounted) setState(() => _editMode = false);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: AppColors.error,
-        ));
+        AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -349,7 +347,6 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
     if (confirmed != true || !mounted) return;
 
     final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _loading = true);
     try {
       final t = widget.transaction;
@@ -396,10 +393,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
       nav.pop();
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: AppColors.error,
-        ));
+        AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
         setState(() => _loading = false);
       }
     }

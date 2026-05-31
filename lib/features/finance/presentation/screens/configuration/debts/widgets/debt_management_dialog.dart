@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
@@ -100,21 +101,15 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     if (_isSaving) return; // Prevent double-submit
 
     if (personNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a person name')),
-      );
+      AppToast.error(context, 'Please enter a person name');
       return;
     }
     if (originalAmountController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the original amount')),
-      );
+      AppToast.error(context, 'Please enter the original amount');
       return;
     }
     if (selectedCategoryId == null && !isEdit) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a category')));
+      AppToast.error(context, 'Please select a category');
       return;
     }
 
@@ -152,9 +147,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
       widget.onSave(debtEntity, selectedCategoryId);
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEdit ? 'Debt updated' : 'Debt created')),
-        );
+        AppToast.success(context, isEdit ? 'Debt updated' : 'Debt created');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

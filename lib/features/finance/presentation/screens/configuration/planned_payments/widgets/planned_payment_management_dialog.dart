@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
@@ -65,21 +66,15 @@ class _PlannedPaymentManagementDialogState
     if (_isSaving) return; // Prevent double-submit
 
     if (nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a payment name')),
-      );
+      AppToast.error(context, 'Please enter a payment name');
       return;
     }
     if (payeeController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a payee')));
+      AppToast.error(context, 'Please enter a payee');
       return;
     }
     if (amountController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter an amount')));
+      AppToast.error(context, 'Please enter an amount');
       return;
     }
 

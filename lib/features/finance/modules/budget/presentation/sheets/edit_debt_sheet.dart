@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 
 import '../../../debt/domain/entities/debt.dart';
 
@@ -46,9 +47,7 @@ class _EditDebtSheetState extends State<EditDebtSheet> {
   Future<void> _save() async {
     final name = _personCtrl.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter a person name')));
+      AppToast.error(context, 'Enter a person name');
       return;
     }
     setState(() => _saving = true);
@@ -63,25 +62,12 @@ class _EditDebtSheetState extends State<EditDebtSheet> {
       );
       await widget.onSave(updated);
       if (mounted) {
-        final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.debt.type == DebtType.lending
-                  ? 'Receivable updated!'
-                  : 'Debt updated!',
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        AppToast.success(context, widget.debt.type == DebtType.lending ? 'Receivable updated!' : 'Debt updated!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.error(context, 'Error: $e');
         setState(() => _saving = false);
       }
     }

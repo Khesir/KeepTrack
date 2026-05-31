@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/state/state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
@@ -157,13 +158,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
     await _transactionController.loadAllTransactions();
     if (mounted) {
       messenger.clearSnackBars();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Budget recalculated successfully!'),
-          backgroundColor: AppColors.success,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppToast.success(context, 'Budget recalculated successfully!');
     }
   }
 
@@ -178,13 +173,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
     await _controller.updateBudget(updated);
     setState(() => _currentBudget = updated);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Budget ${newStatus == BudgetStatus.closed ? 'closed' : 'reopened'} successfully',
-          ),
-        ),
-      );
+      AppToast.success(context, 'Budget ${newStatus == BudgetStatus.closed ? 'closed' : 'reopened'} successfully');
     }
   }
 
@@ -238,9 +227,7 @@ class _BudgetDetailScreenState extends ScopedScreenState<BudgetDetailScreen>
     if (confirmed != true || !mounted) return;
     await _controller.deleteBudget(_currentBudget.id!);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Budget deleted successfully')),
-      );
+      AppToast.success(context, 'Budget deleted successfully');
       Navigator.of(context).pop();
     }
   }

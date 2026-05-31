@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
@@ -90,13 +91,11 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
             onPressed: () async {
               final amount = double.tryParse(amountCtrl.text);
               if (amount == null || amount <= 0) {
-                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
+                AppToast.error(ctx, 'Enter a valid amount');
                 return;
               }
               if (amount > debt.remainingAmount) {
-                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                  content: Text('Cannot exceed remaining ${currencyFormatter.format(debt.remainingAmount, decimalDigits: 2)}'),
-                ));
+                AppToast.error(ctx, 'Cannot exceed remaining ${currencyFormatter.format(debt.remainingAmount, decimalDigits: 2)}');
                 return;
               }
               try {
@@ -108,7 +107,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 _controller.loadDebts();
                 if (ctx.mounted) Navigator.pop(ctx, true);
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                if (ctx.mounted) AppToast.error(ctx, 'Failed: $e');
               }
             },
             child: const Text('Record'),
@@ -121,7 +120,7 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
     feeCtrl.dispose();
 
     if (ok == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment recorded')));
+      AppToast.success(context, 'Payment recorded');
       if (_selected != null) {
         final updated = _controller.data?.where((d) => d.id == _selected!.id).firstOrNull;
         if (updated != null) setState(() => _selected = updated);

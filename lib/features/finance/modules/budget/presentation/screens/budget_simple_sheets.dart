@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
@@ -61,15 +62,11 @@ class _SubDetailSheetState extends State<SubDetailSheet> {
   void dispose() { _nameCtrl.dispose(); _amountCtrl.dispose(); _providerCtrl.dispose(); super.dispose(); }
 
   Future<void> _pay(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _loading = true);
     try {
       await widget.onPay();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(e.toString().replaceFirst('Exception: ', '')),
-        backgroundColor: AppColors.error,
-      ));
+      if (mounted) AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -486,17 +483,13 @@ class _PaymentDrawerState extends State<_PaymentDrawer> {
               if (amount == null || amount <= 0) return;
               final fee = double.tryParse(_feeCtrl.text);
               final nav = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
               setState(() => _loading = true);
               try {
                 await widget.onConfirm(amount, fee);
                 nav.pop();
               } catch (e, st) {
                 debugPrint('[PaymentDrawer] error: $e\n$st');
-                messenger.showSnackBar(SnackBar(
-                  content: Text(e.toString().replaceFirst('Exception: ', '')),
-                  backgroundColor: AppColors.error,
-                ));
+                if (mounted) AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
               } finally {
                 if (mounted) setState(() => _loading = false);
               }

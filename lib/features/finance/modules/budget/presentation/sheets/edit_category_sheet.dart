@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 
@@ -192,15 +193,11 @@ class _EditCategorySheetState extends State<EditCategorySheet> {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text);
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Enter a category name', style: GoogleFonts.dmSans()), backgroundColor: AppColors.error),
-      );
+      AppToast.error(context, 'Enter a category name');
       return;
     }
     if (amount == null || amount < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Enter a valid amount', style: GoogleFonts.dmSans()), backgroundColor: AppColors.error),
-      );
+      AppToast.error(context, 'Enter a valid amount');
       return;
     }
     setState(() => _saving = true);
@@ -218,9 +215,7 @@ class _EditCategorySheetState extends State<EditCategorySheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e', style: GoogleFonts.dmSans()), backgroundColor: AppColors.error),
-        );
+        AppToast.error(context, 'Error: $e');
         setState(() => _saving = false);
       }
     }

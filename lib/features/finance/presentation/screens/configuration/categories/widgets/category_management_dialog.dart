@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 
@@ -35,9 +36,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementDialog> {
     if (_isSaving) return; // Prevent double-submit
 
     if (nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a category name')),
-      );
+      AppToast.error(context, 'Please enter a category name');
       return;
     }
 
@@ -51,9 +50,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementDialog> {
       widget.onSave(category);
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEdit ? 'Category updated' : 'Category created')),
-        );
+        AppToast.success(context, isEdit ? 'Category updated' : 'Category created');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

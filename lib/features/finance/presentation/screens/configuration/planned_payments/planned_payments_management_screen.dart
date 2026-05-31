@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/planned_payments/widgets/planned_payment_management_dialog.dart';
@@ -61,9 +62,7 @@ class _PlannedPaymentsManagementScreenState
             onPressed: () {
               _controller.deletePlannedPayment(payment.id!);
               Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Payment deleted')));
+              AppToast.success(context, 'Payment deleted');
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),

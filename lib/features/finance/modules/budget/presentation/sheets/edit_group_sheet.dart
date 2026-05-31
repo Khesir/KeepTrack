@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 
 import '../../domain/entities/budget.dart';
 import '../controllers/budget_controller.dart';
@@ -49,9 +50,7 @@ class _EditGroupSheetState extends State<EditGroupSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.error(context, 'Error: $e');
         setState(() => _saving = false);
       }
     }

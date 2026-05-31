@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/state.dart';
@@ -135,9 +136,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
     if (ok == true && t.id != null) {
       await _controller.deleteTransaction(t.id!);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction deleted')),
-        );
+        AppToast.success(context, 'Transaction deleted');
       }
     }
   }
@@ -154,9 +153,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
         onSave: (updated) async {
           await _controller.updateTransaction(updated);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Transaction updated')),
-            );
+            AppToast.success(context, 'Transaction updated');
           }
         },
         onDelete: () => _confirmDelete(t),
@@ -497,7 +494,7 @@ class _EditSheetState extends State<_EditSheet> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.error(context, 'Error: $e');
         setState(() => _saving = false);
       }
     }

@@ -1,6 +1,7 @@
 import 'package:keep_track/core/cache/local_cache.dart';
 import 'package:keep_track/features/finance/modules/budget/data/models/budget_category_model.dart';
 import 'package:keep_track/features/finance/modules/budget/data/models/budget_model.dart';
+import 'package:keep_track/features/finance/modules/finance_category/data/models/finance_category_model.dart';
 import 'package:uuid/uuid.dart';
 import '../budget_datasource.dart';
 
@@ -10,15 +11,29 @@ class BudgetDataSourceLocal implements BudgetDataSource {
 
   static const _box = 'budgets';
   static const _categoriesBox = 'budget_categories';
+  static const _fcBox = 'finance_categories';
 
   BudgetDataSourceLocal(this._cache);
 
+  Future<BudgetCategoryModel> _hydrateCategory(BudgetCategoryModel cat) async {
+    if (cat.financeCategory != null || cat.financeCategoryId.isEmpty) return cat;
+    final data = await _cache.get(_fcBox, cat.financeCategoryId);
+    if (data == null) return cat;
+    final fc = FinanceCategoryModel.fromJson(data);
+    return BudgetCategoryModel.fromEntity(cat.copyWith(financeCategory: fc));
+  }
+
   Future<List<BudgetCategoryModel>> _categoriesFor(String budgetId) async {
     final entries = await _cache.getAll(_categoriesBox);
-    return entries
+    final models = entries
         .map((e) => BudgetCategoryModel.fromJson(e))
         .where((c) => c.budgetId == budgetId)
         .toList();
+    final hydrated = <BudgetCategoryModel>[];
+    for (final m in models) {
+      hydrated.add(await _hydrateCategory(m));
+    }
+    return hydrated;
   }
 
   Future<BudgetModel> _hydrate(BudgetModel budget) async {
