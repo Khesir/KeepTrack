@@ -12,4 +12,15 @@ class BackupRemoteDatasource {
     final res = await _dio.get('/backup');
     return (res.data as Map<String, dynamic>)['data'] as String;
   }
+
+  Future<DateTime?> fetchLastSyncedAt() async {
+    try {
+      final res = await _dio.get('/backup/meta');
+      final raw = (res.data as Map<String, dynamic>)['lastSyncedAt'];
+      if (raw == null) return null;
+      return DateTime.tryParse(raw as String);
+    } catch (_) {
+      return null;
+    }
+  }
 }

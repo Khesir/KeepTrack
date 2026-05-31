@@ -24,6 +24,7 @@ class BackupService {
     'debts',
     'planned_payments',
     'wallets',
+    'savings_buckets',
     'subscriptions',
     'transaction_plans',
     'finance_categories',
@@ -94,29 +95,32 @@ class BackupService {
     await _remote.upload(envelope);
   }
 
-  Future<bool> importFromFile(String password) async {
+  Future<Uint8List?> pickBackupFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['ktbak'],
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return false;
+    if (result == null || result.files.isEmpty) return null;
 
     final file = result.files.first;
-    Uint8List bytes;
+    if (file.bytes != null) return file.bytes!;
+    if (file.path != null && !kIsWeb) return File(file.path!).readAsBytes();
+    throw const InvalidBackupException();
+  }
 
-    if (file.bytes != null) {
-      bytes = file.bytes!;
-    } else if (file.path != null && !kIsWeb) {
-      // Desktop fallback: bytes not populated, read from path directly
-      bytes = await File(file.path!).readAsBytes();
-    } else {
-      throw const InvalidBackupException();
-    }
-
+  Future<void> restoreFromBytes(Uint8List bytes, String password) async {
     final envelopeJson = utf8.decode(bytes);
     final payload = _encryption.decrypt(envelopeJson, password);
     await _restoreData(payload);
+  }
+
+  Future<DateTime?> fetchLastSyncedAt() => _remote.fetchLastSyncedAt();
+
+  Future<bool> importFromFile(String password) async {
+    final bytes = await pickBackupFile();
+    if (bytes == null) return false;
+    await restoreFromBytes(bytes, password);
     return true;
   }
 

@@ -19,6 +19,8 @@ import 'package:keep_track/features/finance/presentation/screens/transactions/cr
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import '../auth/presentation/screens/auth_settings_screen.dart';
+import '../settings/data/services/backup_actions.dart';
+import '../settings/data/services/backup_sync_status.dart';
 import '../settings/setting_page.dart';
 
 class FinanceModuleScreen extends StatefulWidget {
@@ -193,6 +195,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         ],
       ),
       actions: [
+        const _MobileSyncChip(),
         _ThemeToggle(layoutController: _layoutController),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/settings'),
@@ -674,7 +677,8 @@ class _FooterContentState extends State<_FooterContent> {
 
   @override
   void dispose() {
-    _dismiss();
+    _overlay?.remove();
+    _overlay = null;
     super.dispose();
   }
 
@@ -1175,6 +1179,79 @@ class _Avatar extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w700,
           color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSyncChip extends StatefulWidget {
+  const _MobileSyncChip();
+
+  @override
+  State<_MobileSyncChip> createState() => _MobileSyncChipState();
+}
+
+class _MobileSyncChipState extends State<_MobileSyncChip> {
+  @override
+  void initState() {
+    super.initState();
+    BackupSyncStatus.instance.load();
+    BackupSyncStatus.instance.notifier.addListener(_onChanged);
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    BackupSyncStatus.instance.notifier.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  String _format(DateTime ts) {
+    final diff = DateTime.now().difference(ts.toLocal());
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    final d = ts.toLocal();
+    final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${d.day} ${months[d.month]}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ts = BackupSyncStatus.instance.notifier.value;
+    final synced = ts != null;
+    final color = synced ? AppColors.success : AppColors.textTertiary;
+
+    return GestureDetector(
+      onTap: () => syncToCloud(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(synced ? Icons.cloud_done_outlined : Icons.cloud_off_outlined, size: 11, color: color),
+              const SizedBox(width: 4),
+              Text(
+                synced ? _format(ts!) : 'no sync',
+                style: GoogleFonts.dmMono(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

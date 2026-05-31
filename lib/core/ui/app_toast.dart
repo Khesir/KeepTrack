@@ -8,7 +8,7 @@ bool get _isDesktop =>
     defaultTargetPlatform != TargetPlatform.android &&
     defaultTargetPlatform != TargetPlatform.iOS;
 
-enum _ToastType { success, error, info }
+enum _ToastType { success, error, info, loading }
 
 class AppToast {
   static void show(BuildContext context, String message) =>
@@ -20,12 +20,15 @@ class AppToast {
   static void error(BuildContext context, String message) =>
       _show(context, message, _ToastType.error);
 
+  static VoidCallback loading(BuildContext context, String message) =>
+      CapturedAppToast.capture(context).loading(message);
+
   static void _show(BuildContext context, String message, _ToastType type) {
     if (!_isDesktop) {
       final bg = switch (type) {
         _ToastType.success => AppColors.success,
         _ToastType.error => AppColors.error,
-        _ToastType.info => AppColors.accent,
+        _ToastType.info || _ToastType.loading => AppColors.accent,
       };
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -51,15 +54,99 @@ class AppToast {
   }
 }
 
+/// Captures overlay/messenger references before an async gap so toasts can be
+/// shown safely after operations like a native file picker that deactivate the
+/// widget element on web.
+class CapturedAppToast {
+  final OverlayState? _overlay;
+  final ScaffoldMessengerState? _messenger;
+
+  CapturedAppToast._(this._overlay, this._messenger);
+
+  factory CapturedAppToast.capture(BuildContext context) {
+    if (_isDesktop) {
+      return CapturedAppToast._(Overlay.of(context), null);
+    }
+    return CapturedAppToast._(null, ScaffoldMessenger.of(context));
+  }
+
+  void success(String message) => _show(message, _ToastType.success);
+  void error(String message) => _show(message, _ToastType.error);
+  void info(String message) => _show(message, _ToastType.info);
+
+  VoidCallback loading(String message) {
+    if (_messenger != null) {
+      final ctrl = _messenger.showSnackBar(SnackBar(
+        content: Row(children: [
+          const SizedBox(
+            width: 14, height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Text(message, style: GoogleFonts.dmSans()),
+        ]),
+        backgroundColor: AppColors.accent,
+        duration: const Duration(days: 1),
+      ));
+      return () => ctrl.close();
+    }
+
+    if (_overlay != null) {
+      late OverlayEntry entry;
+      entry = OverlayEntry(
+        builder: (_) => _ToastWidget(
+          message: message,
+          type: _ToastType.loading,
+          onDismiss: () {},
+          persistent: true,
+        ),
+      );
+      _overlay.insert(entry);
+      return () => entry.remove();
+    }
+
+    return () {};
+  }
+
+  void _show(String message, _ToastType type) {
+    if (_messenger != null) {
+      final bg = switch (type) {
+        _ToastType.success => AppColors.success,
+        _ToastType.error => AppColors.error,
+        _ToastType.info || _ToastType.loading => AppColors.accent,
+      };
+      _messenger.showSnackBar(SnackBar(
+        content: Text(message, style: GoogleFonts.dmSans()),
+        backgroundColor: bg,
+      ));
+      return;
+    }
+
+    if (_overlay != null) {
+      late OverlayEntry entry;
+      entry = OverlayEntry(
+        builder: (_) => _ToastWidget(
+          message: message,
+          type: type,
+          onDismiss: () => entry.remove(),
+        ),
+      );
+      _overlay.insert(entry);
+    }
+  }
+}
+
 class _ToastWidget extends StatefulWidget {
   final String message;
   final _ToastType type;
   final VoidCallback onDismiss;
+  final bool persistent;
 
   const _ToastWidget({
     required this.message,
     required this.type,
     required this.onDismiss,
+    this.persistent = false,
   });
 
   @override
@@ -87,7 +174,9 @@ class _ToastWidgetState extends State<_ToastWidget>
 
     _ctrl.forward();
 
-    Future.delayed(const Duration(milliseconds: 2800), _dismiss);
+    if (!widget.persistent) {
+      Future.delayed(const Duration(milliseconds: 2800), _dismiss);
+    }
   }
 
   Future<void> _dismiss() async {
@@ -102,7 +191,7 @@ class _ToastWidgetState extends State<_ToastWidget>
     super.dispose();
   }
 
-  (Color bg, Color fg, Color accent, IconData icon) get _style =>
+  (Color bg, Color fg, Color accent, IconData? icon) get _style =>
       switch (widget.type) {
         _ToastType.success => (
             AppColors.successLight,
@@ -121,6 +210,12 @@ class _ToastWidgetState extends State<_ToastWidget>
             AppColors.accent,
             AppColors.accent,
             Icons.info_rounded,
+          ),
+        _ToastType.loading => (
+            AppColors.accentLight,
+            AppColors.accent,
+            AppColors.accent,
+            null,
           ),
       };
 
@@ -155,7 +250,17 @@ class _ToastWidgetState extends State<_ToastWidget>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 16, color: fg),
+                  if (icon != null)
+                    Icon(icon, size: 16, color: fg)
+                  else
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: fg,
+                      ),
+                    ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(

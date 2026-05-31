@@ -15,7 +15,10 @@ import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/auth/presentation/widgets/login_dialog.dart';
+import 'package:keep_track/core/navigation/app_navigator.dart';
+import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/features/settings/data/services/backup_service.dart';
+import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -982,6 +985,41 @@ class _DataPane extends StatefulWidget {
 }
 
 class _DataPaneState extends State<_DataPane> {
+  DateTime? _lastSyncedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastSyncedAt();
+  }
+
+  Future<void> _loadLastSyncedAt() async {
+    final ts = await BackupService(
+      cache: locator.get<LocalCache>(),
+      encryption: BackupEncryptionService(),
+      remote: BackupRemoteDatasource(),
+    ).fetchLastSyncedAt();
+    if (mounted) setState(() => _lastSyncedAt = ts);
+    if (ts != null) BackupSyncStatus.instance.update(ts);
+  }
+
+  String get _lastSyncedSubtitle {
+    if (_lastSyncedAt == null) return 'No cloud backup yet';
+    final local = _lastSyncedAt!.toLocal();
+    final now = DateTime.now();
+    final diff = now.difference(local);
+    if (diff.inSeconds < 60) return 'Last synced: just now';
+    if (diff.inHours < 1) return 'Last synced: ${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return 'Last synced: ${diff.inHours}h ago';
+    final day = '${local.day} ${_month(local.month)} ${local.year}';
+    return 'Last synced: $day';
+  }
+
+  String _month(int m) => const [
+    '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ][m];
+
   Future<void> _toggleDemoMode(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await DemoMode.setEnabled(prefs, value);
@@ -1025,7 +1063,7 @@ class _DataPaneState extends State<_DataPane> {
           icon: Icons.cloud_upload_outlined,
           iconColor: AppColors.accent,
           label: 'Sync to Cloud',
-          subtitle: 'Upload an encrypted backup to the server',
+          subtitle: _lastSyncedSubtitle,
           onTap: () => _syncToCloud(context),
         ),
         _PaneRow(
@@ -1041,7 +1079,7 @@ class _DataPaneState extends State<_DataPane> {
           icon: Icons.cloud_download_outlined,
           iconColor: AppColors.info,
           label: 'Restore from Cloud',
-          subtitle: 'Restore data from your cloud backup',
+          subtitle: _lastSyncedSubtitle,
           onTap: () => _restoreFromCloud(context),
         ),
         _PaneLabel('Danger Zone', leftPadding: 0),
@@ -1148,49 +1186,42 @@ class _DataPaneState extends State<_DataPane> {
     return result == true;
   }
 
-  void _showBackupError(BuildContext context, Object e) {
-    String message;
-    if (e is WrongPasswordException) {
-      message = 'Wrong password. The backup could not be decrypted.';
-    } else if (e is InvalidBackupException) {
-      message = 'Invalid backup file. Make sure you selected a valid .ktbak file.';
-    } else {
-      message = 'Something went wrong: $e';
-    }
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Backup Error', style: AppTextStyles.h4),
-        content: Text(message, style: AppTextStyles.bodySmall),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
-      ),
-    );
-  }
+  String _backupErrorMessage(Object e) => switch (e) {
+    WrongPasswordException() => 'Wrong password — backup could not be decrypted.',
+    InvalidBackupException() => 'Invalid backup file. Select a valid .ktbak file.',
+    _ => 'Something went wrong: $e',
+  };
 
   Future<void> _exportToFile(BuildContext context) async {
     final password = await _showPasswordDialog(context, confirm: true);
     if (password == null || !context.mounted) return;
+    final toast = CapturedAppToast.capture(context);
+    final dismiss = toast.loading('Exporting backup…');
     try {
-      final path = await _buildBackupService().exportToFile(password);
-      if (!context.mounted) return;
-      if (path != null) {
-        AppToast.success(context, 'Backup saved to $path');
-      }
+      await _buildBackupService().exportToFile(password);
+      dismiss();
+      toast.success('Backup exported successfully');
     } catch (e) {
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
   }
 
   Future<void> _syncToCloud(BuildContext context) async {
     final password = await _showPasswordDialog(context, confirm: true);
     if (password == null || !context.mounted) return;
+    final toast = CapturedAppToast.capture(context);
+    final dismiss = toast.loading('Syncing to cloud…');
     try {
       await _buildBackupService().syncToCloud(password);
-      if (!context.mounted) return;
-      AppToast.success(context, 'Backup synced to cloud');
+      dismiss();
+      toast.success('Backup synced to cloud');
+      final now = DateTime.now();
+      if (mounted) setState(() => _lastSyncedAt = now);
+      BackupSyncStatus.instance.update(now);
     } catch (e) {
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
   }
 
@@ -1199,12 +1230,25 @@ class _DataPaneState extends State<_DataPane> {
     if (!confirmed || !context.mounted) return;
     final password = await _showPasswordDialog(context, confirm: false);
     if (password == null || !context.mounted) return;
+
+    final toast = CapturedAppToast.capture(context);
+    final service = _buildBackupService();
+    final dismiss = toast.loading('Importing backup…');
+
     try {
-      final imported = await _buildBackupService().importFromFile(password);
-      if (imported && context.mounted) AppRestartWidget.of(context).restart();
+      final bytes = await service.pickBackupFile();
+      if (bytes == null) {
+        dismiss();
+        return;
+      }
+      await service.restoreFromBytes(bytes, password);
+      dismiss();
+      toast.success('Backup imported successfully');
+      await Future.delayed(const Duration(milliseconds: 1500));
+      _goToDashboard();
     } catch (e) {
-      // ignore: use_build_context_synchronously
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
   }
 
@@ -1213,13 +1257,27 @@ class _DataPaneState extends State<_DataPane> {
     if (!confirmed || !context.mounted) return;
     final password = await _showPasswordDialog(context, confirm: false);
     if (password == null || !context.mounted) return;
+
+    final toast = CapturedAppToast.capture(context);
+    final dismiss = toast.loading('Restoring from cloud…');
+
     try {
       await _buildBackupService().restoreFromCloud(password);
-      if (context.mounted) AppRestartWidget.of(context).restart();
+      dismiss();
+      toast.success('Backup restored successfully');
+      await Future.delayed(const Duration(milliseconds: 1500));
+      _goToDashboard();
     } catch (e) {
-      // ignore: use_build_context_synchronously
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
+  }
+
+  void _goToDashboard() {
+    AppNavigator.key.currentState?.pushNamedAndRemoveUntil(
+      AppRoutes.financeModule,
+      (_) => false,
+    );
   }
 
   Future<void> _wipeAllData(BuildContext context) async {

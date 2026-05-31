@@ -11,6 +11,8 @@ import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/inbox_popover_widget.dart';
+import 'package:keep_track/features/settings/data/services/backup_actions.dart';
+import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
@@ -49,6 +51,7 @@ class DesktopTitleBar extends StatelessWidget {
               const Spacer(),
               _OfflineIndicator(isDark: isDark),
               if (kDebugMode) _FeatureFlagButton(isDark: isDark),
+              _SyncStatusChip(isDark: isDark),
               _InboxButton(isDark: isDark),
               _HelpButton(isDark: isDark, url: _helpUrl),
               _SettingsButton(isDark: isDark),
@@ -364,6 +367,87 @@ class _TitleBarIconButtonState extends State<_TitleBarIconButton> {
       );
     }
     return button;
+  }
+}
+
+// ─── Sync Status Chip ─────────────────────────────────────────────────────────
+
+class _SyncStatusChip extends StatefulWidget {
+  final bool isDark;
+  const _SyncStatusChip({required this.isDark});
+
+  @override
+  State<_SyncStatusChip> createState() => _SyncStatusChipState();
+}
+
+class _SyncStatusChipState extends State<_SyncStatusChip> {
+  @override
+  void initState() {
+    super.initState();
+    BackupSyncStatus.instance.load();
+    BackupSyncStatus.instance.notifier.addListener(_onChanged);
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    BackupSyncStatus.instance.notifier.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  String _format(DateTime ts) {
+    final diff = DateTime.now().difference(ts.toLocal());
+    if (diff.inSeconds < 60) return 'SYNCED JUST NOW';
+    if (diff.inMinutes < 60) return 'SYNCED ${diff.inMinutes}M AGO';
+    if (diff.inHours < 24) return 'SYNCED ${diff.inHours}H AGO';
+    final d = ts.toLocal();
+    final months = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    return 'SYNCED ${d.day} ${months[d.month]}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ts = BackupSyncStatus.instance.notifier.value;
+    final synced = ts != null;
+    final color = synced ? AppColors.success : AppColors.textTertiary;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          final ctx = AppNavigator.context;
+          if (ctx != null) syncToCloud(ctx);
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(synced ? Icons.cloud_done_outlined : Icons.cloud_off_outlined, size: 11, color: color),
+              const SizedBox(width: 4),
+              Text(
+                synced ? _format(ts!) : 'NOT SYNCED',
+                style: GoogleFonts.dmMono(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

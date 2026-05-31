@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:keep_track/core/navigation/app_navigator.dart';
+import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,6 +20,7 @@ import 'package:keep_track/features/auth/presentation/screens/auth_settings_scre
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
 import 'package:keep_track/features/settings/data/services/backup_service.dart';
+import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
 import 'package:keep_track/features/settings/settings_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,13 +36,38 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late final SettingsController _controller;
   late final AuthController _authController;
+  DateTime? _lastSyncedAt;
 
   @override
   void initState() {
     super.initState();
     _controller = locator.get<SettingsController>();
     _authController = locator.get<AuthController>();
+    _loadLastSyncedAt();
   }
+
+  Future<void> _loadLastSyncedAt() async {
+    final ts = await _buildBackupService().fetchLastSyncedAt();
+    if (mounted) setState(() => _lastSyncedAt = ts);
+    if (ts != null) BackupSyncStatus.instance.update(ts);
+  }
+
+  String get _lastSyncedSubtitle {
+    if (_lastSyncedAt == null) return 'No cloud backup yet';
+    final local = _lastSyncedAt!.toLocal();
+    final now = DateTime.now();
+    final diff = now.difference(local);
+    if (diff.inSeconds < 60) return 'Last synced: just now';
+    if (diff.inHours < 1) return 'Last synced: ${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return 'Last synced: ${diff.inHours}h ago';
+    final day = '${local.day} ${_month(local.month)} ${local.year}';
+    return 'Last synced: $day';
+  }
+
+  String _month(int m) => const [
+    '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ][m];
 
   static bool get _isDesktop =>
       !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
@@ -221,7 +249,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.cloud_upload_outlined,
                 iconColor: AppColors.accent,
                 label: 'Sync to Cloud',
-                subtitle: 'Upload an encrypted backup to the server',
+                subtitle: _lastSyncedSubtitle,
                 onTap: () => _syncToCloud(context),
               ),
               _Divider(isDark: isDark),
@@ -239,7 +267,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.cloud_download_outlined,
                 iconColor: AppColors.info,
                 label: 'Restore from Cloud',
-                subtitle: 'Restore data from your cloud backup',
+                subtitle: _lastSyncedSubtitle,
                 onTap: () => _restoreFromCloud(context),
               ),
             ]),
@@ -353,6 +381,7 @@ class _SettingsPageState extends State<SettingsPage> {
       );
 
   Future<String?> _showPasswordDialog(BuildContext context, {bool confirm = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final pwdCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
     var obscure = true;
@@ -360,117 +389,108 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return showDialog<String>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(confirm ? 'Set Backup Password' : 'Enter Backup Password', style: AppTextStyles.h4),
+        builder: (ctx, setS) => _BackupDialog(
+          isDark: isDark,
+          icon: Icons.lock_outline_rounded,
+          iconColor: AppColors.accent,
+          title: confirm ? 'Set Backup Password' : 'Enter Backup Password',
+          subtitle: confirm
+              ? 'Choose a password to encrypt your backup. You will need it to restore.'
+              : 'Enter the password used to encrypt this backup.',
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (confirm) ...[
-              Text('Choose a password to encrypt your backup. You will need it to restore.', style: AppTextStyles.bodySmall),
-              const SizedBox(height: 12),
-            ],
-            TextField(
+            _ThemedTextField(
               controller: pwdCtrl,
-              obscureText: obscure,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                errorText: error,
-                suffixIcon: IconButton(
-                  icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
-                  onPressed: () => setS(() => obscure = !obscure),
-                ),
-              ),
+              label: 'Password',
+              obscure: obscure,
+              isDark: isDark,
+              error: error,
+              onToggleObscure: () => setS(() => obscure = !obscure),
             ),
             if (confirm) ...[
-              const SizedBox(height: 8),
-              TextField(
+              const SizedBox(height: 10),
+              _ThemedTextField(
                 controller: confirmCtrl,
-                obscureText: obscure,
-                decoration: const InputDecoration(labelText: 'Confirm Password'),
+                label: 'Confirm Password',
+                obscure: obscure,
+                isDark: isDark,
+                onToggleObscure: () => setS(() => obscure = !obscure),
               ),
             ],
           ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                final pwd = pwdCtrl.text.trim();
-                if (pwd.isEmpty) { setS(() => error = 'Password cannot be empty'); return; }
-                if (confirm && pwd != confirmCtrl.text.trim()) { setS(() => error = 'Passwords do not match'); return; }
-                Navigator.pop(ctx, pwd);
-              },
-              child: const Text('Continue'),
-            ),
-          ],
+          cancelLabel: 'Cancel',
+          confirmLabel: 'Continue',
+          confirmColor: AppColors.accent,
+          onCancel: () => Navigator.pop(ctx),
+          onConfirm: () {
+            final pwd = pwdCtrl.text.trim();
+            if (pwd.isEmpty) { setS(() => error = 'Password cannot be empty'); return; }
+            if (confirm && pwd != confirmCtrl.text.trim()) { setS(() => error = 'Passwords do not match'); return; }
+            Navigator.pop(ctx, pwd);
+          },
         ),
       ),
     );
   }
 
   Future<bool> _showConfirmReplaceDialog(BuildContext context) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final result = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Replace all data?', style: AppTextStyles.h4),
-        content: Text(
-          'This will permanently replace all your current data with the backup. This cannot be undone.',
-          style: AppTextStyles.bodySmall,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.warning),
-            child: const Text('Replace'),
-          ),
-        ],
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      builder: (_) => _BackupDialog(
+        isDark: isDark,
+        icon: Icons.warning_amber_rounded,
+        iconColor: AppColors.warning,
+        title: 'Replace all data?',
+        subtitle: 'This will permanently replace all your current data with the backup. This cannot be undone.',
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Replace',
+        confirmColor: AppColors.warning,
+        onCancel: () => Navigator.pop(context, false),
+        onConfirm: () => Navigator.pop(context, true),
       ),
     );
     return result == true;
   }
 
-  void _showBackupError(BuildContext context, Object e) {
-    String message;
-    if (e is WrongPasswordException) {
-      message = 'Wrong password. The backup could not be decrypted.';
-    } else if (e is InvalidBackupException) {
-      message = 'Invalid backup file. Make sure you selected a valid .ktbak file.';
-    } else {
-      message = 'Something went wrong: $e';
-    }
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Backup Error', style: AppTextStyles.h4),
-        content: Text(message, style: AppTextStyles.bodySmall),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
-      ),
-    );
-  }
+  String _backupErrorMessage(Object e) => switch (e) {
+    WrongPasswordException() => 'Wrong password — backup could not be decrypted.',
+    InvalidBackupException() => 'Invalid backup file. Select a valid .ktbak file.',
+    _ => 'Something went wrong: $e',
+  };
 
   Future<void> _exportToFile(BuildContext context) async {
     final password = await _showPasswordDialog(context, confirm: true);
     if (password == null || !context.mounted) return;
+    final toast = CapturedAppToast.capture(context);
+    final dismiss = toast.loading('Exporting backup…');
     try {
-      final path = await _buildBackupService().exportToFile(password);
-      if (!context.mounted) return;
-      if (path != null) {
-        AppToast.success(context, 'Backup saved to $path');
-      }
+      await _buildBackupService().exportToFile(password);
+      dismiss();
+      toast.success('Backup exported successfully');
     } catch (e) {
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
   }
 
   Future<void> _syncToCloud(BuildContext context) async {
     final password = await _showPasswordDialog(context, confirm: true);
     if (password == null || !context.mounted) return;
+    final toast = CapturedAppToast.capture(context);
+    final dismiss = toast.loading('Syncing to cloud…');
     try {
       await _buildBackupService().syncToCloud(password);
-      if (!context.mounted) return;
-      AppToast.success(context, 'Backup synced to cloud');
+      dismiss();
+      toast.success('Backup synced to cloud');
+      final now = DateTime.now();
+      if (mounted) setState(() => _lastSyncedAt = now);
+      BackupSyncStatus.instance.update(now);
     } catch (e) {
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
   }
 
@@ -479,12 +499,28 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!confirmed || !context.mounted) return;
     final password = await _showPasswordDialog(context, confirm: false);
     if (password == null || !context.mounted) return;
+
+    // Capture before file picker — web deactivates the element during native dialogs.
+    final toast = CapturedAppToast.capture(context);
+    final service = _buildBackupService();
+    final dismiss = toast.loading('Importing backup…');
+
     try {
-      final imported = await _buildBackupService().importFromFile(password);
-      if (imported && context.mounted) AppRestartWidget.of(context).restart();
+      final bytes = await service.pickBackupFile();
+      if (bytes == null) {
+        dismiss();
+        return;
+      }
+
+      await service.restoreFromBytes(bytes, password);
+      dismiss();
+
+      toast.success('Backup imported successfully');
+      await Future.delayed(const Duration(milliseconds: 1500));
+      _goToDashboard();
     } catch (e) {
-      // ignore: use_build_context_synchronously
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
   }
 
@@ -493,13 +529,27 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!confirmed || !context.mounted) return;
     final password = await _showPasswordDialog(context, confirm: false);
     if (password == null || !context.mounted) return;
+
+    final toast = CapturedAppToast.capture(context);
+    final dismiss = toast.loading('Restoring from cloud…');
+
     try {
       await _buildBackupService().restoreFromCloud(password);
-      if (context.mounted) AppRestartWidget.of(context).restart();
+      dismiss();
+      toast.success('Backup restored successfully');
+      await Future.delayed(const Duration(milliseconds: 1500));
+      _goToDashboard();
     } catch (e) {
-      // ignore: use_build_context_synchronously
-      _showBackupError(context, e);
+      dismiss();
+      toast.error(_backupErrorMessage(e));
     }
+  }
+
+  void _goToDashboard() {
+    AppNavigator.key.currentState?.pushNamedAndRemoveUntil(
+      AppRoutes.financeModule,
+      (_) => false,
+    );
   }
 
   Future<void> _wipeAllData(BuildContext context) async {
@@ -929,6 +979,163 @@ class _DesktopSettingsHeader extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ─── Backup Dialog ────────────────────────────────────────────────────────────
+
+class _BackupDialog extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final Widget? content;
+  final String cancelLabel;
+  final String confirmLabel;
+  final Color confirmColor;
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+
+  const _BackupDialog({
+    required this.isDark,
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    this.content,
+    required this.cancelLabel,
+    required this.confirmLabel,
+    required this.confirmColor,
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 400),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: border, width: 0.5),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Row(children: [
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                  alignment: Alignment.center,
+                  child: Icon(icon, size: 18, color: iconColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(title, style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
+                ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+              child: Text(subtitle, style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary, height: 1.5)),
+            ),
+            if (content != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: content!,
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+              child: Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onCancel,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      side: BorderSide(color: border),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(cancelLabel, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onConfirm,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: confirmColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(confirmLabel, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
+                ),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemedTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final bool obscure;
+  final bool isDark;
+  final String? error;
+  final VoidCallback onToggleObscure;
+
+  const _ThemedTextField({
+    required this.controller,
+    required this.label,
+    required this.obscure,
+    required this.isDark,
+    required this.onToggleObscure,
+    this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final border = isDark ? AppColors.border.withValues(alpha: 0.3) : AppColors.border;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary),
+        errorText: error,
+        errorStyle: GoogleFonts.dmSans(fontSize: 12, color: AppColors.error),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        filled: true,
+        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border, width: 0.5)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
+        suffixIcon: IconButton(
+          icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
+          onPressed: onToggleObscure,
+        ),
       ),
     );
   }
