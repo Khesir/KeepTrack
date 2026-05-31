@@ -3,7 +3,7 @@ import '../../domain/entities/transaction.dart';
 abstract class TransactionDataSource {
   Future<List<Transaction>> getTransactions();
   Future<List<Transaction>> getTransactionsByBudget(String budgetId);
-  Future<List<Transaction>> getTransactionsBySavings(String savingsId);
+  Future<List<Transaction>> getTransactionsByWallet(String walletId);
   Future<List<Transaction>> getTransactionsByCategory(String categoryId);
   Future<List<Transaction>> getTransactionsByDateRange(DateTime startDate, DateTime endDate);
   Future<List<Transaction>> getRecentTransactions({int limit = 10});

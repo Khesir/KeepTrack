@@ -10,7 +10,7 @@ import 'package:keep_track/features/finance/modules/budget/presentation/widgets/
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../sheets/transaction_detail_sheet.dart';
@@ -1173,7 +1173,7 @@ class SimpleGoalsSection extends StatelessWidget {
 
 class SimpleSavingsSummaryCard extends StatelessWidget {
   final bool isDark;
-  final List<SavingsBucket> buckets;
+  final List<Wallet> buckets;
 
   const SimpleSavingsSummaryCard({super.key, required this.isDark, required this.buckets});
 
@@ -1209,9 +1209,9 @@ class SimpleSavingsSummaryCard extends StatelessWidget {
 
 class SimpleSavingsSection extends StatelessWidget {
   final bool isDark;
-  final List<SavingsBucket> buckets;
+  final List<Wallet> buckets;
   final VoidCallback onAdd;
-  final void Function(SavingsBucket) onRowTap;
+  final void Function(Wallet) onRowTap;
 
   const SimpleSavingsSection({super.key, required this.isDark, required this.buckets, required this.onAdd, required this.onRowTap});
 
@@ -1227,7 +1227,7 @@ class SimpleSavingsSection extends StatelessWidget {
       onAdd: onAdd,
       addLabel: 'Add Bucket',
       child: buckets.isEmpty
-          ? _EmptyRow(isDark: isDark, text: 'No savings buckets yet')
+          ? _EmptyRow(isDark: isDark, text: 'No wallets yet')
           : Column(children: [
               ...buckets.map((b) {
                 final color = b.colorHex != null

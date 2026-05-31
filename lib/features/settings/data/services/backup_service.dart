@@ -23,7 +23,7 @@ class BackupService {
     'goals',
     'debts',
     'planned_payments',
-    'savings_buckets',
+    'wallets',
     'subscriptions',
     'transaction_plans',
     'finance_categories',

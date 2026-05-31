@@ -19,10 +19,10 @@ import 'package:keep_track/features/finance/modules/planned_payment/data/datasou
 import 'package:keep_track/features/finance/modules/planned_payment/data/datasources/local/planned_payment_datasource_local.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/data/repositories/planned_payment_repository_impl.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/repositories/planned_payment_repository.dart';
-import 'package:keep_track/features/finance/modules/savings/data/datasources/local/savings_datasource_local.dart';
-import 'package:keep_track/features/finance/modules/savings/data/datasources/savings_datasource.dart';
-import 'package:keep_track/features/finance/modules/savings/data/repositories/savings_repository_impl.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/repositories/savings_repository.dart';
+import 'package:keep_track/features/finance/modules/wallet/data/datasources/local/wallet_datasource_local.dart';
+import 'package:keep_track/features/finance/modules/wallet/data/datasources/wallet_datasource.dart';
+import 'package:keep_track/features/finance/modules/wallet/data/repositories/wallet_repository_impl.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/repositories/wallet_repository.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/data/datasources/local/subscription_datasource_local.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/data/datasources/subscription_datasource.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/data/repositories/subscription_repository_impl.dart';
@@ -40,7 +40,7 @@ import 'package:keep_track/features/finance/presentation/state/debt_controller.d
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_cache.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
@@ -51,8 +51,8 @@ void setupFinanceDependencies() {
   setupBudgetDependencies();
 
   // Data sources
-  locator.registerFactory<SavingsDataSource>(
-    () => SavingsDataSourceLocal(locator.get<LocalCache>()),
+  locator.registerFactory<WalletDataSource>(
+    () => WalletDataSourceLocal(locator.get<LocalCache>()),
   );
   locator.registerFactory<TransactionPlanDataSource>(
     () => TransactionPlanDataSourceLocal(locator.get<LocalCache>()),
@@ -80,8 +80,8 @@ void setupFinanceDependencies() {
   locator.registerFactory<FinanceCategoryRepository>(
     () => FinanceCategoryRepositoryImpl(locator.get<FinanceCategoryDataSource>()),
   );
-  locator.registerFactory<SavingsRepository>(
-    () => SavingsRepositoryImpl(locator.get<SavingsDataSource>()),
+  locator.registerFactory<WalletRepository>(
+    () => WalletRepositoryImpl(locator.get<WalletDataSource>()),
   );
   locator.registerFactory<TransactionPlanRepository>(
     () => TransactionPlanRepositoryImpl(locator.get<TransactionPlanDataSource>()),
@@ -110,8 +110,8 @@ void setupFinanceDependencies() {
   // Controllers
   locator.registerLazySingleton<TransactionCache>(() => TransactionCache());
 
-  locator.registerLazySingleton<SavingsController>(
-    () => SavingsController(locator.get<SavingsRepository>()),
+  locator.registerLazySingleton<WalletController>(
+    () => WalletController(locator.get<WalletRepository>()),
   );
   locator.registerLazySingleton<SubscriptionController>(
     () => SubscriptionController(locator.get<SubscriptionRepository>()),

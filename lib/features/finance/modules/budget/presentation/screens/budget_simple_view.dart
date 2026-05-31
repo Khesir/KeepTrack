@@ -26,7 +26,7 @@ import 'package:keep_track/features/finance/modules/finance_category/domain/enti
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
@@ -84,7 +84,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   late final DebtController _debtController;
   late final SubscriptionController _subController;
   late final GoalController _goalController;
-  late final SavingsController _savingsController;
+  late final WalletController _walletController;
   late final FinanceCategoryController _categoryController;
   late final MonthPlanController _monthPlanController;
   DateTime _month = DateTime.now();
@@ -97,7 +97,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     _debtController = locator.get<DebtController>();
     _subController = locator.get<SubscriptionController>();
     _goalController = locator.get<GoalController>();
-    _savingsController = locator.get<SavingsController>();
+    _walletController = locator.get<WalletController>();
     _categoryController = locator.get<FinanceCategoryController>();
     _monthPlanController = locator.get<MonthPlanController>();
     _budgetController.loadBudgets();
@@ -489,7 +489,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             type: TransactionType.income,
             date: DateTime.now(),
             goalId: currentGoal.id,
-            savingsId: currentGoal.savingsBucketId,
+            walletId: currentGoal.savingsBucketId,
             financeCategoryId: categoryId,
             description: 'Contribution to ${currentGoal.name}',
             budgetProfileId: widget.budgetProfileId,
@@ -500,13 +500,13 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
 
           // 3. Sync linked savings bucket balance
           if (currentGoal.savingsBucketId != null) {
-            final buckets = _savingsController.data ?? [];
-            final bucket = buckets
-                .where((b) => b.id == currentGoal.savingsBucketId)
+            final wallets = _walletController.data ?? [];
+            final wallet = wallets
+                .where((w) => w.id == currentGoal.savingsBucketId)
                 .firstOrNull;
-            if (bucket != null) {
-              await _savingsController.updateSavingsBucket(
-                bucket.copyWith(balance: bucket.balance + amount),
+            if (wallet != null) {
+              await _walletController.updateWallet(
+                wallet.copyWith(balance: wallet.balance + amount),
               );
             }
           }

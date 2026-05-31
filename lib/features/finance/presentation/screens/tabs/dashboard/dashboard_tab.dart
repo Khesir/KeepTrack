@@ -11,12 +11,12 @@ import 'package:keep_track/features/finance/modules/budget/presentation/controll
 import 'package:keep_track/features/finance/modules/budget/presentation/helpers/budget_month_filter.dart';
 import 'package:keep_track/features/finance/modules/budget_profile/domain/entities/budget_profile.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/payment_enums.dart';
 import 'package:keep_track/features/finance/modules/planned_payment/domain/entities/planned_payment.dart';
 import 'package:keep_track/features/finance/presentation/state/planned_payment_controller.dart';
@@ -35,7 +35,7 @@ class DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<DashboardTab> {
-  late final SavingsController _savingsController;
+  late final WalletController _walletController;
   late final BudgetController _budgetController;
   late final TransactionController _txController;
   late final SubscriptionController _subController;
@@ -50,7 +50,7 @@ class _DashboardTabState extends State<DashboardTab> {
   @override
   void initState() {
     super.initState();
-    _savingsController = locator.get<SavingsController>();
+    _walletController = locator.get<WalletController>();
     _budgetController = locator.get<BudgetController>();
     _txController = locator.get<TransactionController>();
     _subController = locator.get<SubscriptionController>();
@@ -58,7 +58,7 @@ class _DashboardTabState extends State<DashboardTab> {
     _budgetProfileController = locator.get<BudgetProfileController>();
     _plannedPaymentController = locator.get<PlannedPaymentController>();
     _txPlanController = locator.get<TransactionPlanController>();
-    _savingsController.loadSavings();
+    _walletController.loadWallets();
     _budgetController.loadBudgets();
     _txController.loadAllTransactions();
   }
@@ -92,9 +92,9 @@ class _DashboardTabState extends State<DashboardTab> {
         _budgetProfileController.selectedProfileId = effectiveProfileId;
       });
     }
-    return AsyncStreamBuilder<List<SavingsBucket>>(
-      state: _savingsController,
-      builder: (_, buckets) => AsyncStreamBuilder<List<Budget>>(
+    return AsyncStreamBuilder<List<Wallet>>(
+      state: _walletController,
+      builder: (_, wallets) => AsyncStreamBuilder<List<Budget>>(
         state: _budgetController,
         builder: (_, budgets) => AsyncStreamBuilder<List<Transaction>>(
           state: _txController,
@@ -106,24 +106,24 @@ class _DashboardTabState extends State<DashboardTab> {
                 state: _plannedPaymentController,
                 builder: (_, payments) => AsyncStreamBuilder<List<TransactionPlan>>(
                   state: _txPlanController,
-                  builder: (_, plans) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, debts, subs, payments, plans),
-                  loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, debts, subs, payments, []),
-                  errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, debts, subs, payments, []),
+                  builder: (_, plans) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, debts, subs, payments, plans),
+                  loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, debts, subs, payments, []),
+                  errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, debts, subs, payments, []),
                 ),
-                loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, debts, subs, [], []),
-                errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, debts, subs, [], []),
+                loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, debts, subs, [], []),
+                errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, debts, subs, [], []),
               ),
-              loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, debts, [], [], []),
-              errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, debts, [], [], []),
+              loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, debts, [], [], []),
+              errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, debts, [], [], []),
             ),
-            loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, [], [], [], []),
-            errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, txs, [], [], [], []),
+            loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, [], [], [], []),
+            errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, txs, [], [], [], []),
           ),
-          loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, [], [], [], [], []),
-          errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, budgets, [], [], [], [], []),
+          loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, [], [], [], [], []),
+          errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, budgets, [], [], [], [], []),
         ),
-        loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, [], [], [], [], [], []),
-        errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, buckets, [], [], [], [], [], []),
+        loadingBuilder: (_) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, [], [], [], [], [], []),
+        errorBuilder: (_, __) => _buildDashboard(context, isDark, profiles, effectiveProfileId, wallets, [], [], [], [], [], []),
       ),
       loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
       errorBuilder: (_, __) => const Center(child: CircularProgressIndicator()),
@@ -133,7 +133,7 @@ class _DashboardTabState extends State<DashboardTab> {
   Widget _buildDashboard(
     BuildContext context, bool isDark,
     List<BudgetProfile> profiles, String? selectedProfileId,
-    List<SavingsBucket> buckets, List<Budget> budgets,
+    List<Wallet> wallets, List<Budget> budgets,
     List<Transaction> txs, List<Debt> debts, List<Subscription> subs,
     List<PlannedPayment> plannedPayments, List<TransactionPlan> txPlans,
   ) {
@@ -142,7 +142,8 @@ class _DashboardTabState extends State<DashboardTab> {
     final now = DateTime.now();
     final currentMonthTxs = profileTxs.where((t) => t.date.year == now.year && t.date.month == now.month).toList();
     final spentByCategory = BudgetMonthFilter.buildSpentByCategory(currentMonthTxs);
-    final totalSavings = buckets.fold(0.0, (s, b) => s + b.balance);
+    final totalSavings = wallets.where((w) => w.type == WalletType.standard).fold(0.0, (s, w) => s + w.balance);
+    final totalCreditOwed = wallets.where((w) => w.type == WalletType.creditCard).fold(0.0, (s, w) => s + w.balance);
     final totalDebt = debts.where((d) => d.type == DebtType.borrowing && d.status == DebtStatus.active).fold(0.0, (s, d) => s + d.remainingAmount);
     final totalReceivables = debts.where((d) => d.type == DebtType.lending && d.status == DebtStatus.active).fold(0.0, (s, d) => s + d.remainingAmount);
     final plannedIncome = monthBudgets.where((b) => b.budgetType == BudgetType.income).fold(0.0, (s, b) => s + b.budgetTarget);
@@ -203,10 +204,12 @@ class _DashboardTabState extends State<DashboardTab> {
         SliverToBoxAdapter(child: _MonthOverviewCard(
           isDark: isDark,
           totalSavings: totalSavings,
+          totalCreditOwed: totalCreditOwed,
           netDebt: totalReceivables - totalDebt,
           actualIncome: actualIncome, plannedIncome: plannedIncome,
           actualExpenses: actualExpenses, plannedExpenses: plannedExpenses,
           hasBudgets: monthBudgets.isNotEmpty,
+          hasWallets: wallets.isNotEmpty,
         )),
         SliverToBoxAdapter(child: _SpendingChart(transactions: currentMonthTxs, isDark: isDark)),
         SliverToBoxAdapter(
@@ -261,19 +264,21 @@ class _DashboardTabState extends State<DashboardTab> {
 
 class _MonthOverviewCard extends StatelessWidget {
   final bool isDark;
-  final double totalSavings, netDebt;
+  final double totalSavings, totalCreditOwed, netDebt;
   final double actualIncome, plannedIncome, actualExpenses, plannedExpenses;
-  final bool hasBudgets;
+  final bool hasBudgets, hasWallets;
 
   const _MonthOverviewCard({
     required this.isDark,
     required this.totalSavings,
+    required this.totalCreditOwed,
     required this.netDebt,
     required this.actualIncome,
     required this.plannedIncome,
     required this.actualExpenses,
     required this.plannedExpenses,
     required this.hasBudgets,
+    required this.hasWallets,
   });
 
   @override
@@ -357,6 +362,36 @@ class _MonthOverviewCard extends StatelessWidget {
                 icon: Icons.arrow_upward_rounded,
               ),
             ],
+            if (hasWallets) ...[
+              const SizedBox(height: 14),
+              IntrinsicHeight(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _WalletStatChip(
+                        isDark: isDark,
+                        icon: Icons.account_balance_wallet_outlined,
+                        label: 'Wallets',
+                        value: currencyFormatter.format(totalSavings, decimalDigits: 0),
+                        color: AppColors.accent,
+                      ),
+                    ),
+                    if (totalCreditOwed > 0) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _WalletStatChip(
+                          isDark: isDark,
+                          icon: Icons.credit_card_outlined,
+                          label: 'Credit Owed',
+                          value: currencyFormatter.format(totalCreditOwed, decimalDigits: 0),
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               children: [
@@ -387,6 +422,63 @@ class _MonthOverviewCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _WalletStatChip extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _WalletStatChip({
+    required this.isDark,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.08 : 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  style: GoogleFonts.dmMono(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

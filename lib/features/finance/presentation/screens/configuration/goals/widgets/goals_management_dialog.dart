@@ -6,8 +6,8 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 
 class GoalsManagementDialog extends StatefulWidget {
   final Goal? goal;
@@ -69,7 +69,7 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
     if (g?.colorHex != null) {
       try { _color = Color(int.parse(g!.colorHex!.replaceFirst('#', '0xFF'))); } catch (_) {}
     }
-    locator.get<SavingsController>().loadSavings();
+    locator.get<WalletController>().loadWallets();
   }
 
   @override
@@ -109,12 +109,12 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
     }
   }
 
-  void _pickSavingsBucket(bool isDark) {
+  void _pickWallet(bool isDark) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _SavingsBucketPicker(
+      builder: (_) => _WalletPicker(
         isDark: isDark,
         selectedId: _savingsBucketId,
         onSelect: (bucket) {
@@ -208,7 +208,7 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
               // Savings bucket (required)
               _FieldLabel('Linked Savings Bucket *'),
               GestureDetector(
-                onTap: () => _pickSavingsBucket(isDark),
+                onTap: () => _pickWallet(isDark),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   decoration: BoxDecoration(
@@ -378,12 +378,12 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
 
 // ─── Savings Bucket Picker ────────────────────────────────────────────────────
 
-class _SavingsBucketPicker extends StatelessWidget {
+class _WalletPicker extends StatelessWidget {
   final bool isDark;
   final String? selectedId;
-  final void Function(SavingsBucket) onSelect;
+  final void Function(Wallet) onSelect;
 
-  const _SavingsBucketPicker({required this.isDark, required this.selectedId, required this.onSelect});
+  const _WalletPicker({required this.isDark, required this.selectedId, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -397,29 +397,29 @@ class _SavingsBucketPicker extends StatelessWidget {
         const SizedBox(height: 10),
         Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
         Padding(padding: const EdgeInsets.fromLTRB(20, 14, 16, 10), child: Row(children: [
-          Text('Select Savings Bucket', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+          Text('Select Wallet', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
           const Spacer(),
           GestureDetector(onTap: () => Navigator.pop(context), child: Padding(padding: const EdgeInsets.all(4), child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary))),
         ])),
         Divider(height: 1, color: borderColor),
-        AsyncStreamBuilder<List<SavingsBucket>>(
-          state: locator.get<SavingsController>(),
-          builder: (_, buckets) {
-            if (buckets.isEmpty) {
+        AsyncStreamBuilder<List<Wallet>>(
+          state: locator.get<WalletController>(),
+          builder: (_, wallets) {
+            if (wallets.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(children: [
-                  Icon(Icons.savings_outlined, size: 40, color: AppColors.textTertiary),
+                  Icon(Icons.account_balance_wallet_outlined, size: 40, color: AppColors.textTertiary),
                   const SizedBox(height: 8),
-                  Text('No savings buckets yet', style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textSecondary)),
+                  Text('No wallets yet', style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
-                  Text('Create a savings bucket first to link your goal', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textTertiary), textAlign: TextAlign.center),
+                  Text('Create a wallet first to link your goal', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textTertiary), textAlign: TextAlign.center),
                 ]),
               );
             }
             return Column(
               mainAxisSize: MainAxisSize.min,
-              children: buckets.map((b) {
+              children: wallets.map((b) {
                 final isSelected = b.id == selectedId;
                 final color = b.colorHex != null
                     ? Color(int.parse(b.colorHex!.replaceFirst('#', '0xff')))
@@ -428,7 +428,7 @@ class _SavingsBucketPicker extends StatelessWidget {
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                     leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-                        child: Icon(Icons.savings_outlined, size: 20, color: color)),
+                        child: Icon(Icons.account_balance_wallet_outlined, size: 20, color: color)),
                     title: Text(b.name, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400, color: textPrimary)),
                     subtitle: Text(currencyFormatter.format(b.balance, decimalDigits: 2),
                         style: GoogleFonts.dmMono(fontSize: 12, color: AppColors.success)),

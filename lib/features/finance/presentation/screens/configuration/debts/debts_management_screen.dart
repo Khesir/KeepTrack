@@ -5,10 +5,10 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/debts/widgets/debt_management_dialog.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 class DebtsManagementScreen extends StatefulWidget {
   const DebtsManagementScreen({super.key});
 
@@ -18,13 +18,13 @@ class DebtsManagementScreen extends StatefulWidget {
 
 class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
   late final DebtController _debtController;
-  late final SavingsController _savingsController;
+  late final WalletController _walletController;
 
   @override
   void initState() {
     super.initState();
     _debtController = locator.get<DebtController>();
-    _savingsController = locator.get<SavingsController>();
+    _walletController = locator.get<WalletController>();
   }
 
   @override
@@ -33,12 +33,12 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
     super.dispose();
   }
 
-  void _showCreateEditDialog({Debt? debt, required List<SavingsBucket> savingsBuckets}) {
+  void _showCreateEditDialog({Debt? debt, required List<Wallet> wallets}) {
     showDialog(
       context: context,
       builder: (context) => DebtManagementDialog(
         debt: debt,
-        savingsBuckets: savingsBuckets,
+        wallets: wallets,
         onSave: (savedDebt, categoryId) => {
           if (debt != null)
             {_debtController.updateDebt(savedDebt)}
@@ -80,13 +80,13 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Debts')),
-      body: AsyncStreamBuilder<List<SavingsBucket>>(
-        state: _savingsController,
-        builder: (context, savingsBuckets) {
+      body: AsyncStreamBuilder<List<Wallet>>(
+        state: _walletController,
+        builder: (context, wallets) {
           return AsyncStreamBuilder<List<Debt>>(
             state: _debtController,
             builder: (context, debts) {
-              return _buildDebtsList(debts, savingsBuckets);
+              return _buildDebtsList(debts, wallets);
             },
             loadingBuilder: (context) =>
                 const Center(child: CircularProgressIndicator()),
@@ -115,21 +115,21 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 16),
-              Text('Failed to load savings: $message'),
+              Text('Failed to load wallets: $message'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => _savingsController.loadSavings(),
+                onPressed: () => _walletController.loadWallets(),
                 child: const Text('Retry'),
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: AsyncStreamBuilder<List<SavingsBucket>>(
-        state: _savingsController,
-        builder: (context, savingsBuckets) {
+      floatingActionButton: AsyncStreamBuilder<List<Wallet>>(
+        state: _walletController,
+        builder: (context, wallets) {
           return FloatingActionButton.extended(
-            onPressed: () => _showCreateEditDialog(savingsBuckets: savingsBuckets),
+            onPressed: () => _showCreateEditDialog(wallets: wallets),
             icon: const Icon(Icons.add),
             label: const Text('Add Debt'),
           );
@@ -147,7 +147,7 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
     );
   }
 
-  Widget _buildDebtsList(List<Debt> debts, List<SavingsBucket> savingsBuckets) {
+  Widget _buildDebtsList(List<Debt> debts, List<Wallet> wallets) {
           if (debts.isEmpty) {
             return Center(
               child: Column(
@@ -250,7 +250,7 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
                     ],
                     onSelected: (value) {
                       if (value == 'edit') {
-                        _showCreateEditDialog(debt: debt, savingsBuckets: savingsBuckets);
+                        _showCreateEditDialog(debt: debt, wallets: wallets);
                       } else if (value == 'delete') {
                         _deleteDebt(debt);
                       }

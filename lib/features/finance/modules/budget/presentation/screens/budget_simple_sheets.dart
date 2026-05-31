@@ -11,6 +11,7 @@ import 'package:keep_track/core/state/state.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
+import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 
@@ -537,6 +538,18 @@ class _GoalDetailSheetState extends State<GoalDetailSheet> {
     return widget.goal;
   }
 
+  void _showEditDialog(Goal current) {
+    showDialog(
+      context: context,
+      builder: (_) => GoalsManagementDialog(
+        goal: current,
+        onSave: (updated) async {
+          await widget.onUpdate(updated);
+        },
+      ),
+    );
+  }
+
   void _showContributeDrawer(Goal current) {
     showModalBottomSheet(
       context: context,
@@ -586,6 +599,7 @@ class _GoalDetailSheetState extends State<GoalDetailSheet> {
             onContribute: g.status != GoalStatus.completed
                 ? () => _showContributeDrawer(g)
                 : null,
+            onEdit: () => _showEditDialog(g),
           ),
         );
       },
@@ -598,6 +612,7 @@ class _GoalViewBody extends StatelessWidget {
   final Color color;
   final bool isDark, loading;
   final VoidCallback? onContribute;
+  final VoidCallback? onEdit;
 
   const _GoalViewBody({
     required this.goal,
@@ -605,6 +620,7 @@ class _GoalViewBody extends StatelessWidget {
     required this.isDark,
     required this.loading,
     required this.onContribute,
+    this.onEdit,
   });
 
   @override
@@ -674,6 +690,16 @@ class _GoalViewBody extends StatelessWidget {
         loading: loading,
         onTap: onContribute,
       ),
+      if (onEdit != null) ...[
+        const SizedBox(height: 8),
+        _ActionButton(
+          label: 'Edit Goal',
+          icon: Icons.edit_outlined,
+          color: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
+          outlined: true,
+          onTap: onEdit,
+        ),
+      ],
     ]);
   }
 }

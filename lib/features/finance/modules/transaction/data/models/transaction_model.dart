@@ -20,7 +20,8 @@ class TransactionModel extends Transaction {
     super.goalId,
     super.plannedPaymentId,
     super.refundedTransactionId,
-    super.savingsId,
+    super.walletId,
+    super.toWalletId,
     super.subscriptionId,
   });
 
@@ -44,7 +45,8 @@ class TransactionModel extends Transaction {
       goalId: transaction.goalId,
       plannedPaymentId: transaction.plannedPaymentId,
       refundedTransactionId: transaction.refundedTransactionId,
-      savingsId: transaction.savingsId,
+      walletId: transaction.walletId,
+      toWalletId: transaction.toWalletId,
       subscriptionId: transaction.subscriptionId,
     );
   }
@@ -72,7 +74,8 @@ class TransactionModel extends Transaction {
       goalId: json['goalId'] as String?,
       plannedPaymentId: json['plannedPaymentId'] as String?,
       refundedTransactionId: json['refundedTransactionId'] as String?,
-      savingsId: json['savingsId'] as String?,
+      walletId: json['walletId'] as String?,
+      toWalletId: json['toWalletId'] as String?,
       subscriptionId: json['subscriptionId'] as String?,
     );
   }
@@ -93,7 +96,8 @@ class TransactionModel extends Transaction {
       if (goalId != null) 'goalId': goalId,
       if (plannedPaymentId != null) 'plannedPaymentId': plannedPaymentId,
       if (refundedTransactionId != null) 'refundedTransactionId': refundedTransactionId,
-      if (savingsId != null) 'savingsId': savingsId,
+      if (walletId != null) 'walletId': walletId,
+      if (toWalletId != null) 'toWalletId': toWalletId,
       if (subscriptionId != null) 'subscriptionId': subscriptionId,
     };
   }
@@ -118,7 +122,8 @@ class TransactionModel extends Transaction {
       if (goalId != null) 'goalId': goalId,
       if (plannedPaymentId != null) 'plannedPaymentId': plannedPaymentId,
       if (refundedTransactionId != null) 'refundedTransactionId': refundedTransactionId,
-      if (savingsId != null) 'savingsId': savingsId,
+      if (walletId != null) 'walletId': walletId,
+      if (toWalletId != null) 'toWalletId': toWalletId,
       if (subscriptionId != null) 'subscriptionId': subscriptionId,
     };
   }

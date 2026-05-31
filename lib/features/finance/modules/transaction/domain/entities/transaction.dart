@@ -19,7 +19,8 @@ class Transaction {
   final String? goalId;
   final String? plannedPaymentId;
   final String? refundedTransactionId;
-  final String? savingsId;
+  final String? walletId;
+  final String? toWalletId;
   final String? subscriptionId;
 
   Transaction({
@@ -41,7 +42,8 @@ class Transaction {
     this.goalId,
     this.plannedPaymentId,
     this.refundedTransactionId,
-    this.savingsId,
+    this.walletId,
+    this.toWalletId,
     this.subscriptionId,
   });
 
@@ -64,7 +66,8 @@ class Transaction {
     String? goalId,
     String? plannedPaymentId,
     String? refundedTransactionId,
-    String? savingsId,
+    String? walletId,
+    String? toWalletId,
     String? subscriptionId,
   }) {
     return Transaction(
@@ -86,7 +89,8 @@ class Transaction {
       goalId: goalId ?? this.goalId,
       plannedPaymentId: plannedPaymentId ?? this.plannedPaymentId,
       refundedTransactionId: refundedTransactionId ?? this.refundedTransactionId,
-      savingsId: savingsId ?? this.savingsId,
+      walletId: walletId ?? this.walletId,
+      toWalletId: toWalletId ?? this.toWalletId,
       subscriptionId: subscriptionId ?? this.subscriptionId,
     );
   }

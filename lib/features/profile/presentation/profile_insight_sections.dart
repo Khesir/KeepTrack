@@ -6,7 +6,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 
 const _palette = [
@@ -222,7 +222,7 @@ class InsightTrendSection extends StatelessWidget {
 // ─── Savings Distribution (Donut) ────────────────────────────────────────────
 
 class InsightSavingsSection extends StatelessWidget {
-  final List<SavingsBucket> buckets;
+  final List<Wallet> buckets;
   final double total;
 
   const InsightSavingsSection({super.key, required this.buckets, required this.total});

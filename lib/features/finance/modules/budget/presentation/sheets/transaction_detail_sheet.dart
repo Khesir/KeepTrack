@@ -15,7 +15,8 @@ import 'package:keep_track/features/finance/presentation/state/budget_profile_co
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_sheet.dart'
@@ -59,6 +60,10 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
   String? _editGoalId;
   String? _editEntityLabel;
 
+  // Edit-mode wallet state (for transfers)
+  String? _editWalletId;
+  String? _editToWalletId;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +85,10 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
           ? '${profile.name} · ${DateFormat('MMM yyyy').format(_editDate)}'
           : profile.name;
     }
+
+    // Pre-populate wallet ids
+    _editWalletId = widget.transaction.walletId;
+    _editToWalletId = widget.transaction.toWalletId;
 
     // Pre-populate entity link
     final t = widget.transaction;
@@ -112,6 +121,15 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
 
   String? _linkedLabel() {
     final t = widget.transaction;
+    if (t.type == TransactionType.transfer) {
+      final wallets = locator.get<WalletController>().data ?? [];
+      final from = wallets.where((w) => w.id == t.walletId).firstOrNull;
+      final to = wallets.where((w) => w.id == t.toWalletId).firstOrNull;
+      if (from != null || to != null) {
+        return '${from?.name ?? '—'} → ${to?.name ?? '—'}';
+      }
+      return null;
+    }
     if (t.goalId != null) {
       final goals = locator.get<GoalController>().data ?? [];
       final goal = goals.where((g) => g.id == t.goalId).firstOrNull;
@@ -130,10 +148,10 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
       final sub = subs.where((s) => s.id == t.subscriptionId).firstOrNull;
       return 'Subscription: ${sub?.name ?? '—'}';
     }
-    if (t.savingsId != null) {
-      final buckets = locator.get<SavingsController>().data ?? [];
-      final bucket = buckets.where((b) => b.id == t.savingsId).firstOrNull;
-      return 'Savings: ${bucket?.name ?? '—'}';
+    if (t.walletId != null) {
+      final wallets = locator.get<WalletController>().data ?? [];
+      final wallet = wallets.where((w) => w.id == t.walletId).firstOrNull;
+      return 'Wallet: ${wallet?.name ?? '—'}';
     }
     return null;
   }
@@ -270,13 +288,13 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
     if (newGoalId != null && newGoalId != origGoal) {
       final goalCtrl = locator.get<GoalController>();
       await goalCtrl.contributeToGoal(newGoalId, amount);
-      final savingsCtrl = locator.get<SavingsController>();
-      if (savingsCtrl.data == null) await savingsCtrl.loadSavings();
+      final walletCtrl = locator.get<WalletController>();
+      if (walletCtrl.data == null) await walletCtrl.loadWallets();
       final goal = (goalCtrl.data ?? []).where((g) => g.id == newGoalId).firstOrNull;
       if (goal?.savingsBucketId != null) {
-        final bucket = (savingsCtrl.data ?? []).where((b) => b.id == goal!.savingsBucketId).firstOrNull;
-        if (bucket != null) {
-          await savingsCtrl.updateSavingsBucket(bucket.copyWith(balance: bucket.balance + amount));
+        final wallet = (walletCtrl.data ?? []).where((w) => w.id == goal!.savingsBucketId).firstOrNull;
+        if (wallet != null) {
+          await walletCtrl.updateWallet(wallet.copyWith(balance: wallet.balance + amount));
         }
       }
     }
@@ -303,7 +321,8 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
           debtId: _editDebtId,
           goalId: _editGoalId,
           plannedPaymentId: t.plannedPaymentId,
-          savingsId: t.savingsId,
+          walletId: _editWalletId,
+          toWalletId: _editToWalletId,
           userId: t.userId,
           createdAt: t.createdAt,
         ),
@@ -379,13 +398,28 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
           ));
         }
       }
-      if (t.savingsId != null) {
-        final savingsCtrl = locator.get<SavingsController>();
-        final bucket = (savingsCtrl.data ?? []).where((b) => b.id == t.savingsId).firstOrNull;
-        if (bucket != null) {
-          await savingsCtrl.updateSavingsBucket(
-            bucket.copyWith(balance: (bucket.balance - t.amount).clamp(0.0, double.infinity)),
-          );
+      if (t.walletId != null || t.toWalletId != null) {
+        final walletCtrl = locator.get<WalletController>();
+        final wallets = walletCtrl.data ?? [];
+        // Reverse from-wallet: add back the amount that was deducted
+        if (t.walletId != null) {
+          final fromWallet = wallets.where((w) => w.id == t.walletId).firstOrNull;
+          if (fromWallet != null) {
+            final delta = t.type == TransactionType.transfer
+                ? t.amount
+                : (t.type == TransactionType.income
+                    ? (fromWallet.type == WalletType.creditCard ? t.amount : -t.amount)
+                    : (fromWallet.type == WalletType.creditCard ? -t.amount : t.amount));
+            await walletCtrl.updateWallet(fromWallet.copyWith(balance: fromWallet.balance + delta));
+          }
+        }
+        // Reverse to-wallet for transfers: subtract the amount that was added
+        if (t.type == TransactionType.transfer && t.toWalletId != null) {
+          final toWallet = wallets.where((w) => w.id == t.toWalletId).firstOrNull;
+          if (toWallet != null) {
+            final delta = toWallet.type == WalletType.creditCard ? t.amount : -t.amount;
+            await walletCtrl.updateWallet(toWallet.copyWith(balance: toWallet.balance + delta));
+          }
         }
       }
 
@@ -546,7 +580,8 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = widget.transaction;
     final isIncome = t.type == TransactionType.income;
-    final color = isIncome ? AppColors.success : AppColors.error;
+    final isTransfer = t.type == TransactionType.transfer;
+    final color = isTransfer ? AppColors.info : (isIncome ? AppColors.success : AppColors.error);
     final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
@@ -581,7 +616,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-                  child: Text(isIncome ? 'Income' : 'Expense',
+                  child: Text(isTransfer ? 'Transfer' : (isIncome ? 'Income' : 'Expense'),
                       style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
                 ),
               ],
@@ -595,16 +630,17 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: _editMode
-                ? _buildEditBody(isDark, borderColor, textPrimary)
-                : _buildViewBody(isDark, color, textPrimary, linked),
+                ? _buildEditBody(isDark, borderColor, textPrimary, isTransfer)
+                : _buildViewBody(isDark, color, textPrimary, linked, isTransfer),
           ),
         ])),
       ),
     );
   }
 
-  Widget _buildViewBody(bool isDark, Color color, Color textPrimary, String? linked) {
+  Widget _buildViewBody(bool isDark, Color color, Color textPrimary, String? linked, bool isTransfer) {
     final t = widget.transaction;
+    final sign = isTransfer ? '↔' : (isIncome(t) ? '+' : '-');
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
         padding: const EdgeInsets.all(14),
@@ -616,7 +652,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Amount', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
             Text(
-              '${isIncome(t) ? '+' : '-'}${currencyFormatter.format(t.amount, decimalDigits: 2)}',
+              '$sign${currencyFormatter.format(t.amount, decimalDigits: 2)}',
               style: GoogleFonts.dmMono(fontSize: 22, fontWeight: FontWeight.w700, color: color, fontFeatures: const [FontFeature.tabularFigures()]),
             ),
           ])),
@@ -630,7 +666,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
       ),
       const SizedBox(height: 14),
       _InfoRow(isDark: isDark, label: 'Date', value: DateFormat('MMMM d, yyyy').format(t.date), textPrimary: textPrimary),
-      if (linked != null) _InfoRow(isDark: isDark, label: 'Linked to', value: linked, textPrimary: AppColors.accent),
+      if (linked != null) _InfoRow(isDark: isDark, label: isTransfer ? 'Transfer' : 'Linked to', value: linked, textPrimary: AppColors.info),
       if (t.notes != null && t.notes!.isNotEmpty) _InfoRow(isDark: isDark, label: 'Notes', value: t.notes!, textPrimary: textPrimary),
       const SizedBox(height: 20),
       _Button(label: 'Edit Transaction', icon: Icons.edit_outlined,
@@ -644,7 +680,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
 
   bool isIncome(Transaction t) => t.type == TransactionType.income;
 
-  Widget _buildEditBody(bool isDark, Color borderColor, Color textPrimary) {
+  Widget _buildEditBody(bool isDark, Color borderColor, Color textPrimary, bool isTransfer) {
     final chipBg = isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.background;
     final chipBorder = isDark ? AppColors.border.withValues(alpha: 0.25) : AppColors.border.withValues(alpha: 0.6);
 
@@ -672,89 +708,145 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
       ),
       const SizedBox(height: 12),
 
-      // Category picker
-      GestureDetector(
-        onTap: () => _showCategoryPicker(isDark),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: chipBg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _editCategory != null ? AppColors.accent.withValues(alpha: 0.4) : chipBorder, width: 0.5),
+      if (isTransfer) ...[
+        // Transfer: show from/to wallets (read-only)
+        _buildTransferWalletRow(isDark, chipBg, chipBorder, textPrimary),
+        const SizedBox(height: 8),
+      ] else ...[
+        // Category picker
+        GestureDetector(
+          onTap: () => _showCategoryPicker(isDark),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: chipBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _editCategory != null ? AppColors.accent.withValues(alpha: 0.4) : chipBorder, width: 0.5),
+            ),
+            child: Row(children: [
+              Icon(Icons.category_outlined, size: 16,
+                  color: _editCategory != null ? AppColors.accent : AppColors.textSecondary),
+              const SizedBox(width: 10),
+              Expanded(child: Text(
+                _editCategory?.name ?? 'Select Category',
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
+                    color: _editCategory != null ? textPrimary : AppColors.textSecondary),
+              )),
+              Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
+            ]),
           ),
-          child: Row(children: [
-            Icon(Icons.category_outlined, size: 16,
-                color: _editCategory != null ? AppColors.accent : AppColors.textSecondary),
-            const SizedBox(width: 10),
-            Expanded(child: Text(
-              _editCategory?.name ?? 'Select Category',
-              style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
-                  color: _editCategory != null ? textPrimary : AppColors.textSecondary),
-            )),
-            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
-          ]),
         ),
-      ),
-      const SizedBox(height: 8),
+        const SizedBox(height: 8),
 
-      // Budget profile picker
-      GestureDetector(
-        onTap: () => _showProfilePicker(isDark),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: chipBg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _editProfileId != null ? AppColors.accent.withValues(alpha: 0.4) : chipBorder, width: 0.5),
+        // Budget profile picker
+        GestureDetector(
+          onTap: () => _showProfilePicker(isDark),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: chipBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _editProfileId != null ? AppColors.accent.withValues(alpha: 0.4) : chipBorder, width: 0.5),
+            ),
+            child: Row(children: [
+              Icon(Icons.account_balance_wallet_outlined, size: 16,
+                  color: _editProfileId != null ? AppColors.accent : AppColors.textSecondary),
+              const SizedBox(width: 10),
+              Expanded(child: Text(
+                _editProfileName ?? 'No Budget Profile',
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
+                    color: _editProfileId != null ? textPrimary : AppColors.textSecondary),
+              )),
+              Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
+            ]),
           ),
-          child: Row(children: [
-            Icon(Icons.account_balance_wallet_outlined, size: 16,
-                color: _editProfileId != null ? AppColors.accent : AppColors.textSecondary),
-            const SizedBox(width: 10),
-            Expanded(child: Text(
-              _editProfileName ?? 'No Budget Profile',
-              style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
-                  color: _editProfileId != null ? textPrimary : AppColors.textSecondary),
-            )),
-            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
-          ]),
         ),
-      ),
-      const SizedBox(height: 8),
+        const SizedBox(height: 8),
 
-      // Entity link picker
-      GestureDetector(
-        onTap: () => _showEntityTypePicker(isDark),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: chipBg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _editEntityLabel != null ? AppColors.success.withValues(alpha: 0.4) : chipBorder, width: 0.5),
+        // Entity link picker
+        GestureDetector(
+          onTap: () => _showEntityTypePicker(isDark),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: chipBg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _editEntityLabel != null ? AppColors.success.withValues(alpha: 0.4) : chipBorder, width: 0.5),
+            ),
+            child: Row(children: [
+              Icon(_editEntityType != null ? _entityIcon(_editEntityType!) : Icons.link_rounded,
+                  size: 16, color: _editEntityLabel != null ? AppColors.success : AppColors.textSecondary),
+              const SizedBox(width: 10),
+              Expanded(child: Text(
+                _editEntityLabel ?? 'Link Entity (optional)',
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
+                    color: _editEntityLabel != null ? textPrimary : AppColors.textSecondary),
+              )),
+              Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
+            ]),
           ),
-          child: Row(children: [
-            Icon(_editEntityType != null ? _entityIcon(_editEntityType!) : Icons.link_rounded,
-                size: 16, color: _editEntityLabel != null ? AppColors.success : AppColors.textSecondary),
-            const SizedBox(width: 10),
-            Expanded(child: Text(
-              _editEntityLabel ?? 'Link Entity (optional)',
-              style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
-                  color: _editEntityLabel != null ? textPrimary : AppColors.textSecondary),
-            )),
-            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
-          ]),
         ),
-      ),
-      const SizedBox(height: 20),
+        const SizedBox(height: 8),
+      ],
+      const SizedBox(height: 12),
 
       _Button(label: 'Save Changes', icon: Icons.check_rounded, color: AppColors.accent, loading: _loading, onTap: _save),
       const SizedBox(height: 8),
       _Button(label: 'Cancel', icon: Icons.close_rounded, color: AppColors.textSecondary,
           outlined: true, isDark: isDark, onTap: () => setState(() => _editMode = false)),
     ]);
+  }
+
+  Widget _buildTransferWalletRow(bool isDark, Color chipBg, Color chipBorder, Color textPrimary) {
+    final wallets = locator.get<WalletController>().data ?? [];
+    final fromWallet = wallets.where((w) => w.id == _editWalletId).firstOrNull;
+    final toWallet = wallets.where((w) => w.id == _editToWalletId).firstOrNull;
+
+    Widget walletChip(Wallet? wallet, String fallback) {
+      final wColor = wallet?.colorHex != null
+          ? Color(int.parse(wallet!.colorHex!.replaceFirst('#', '0xff')))
+          : AppColors.info;
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: chipBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: wallet != null ? AppColors.info.withValues(alpha: 0.4) : chipBorder, width: 0.5),
+          ),
+          child: Row(children: [
+            Icon(
+              wallet?.type == WalletType.creditCard ? Icons.credit_card_outlined : Icons.account_balance_wallet_outlined,
+              size: 14, color: wallet != null ? wColor : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(
+              wallet?.name ?? fallback,
+              style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
+                  color: wallet != null ? textPrimary : AppColors.textSecondary),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+            )),
+          ]),
+        ),
+      );
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          walletChip(fromWallet, 'From wallet'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(child: Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.info)),
+          ),
+          walletChip(toWallet, 'To wallet'),
+        ],
+      ),
+    );
   }
 
   IconData _entityIcon(String type) => switch (type) {

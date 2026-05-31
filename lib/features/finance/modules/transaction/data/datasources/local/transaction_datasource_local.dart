@@ -27,9 +27,9 @@ class TransactionDataSourceLocal implements TransactionDataSource {
   }
 
   @override
-  Future<List<Transaction>> getTransactionsBySavings(String savingsId) async {
+  Future<List<Transaction>> getTransactionsByWallet(String walletId) async {
     final all = await _getAll();
-    return all.where((t) => t.savingsId == savingsId).toList();
+    return all.where((t) => t.walletId == walletId).toList();
   }
 
   @override

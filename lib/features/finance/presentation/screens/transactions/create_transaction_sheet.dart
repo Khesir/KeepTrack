@@ -18,7 +18,9 @@ import 'package:keep_track/features/finance/presentation/state/budget_profile_co
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_plan_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'scan_expenses_sheet.dart';
 
 class CreateTransactionSheet extends StatefulWidget {
@@ -59,10 +61,12 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
   late final BudgetProfileController _profileController;
   late final MonthPlanController _monthPlanController;
   late final AuthController _authController;
+  late final WalletController _walletController;
 
   TransactionType _type = TransactionType.expense;
   String _amountStr = '0';
   FinanceCategory? _category;
+  Wallet? _selectedWallet;
   DateTime _date = DateTime.now();
   final _descCtrl = TextEditingController();
   bool _loading = false;
@@ -70,6 +74,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
   bool _isPlan = false;
   bool _categoryError = false;
   bool _profileError = false;
+  bool _walletError = false;
   String? _selectedProfileId;
   String? _selectedProfileName;
   String? _selectedPlanMonth;
@@ -84,6 +89,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     _profileController = locator.get<BudgetProfileController>();
     _monthPlanController = locator.get<MonthPlanController>();
     _authController = locator.get<AuthController>();
+    _walletController = locator.get<WalletController>();
     _catController.loadCategories();
 
     // Pre-select profile if provided
@@ -184,6 +190,10 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
       setState(() => _categoryError = true);
       return;
     }
+    if (_selectedWallet == null) {
+      setState(() => _walletError = true);
+      return;
+    }
     if (_amount <= 0) return;
     if (_isPlan && _descCtrl.text.trim().isEmpty) return;
     setState(() => _loading = true);
@@ -209,6 +219,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
           date: _date,
           description: desc.isEmpty ? autoDesc : desc,
           budgetProfileId: _selectedProfileId,
+          walletId: _selectedWallet!.id,
         ));
       }
       widget.onCreated?.call();
@@ -320,6 +331,71 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     );
   }
 
+  void _pickWallet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wallets = _walletController.data ?? [];
+    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(2))),
+          Padding(padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+              child: Text('Select Wallet', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: fg))),
+          if (wallets.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: Text('No wallets yet. Create one in the Wallet tab.', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary)),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: wallets.length,
+                separatorBuilder: (_, __) => Divider(height: 1, color: borderColor, indent: 16, endIndent: 16),
+                itemBuilder: (_, i) {
+                  final w = wallets[i];
+                  final sel = _selectedWallet?.id == w.id;
+                  final wColor = w.colorHex != null
+                      ? Color(int.parse(w.colorHex!.replaceFirst('#', '0xff')))
+                      : AppColors.accent;
+                  return ListTile(
+                    leading: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: wColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        w.type == WalletType.creditCard ? Icons.credit_card_outlined : Icons.account_balance_wallet_outlined,
+                        size: 16, color: wColor,
+                      ),
+                    ),
+                    title: Text(w.name, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: fg)),
+                    subtitle: Text(
+                      '${currencyFormatter.format(w.balance, decimalDigits: 2)} • ${w.type.displayName}',
+                      style: GoogleFonts.dmMono(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                    trailing: sel ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent) : null,
+                    onTap: () {
+                      setState(() { _selectedWallet = w; _walletError = false; });
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 8),
+        ])),
+      ),
+    );
+  }
+
   void _pickDate() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
@@ -418,6 +494,17 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
               onTap: _selectedProfileId == null ? null : _pickCategory,
             ),
             const SizedBox(width: 8),
+            _Chip(
+              icon: _selectedWallet == null
+                  ? Icons.account_balance_wallet_outlined
+                  : (_selectedWallet!.type == WalletType.creditCard ? Icons.credit_card_outlined : Icons.account_balance_wallet_outlined),
+              label: _selectedWallet?.name ?? 'Wallet *',
+              color: _walletError ? AppColors.error : (_selectedWallet != null ? AppColors.accent : AppColors.textSecondary),
+              isDark: isDark,
+              highlighted: _walletError,
+              onTap: () { setState(() => _walletError = false); _pickWallet(); },
+            ),
+            const SizedBox(width: 8),
             _Chip(icon: Icons.calendar_today_outlined, label: dateLabel, color: isToday ? AppColors.textSecondary : AppColors.accent, isDark: isDark, onTap: _pickDate),
             if (!_isPlan) ...[
               const SizedBox(width: 8),
@@ -486,7 +573,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
             child: ElevatedButton(
               onPressed: _loading ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _amount > 0 && _category != null
+                backgroundColor: _amount > 0 && _category != null && (_isPlan || _selectedWallet != null)
                     ? (_isPlan ? AppColors.accent : _typeColor)
                     : AppColors.textTertiary,
                 foregroundColor: Colors.white, elevation: 0,

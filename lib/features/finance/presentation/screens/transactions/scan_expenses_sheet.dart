@@ -23,7 +23,8 @@ import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.da
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
@@ -60,7 +61,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
   late final SubscriptionController _subController;
   late final DebtController _debtController;
   late final GoalController _goalController;
-  late final SavingsController _savingsController;
+  late final WalletController _walletController;
   final ReceiptParserService _parserService = ReceiptParserService();
   final _picker = ImagePicker();
   final _uuid = const Uuid();
@@ -69,6 +70,8 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
   File? _pickedFile;
   List<_EditableItem> _items = [];
   String? _errorMessage;
+  bool _textMode = false;
+  final _textCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -82,7 +85,14 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     _subController = locator.get<SubscriptionController>();
     _debtController = locator.get<DebtController>();
     _goalController = locator.get<GoalController>();
-    _savingsController = locator.get<SavingsController>();
+    _walletController = locator.get<WalletController>();
+    _textCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _textCtrl.dispose();
+    super.dispose();
   }
 
   FinanceCategory? _matchCategory(String name, TransactionType type) {
@@ -186,9 +196,62 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
             isMonthlyProfile: defaultIsMonthly,
             entityType: p.entityType,
             entityHint: p.entityHint,
+            walletHint: p.walletHint,
           );
-          // Auto-match entity from AI hint so chip starts green without manual linking
+          // Auto-match entity and wallet from AI hints
           _autoLinkEntity(item, p.entityType, p.entityHint);
+          _autoLinkWallet(item, p.walletHint);
+          return item;
+        }).toList();
+        _step = _ScanStep.review;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _items = []; _errorMessage = _friendlyError(e); _step = _ScanStep.review; });
+    }
+  }
+
+  Future<void> _parseText() async {
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() { _step = _ScanStep.loading; _errorMessage = null; });
+    try {
+      final parsed = await _parserService.parseTextInput(text);
+      if (!mounted) return;
+      final pid = _defaultProfileId;
+      final today = DateTime.now();
+      final defaultProfile = pid != null
+          ? _profiles.cast<BudgetProfile?>().firstWhere((p) => p?.id == pid, orElse: () => null)
+          : null;
+      final defaultIsMonthly = defaultProfile?.isMonthly ?? false;
+      final defaultBaseName = defaultProfile?.name;
+      final defaultDisplayName = defaultProfile == null
+          ? null
+          : defaultIsMonthly
+              ? '${defaultProfile.name} · ${DateFormat('MMM yyyy').format(today)}'
+              : defaultProfile.name;
+      setState(() {
+        _items = parsed.map((p) {
+          final txType = p.type == 'income' ? TransactionType.income : TransactionType.expense;
+          final matched = _matchCategory(p.categoryName, txType);
+          final item = _EditableItem(
+            id: _uuid.v4(),
+            amount: p.amount,
+            type: txType,
+            description: p.description,
+            date: today,
+            categoryName: p.categoryName,
+            category: matched,
+            profileId: pid,
+            profileName: defaultDisplayName,
+            profileBaseName: defaultBaseName,
+            isMonthlyProfile: defaultIsMonthly,
+            entityType: p.entityType,
+            entityHint: p.entityHint,
+            walletHint: p.walletHint,
+          );
+          _autoLinkEntity(item, p.entityType, p.entityHint);
+          _autoLinkWallet(item, p.walletHint);
           return item;
         }).toList();
         _step = _ScanStep.review;
@@ -242,6 +305,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
         subscriptionId: item.subscriptionId,
         debtId: item.debtId,
         goalId: item.goalId,
+        walletId: item.walletId,
       ));
 
       if (item.subscriptionId != null || item.debtId != null || item.goalId != null) {
@@ -369,6 +433,17 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     }
   }
 
+  void _autoLinkWallet(_EditableItem item, String? hint) {
+    if (hint == null || hint.isEmpty) return;
+    final h = hint.toLowerCase();
+    final wallets = _walletController.data ?? [];
+    final match = wallets.where((w) => w.name.toLowerCase().contains(h) || h.contains(w.name.toLowerCase())).firstOrNull;
+    if (match != null) {
+      item.walletId = match.id;
+      item.walletName = match.name;
+    }
+  }
+
   Future<void> _applyEntitySideEffects(_EditableItem item) async {
     // ── Subscription: uses Hive pay() which sets lastBilledDate + advances nextBillingDate ─
     if (item.subscriptionId != null) {
@@ -404,15 +479,15 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     // ── Goal: contributeToGoal writes to Hive + reloads; savings sync ─────────
     if (item.goalId != null) {
       await _goalController.contributeToGoal(item.goalId!, item.amount);
-      if (_savingsController.data == null) await _savingsController.loadSavings();
+      if (_walletController.data == null) await _walletController.loadWallets();
       final goal = (_goalController.data ?? []).where((g) => g.id == item.goalId).firstOrNull;
       if (goal?.savingsBucketId != null) {
-        final bucket = (_savingsController.data ?? [])
-            .where((b) => b.id == goal!.savingsBucketId)
+        final wallet = (_walletController.data ?? [])
+            .where((w) => w.id == goal!.savingsBucketId)
             .firstOrNull;
-        if (bucket != null) {
-          await _savingsController.updateSavingsBucket(
-            bucket.copyWith(balance: bucket.balance + item.amount),
+        if (wallet != null) {
+          await _walletController.updateWallet(
+            wallet.copyWith(balance: wallet.balance + item.amount),
           );
         }
       }
@@ -672,34 +747,122 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                     color: AppColors.accent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.document_scanner_outlined, size: 22, color: AppColors.accent),
+                  child: Icon(
+                    _textMode ? Icons.edit_note_rounded : Icons.document_scanner_outlined,
+                    size: 22, color: AppColors.accent,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Scan Expenses', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
-                  Text('AI reads your handwritten notes', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+                  Text(
+                    _textMode ? 'Describe your expenses' : 'Add Expenses',
+                    style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary),
+                  ),
+                  Text(
+                    _textMode ? 'Type naturally, AI will parse it' : 'Scan an image or type it out',
+                    style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
+                  ),
                 ])),
+                if (_textMode)
+                  GestureDetector(
+                    onTap: () => setState(() { _textMode = false; _textCtrl.clear(); }),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
+                    ),
+                  ),
               ]),
             ),
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(children: [
-                if (!_isDesktop) ...[
-                  _SourceCard(isDark: isDark, icon: Icons.camera_alt_outlined,
-                      label: 'Camera', sublabel: 'Take a photo now',
-                      onTap: () => _pickImage(ImageSource.camera)),
-                  const SizedBox(height: 10),
-                ],
-                _SourceCard(isDark: isDark, icon: Icons.photo_library_outlined,
-                    label: _isDesktop ? 'Choose from Files' : 'Gallery',
-                    sublabel: _isDesktop ? 'JPG, PNG or WebP' : 'Pick from files',
-                    onTap: () => _pickImage(ImageSource.gallery)),
-              ]),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: _textMode
+                    ? _buildTextInput(isDark, textPrimary)
+                    : _buildImageOptions(isDark),
+              ),
             ),
           ]),
         ),
       ),
+    );
+  }
+
+  Widget _buildImageOptions(bool isDark) {
+    return Column(
+      key: const ValueKey('image'),
+      children: [
+        if (!_isDesktop) ...[
+          _SourceCard(isDark: isDark, icon: Icons.camera_alt_outlined,
+              label: 'Camera', sublabel: 'Take a photo now',
+              onTap: () => _pickImage(ImageSource.camera)),
+          const SizedBox(height: 10),
+        ],
+        _SourceCard(isDark: isDark, icon: Icons.photo_library_outlined,
+            label: _isDesktop ? 'Choose from Files' : 'Gallery',
+            sublabel: _isDesktop ? 'JPG, PNG or WebP' : 'Pick from files',
+            onTap: () => _pickImage(ImageSource.gallery)),
+        const SizedBox(height: 10),
+        _SourceCard(
+          isDark: isDark,
+          icon: Icons.edit_note_rounded,
+          label: 'Type it out',
+          sublabel: 'e.g. "500 groceries from GCash yesterday"',
+          color: AppColors.success,
+          onTap: () => setState(() => _textMode = true),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextInput(bool isDark, Color textPrimary) {
+    final borderColor = isDark ? AppColors.border.withValues(alpha: 0.25) : AppColors.border.withValues(alpha: 0.5);
+    return Column(
+      key: const ValueKey('text'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _textCtrl,
+          autofocus: true,
+          maxLines: 4,
+          minLines: 3,
+          textCapitalization: TextCapitalization.sentences,
+          style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
+          decoration: InputDecoration(
+            hintText: 'e.g. "spent 500 on groceries from GCash, paid 1200 electricity from BDO yesterday"',
+            hintStyle: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textTertiary, height: 1.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.success, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.all(14),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _textCtrl.text.trim().isEmpty ? null : _parseText,
+            icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+            label: Text('Parse with AI', style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600)),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.success,
+              disabledBackgroundColor: AppColors.textTertiary,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -719,9 +882,15 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
               child: CircularProgressIndicator(color: AppColors.accent, strokeWidth: 2.5)),
         ),
         const SizedBox(height: 16),
-        Text('Scanning expenses…', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: textPrimary)),
+        Text(
+          _textMode ? 'Analysing your input…' : 'Scanning expenses…',
+          style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: textPrimary),
+        ),
         const SizedBox(height: 4),
-        Text('AI is reading your handwritten notes', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+        Text(
+          _textMode ? 'AI is parsing your description' : 'AI is reading your image',
+          style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
+        ),
       ]),
     );
   }
@@ -756,22 +925,26 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                 child: Row(children: [
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                      _errorMessage != null ? 'Couldn\'t read document'
-                          : _items.isEmpty ? 'Nothing detected'
-                          : '${_items.length} transaction${_items.length == 1 ? '' : 's'} found',
+                      _errorMessage != null
+                          ? (_textMode ? 'Couldn\'t parse input' : 'Couldn\'t read document')
+                          : _items.isEmpty
+                              ? (_textMode ? 'Nothing found' : 'Nothing detected')
+                              : '${_items.length} transaction${_items.length == 1 ? '' : 's'} found',
                       style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary),
                     ),
                     Text(
-                      _errorMessage != null ? 'See tips below and try again'
-                          : _items.isEmpty ? 'Try a clearer photo of your document'
-                          : 'Review and edit before saving',
+                      _errorMessage != null
+                          ? (_textMode ? 'Try rephrasing your input' : 'See tips below and try again')
+                          : _items.isEmpty
+                              ? (_textMode ? 'Try describing your expenses more clearly' : 'Try a clearer photo of your document')
+                              : 'Review and edit before saving',
                       style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ])),
                   TextButton.icon(
                     onPressed: () => setState(() { _step = _ScanStep.pick; _items = []; _errorMessage = null; }),
-                    icon: const Icon(Icons.camera_alt_outlined, size: 14),
-                    label: const Text('Re-scan'),
+                    icon: Icon(_textMode ? Icons.edit_note_rounded : Icons.camera_alt_outlined, size: 14),
+                    label: Text(_textMode ? 'Re-type' : 'Re-scan'),
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.accent,
                       textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
@@ -804,15 +977,23 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                   ]),
                 ),
                 const SizedBox(height: 20),
-                Text('Tips for a better scan', style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary, letterSpacing: 0.3)),
+                Text(
+                  _textMode ? 'Tips for better results' : 'Tips for a better scan',
+                  style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary, letterSpacing: 0.3),
+                ),
                 const SizedBox(height: 10),
-                ...[
+                ...(_textMode ? [
+                  (Icons.format_list_numbered_rounded, 'List one expense per line for clarity'),
+                  (Icons.place_rounded, 'Mention the wallet name, e.g. "from GCash" or "BDO"'),
+                  (Icons.calendar_today_outlined, 'Include dates like "yesterday" or "last Monday"'),
+                  (Icons.translate_rounded, 'Filipino-English mixing is fine — be natural'),
+                ] : [
                   (Icons.light_mode_outlined, 'Use good lighting — avoid shadows and glare'),
                   (Icons.crop_free_rounded, 'Fit the full document in the frame'),
                   (Icons.blur_off_rounded, 'Hold your camera steady for a sharp photo'),
                   (Icons.text_fields_rounded, 'Make sure all text is clearly readable'),
                   (Icons.rotate_right_rounded, 'Try a different angle if text is skewed'),
-                ].map((tip) => Padding(
+                ]).map((tip) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Container(
@@ -840,8 +1021,13 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                 const SizedBox(height: 14),
                 Text('No transactions found', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
                 const SizedBox(height: 6),
-                Text('The document may not contain recognisable expense data, or the image quality is too low. Try a clearer photo.',
-                    style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary, height: 1.5), textAlign: TextAlign.center),
+                Text(
+                  _textMode
+                      ? 'Nothing recognisable was found. Try describing amounts, what they were for, and which wallet.'
+                      : 'The document may not contain recognisable expense data, or the image quality is too low. Try a clearer photo.',
+                  style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
               ]),
             ))),
 
@@ -892,6 +1078,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                   onChanged: () => setState(() {}),
                   onPickProfile: () => _showProfilePicker(_items[i]),
                   onPickCategory: () => _showCategoryPicker(_items[i]),
+                  onPickWallet: () => _showItemWalletPicker(_items[i]),
                   onPickEntity: () => _items[i].entityType != null
                       ? _showEntityPicker(_items[i])
                       : _showEntityTypePicker(_items[i]),
@@ -900,8 +1087,83 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
             ),
 
           // Confirm bar
-          if (_items.isNotEmpty) _ConfirmBar(isDark: isDark, count: includedCount, onConfirm: includedCount > 0 ? _confirmAll : null),
+          if (_items.isNotEmpty)
+            _ConfirmBar(isDark: isDark, count: includedCount, onConfirm: includedCount > 0 ? _confirmAll : null),
         ]),
+      ),
+    );
+  }
+
+  void _showItemWalletPicker(_EditableItem item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wallets = _walletController.data ?? [];
+    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(2))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            child: Row(children: [
+              Text('Select Wallet', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: fg)),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Padding(padding: const EdgeInsets.all(4), child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary)),
+              ),
+            ]),
+          ),
+          if (wallets.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: Text('No wallets yet. Create one in the Wallet tab.', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary)),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: wallets.length,
+                separatorBuilder: (_, __) => Divider(height: 1, color: borderColor, indent: 16, endIndent: 16),
+                itemBuilder: (_, i) {
+                  final w = wallets[i];
+                  final sel = item.walletId == w.id;
+                  final wColor = w.colorHex != null
+                      ? Color(int.parse(w.colorHex!.replaceFirst('#', '0xff')))
+                      : AppColors.accent;
+                  return ListTile(
+                    leading: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: wColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        w.type == WalletType.creditCard ? Icons.credit_card_outlined : Icons.account_balance_wallet_outlined,
+                        size: 16, color: wColor,
+                      ),
+                    ),
+                    title: Text(w.name, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: fg)),
+                    subtitle: Text(
+                      '${currencyFormatter.format(w.balance, decimalDigits: 2)} • ${w.type.displayName}',
+                      style: GoogleFonts.dmMono(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                    trailing: sel ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent) : null,
+                    onTap: () {
+                      setState(() { item.walletId = w.id; item.walletName = w.name; });
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 8),
+        ])),
       ),
     );
   }
@@ -949,6 +1211,11 @@ class _EditableItem {
   String? goalId;
   String? entityLabel;  // display name of the linked entity
 
+  // Wallet linking
+  String? walletId;
+  String? walletName;
+  String? walletHint;   // AI-suggested wallet name hint
+
   _EditableItem({
     required this.id,
     required this.amount,
@@ -964,6 +1231,7 @@ class _EditableItem {
     this.included = true,
     this.entityType,
     this.entityHint,
+    this.walletHint,
   });
 }
 
@@ -976,6 +1244,7 @@ class _ReviewItemTile extends StatefulWidget {
   final VoidCallback onChanged;
   final VoidCallback onPickProfile;
   final VoidCallback onPickCategory;
+  final VoidCallback onPickWallet;
   final VoidCallback? onPickEntity;
 
   const _ReviewItemTile({
@@ -986,6 +1255,7 @@ class _ReviewItemTile extends StatefulWidget {
     required this.onChanged,
     required this.onPickProfile,
     required this.onPickCategory,
+    required this.onPickWallet,
     this.onPickEntity,
   });
 
@@ -1091,9 +1361,15 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
                 child: TextField(
                   controller: _descCtrl,
                   enabled: item.included,
-                  style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary),
+                  style: GoogleFonts.dmSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
+                  ),
                   decoration: InputDecoration(
-                    isDense: true, contentPadding: EdgeInsets.zero, border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                    border: InputBorder.none,
                     hintText: 'Description',
                     hintStyle: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textTertiary),
                   ),
@@ -1155,55 +1431,58 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
 
           Divider(height: 1, color: divColor),
 
-          // ── Row 3: chips ─────────────────────────────────────────────────
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          // ── Chips ─────────────────────────────────────────────────────────
+          Padding(
             padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
-            child: Row(children: [
-              // Budget profile
-              _ChipButton(
-                icon: Icons.account_balance_wallet_outlined,
-                label: item.profileName ?? 'Select Budget',
-                color: item.profileName != null ? AppColors.accent : AppColors.error,
-                isDark: isDark,
-                onTap: item.included ? widget.onPickProfile : null,
-              ),
-              const SizedBox(width: 6),
-              // Date
-              _ChipButton(
-                icon: Icons.calendar_today_outlined,
-                label: DateFormat('MMM d, yyyy').format(item.date),
-                color: AppColors.textSecondary,
-                isDark: isDark,
-                onTap: item.included ? _pickDate : null,
-              ),
-              const SizedBox(width: 6),
-              // Category
-              _ChipButton(
-                icon: Icons.category_outlined,
-                label: item.category?.name ?? 'Select Category',
-                color: item.category != null ? AppColors.textSecondary : AppColors.warning,
-                isDark: isDark,
-                onTap: item.included ? widget.onPickCategory : null,
-              ),
-              // Entity link chip — always shown
-              const SizedBox(width: 6),
-              _ChipButton(
-                icon: item.entityType != null ? _entityIcon(item.entityType!) : Icons.link_rounded,
-                label: item.entityLabel != null
-                    ? item.entityLabel!
-                    : item.entityType != null
-                        ? _entityPlaceholder(item.entityType!, item.entityHint)
-                        : 'Link Entity',
-                color: item.entityLabel != null
-                    ? AppColors.success
-                    : item.entityType != null
-                        ? AppColors.error
-                        : AppColors.textSecondary,
-                isDark: isDark,
-                onTap: item.included && widget.onPickEntity != null ? widget.onPickEntity : null,
-              ),
-            ]),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _ChipButton(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: item.profileName ?? 'Select Budget',
+                  color: item.profileName != null ? AppColors.accent : AppColors.error,
+                  isDark: isDark,
+                  onTap: item.included ? widget.onPickProfile : null,
+                ),
+                _ChipButton(
+                  icon: Icons.calendar_today_outlined,
+                  label: DateFormat('MMM d, yyyy').format(item.date),
+                  color: AppColors.textSecondary,
+                  isDark: isDark,
+                  onTap: item.included ? _pickDate : null,
+                ),
+                _ChipButton(
+                  icon: Icons.category_outlined,
+                  label: item.category?.name ?? 'Select Category',
+                  color: item.category != null ? AppColors.textSecondary : AppColors.warning,
+                  isDark: isDark,
+                  onTap: item.included ? widget.onPickCategory : null,
+                ),
+                _ChipButton(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: item.walletName ?? 'Select Wallet',
+                  color: item.walletId != null ? AppColors.accent : AppColors.warning,
+                  isDark: isDark,
+                  onTap: item.included ? widget.onPickWallet : null,
+                ),
+                _ChipButton(
+                  icon: item.entityType != null ? _entityIcon(item.entityType!) : Icons.link_rounded,
+                  label: item.entityLabel != null
+                      ? item.entityLabel!
+                      : item.entityType != null
+                          ? _entityPlaceholder(item.entityType!, item.entityHint)
+                          : 'Link Entity',
+                  color: item.entityLabel != null
+                      ? AppColors.success
+                      : item.entityType != null
+                          ? AppColors.error
+                          : AppColors.textSecondary,
+                  isDark: isDark,
+                  onTap: item.included && widget.onPickEntity != null ? widget.onPickEntity : null,
+                ),
+              ],
+            ),
           ),
         ]),
       ),
@@ -1300,14 +1579,17 @@ class _SourceCard extends StatelessWidget {
   final String label;
   final String sublabel;
   final VoidCallback onTap;
+  final Color? color;
 
   const _SourceCard({
     required this.isDark, required this.icon,
     required this.label, required this.sublabel, required this.onTap,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final c = color ?? AppColors.accent;
     final bg = isDark ? const Color(0xFF2C2C2A) : AppColors.background;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
@@ -1325,10 +1607,10 @@ class _SourceCard extends StatelessWidget {
           Container(
             width: 44, height: 44,
             decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.1),
+              color: c.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(icon, size: 22, color: AppColors.accent),
+            child: Icon(icon, size: 22, color: c),
           ),
           const SizedBox(width: 14),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

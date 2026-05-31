@@ -4,20 +4,20 @@ import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 
 class DebtManagementDialog extends StatefulWidget {
   final Debt? debt;
-  final List<SavingsBucket> savingsBuckets;
+  final List<Wallet> wallets;
 
   final Function(Debt, String?) onSave;
 
   const DebtManagementDialog({
     this.debt,
-    required this.savingsBuckets,
+    required this.wallets,
     required this.onSave,
     super.key,
   });
@@ -79,7 +79,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
     selectedType = d?.type ?? DebtType.lending;
     selectedStatus = d?.status ?? DebtStatus.active;
     selectedPaymentFrequency = d?.paymentFrequency ?? PaymentFrequency.monthly;
-    selectedAccountId = widget.savingsBuckets.firstOrNull?.id;
+    selectedAccountId = widget.wallets.firstOrNull?.id;
 
     _categoryController = locator.get<FinanceCategoryController>();
     _categoryController.loadCategories();
@@ -195,7 +195,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              if (widget.savingsBuckets.isEmpty)
+              if (widget.wallets.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -223,7 +223,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
                     border: OutlineInputBorder(),
                     hintText: 'Select a savings bucket',
                   ),
-                  items: widget.savingsBuckets
+                  items: widget.wallets
                       .map(
                         (bucket) => DropdownMenuItem(
                           value: bucket.id,

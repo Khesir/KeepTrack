@@ -11,6 +11,7 @@ class ParsedTransactionItem {
   final String categoryName;
   final String? entityType;  // "subscription" | "debt_payment" | "lending" | "goal" | null
   final String? entityHint;  // name hint to pre-filter entity picker
+  final String? walletHint;  // wallet name hint for auto-matching
 
   const ParsedTransactionItem({
     required this.amount,
@@ -20,6 +21,7 @@ class ParsedTransactionItem {
     required this.categoryName,
     this.entityType,
     this.entityHint,
+    this.walletHint,
   });
 
   factory ParsedTransactionItem.fromJson(Map<String, dynamic> json) =>
@@ -31,6 +33,7 @@ class ParsedTransactionItem {
         categoryName: json['categoryName'] as String,
         entityType: json['entityType'] as String?,
         entityHint: json['entityHint'] as String?,
+        walletHint: json['walletHint'] as String?,
       );
 }
 
@@ -51,6 +54,18 @@ class ReceiptParserService {
       '/transactions/parse-receipt',
       data: {'imageBase64': base64Image, 'mimeType': mimeType},
       options: Options(receiveTimeout: const Duration(seconds: 60)),
+    );
+
+    return (response.data as List)
+        .map((e) => ParsedTransactionItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<ParsedTransactionItem>> parseTextInput(String text) async {
+    final response = await _dio.post<List<dynamic>>(
+      '/transactions/parse-text',
+      data: {'text': text},
+      options: Options(receiveTimeout: const Duration(seconds: 30)),
     );
 
     return (response.data as List)

@@ -1226,7 +1226,7 @@ class _DataPaneState extends State<_DataPane> {
     final cache = locator.get<LocalCache>();
     for (final box in [
       'transactions', 'budgets', 'budget_categories', 'month_plans',
-      'goals', 'debts', 'planned_payments', 'savings_buckets',
+      'goals', 'debts', 'planned_payments', 'wallets',
       'subscriptions', 'transaction_plans', 'finance_categories',
       'budget_profiles',
     ]) {

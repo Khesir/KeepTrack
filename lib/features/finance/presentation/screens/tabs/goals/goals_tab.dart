@@ -246,6 +246,7 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
                 onFilterChange: (f) => setState(() => _selectedFilter = f),
                 onSelect: (g) => setState(() => _selectedGoal = g),
                 onAdd: () => _showGoalDialog(),
+                onEdit: (g) => _showGoalDialog(goal: g),
               );
             },
             loadingBuilder: (_) => const Center(
@@ -458,6 +459,7 @@ class _DesktopLayout extends StatelessWidget {
                               goal: g,
                               isSelected: selectedGoal?.id == g.id,
                               onTap: () => onSelect(g),
+                              onEdit: () => onEdit(g),
                             );
                           },
                         ),
@@ -497,6 +499,8 @@ class _MobileListView extends StatelessWidget {
   final ValueChanged<Goal> onSelect;
   final VoidCallback onAdd;
 
+  final ValueChanged<Goal> onEdit;
+
   const _MobileListView({
     required this.goals,
     required this.allGoals,
@@ -509,6 +513,7 @@ class _MobileListView extends StatelessWidget {
     required this.onFilterChange,
     required this.onSelect,
     required this.onAdd,
+    required this.onEdit,
   });
 
   @override
@@ -681,6 +686,7 @@ class _MobileListView extends StatelessWidget {
                           goal: goals[i],
                           isSelected: false,
                           onTap: () => onSelect(goals[i]),
+                          onEdit: () => onEdit(goals[i]),
                         ),
                       ],
                     ],
@@ -1035,8 +1041,9 @@ class _GoalListRow extends StatelessWidget {
   final Goal goal;
   final bool isSelected;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
 
-  const _GoalListRow({required this.goal, required this.isSelected, required this.onTap});
+  const _GoalListRow({required this.goal, required this.isSelected, required this.onTap, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -1109,6 +1116,15 @@ class _GoalListRow extends StatelessWidget {
                 ),
                 _StatusBadge(status: goal.status),
               ],
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: onEdit,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(Icons.edit_outlined, size: 15, color: AppColors.textTertiary),
+              ),
             ),
           ],
         ),

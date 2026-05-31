@@ -41,10 +41,10 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
     });
   }
 
-  Future<void> loadTransactionsBySavings(String savingsId) async {
+  Future<void> loadTransactionsByWallet(String walletId) async {
     await execute(() async {
       return await _repository
-          .getTransactionsBySavings(savingsId)
+          .getTransactionsByWallet(walletId)
           .then((r) => r.unwrap());
     });
   }

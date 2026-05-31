@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:keep_track/core/demo/demo_mode.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 
 class BalanceGraph extends StatefulWidget {
@@ -16,15 +16,15 @@ class BalanceGraph extends StatefulWidget {
 }
 
 class _BalanceGraphState extends State<BalanceGraph> {
-  late final SavingsController _savingsController;
+  late final WalletController _walletController;
   late final TransactionController _transactionController;
 
   @override
   void initState() {
     super.initState();
-    _savingsController = locator.get<SavingsController>();
+    _walletController = locator.get<WalletController>();
     _transactionController = locator.get<TransactionController>();
-    _savingsController.loadSavings();
+    _walletController.loadWallets();
 
     final now = DateTime.now();
     final startDate = DateTime(now.year, now.month, 1);
@@ -36,8 +36,8 @@ class _BalanceGraphState extends State<BalanceGraph> {
 
   @override
   Widget build(BuildContext context) {
-    return AsyncStreamBuilder<List<SavingsBucket>>(
-      state: _savingsController,
+    return AsyncStreamBuilder<List<Wallet>>(
+      state: _walletController,
       loadingBuilder: (_) => Card(
         elevation: 0,
         child: Container(
@@ -50,10 +50,10 @@ class _BalanceGraphState extends State<BalanceGraph> {
         elevation: 0,
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Text('Error loading savings: $message'),
+          child: Text('Error loading wallets: $message'),
         ),
       ),
-      builder: (context, buckets) {
+      builder: (context, wallets) {
         return AsyncStreamBuilder<List<Transaction>>(
           state: _transactionController,
           loadingBuilder: (_) => Card(
@@ -64,15 +64,15 @@ class _BalanceGraphState extends State<BalanceGraph> {
               child: const CircularProgressIndicator(),
             ),
           ),
-          errorBuilder: (context, message) => _buildGraphCard(buckets, []),
-          builder: (context, transactions) => _buildGraphCard(buckets, transactions),
+          errorBuilder: (context, message) => _buildGraphCard(wallets, []),
+          builder: (context, transactions) => _buildGraphCard(wallets, transactions),
         );
       },
     );
   }
 
-  Widget _buildGraphCard(List<SavingsBucket> buckets, List<Transaction> transactions) {
-    final currentBalance = buckets.fold(0.0, (sum, b) => sum + b.balance);
+  Widget _buildGraphCard(List<Wallet> wallets, List<Transaction> transactions) {
+    final currentBalance = wallets.where((w) => w.type == WalletType.standard).fold(0.0, (sum, w) => sum + w.balance);
     // Calculate balance trend data
     final balanceData = _calculateBalanceTrend(currentBalance, transactions);
 

@@ -13,7 +13,7 @@ import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/budget/budget_tab_screen.dart';
 import 'package:keep_track/features/finance/presentation/screens/tabs/dashboard/dashboard_tab.dart';
-import 'package:keep_track/features/finance/presentation/screens/tabs/savings/savings_tab.dart';
+import 'package:keep_track/features/finance/presentation/screens/tabs/wallet/wallet_tab.dart';
 import 'package:keep_track/features/finance/presentation/screens/transaction_planner_screen.dart';
 import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_sheet.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
@@ -36,7 +36,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   List<Widget> get _screens => [
     const DashboardTab(),
     const BudgetTabScreen(),
-    const SavingsTab(),
+    const WalletTab(),
     const TransactionPlannerScreen(),
   ];
 
@@ -52,9 +52,9 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
       label: 'Budget',
     ),
     _NavItem(
-      icon: Icons.savings_outlined,
-      activeIcon: Icons.savings,
-      label: 'Savings',
+      icon: Icons.account_balance_wallet_outlined,
+      activeIcon: Icons.account_balance_wallet,
+      label: 'Wallet',
     ),
     _NavItem(
       icon: Icons.receipt_long_outlined,

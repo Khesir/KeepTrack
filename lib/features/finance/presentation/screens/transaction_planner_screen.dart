@@ -40,7 +40,7 @@ class _TransactionPlannerScreenState extends ScopedScreenState<TransactionPlanne
   String _historyFilter = 'All';
   StreamSubscription? _catSub;
 
-  static const _filters = ['All', 'Income', 'Expense', 'Savings', 'Goals'];
+  static const _filters = ['All', 'Income', 'Expense', 'Transfer', 'Wallet', 'Goals'];
 
   late final BudgetProfileController _profileController;
 
@@ -336,7 +336,8 @@ class _Feed extends StatelessWidget {
   List<Transaction> _filterTxs() => switch (historyFilter) {
         'Income' => transactions.where((t) => t.type == TransactionType.income).toList(),
         'Expense' => transactions.where((t) => t.type == TransactionType.expense).toList(),
-        'Savings' => transactions.where((t) => t.savingsId != null).toList(),
+        'Transfer' => transactions.where((t) => t.type == TransactionType.transfer).toList(),
+        'Wallet' => transactions.where((t) => t.walletId != null).toList(),
         'Goals' => transactions.where((t) => t.goalId != null).toList(),
         _ => [...transactions],
       };
@@ -556,11 +557,36 @@ class _TxRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIn = transaction.type == TransactionType.income;
-    final color = isIn ? AppColors.success : AppColors.error;
+    final isTransfer = transaction.type == TransactionType.transfer;
+    final Color color;
+    final IconData typeIcon;
+    final String sign;
+    if (isTransfer) {
+      color = AppColors.info;
+      typeIcon = Icons.swap_horiz_rounded;
+      sign = '↔';
+    } else if (isIn) {
+      color = AppColors.success;
+      typeIcon = Icons.arrow_downward_rounded;
+      sign = '+';
+    } else {
+      color = AppColors.error;
+      typeIcon = Icons.arrow_upward_rounded;
+      sign = '-';
+    }
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
+    final String defaultLabel;
+    if (isTransfer) {
+      defaultLabel = 'Transfer';
+    } else if (category != null) {
+      defaultLabel = isIn ? 'Earns ${category!.name}' : 'Pays ${category!.name}';
+    } else {
+      defaultLabel = isIn ? 'Income' : 'Expense';
+    }
+
     final tags = [
-      if (transaction.savingsId != null) ('Savings', AppColors.info),
+      if (transaction.walletId != null) ('Wallet', AppColors.info),
       if (transaction.goalId != null) ('Goal', AppColors.accent),
       if (transaction.debtId != null) ('Debt', AppColors.error),
       if (transaction.subscriptionId != null) ('Sub', AppColors.warning),
@@ -577,12 +603,12 @@ class _TxRow extends StatelessWidget {
           width: 34, height: 34,
           decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
           alignment: Alignment.center,
-          child: Icon(isIn ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, color: color, size: 15),
+          child: Icon(typeIcon, color: color, size: 15),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(transaction.description ?? (category != null ? (isIn ? 'Earns ${category!.name}' : 'Pays ${category!.name}') : (isIn ? 'Income' : 'Expense')),
+            Text(transaction.description ?? defaultLabel,
                 style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: fg),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
@@ -615,7 +641,7 @@ class _TxRow extends StatelessWidget {
           ]),
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('${isIn ? '+' : '-'}${currencyFormatter.format(transaction.amount, decimalDigits: 2)}',
+          Text('$sign${currencyFormatter.format(transaction.amount, decimalDigits: 2)}',
               style: GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w700, color: color,
                   fontFeatures: const [FontFeature.tabularFigures()])),
           if (transaction.fee > 0)

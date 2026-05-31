@@ -10,12 +10,12 @@ import 'package:keep_track/features/finance/modules/budget/domain/entities/month
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/helpers/budget_month_filter.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
-import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'profile_insight_sections.dart';
@@ -31,7 +31,7 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
   late final MonthPlanController _monthPlanController;
   late final BudgetController _budgetController;
   late final TransactionController _txController;
-  late final SavingsController _savingsController;
+  late final WalletController _walletController;
   late final DebtController _debtController;
   late final SubscriptionController _subController;
   int _selectedMonthIndex = 0;
@@ -41,7 +41,7 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
     _monthPlanController = locator.get<MonthPlanController>();
     _budgetController = locator.get<BudgetController>();
     _txController = locator.get<TransactionController>();
-    _savingsController = locator.get<SavingsController>();
+    _walletController = locator.get<WalletController>();
     _debtController = locator.get<DebtController>();
     _subController = locator.get<SubscriptionController>();
   }
@@ -50,7 +50,7 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
   void onReady() {
     configureLayout(title: 'Insights', showBottomNav: true);
     _budgetController.loadBudgets();
-    _savingsController.loadSavings();
+    _walletController.loadWallets();
     final now = DateTime.now();
     _txController.loadTransactionsByDateRange(
       DateTime(now.year, now.month, 1),
@@ -94,15 +94,15 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
               state: _txController,
               builder: (_, txs) {
                 final spent = BudgetMonthFilter.buildSpentByCategory(txs);
-                return AsyncStreamBuilder<List<SavingsBucket>>(
-                  state: _savingsController,
+                return AsyncStreamBuilder<List<Wallet>>(
+                  state: _walletController,
                   builder: (_, buckets) => AsyncStreamBuilder<List<Debt>>(
                     state: _debtController,
                     builder: (_, debts) => AsyncStreamBuilder<List<Subscription>>(
                       state: _subController,
-                      builder: (_, subs) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, debts, subs),
-                      loadingBuilder: (_) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, debts, []),
-                      errorBuilder: (_, __) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, debts, []),
+                      builder: (_, subs) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, wallets, debts, subs),
+                      loadingBuilder: (_) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, wallets, debts, []),
+                      errorBuilder: (_, __) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, wallets, debts, []),
                     ),
                     loadingBuilder: (_) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, [], []),
                     errorBuilder: (_, __) => _buildContent(displayPlans, idx, selected, monthBudgets, allBudgets, spent, buckets, [], []),
@@ -131,11 +131,11 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
     List<Budget> monthBudgets,
     List<Budget> allBudgets,
     Map<String, double> spentByCategory,
-    List<SavingsBucket> buckets,
+    List<Wallet> wallets,
     List<Debt> debts,
     List<Subscription> subs,
   ) {
-    final totalSavings = buckets.fold(0.0, (s, b) => s + b.balance);
+    final totalSavings = wallets.where((w) => w.type == WalletType.standard).fold(0.0, (s, w) => s + w.balance);
     final totalDebt = debts.where((d) => d.type == DebtType.borrowing).fold(0.0, (s, d) => s + d.remainingAmount);
     final totalReceivables = debts.where((d) => d.type == DebtType.lending).fold(0.0, (s, d) => s + d.remainingAmount);
     final activeSubs = subs.where((s) => s.status == SubscriptionStatus.active).toList();
@@ -150,8 +150,8 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
           SliverToBoxAdapter(child: InsightSpendingSection(allBudgets: monthBudgets, spentByCategory: spentByCategory)),
           SliverToBoxAdapter(child: InsightBudgetBarsSection(allBudgets: monthBudgets, spentByCategory: spentByCategory)),
         ],
-        if (buckets.isNotEmpty)
-          SliverToBoxAdapter(child: InsightSavingsSection(buckets: buckets, total: totalSavings)),
+        if (wallets.isNotEmpty)
+          SliverToBoxAdapter(child: InsightSavingsSection(buckets: wallets, total: totalSavings)),
         if (plans.length > 1)
           SliverToBoxAdapter(child: InsightTrendSection(plans: plans, allBudgets: allBudgets)),
         if (debts.isNotEmpty)

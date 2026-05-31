@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
-import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 
 class SavingsSection extends StatelessWidget {
-  final List<SavingsBucket> buckets;
+  final List<Wallet> buckets;
   final Map<String, double> plannedAmounts;
   final VoidCallback onManage;
-  final void Function(SavingsBucket) onDeposit;
-  final void Function(SavingsBucket, double) onSetPlanned;
+  final void Function(Wallet) onDeposit;
+  final void Function(Wallet, double) onSetPlanned;
   final int? dragIndex;
 
   const SavingsSection({
@@ -135,7 +135,7 @@ class SavingsSection extends StatelessWidget {
 }
 
 class _SavingsRow extends StatelessWidget {
-  final SavingsBucket bucket;
+  final Wallet bucket;
   final double planned;
   final VoidCallback onDeposit;
   final void Function(double) onSetPlanned;
