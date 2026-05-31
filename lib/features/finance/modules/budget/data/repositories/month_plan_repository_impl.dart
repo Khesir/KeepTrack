@@ -139,14 +139,32 @@ class MonthPlanRepositoryImpl implements MonthPlanRepository {
   }
 
   @override
+  Future<Result<MonthPlan>> getOrCreateMonthPlanForMonthlyProfile(String month, String profileId) async {
+    try {
+      final plan = await dataSource.getOrCreateMonthPlanForMonthlyProfile(month, profileId);
+      return Result.success(plan);
+    } catch (e) {
+      return Result.error(UnknownFailure(message: 'Failed to get or create monthly profile plan: $e'));
+    }
+  }
+
+  @override
   Future<Result<MonthPlan>> closeMonthPlan(String id) async {
     try {
       final plan = await dataSource.closeMonthPlan(id);
       return Result.success(plan);
     } catch (e) {
-      return Result.error(
-        UnknownFailure(message: 'Failed to close month plan: $e'),
-      );
+      return Result.error(UnknownFailure(message: 'Failed to close month plan: $e'));
+    }
+  }
+
+  @override
+  Future<Result<MonthPlan>> reopenMonthPlan(String id) async {
+    try {
+      final plan = await dataSource.reopenMonthPlan(id);
+      return Result.success(plan);
+    } catch (e) {
+      return Result.error(UnknownFailure(message: 'Failed to reopen month plan: $e'));
     }
   }
 }

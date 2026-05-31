@@ -7,8 +7,9 @@ import '../../../transaction/domain/entities/transaction.dart';
 
 class TransactionMiniRow extends StatelessWidget {
   final Transaction transaction;
+  final VoidCallback? onTap;
 
-  const TransactionMiniRow({required this.transaction});
+  const TransactionMiniRow({required this.transaction, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +17,9 @@ class TransactionMiniRow extends StatelessWidget {
     final amtColor = isIncome ? AppColors.success : AppColors.error;
     final sign = isIncome ? '+' : '-';
 
-    return Padding(
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       child: Row(
         children: [
@@ -43,8 +46,12 @@ class TransactionMiniRow extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
+          ],
         ],
       ),
-    );
+    ));
   }
 }

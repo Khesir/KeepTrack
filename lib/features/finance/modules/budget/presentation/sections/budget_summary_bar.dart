@@ -71,7 +71,6 @@ class BudgetSummaryBar extends StatelessWidget {
   });
 
   String _tabTitle(String monthLabel) => switch (selectedTab) {
-    0 => 'Summary',
     1 => monthLabel,
     2 => 'Subscriptions',
     3 => 'Debts',
@@ -81,7 +80,6 @@ class BudgetSummaryBar extends StatelessWidget {
   };
 
   String _tabSubtitle(String leftLabel) => switch (selectedTab) {
-    0 => 'Financial overview',
     1 => leftLabel,
     2 => '$subsCount active',
     3 => '$debtsCount active',
@@ -259,7 +257,6 @@ class BudgetSummaryBar extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final pills = [
-              _TabPill(label: 'Summary', count: 0, color: AppColors.info, selected: selectedTab == 0, onTap: () => onTabSelect(0)),
               _TabPill(label: 'Budget', count: budgetGroupCount, color: AppColors.accent, selected: selectedTab == 1, onTap: () => onTabSelect(1)),
               _TabPill(label: 'Subs', count: subsCount, color: AppColors.warning, selected: selectedTab == 2, onTap: () => onTabSelect(2)),
               _TabPill(label: 'Debts', count: debtsCount, color: AppColors.error, selected: selectedTab == 3, onTap: () => onTabSelect(3)),
@@ -333,9 +330,7 @@ class _TabPill extends StatelessWidget {
         : AppColors.border.withValues(alpha: isDark ? 0.2 : 1.0);
     final textColor = selected
         ? Colors.white
-        : (count > 0
-            ? (isDark ? AppColors.primaryForeground : AppColors.textPrimary)
-            : AppColors.textTertiary);
+        : (isDark ? AppColors.primaryForeground : AppColors.textPrimary);
 
     return GestureDetector(
       onTap: onTap,
@@ -358,7 +353,7 @@ class _TabPill extends StatelessWidget {
                 width: 6, height: 6,
                 margin: const EdgeInsets.only(right: 6),
                 decoration: BoxDecoration(
-                  color: count > 0 ? color : AppColors.textTertiary,
+                  color: color,
                   shape: BoxShape.circle,
                 ),
               ),

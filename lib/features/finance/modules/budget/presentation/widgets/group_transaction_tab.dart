@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../../core/theme/app_theme.dart';
 import '../../../transaction/domain/entities/transaction.dart';
+import '../sheets/transaction_detail_sheet.dart';
 import 'transaction_mini_row.dart';
 
 class GroupTransactionsTab extends StatelessWidget {
@@ -39,7 +40,10 @@ class GroupTransactionsTab extends StatelessWidget {
           opacity: v,
           child: Transform.translate(offset: Offset(0, (1 - v) * 8), child: child),
         ),
-        child: TransactionMiniRow(transaction: transactions[i]),
+        child: TransactionMiniRow(
+          transaction: transactions[i],
+          onTap: () => TransactionDetailSheet.show(context, transaction: transactions[i]),
+        ),
       ),
     );
   }

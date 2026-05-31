@@ -20,6 +20,7 @@ import 'package:keep_track/features/finance/presentation/state/finance_category_
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_plan_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/sheets/transaction_detail_sheet.dart';
 
 class TransactionPlannerScreen extends ScopedScreen {
   const TransactionPlannerScreen({super.key});
@@ -211,7 +212,7 @@ class _Feed extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text('No upcoming plans', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
-                  Text('Tap New Plan to schedule a future transaction',
+                  Text('Tap + to schedule a future transaction',
                       style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textTertiary)),
                 ]),
               ),
@@ -566,7 +567,10 @@ class _TxRow extends StatelessWidget {
     ];
     final profileLabel = profileName;
 
-    return Padding(
+    return InkWell(
+      onTap: () => TransactionDetailSheet.show(context, transaction: transaction),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Container(
@@ -618,8 +622,10 @@ class _TxRow extends StatelessWidget {
             Text('fee ${currencyFormatter.format(transaction.fee, decimalDigits: 2)}',
                 style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
         ]),
+        const SizedBox(width: 4),
+        Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
       ]),
-    );
+    ));
   }
 
   Color _catColor(CategoryType t) => switch (t) {

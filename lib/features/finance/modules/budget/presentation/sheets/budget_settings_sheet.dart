@@ -6,14 +6,16 @@ class BudgetSettingsSheet extends StatelessWidget {
   final String monthLabel;
   final VoidCallback? onEditBudget;
   final VoidCallback? onCloseBudget;
-  final VoidCallback onDeleteBudget;
+  final VoidCallback? onDeleteBudget;
+  final VoidCallback? onDeleteProfile;
 
   const BudgetSettingsSheet({
     super.key,
     required this.monthLabel,
     this.onEditBudget,
     this.onCloseBudget,
-    required this.onDeleteBudget,
+    this.onDeleteBudget,
+    this.onDeleteProfile,
   });
 
   static Future<void> show(
@@ -21,7 +23,8 @@ class BudgetSettingsSheet extends StatelessWidget {
     required String monthLabel,
     VoidCallback? onEditBudget,
     VoidCallback? onCloseBudget,
-    required VoidCallback onDeleteBudget,
+    VoidCallback? onDeleteBudget,
+    VoidCallback? onDeleteProfile,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -32,6 +35,7 @@ class BudgetSettingsSheet extends StatelessWidget {
         onEditBudget: onEditBudget,
         onCloseBudget: onCloseBudget,
         onDeleteBudget: onDeleteBudget,
+        onDeleteProfile: onDeleteProfile,
       ),
     );
   }
@@ -91,16 +95,30 @@ class BudgetSettingsSheet extends StatelessWidget {
             },
           ),
         ],
-        Divider(height: 1, color: divColor),
-        _SettingsRow(
-          icon: Icons.delete_outline_rounded,
-          label: 'Delete Budget',
-          color: AppColors.error,
-          onTap: () {
-            Navigator.pop(context);
-            onDeleteBudget();
-          },
-        ),
+        if (onDeleteBudget != null) ...[
+          Divider(height: 1, color: divColor),
+          _SettingsRow(
+            icon: Icons.delete_outline_rounded,
+            label: 'Delete Month',
+            color: AppColors.error,
+            onTap: () {
+              Navigator.pop(context);
+              onDeleteBudget!();
+            },
+          ),
+        ],
+        if (onDeleteProfile != null) ...[
+          Divider(height: 1, color: divColor),
+          _SettingsRow(
+            icon: Icons.delete_forever_rounded,
+            label: 'Delete Profile',
+            color: AppColors.error,
+            onTap: () {
+              Navigator.pop(context);
+              onDeleteProfile!();
+            },
+          ),
+        ],
         Divider(height: 1, color: divColor),
         const SizedBox(height: 8),
         Padding(

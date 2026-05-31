@@ -103,6 +103,11 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   String? get _activeProfileId =>
       locator.get<BudgetProfileController>().activeProfileId;
 
+  String get _currentMonthKey {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
+
   // Savings tab (index 2) has no FAB
   @override
   Widget build(BuildContext context) {
@@ -122,7 +127,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   Widget _buildDesktop() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => CreateTransactionSheet.show(context, onCreated: _refreshTransactions, initialProfileId: _activeProfileId),
+        onPressed: () => CreateTransactionSheet.show(context, onCreated: _refreshTransactions, initialProfileId: _activeProfileId, initialMonthKey: _currentMonthKey),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
@@ -293,7 +298,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
             ),
             const SizedBox(width: 10),
             GestureDetector(
-              onTap: () => CreateTransactionSheet.show(context, onCreated: _refreshTransactions, initialProfileId: _activeProfileId),
+              onTap: () => CreateTransactionSheet.show(context, onCreated: _refreshTransactions, initialProfileId: _activeProfileId, initialMonthKey: _currentMonthKey),
               child: Container(
                 width: 62,
                 height: 62,

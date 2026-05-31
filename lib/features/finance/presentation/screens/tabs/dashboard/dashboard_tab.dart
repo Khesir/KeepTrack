@@ -25,6 +25,7 @@ import 'package:keep_track/features/finance/presentation/screens/tabs/dashboard/
 import 'package:keep_track/features/finance/modules/transaction_plan/domain/entities/transaction_plan.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_plan_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/sheets/transaction_detail_sheet.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
@@ -244,7 +245,10 @@ class _DashboardTabState extends State<DashboardTab> {
             hasBudgets: profileBudgets.isNotEmpty,
             transactionCount: profileTxs.length,
             monthLabel: DateFormat('MMMM yyyy').format(DateTime.now()),
-            onTap: () => setState(() => _showingInsights = true),
+            onTap: () {
+              _txController.loadAllTransactions();
+              setState(() => _showingInsights = true);
+            },
           ),
         ),
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
@@ -324,68 +328,6 @@ class _MonthOverviewCard extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total Balance',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: totalSavings),
-                        duration: const Duration(milliseconds: 900),
-                        curve: Curves.easeOutCubic,
-                        builder: (_, value, __) => Text(
-                          currencyFormatter.format(value, decimalDigits: 0),
-                          style: GoogleFonts.dmMono(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: textPrimary,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      netDebt >= 0 ? 'Receivables' : 'You Owe',
-                      style: GoogleFonts.dmSans(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: netDebt.abs()),
-                      duration: const Duration(milliseconds: 900),
-                      curve: Curves.easeOutCubic,
-                      builder: (_, value, __) => Text(
-                        currencyFormatter.format(value, decimalDigits: 0),
-                        style: GoogleFonts.dmMono(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: netDebt >= 0 ? AppColors.info : AppColors.warning,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -889,7 +831,9 @@ class _TxRow extends StatelessWidget {
     final dateStr = isToday ? 'Today' : isYesterday ? 'Yesterday' : DateFormat('MMM d').format(t.date);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
-    return Padding(
+    return InkWell(
+      onTap: () => TransactionDetailSheet.show(context, transaction: t),
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       child: Row(children: [
         Container(
@@ -920,8 +864,10 @@ class _TxRow extends StatelessWidget {
         ])),
         Text('$sign${currencyFormatter.format(t.totalCost, decimalDigits: 2)}',
             style: GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w600, color: color, fontFeatures: const [FontFeature.tabularFigures()])),
+        const SizedBox(width: 4),
+        Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
       ]),
-    );
+    ));
   }
 }
 

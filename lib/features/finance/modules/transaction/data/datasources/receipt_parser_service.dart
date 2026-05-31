@@ -9,6 +9,8 @@ class ParsedTransactionItem {
   final String description;
   final DateTime date;
   final String categoryName;
+  final String? entityType;  // "subscription" | "debt_payment" | "lending" | "goal" | null
+  final String? entityHint;  // name hint to pre-filter entity picker
 
   const ParsedTransactionItem({
     required this.amount,
@@ -16,6 +18,8 @@ class ParsedTransactionItem {
     required this.description,
     required this.date,
     required this.categoryName,
+    this.entityType,
+    this.entityHint,
   });
 
   factory ParsedTransactionItem.fromJson(Map<String, dynamic> json) =>
@@ -25,21 +29,8 @@ class ParsedTransactionItem {
         description: json['description'] as String,
         date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
         categoryName: json['categoryName'] as String,
-      );
-
-  ParsedTransactionItem copyWith({
-    double? amount,
-    String? type,
-    String? description,
-    DateTime? date,
-    String? categoryName,
-  }) =>
-      ParsedTransactionItem(
-        amount: amount ?? this.amount,
-        type: type ?? this.type,
-        description: description ?? this.description,
-        date: date ?? this.date,
-        categoryName: categoryName ?? this.categoryName,
+        entityType: json['entityType'] as String?,
+        entityHint: json['entityHint'] as String?,
       );
 }
 

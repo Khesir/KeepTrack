@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart'
@@ -7,6 +9,7 @@ import '../../../../../../core/state/stream_state.dart';
 import '../../../../presentation/state/finance_category_controller.dart';
 import '../../../finance_category/domain/entities/finance_category_enums.dart';
 import '../../domain/entities/budget.dart';
+import 'sheet_helpers.dart';
 
 class AddCategorySheet extends StatefulWidget {
   final Budget group;
@@ -25,173 +28,192 @@ class AddCategorySheet extends StatefulWidget {
 }
 
 class _AddCategorySheetState extends State<AddCategorySheet> {
-  final _nameController = TextEditingController();
-  final _amountController = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _amountCtrl = TextEditingController();
   bool _saving = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _amountController.dispose();
+    _nameCtrl.dispose();
+    _amountCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final isIncome = widget.group.budgetType == BudgetType.income;
+    final accentColor = isIncome ? AppColors.success : AppColors.accent;
+
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text('Add Category', style: AppTextStyles.h4),
-            const SizedBox(height: 4),
-            Text(
-              widget.group.title ?? '',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _nameController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Category Name',
-                hintText: 'e.g., Groceries, Netflix, Salary',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Planned Amount',
-                border: OutlineInputBorder(),
-                prefixText: '₱ ',
-              ),
-              onSubmitted: (_) => _save(),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 16, 0),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(
+                        'Add Category',
+                        style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary),
+                      ),
+                      if ((widget.group.title ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.group.title!,
+                          style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
                         ),
-                      )
-                    : const Text('Add'),
+                      ],
+                    ]),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isIncome ? 'Income' : 'Expense',
+                      style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: accentColor),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ]),
               ),
-            ),
-          ],
+              Divider(height: 24, color: borderColor),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SheetLabel('CATEGORY NAME'),
+                    SheetField(
+                      ctrl: _nameCtrl,
+                      hint: 'e.g. Groceries, Netflix, Salary',
+                      isDark: isDark,
+                      autofocus: true,
+                      capitalize: true,
+                    ),
+                    const SizedBox(height: 16),
+                    SheetLabel('PLANNED AMOUNT'),
+                    SheetField(
+                      ctrl: _amountCtrl,
+                      hint: '0.00',
+                      prefix: '${currencyFormatter.currencySymbol} ',
+                      isDark: isDark,
+                      numeric: true,
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        onPressed: _saving ? null : _save,
+                        icon: _saving
+                            ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.add_rounded, size: 15),
+                        label: Text(_saving ? 'Adding…' : 'Add Category'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _save() async {
-    final name = _nameController.text.trim();
+    final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter a category name')));
-      return;
-    }
-    final amount = double.tryParse(_amountController.text);
-    if (amount == null || amount < 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enter a valid amount')));
-      return;
-    }
-    final budgetId = widget.group.id;
-    if (budgetId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Budget group has no ID — please try again.'),
-        ),
+        SnackBar(content: Text('Enter a category name', style: GoogleFonts.dmSans()), backgroundColor: AppColors.error),
       );
       return;
     }
+    final amount = double.tryParse(_amountCtrl.text);
+    if (amount == null || amount < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Enter a valid amount', style: GoogleFonts.dmSans()), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+    final budgetId = widget.group.id;
+    if (budgetId == null) return;
+
     setState(() => _saving = true);
     try {
-      // Derive CategoryType from the group's BudgetType
-      final catType = widget.group.budgetType == BudgetType.income
-          ? CategoryType.income
-          : CategoryType.expense;
+      final catType = widget.group.budgetType == BudgetType.income ? CategoryType.income : CategoryType.expense;
 
-      // Check if a matching FinanceCategory already exists — reuse it, don't duplicate
       final currentState = widget.categoryController.state;
-      final currentCats = currentState is AsyncData<List<FinanceCategory>>
-          ? currentState.data
-          : <FinanceCategory>[];
+      final currentCats = currentState is AsyncData<List<FinanceCategory>> ? currentState.data : <FinanceCategory>[];
       final existing = currentCats
-          .where(
-            (c) =>
-                c.name.toLowerCase() == name.toLowerCase() && c.type == catType,
-          )
+          .where((c) => c.name.toLowerCase() == name.toLowerCase() && c.type == catType)
           .firstOrNull;
 
       FinanceCategory created;
       if (existing != null) {
         created = existing;
       } else {
-        // Create a new FinanceCategory in the DB
-        await widget.categoryController.createCategory(
-          FinanceCategory(name: name, type: catType),
-        );
-        // Find the freshly created category in the updated cache
+        await widget.categoryController.createCategory(FinanceCategory(name: name, type: catType));
         final updatedState = widget.categoryController.state;
-        final updatedCats = updatedState is AsyncData<List<FinanceCategory>>
-            ? updatedState.data
-            : <FinanceCategory>[];
+        final updatedCats = updatedState is AsyncData<List<FinanceCategory>> ? updatedState.data : <FinanceCategory>[];
         created = updatedCats.firstWhere(
-          (c) =>
-              c.name.toLowerCase() == name.toLowerCase() && c.type == catType,
+          (c) => c.name.toLowerCase() == name.toLowerCase() && c.type == catType,
           orElse: () => FinanceCategory(name: name, type: catType),
         );
       }
 
-      await widget.onSave(
-        BudgetCategory(
-          budgetId: budgetId,
-          financeCategoryId: created.id ?? '',
-          targetAmount: amount,
-          financeCategory: created,
-        ),
-      );
+      await widget.onSave(BudgetCategory(
+        budgetId: budgetId,
+        financeCategoryId: created.id ?? '',
+        targetAmount: amount,
+        financeCategory: created,
+      ));
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e', style: GoogleFonts.dmSans()), backgroundColor: AppColors.error),
+        );
         setState(() => _saving = false);
       }
     }

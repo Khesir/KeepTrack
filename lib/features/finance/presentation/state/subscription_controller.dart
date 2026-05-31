@@ -33,7 +33,9 @@ class SubscriptionController extends StreamState<AsyncState<List<Subscription>>>
 
   Future<void> updateSubscription(Subscription subscription) async {
     await _repository.updateSubscription(subscription).then((r) => r.unwrap());
-    await loadSubscriptions();
+    await executeSilent(() async {
+      return await _repository.getSubscriptions().then((r) => r.unwrap());
+    });
   }
 
   Future<void> deleteSubscription(String id) async {
@@ -43,7 +45,10 @@ class SubscriptionController extends StreamState<AsyncState<List<Subscription>>>
 
   Future<Subscription> pay(String id, {String? budgetId}) async {
     final updated = await _repository.pay(id, budgetId: budgetId).then((r) => r.unwrap());
-    await loadSubscriptions();
+    // Use executeSilent so we don't flash AsyncLoading — the list stays visible during refresh
+    await executeSilent(() async {
+      return await _repository.getSubscriptions().then((r) => r.unwrap());
+    });
     return updated;
   }
 }

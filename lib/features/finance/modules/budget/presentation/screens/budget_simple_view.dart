@@ -34,7 +34,7 @@ import 'package:keep_track/features/finance/presentation/state/budget_profile_co
 import 'budget_simple_sections.dart';
 import 'budget_simple_sheets.dart';
 import '../sections/budget_overall_summary.dart';
-import '../sheets/budget_settings_sheet.dart';
+import '../dialogs/budget_settings_dialog.dart';
 import '../sheets/profile_start_planning_sheet.dart';
 import '../sheets/start_planning_sheet.dart';
 
@@ -47,9 +47,11 @@ class BudgetSimpleView extends StatefulWidget {
   final Color? profileAccentColor;
   final DateTime? profileStartDate;
   final DateTime? profileEndDate;
-  final void Function(bool isIncome)? onAddProfileGroup;
+  final void Function(bool isIncome, String monthKey)? onAddProfileGroup;
   final VoidCallback? onToggleView;
   final void Function(List<Budget> monthBudgets)? onOpenSettings;
+  final VoidCallback? onEditProfile;
+  final VoidCallback? onDeleteProfile;
   final bool profileIsMonthly;
 
   const BudgetSimpleView({
@@ -66,6 +68,8 @@ class BudgetSimpleView extends StatefulWidget {
     this.onAddProfileGroup,
     this.onToggleView,
     this.onOpenSettings,
+    this.onEditProfile,
+    this.onDeleteProfile,
   });
 
   bool get _isProfileMode => budgetProfileId != null;
@@ -110,10 +114,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       final end = widget.profileEndDate ?? DateTime.now().add(const Duration(days: 365));
       _txController.loadTransactionsByDateRange(start, end);
     } else {
-      _txController.loadTransactionsByDateRange(
-        DateTime(_month.year, _month.month, 1),
-        DateTime(_month.year, _month.month + 1, 1),
-      );
+      _txController.loadAllTransactions();
     }
   }
 
@@ -170,17 +171,32 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   }
 
   void _showSettings(List<Budget> monthBudgets, MonthPlan? monthPlan) {
-    final allClosed = monthBudgets.isNotEmpty &&
-        monthBudgets.every((b) => b.status == BudgetStatus.closed);
-    BudgetSettingsSheet.show(
+    BudgetSettingsDialog.show(
       context,
       monthLabel: _monthLabel,
-      onCloseBudget: monthPlan != null && !monthPlan.isClosed
-          ? () => _confirmClosePlan(monthPlan)
-          : widget._isProfileMode && widget.profileIsMonthly && monthBudgets.isNotEmpty && !allClosed
-              ? () => _confirmCloseMonthBudgets(monthBudgets)
-              : null,
-      onDeleteBudget: () => _confirmDeleteBudget(monthBudgets),
+      profileName: widget.profileName,
+      profileColor: widget.profileAccentColor,
+      monthPlan: monthPlan,
+      hasMonthPlan: monthPlan != null,
+      onStartPlanning: monthPlan == null
+          ? () async {
+              if (widget._isProfileMode && widget.budgetProfileId != null) {
+                await _monthPlanController.getOrCreateMonthPlanForMonthlyProfile(_monthKey, widget.budgetProfileId!);
+              } else {
+                await _monthPlanController.getOrCreateMonthPlan(_monthKey);
+              }
+              await _budgetController.refreshBudgetsWithSpentAmounts();
+            }
+          : null,
+      onCloseMonthPlan: monthPlan != null && !monthPlan.isClosed
+          ? () => _monthPlanController.closeMonthPlan(monthPlan.id!)
+          : null,
+      onReopenMonthPlan: monthPlan != null && monthPlan.isClosed
+          ? () => _monthPlanController.reopenMonthPlan(monthPlan.id!)
+          : null,
+      onDeleteMonth: () => _confirmDeleteBudget(monthBudgets, monthPlan),
+      onEditProfile: widget.onEditProfile,
+      onDeleteProfile: widget.onDeleteProfile,
     );
   }
 
@@ -244,15 +260,14 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     );
   }
 
-  Future<void> _confirmDeleteBudget(List<Budget> monthBudgets) async {
-    if (monthBudgets.isEmpty) return;
+  Future<void> _confirmDeleteBudget(List<Budget> monthBudgets, MonthPlan? plan) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Delete budget for $_monthLabel?'),
-        content: Text(
-          '${monthBudgets.length} group${monthBudgets.length == 1 ? '' : 's'} and all their categories will be permanently removed.',
-        ),
+        content: Text(monthBudgets.isEmpty
+            ? 'The month plan will be removed.'
+            : '${monthBudgets.length} group${monthBudgets.length == 1 ? '' : 's'} and their categories will be permanently removed.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
@@ -266,6 +281,9 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     if (confirmed != true || !mounted) return;
     for (final group in monthBudgets) {
       if (group.id != null) await _budgetController.deleteBudget(group.id!);
+    }
+    if (plan?.id != null) {
+      await _monthPlanController.deleteMonthPlan(plan!.id!);
     }
   }
 
@@ -288,7 +306,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
 
   void _showCreateGroup(bool isIncome) {
     if (widget._isProfileMode && widget.onAddProfileGroup != null) {
-      widget.onAddProfileGroup!(isIncome);
+      widget.onAddProfileGroup!(isIncome, _monthKey);
       return;
     }
     showModalBottomSheet(
@@ -324,12 +342,12 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     );
   }
 
-  void _showCategoryDetail(Budget group, BudgetCategory cat, double spent) {
+  void _showCategoryDetail(Budget group, BudgetCategory cat, double spent, {bool canEdit = true}) {
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (_) => CategoryDetailSheet(
         group: group, cat: cat, spent: spent,
-        onEdit: () { Navigator.pop(context); _showEditCategory(group, cat); },
+        onEdit: canEdit ? () { Navigator.pop(context); _showEditCategory(group, cat); } : null,
       ),
     );
   }
@@ -515,37 +533,47 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return AsyncStreamBuilder<List<Budget>>(
-      state: _budgetController,
-      builder: (_, budgets) => AsyncStreamBuilder<List<Transaction>>(
-        state: _txController,
-        builder: (_, txs) => AsyncStreamBuilder<List<Debt>>(
-          state: _debtController,
-          builder: (_, debts) => AsyncStreamBuilder<List<Subscription>>(
-            state: _subController,
-            builder: (_, subs) => AsyncStreamBuilder<List<Goal>>(
-              state: _goalController,
-              builder: (_, goals) => _build(context, isDark, budgets, txs, debts, subs, goals),
-              loadingBuilder: (_) => _build(context, isDark, budgets, txs, debts, subs, []),
-              errorBuilder: (_, __) => _build(context, isDark, budgets, txs, debts, subs, []),
+    return AsyncStreamBuilder<List<MonthPlan>>(
+      state: _monthPlanController,
+      builder: (_, __) => AsyncStreamBuilder<List<Budget>>(
+        state: _budgetController,
+        builder: (_, budgets) => AsyncStreamBuilder<List<Transaction>>(
+          state: _txController,
+          builder: (_, txs) => AsyncStreamBuilder<List<Debt>>(
+            state: _debtController,
+            builder: (_, debts) => AsyncStreamBuilder<List<Subscription>>(
+              state: _subController,
+              builder: (_, subs) => AsyncStreamBuilder<List<Goal>>(
+                state: _goalController,
+                builder: (_, goals) => _build(context, isDark, budgets, txs, debts, subs, goals),
+                loadingBuilder: (_) => _build(context, isDark, budgets, txs, debts, subs, []),
+                errorBuilder: (_, __) => _build(context, isDark, budgets, txs, debts, subs, []),
+              ),
+              loadingBuilder: (_) => _build(context, isDark, budgets, txs, debts, [], []),
+              errorBuilder: (_, __) => _build(context, isDark, budgets, txs, debts, [], []),
             ),
-            loadingBuilder: (_) => _build(context, isDark, budgets, txs, debts, [], []),
-            errorBuilder: (_, __) => _build(context, isDark, budgets, txs, debts, [], []),
+            loadingBuilder: (_) => _build(context, isDark, budgets, txs, [], [], []),
+            errorBuilder: (_, __) => _build(context, isDark, budgets, txs, [], [], []),
           ),
-          loadingBuilder: (_) => _build(context, isDark, budgets, txs, [], [], []),
-          errorBuilder: (_, __) => _build(context, isDark, budgets, txs, [], [], []),
+          loadingBuilder: (_) => _build(context, isDark, budgets, [], [], [], []),
+          errorBuilder: (_, __) => _build(context, isDark, budgets, [], [], [], []),
         ),
-        loadingBuilder: (_) => _build(context, isDark, budgets, [], [], [], []),
-        errorBuilder: (_, __) => _build(context, isDark, budgets, [], [], [], []),
+        loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+        errorBuilder: (_, msg) => Center(child: Text(msg)),
       ),
       loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
-      errorBuilder: (_, msg) => Center(child: Text(msg)),
+      errorBuilder: (_, __) => const Center(child: CircularProgressIndicator()),
     );
   }
 
   Widget _build(BuildContext ctx, bool isDark, List<Budget> budgets, List<Transaction> txs,
       List<Debt> debts, List<Subscription> subs, List<Goal> goals) {
-    final spentByCategory = BudgetMonthFilter.buildSpentByCategory(txs);
+    // Scope all per-month aggregations to the currently viewed month, filtered by profile when in profile mode
+    final allMonthTxs = BudgetMonthFilter.filterTransactions(txs, _month);
+    final monthTxs = widget._isProfileMode && widget.budgetProfileId != null
+        ? allMonthTxs.where((t) => t.budgetProfileId == widget.budgetProfileId).toList()
+        : allMonthTxs;
+    final spentByCategory = BudgetMonthFilter.buildSpentByCategory(monthTxs);
     final categoryNames = <String, String>{
       for (final c in (_categoryController.data ?? []))
         if (c.id != null) c.id!: c.name,
@@ -553,7 +581,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
 
     final paidThisMonthByDebt = <String, double>{};
     final contributedThisMonthByGoal = <String, double>{};
-    for (final t in txs) {
+    for (final t in monthTxs) {
       if (t.debtId != null) {
         paidThisMonthByDebt[t.debtId!] = (paidThisMonthByDebt[t.debtId!] ?? 0) + t.amount;
       }
@@ -639,19 +667,24 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         ? null
         : plans.cast<MonthPlan?>().firstWhere(
             (p) => p?.month == _monthKey, orElse: () => null);
-    final MonthPlan? profilePlan = widget._isProfileMode
+    final MonthPlan? profilePlan = widget._isProfileMode && !widget.profileIsMonthly
         ? plans.cast<MonthPlan?>().firstWhere(
             (p) => p?.budgetProfileId == widget.budgetProfileId, orElse: () => null)
         : null;
+    final MonthPlan? monthlyProfilePlan = widget._isProfileMode && widget.profileIsMonthly
+        ? plans.cast<MonthPlan?>().firstWhere(
+            (p) => p?.month == _monthKey && p?.budgetProfileId == widget.budgetProfileId,
+            orElse: () => null)
+        : null;
     final bool hasMonthPlan = widget._isProfileMode
         ? widget.profileIsMonthly
-            ? monthBudgets.isNotEmpty
+            ? monthlyProfilePlan != null || monthBudgets.isNotEmpty
             : (profilePlan != null || monthBudgets.isNotEmpty)
         : monthPlan != null;
 
     final bool isMonthClosed = widget._isProfileMode
         ? widget.profileIsMonthly
-            ? monthBudgets.isNotEmpty && monthBudgets.every((b) => b.status == BudgetStatus.closed)
+            ? monthlyProfilePlan?.isClosed ?? false
             : false
         : monthPlan?.isClosed ?? false;
 
@@ -694,8 +727,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           onNext: _nextMonth,
           onBackToCurrentMonth: !_isCurrentMonth && currentMonthHasPlan ? _backToCurrentMonth : null,
           onToggleView: widget.onToggleView,
-          // Always show settings for profiles
-          onSettings: widget.onOpenSettings != null ? () => widget.onOpenSettings!(monthBudgets) : null,
+          onSettings: () => _showSettings(monthBudgets, monthlyProfilePlan),
         ))
       else
         SliverToBoxAdapter(child: SimpleMonthNav(
@@ -705,7 +737,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           onPrev: _prevMonth, onNext: _nextMonth,
           onBackToCurrentMonth: !_isCurrentMonth && currentMonthHasPlan ? _backToCurrentMonth : null,
           onToggleView: widget.onToggleView,
-          onSettings: hasMonthPlan ? () => _showSettings(monthBudgets, monthPlan) : null,
+          onSettings: () => _showSettings(monthBudgets, monthPlan),
         )),
     ];
 
@@ -749,7 +781,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             debts: sortedDebts,
             receivables: sortedReceivables,
             goals: sortedGoals,
-            transactions: txs,
+            transactions: monthTxs,
             currentMonth: _month,
             isDark: isDark,
           ),
@@ -764,7 +796,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         SliverToBoxAdapter(
           child: SimpleTransactionsSection(
             isDark: isDark,
-            transactions: txs,
+            transactions: monthTxs,
             categoryNames: categoryNames,
           ),
         ),
@@ -790,13 +822,17 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       if (hasMonthPlan && tab == 1) ...[
         SliverToBoxAdapter(child: SimpleBudgetSection(
           isDark: isDark, label: 'INCOME', groups: incomeGroups, spentByCategory: spentByCategory, isIncome: true,
-          onAddGroup: () => _showCreateGroup(true), onAddCategory: _showAddCategory,
-          onEditGroup: _showEditGroup, onCategoryTap: _showCategoryDetail,
+          onAddGroup: isMonthClosed ? null : () => _showCreateGroup(true),
+          onAddCategory: isMonthClosed ? null : _showAddCategory,
+          onEditGroup: isMonthClosed ? null : _showEditGroup,
+          onCategoryTap: (g, c, s) => _showCategoryDetail(g, c, s, canEdit: !isMonthClosed),
         )),
         SliverToBoxAdapter(child: SimpleBudgetSection(
           isDark: isDark, label: 'EXPENSES', groups: expenseGroups, spentByCategory: spentByCategory, isIncome: false,
-          onAddGroup: () => _showCreateGroup(false), onAddCategory: _showAddCategory,
-          onEditGroup: _showEditGroup, onCategoryTap: _showCategoryDetail,
+          onAddGroup: isMonthClosed ? null : () => _showCreateGroup(false),
+          onAddCategory: isMonthClosed ? null : _showAddCategory,
+          onEditGroup: isMonthClosed ? null : _showEditGroup,
+          onCategoryTap: (g, c, s) => _showCategoryDetail(g, c, s, canEdit: !isMonthClosed),
         )),
       ],
       if (tab == 2)

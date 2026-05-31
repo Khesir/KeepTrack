@@ -5,6 +5,7 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../../transaction/domain/entities/transaction.dart';
+import '../sheets/transaction_detail_sheet.dart';
 
 class AllTransactionsTab extends StatefulWidget {
   final List<Transaction> transactions;
@@ -100,7 +101,10 @@ class _AllTransactionsTabState extends State<AllTransactionsTab> {
                           ),
                           child: Column(children: [
                             if (i > 0) Divider(height: 1, thickness: 0.5, color: divColor, indent: 12, endIndent: 12),
-                            Padding(
+                            InkWell(
+                              onTap: () => TransactionDetailSheet.show(context, transaction: t),
+                              borderRadius: i == 0 ? const BorderRadius.vertical(top: Radius.circular(12)) : BorderRadius.zero,
+                              child: Padding(
                               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                               child: Row(children: [
                                 Container(
@@ -142,8 +146,10 @@ class _AllTransactionsTabState extends State<AllTransactionsTab> {
                                       style: GoogleFonts.dmSans(fontSize: 9, color: AppColors.textTertiary),
                                     ),
                                 ]),
+                                const SizedBox(width: 4),
+                                Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
                               ]),
-                            ),
+                            )),
                           ]),
                         );
                       }),
