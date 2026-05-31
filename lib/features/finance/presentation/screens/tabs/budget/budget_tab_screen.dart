@@ -6,7 +6,7 @@ import 'package:keep_track/features/finance/modules/budget/domain/entities/budge
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_month_screen.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_simple_view.dart';
-import 'package:keep_track/features/finance/modules/budget/presentation/sheets/budget_settings_sheet.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/dialogs/budget_settings_dialog.dart';
 import 'package:keep_track/features/finance/modules/budget_profile/domain/entities/budget_profile.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
@@ -55,52 +55,19 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
 
   void _openSettings(List<Budget> monthBudgets) {
     final profile = _activeProfile!;
-    if (profile.isMonthly) {
-      // Monthly profile: close this month's budgets, not the whole profile
-      final allClosed = monthBudgets.isNotEmpty &&
-          monthBudgets.every((b) => b.status == BudgetStatus.closed);
-      BudgetSettingsSheet.show(
-        context,
-        monthLabel: profile.name,
-        onEditBudget: _editProfile,
-        onCloseBudget: monthBudgets.isNotEmpty && !allClosed
-            ? () => _confirmCloseMonthBudgets(profile, monthBudgets)
-            : null,
-        onDeleteBudget: () => _confirmDeleteProfile(profile),
-      );
-    } else {
-      // Custom profile: close the whole profile
-      BudgetSettingsSheet.show(
-        context,
-        monthLabel: profile.name,
-        onEditBudget: _editProfile,
-        onCloseBudget: profile.status == BudgetProfileStatus.active
-            ? () => _confirmCloseProfile(profile)
-            : null,
-        onDeleteBudget: () => _confirmDeleteProfile(profile),
-      );
-    }
+    final profileColor = profile.colorHex != null
+        ? Color(int.parse(profile.colorHex!.replaceFirst('#', '0xFF')))
+        : AppColors.accent;
+    // Custom profile — no month plan concept; profile-level settings only
+    BudgetSettingsDialog.show(
+      context,
+      monthLabel: profile.name,
+      profileColor: profileColor,
+      onEditProfile: _editProfile,
+      onDeleteProfile: () => _confirmDeleteProfile(profile),
+    );
   }
 
-  Future<void> _confirmCloseMonthBudgets(BudgetProfile profile, List<Budget> monthBudgets) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Close this month\'s budget?'),
-        content: const Text('All active budget groups for this month will be marked as closed.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Close Budget')),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    for (final b in monthBudgets) {
-      if (b.id != null && b.status == BudgetStatus.active) {
-        await _budgetController.closeBudget(b.id!);
-      }
-    }
-  }
 
   Future<void> _confirmCloseProfile(BudgetProfile profile) async {
     final confirmed = await showDialog<bool>(
@@ -182,7 +149,7 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
     if (mounted) _back();
   }
 
-  void _showAddProfileGroup(bool isIncome) {
+  void _showAddProfileGroup(bool isIncome, String monthKey) {
     final profile = _activeProfile!;
     showModalBottomSheet(
       context: context,
@@ -191,6 +158,7 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
       builder: (_) => ProfileCreateGroupSheet(
         profile: profile,
         isIncome: isIncome,
+        monthKey: monthKey,
         budgetController: _budgetController,
         monthPlanController: _monthPlanController,
         onCreated: () => _budgetController.loadBudgets(),
@@ -254,6 +222,8 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
         onAddProfileGroup: _showAddProfileGroup,
         onToggleView: _toggleView,
         onOpenSettings: _openSettings,
+        onEditProfile: _editProfile,
+        onDeleteProfile: () => _confirmDeleteProfile(_activeProfile!),
       ),
     );
   }

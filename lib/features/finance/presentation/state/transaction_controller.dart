@@ -77,9 +77,9 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
   /// Update an existing transaction
   Future<void> updateTransaction(Transaction transaction) async {
     await executeSilent(() async {
-      await _repository.updateTransaction(transaction).then((r) => r.unwrap());
-      await loadRecentTransactions();
-      return data ?? [];
+      final updated = await _repository.updateTransaction(transaction).then((r) => r.unwrap());
+      final current = data ?? [];
+      return current.map((t) => t.id == transaction.id ? updated : t).toList();
     });
     _cache.invalidateAll();
     onMutated?.call();
@@ -89,8 +89,8 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
   Future<void> deleteTransaction(String id) async {
     await executeSilent(() async {
       await _repository.deleteTransaction(id).then((r) => r.unwrap());
-      await loadRecentTransactions();
-      return data ?? [];
+      final current = data ?? [];
+      return current.where((t) => t.id != id).toList();
     });
     _cache.invalidateAll();
     onMutated?.call();

@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:keep_track/core/di/service_locator.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
-import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
-import 'package:keep_track/features/finance/modules/budget/presentation/helpers/currency_formatter.dart';
-import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
-import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 
 import '../controllers/budget_controller.dart';
 import '../../../../presentation/state/month_plan_controller.dart';
@@ -43,96 +39,14 @@ class StartPlanningSheet extends StatefulWidget {
 class _StartPlanningSheetState extends State<StartPlanningSheet> {
   bool _loading = false;
 
-  double _calculateCarryOver() {
-    final prevBudgets = (widget.budgetController.data ?? [])
-        .where((b) =>
-            b.month == widget.prevMonthKey &&
-            (widget.budgetProfileId == null ||
-                b.budgetProfileId == widget.budgetProfileId))
-        .toList();
-    final income = prevBudgets
-        .where((b) => b.budgetType == BudgetType.income)
-        .fold(0.0, (s, b) => s + b.budgetTarget);
-    final expenses = prevBudgets
-        .where((b) => b.budgetType == BudgetType.expense)
-        .fold(0.0, (s, b) => s + b.budgetTarget);
-    return income - expenses;
-  }
-
-  Future<void> _applyCarryOver(double amount) async {
-    final userId = locator.get<AuthController>().currentUser?.id ?? '';
-    final catCtrl = locator.get<FinanceCategoryController>();
-
-    final categoryId = await catCtrl.findOrCreate(
-      name: 'Carry Over',
-      type: CategoryType.income,
-      userId: userId,
-    );
-    if (categoryId == null) return;
-
-    final created = await widget.budgetController.createBudget(Budget(
-      month: widget.monthKey,
-      title: 'Carry Over',
-      budgetType: BudgetType.income,
-      periodType: BudgetPeriodType.monthly,
-      status: BudgetStatus.active,
-      budgetProfileId: widget.budgetProfileId,
-    ));
-
-    await widget.budgetController.addCategory(
-      created.id!,
-      BudgetCategory(
-        budgetId: created.id!,
-        financeCategoryId: categoryId,
-        targetAmount: amount,
-      ),
-    );
-
-    // Only link to month plan for non-profile mode
-    if (!widget._isProfileMode) {
-      await widget.monthPlanController.addBudgetToMonthPlan(
-        widget.monthKey,
-        created.id!,
-      );
-    }
-  }
-
-  Future<void> _promptCarryOver() async {
-    final carryOver = _calculateCarryOver();
-    if (carryOver <= 0 || !mounted) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Carry Over'),
-        content: Text(
-          'Your previous month had a remaining balance of ${formatCurrency(carryOver)}. '
-          'Add it as carry-over income for ${widget.monthLabel}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Skip'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Add Carry Over'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      await _applyCarryOver(carryOver);
-      await widget.budgetController.refreshBudgetsWithSpentAmounts();
-    }
-  }
-
   Future<void> _copyFromPrev() async {
     setState(() => _loading = true);
     try {
       if (widget._isProfileMode) {
-        // Copy profile-scoped budgets from previous month
+        final plan = widget.budgetProfileId != null
+            ? await widget.monthPlanController.getOrCreateMonthPlanForMonthlyProfile(
+                widget.monthKey, widget.budgetProfileId!)
+            : null;
         final prevBudgets = (widget.budgetController.data ?? [])
             .where((b) =>
                 b.budgetProfileId == widget.budgetProfileId &&
@@ -158,16 +72,15 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
               ),
             );
           }
+          if (plan?.id != null && created.id != null) {
+            await widget.monthPlanController.addBudgetToPlanById(plan!.id!, created.id!);
+          }
         }
         await widget.budgetController.refreshBudgetsWithSpentAmounts();
       } else {
-        await widget.monthPlanController.copyMonthPlan(
-          widget.prevMonthKey,
-          widget.monthKey,
-        );
+        await widget.monthPlanController.copyMonthPlan(widget.prevMonthKey, widget.monthKey);
         await widget.budgetController.refreshBudgetsWithSpentAmounts();
       }
-      await _promptCarryOver();
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
@@ -181,11 +94,13 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
   Future<void> _startFresh() async {
     setState(() => _loading = true);
     try {
-      if (!widget._isProfileMode) {
+      if (widget.budgetProfileId != null) {
+        await widget.monthPlanController.getOrCreateMonthPlanForMonthlyProfile(
+            widget.monthKey, widget.budgetProfileId!);
+      } else {
         await widget.monthPlanController.getOrCreateMonthPlan(widget.monthKey);
-        await widget.budgetController.refreshBudgetsWithSpentAmounts();
       }
-      await _promptCarryOver();
+      await widget.budgetController.refreshBudgetsWithSpentAmounts();
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -194,69 +109,159 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          const SizedBox(height: 12),
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(children: [
+              Container(
+                width: 44, height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: const Icon(Icons.calendar_month_rounded, size: 22, color: AppColors.accent),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text('Start Planning', style: AppTextStyles.h4),
-            const SizedBox(height: 4),
-            Text(
-              widget.monthLabel,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(width: 14),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Start Planning',
+                    style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+                Text(widget.monthLabel,
+                    style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+              ]),
+            ]),
+          ),
 
-            if (widget.hasPrevBudgets) ...[
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _loading ? null : _copyFromPrev,
-                  icon: _loading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.copy_outlined, size: 18),
-                  label: Text(
-                    _loading ? 'Copying…' : 'Copy from ${widget.prevMonthLabel}',
-                  ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(children: [
+              if (widget.hasPrevBudgets) ...[
+                _OptionCard(
+                  isDark: isDark,
+                  icon: Icons.copy_all_rounded,
+                  label: 'Copy from ${widget.prevMonthLabel}',
+                  sublabel: 'Duplicate all budget groups and categories',
+                  isPrimary: true,
+                  loading: _loading,
+                  onTap: _loading ? null : _copyFromPrev,
                 ),
+                const SizedBox(height: 10),
+              ],
+              _OptionCard(
+                isDark: isDark,
+                icon: Icons.add_circle_outline_rounded,
+                label: 'Start Fresh',
+                sublabel: 'Create a new empty budget for this month',
+                isPrimary: !widget.hasPrevBudgets,
+                loading: false,
+                onTap: _loading ? null : _startFresh,
               ),
-              const SizedBox(height: 12),
-            ],
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _loading ? null : _startFresh,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Start Fresh'),
-              ),
+class _OptionCard extends StatelessWidget {
+  final bool isDark;
+  final IconData icon;
+  final String label;
+  final String sublabel;
+  final bool isPrimary;
+  final bool loading;
+  final VoidCallback? onTap;
+
+  const _OptionCard({
+    required this.isDark,
+    required this.icon,
+    required this.label,
+    required this.sublabel,
+    required this.isPrimary,
+    required this.loading,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isPrimary
+        ? AppColors.accent
+        : (isDark ? const Color(0xFF2C2C2A) : AppColors.background);
+    final border = isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5);
+    final labelColor = isPrimary ? Colors.white : (isDark ? AppColors.primaryForeground : AppColors.textPrimary);
+    final subColor = isPrimary ? Colors.white.withValues(alpha: 0.75) : AppColors.textSecondary;
+    final iconColor = isPrimary ? Colors.white : AppColors.accent;
+    final iconBg = isPrimary
+        ? Colors.white.withValues(alpha: 0.15)
+        : AppColors.accent.withValues(alpha: 0.1);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedOpacity(
+        opacity: onTap == null ? 0.5 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+            border: isPrimary ? null : Border.all(color: border, width: 0.5),
+          ),
+          child: Row(children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+              child: loading
+                  ? Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: iconColor,
+                      ),
+                    )
+                  : Icon(icon, size: 20, color: iconColor),
             ),
-          ],
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: labelColor)),
+              const SizedBox(height: 2),
+              Text(sublabel, style: GoogleFonts.dmSans(fontSize: 12, color: subColor)),
+            ])),
+            Icon(Icons.chevron_right_rounded, size: 18,
+                color: isPrimary ? Colors.white.withValues(alpha: 0.7) : AppColors.textTertiary),
+          ]),
         ),
       ),
     );

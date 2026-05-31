@@ -21,6 +21,12 @@ abstract class MonthPlanDataSource {
   /// Get or create the plan for a custom budget profile.
   Future<MonthPlanModel> getOrCreatePlanForProfile(String profileId);
 
+  /// Get or create a plan for a monthly profile scoped to a specific month.
+  Future<MonthPlanModel> getOrCreateMonthPlanForMonthlyProfile(String month, String profileId);
+
   /// Set the plan's status to closed.
   Future<MonthPlanModel> closeMonthPlan(String id);
+
+  /// Set the plan's status back to active.
+  Future<MonthPlanModel> reopenMonthPlan(String id);
 }

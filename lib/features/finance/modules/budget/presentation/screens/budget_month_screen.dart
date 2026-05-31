@@ -78,7 +78,7 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
 
   DateTime _currentMonth = DateTime.now();
   List<String> _itemOrder = [];
-  int _selectedTab = 0;
+  int _selectedTab = 1;
   Budget? _selectedGroup;
   BudgetCategory? _selectedCategory;
   Budget? _selectedCategoryGroup;

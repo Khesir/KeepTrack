@@ -11,6 +11,7 @@ import 'package:keep_track/features/finance/presentation/state/month_plan_contro
 class ProfileCreateGroupSheet extends StatefulWidget {
   final BudgetProfile profile;
   final bool isIncome;
+  final String monthKey;
   final BudgetController budgetController;
   final MonthPlanController monthPlanController;
   final VoidCallback onCreated;
@@ -19,6 +20,7 @@ class ProfileCreateGroupSheet extends StatefulWidget {
     super.key,
     required this.profile,
     required this.isIncome,
+    required this.monthKey,
     required this.budgetController,
     required this.monthPlanController,
     required this.onCreated,
@@ -51,11 +53,9 @@ class _ProfileCreateGroupSheetState extends State<ProfileCreateGroupSheet> {
     if (title.isEmpty) return;
     setState(() => _saving = true);
     try {
-      final now = DateTime.now();
-      final month = '${now.year}-${now.month.toString().padLeft(2, '0')}';
       final created = await widget.budgetController.createBudget(
         Budget(
-          month: month,
+          month: widget.monthKey,
           title: title,
           budgetType: _type,
           periodType: widget.profile.isMonthly ? BudgetPeriodType.monthly : BudgetPeriodType.oneTime,
@@ -63,11 +63,16 @@ class _ProfileCreateGroupSheetState extends State<ProfileCreateGroupSheet> {
           budgetProfileId: widget.profile.id,
         ),
       );
-      // Register this budget in the profile's MonthPlan
+      // Register this budget in the correct month plan
       if (created.id != null) {
         final plans = widget.monthPlanController.data ?? [];
         final plan = plans.cast<MonthPlan?>().firstWhere(
-          (p) => p?.budgetProfileId == widget.profile.id, orElse: () => null);
+          (p) => p?.budgetProfileId == widget.profile.id && p?.month == widget.monthKey,
+          orElse: () => plans.cast<MonthPlan?>().firstWhere(
+            (p) => p?.budgetProfileId == widget.profile.id && p?.month == null,
+            orElse: () => null,
+          ),
+        );
         if (plan?.id != null) {
           await widget.monthPlanController.addBudgetToPlanById(plan!.id!, created.id!);
         }

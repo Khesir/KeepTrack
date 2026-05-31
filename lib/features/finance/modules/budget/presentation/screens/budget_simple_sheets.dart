@@ -366,9 +366,9 @@ class CategoryDetailSheet extends StatelessWidget {
   final Budget group;
   final BudgetCategory cat;
   final double spent;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
 
-  const CategoryDetailSheet({super.key, required this.group, required this.cat, required this.spent, required this.onEdit});
+  const CategoryDetailSheet({super.key, required this.group, required this.cat, required this.spent, this.onEdit});
 
   @override
   Widget build(BuildContext context) {

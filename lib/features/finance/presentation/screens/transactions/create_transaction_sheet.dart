@@ -16,6 +16,7 @@ import 'package:keep_track/features/finance/modules/transaction/domain/entities/
 import 'package:keep_track/features/finance/modules/transaction_plan/domain/entities/transaction_plan.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_plan_controller.dart';
 import 'scan_expenses_sheet.dart';
@@ -23,13 +24,15 @@ import 'scan_expenses_sheet.dart';
 class CreateTransactionSheet extends StatefulWidget {
   final VoidCallback? onCreated;
   final String? initialProfileId;
+  final String? initialMonthKey;
 
-  const CreateTransactionSheet({super.key, this.onCreated, this.initialProfileId});
+  const CreateTransactionSheet({super.key, this.onCreated, this.initialProfileId, this.initialMonthKey});
 
   static Future<void> show(
     BuildContext context, {
     VoidCallback? onCreated,
     String? initialProfileId,
+    String? initialMonthKey,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -39,6 +42,7 @@ class CreateTransactionSheet extends StatefulWidget {
       builder: (_) => CreateTransactionSheet(
         onCreated: onCreated,
         initialProfileId: initialProfileId,
+        initialMonthKey: initialMonthKey,
       ),
     );
   }
@@ -53,6 +57,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
   late final FinanceCategoryController _catController;
   late final BudgetController _budgetController;
   late final BudgetProfileController _profileController;
+  late final MonthPlanController _monthPlanController;
   late final AuthController _authController;
 
   TransactionType _type = TransactionType.expense;
@@ -67,6 +72,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
   bool _profileError = false;
   String? _selectedProfileId;
   String? _selectedProfileName;
+  String? _selectedPlanMonth;
 
   @override
   void initState() {
@@ -76,6 +82,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     _catController = locator.get<FinanceCategoryController>();
     _budgetController = locator.get<BudgetController>();
     _profileController = locator.get<BudgetProfileController>();
+    _monthPlanController = locator.get<MonthPlanController>();
     _authController = locator.get<AuthController>();
     _catController.loadCategories();
 
@@ -88,7 +95,25 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
       );
       if (match != null) {
         _selectedProfileId = match.id;
-        _selectedProfileName = match.name;
+        if (match.isMonthly && widget.initialMonthKey != null) {
+          final plans = _monthPlanController.data ?? [];
+          final plan = plans.cast<dynamic>().firstWhere(
+            (p) => p.budgetProfileId == match.id && p.month == widget.initialMonthKey,
+            orElse: () => null,
+          );
+          if (plan != null) {
+            _selectedPlanMonth = plan.month as String;
+            final monthDt = DateTime.tryParse('${plan.month}-01');
+            final label = monthDt != null ? DateFormat('MMM yyyy').format(monthDt) : plan.month as String;
+            _selectedProfileName = '${match.name} – $label';
+          } else {
+            _selectedProfileName = match.name;
+            _selectedPlanMonth = null;
+          }
+        } else {
+          _selectedProfileName = match.name;
+          _selectedPlanMonth = null;
+        }
       }
     }
   }
@@ -197,20 +222,43 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     if (_selectedProfileId == null) return null;
     final s = _budgetController.state;
     if (s is! AsyncData<List<Budget>>) return null;
-    final ids = s.data
-        .where((b) => b.budgetProfileId == _selectedProfileId)
-        .expand((b) => b.categories.map((c) => c.financeCategoryId))
-        .toSet();
-    // If profile has no budget categories yet, fall back to showing all categories
+    final ids = s.data.where((b) {
+      if (b.budgetProfileId != _selectedProfileId) return false;
+      if (_selectedPlanMonth != null) return b.month == _selectedPlanMonth && b.status == BudgetStatus.active;
+      return b.status == BudgetStatus.active;
+    }).expand((b) => b.categories.map((c) => c.financeCategoryId)).toSet();
     return ids.isEmpty ? null : ids;
   }
 
   void _pickBudgetProfile() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final s = _profileController.state;
-    final profiles = s is AsyncData<List<BudgetProfile>> ? s.data : <BudgetProfile>[];
+    final profiles = _profileController.data ?? <BudgetProfile>[];
+    final plans = _monthPlanController.data ?? [];
     final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+    // Build picker items: monthly profiles → one entry per open plan; custom → one entry per profile
+    final items = <({String label, String profileId, String? planMonth})>[];
+    for (final p in profiles) {
+      if (!p.isActive) continue;
+      if (p.isMonthly) {
+        final profilePlans = plans
+            .where((pl) => pl.budgetProfileId == p.id && !pl.isClosed && pl.month != null)
+            .toList()
+          ..sort((a, b) => (b.month ?? '').compareTo(a.month ?? ''));
+        if (profilePlans.isEmpty) {
+          items.add((label: p.name, profileId: p.id!, planMonth: null));
+        } else {
+          for (final pl in profilePlans) {
+            final monthDt = DateTime.tryParse('${pl.month!}-01');
+            final monthLabel = monthDt != null ? DateFormat('MMM yyyy').format(monthDt) : pl.month!;
+            items.add((label: '${p.name} – $monthLabel', profileId: p.id!, planMonth: pl.month));
+          }
+        }
+      } else {
+        items.add((label: p.name, profileId: p.id!, planMonth: null));
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -223,17 +271,25 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
           Padding(padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
               child: Text('Select Budget', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: fg))),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 280),
+            constraints: const BoxConstraints(maxHeight: 320),
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: profiles.length,
+              itemCount: items.length,
               itemBuilder: (_, i) {
-                final p = profiles[i];
-                final sel = _selectedProfileId == p.id;
+                final item = items[i];
+                final sel = _selectedProfileId == item.profileId && _selectedPlanMonth == item.planMonth;
                 return ListTile(
-                  title: Text(p.name, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: fg)),
+                  title: Text(item.label, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: fg)),
                   trailing: sel ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent) : null,
-                  onTap: () { setState(() { _selectedProfileId = p.id; _selectedProfileName = p.name; _category = null; }); Navigator.pop(context); },
+                  onTap: () {
+                    setState(() {
+                      _selectedProfileId = item.profileId;
+                      _selectedProfileName = item.label;
+                      _selectedPlanMonth = item.planMonth;
+                      _category = null;
+                    });
+                    Navigator.pop(context);
+                  },
                 );
               },
             ),

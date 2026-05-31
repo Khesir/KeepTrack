@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/settings/presentation/settings_controller.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
@@ -16,6 +18,13 @@ import 'package:keep_track/features/finance/modules/transaction/data/datasources
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
+import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
+import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
+import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:uuid/uuid.dart';
@@ -47,6 +56,11 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
   late final BudgetProfileController _profileController;
   late final BudgetController _budgetController;
   late final AuthController _authController;
+  late final SettingsController _settingsController;
+  late final SubscriptionController _subController;
+  late final DebtController _debtController;
+  late final GoalController _goalController;
+  late final SavingsController _savingsController;
   final ReceiptParserService _parserService = ReceiptParserService();
   final _picker = ImagePicker();
   final _uuid = const Uuid();
@@ -64,6 +78,11 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     _profileController = locator.get<BudgetProfileController>();
     _budgetController = locator.get<BudgetController>();
     _authController = locator.get<AuthController>();
+    _settingsController = locator.get<SettingsController>();
+    _subController = locator.get<SubscriptionController>();
+    _debtController = locator.get<DebtController>();
+    _goalController = locator.get<GoalController>();
+    _savingsController = locator.get<SavingsController>();
   }
 
   FinanceCategory? _matchCategory(String name, TransactionType type) {
@@ -124,11 +143,6 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
       defaultTargetPlatform == TargetPlatform.linux;
 
   String? get _defaultProfileId => _profileController.activeProfileId;
-  String? _profileNameFor(String? id) {
-    if (id == null) return null;
-    try { return _profiles.firstWhere((p) => p.id == id).name; }
-    catch (_) { return null; }
-  }
 
   Future<void> _pickImage(ImageSource source) async {
     final xfile = await _picker.pickImage(source: source, imageQuality: 85);
@@ -143,13 +157,22 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
       final parsed = await _parserService.parseReceiptImage(_pickedFile!);
       if (!mounted) return;
       final pid = _defaultProfileId;
-      final pname = _profileNameFor(pid);
       final today = DateTime.now();
+      final defaultProfile = pid != null
+          ? _profiles.cast<BudgetProfile?>().firstWhere((p) => p?.id == pid, orElse: () => null)
+          : null;
+      final defaultIsMonthly = defaultProfile?.isMonthly ?? false;
+      final defaultBaseName = defaultProfile?.name;
+      final defaultDisplayName = defaultProfile == null
+          ? null
+          : defaultIsMonthly
+              ? '${defaultProfile.name} · ${DateFormat('MMM yyyy').format(today)}'
+              : defaultProfile.name;
       setState(() {
         _items = parsed.map((p) {
           final txType = p.type == 'income' ? TransactionType.income : TransactionType.expense;
           final matched = _matchCategory(p.categoryName, txType);
-          return _EditableItem(
+          final item = _EditableItem(
             id: _uuid.v4(),
             amount: p.amount,
             type: txType,
@@ -158,8 +181,15 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
             categoryName: p.categoryName,
             category: matched,
             profileId: pid,
-            profileName: pname,
+            profileName: defaultDisplayName,
+            profileBaseName: defaultBaseName,
+            isMonthlyProfile: defaultIsMonthly,
+            entityType: p.entityType,
+            entityHint: p.entityHint,
           );
+          // Auto-match entity from AI hint so chip starts green without manual linking
+          _autoLinkEntity(item, p.entityType, p.entityHint);
+          return item;
         }).toList();
         _step = _ScanStep.review;
       });
@@ -177,9 +207,27 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     for (final item in toSave) {
       String? categoryId = item.category?.id;
       if (categoryId == null) {
-        final catType = item.type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+        // Use proper category names for entity-linked transactions
+        final String categoryName;
+        final CategoryType catType;
+        if (item.subscriptionId != null) {
+          categoryName = 'Subscriptions';
+          catType = CategoryType.expense;
+        } else if (item.debtId != null && item.entityType == 'debt_payment') {
+          categoryName = 'Debt Payment';
+          catType = CategoryType.expense;
+        } else if (item.debtId != null && item.entityType == 'lending') {
+          categoryName = item.type == TransactionType.income ? 'Receivables' : 'Debt Payment';
+          catType = item.type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+        } else if (item.goalId != null) {
+          categoryName = 'Savings';
+          catType = CategoryType.savings;
+        } else {
+          categoryName = item.categoryName.isNotEmpty ? item.categoryName : 'Other';
+          catType = item.type == TransactionType.income ? CategoryType.income : CategoryType.expense;
+        }
         categoryId = await _catController.findOrCreate(
-          name: item.categoryName.isNotEmpty ? item.categoryName : 'Other',
+          name: categoryName,
           type: catType,
           userId: userId,
         );
@@ -191,20 +239,32 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
         date: item.date,
         description: item.description.isNotEmpty ? item.description : item.categoryName,
         budgetProfileId: item.profileId,
+        subscriptionId: item.subscriptionId,
+        debtId: item.debtId,
+        goalId: item.goalId,
       ));
+
+      if (item.subscriptionId != null || item.debtId != null || item.goalId != null) {
+        try {
+          await _applyEntitySideEffects(item);
+        } catch (_) {}
+      }
     }
     widget.onConfirmed?.call();
     if (mounted) Navigator.pop(context);
   }
 
   String _friendlyError(Object e) {
-    final msg = e.toString();
-    if (msg.contains('too large')) return msg;
-    if (msg.contains('400') || msg.contains('BadRequest')) return 'The image could not be read. Try a clearer photo.';
-    if (msg.contains('401')) return 'Session expired. Please sign in again.';
-    if (msg.contains('429')) return 'Too many requests. Please wait a moment.';
-    if (msg.contains('timeout') || msg.contains('SocketException')) return 'Connection timed out. Check your internet.';
-    return 'Something went wrong. Please try again.';
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('too large')) { return 'Image is too large. Try a smaller or lower-quality photo.'; }
+    if (msg.contains('unsupported') || msg.contains('format') || msg.contains('invalid image')) { return 'This file type couldn\'t be read. Use a JPG or PNG image.'; }
+    if (msg.contains('no transaction') || msg.contains('no item') || msg.contains('nothing found')) { return 'No transactions were detected. Make sure the document contains clear expense or income entries.'; }
+    if (msg.contains('400') || msg.contains('badrequest') || msg.contains('unreadable')) { return 'The image couldn\'t be processed. Make sure the text is sharp and fully visible.'; }
+    if (msg.contains('401') || msg.contains('unauthorized')) { return 'Session expired. Please sign in again.'; }
+    if (msg.contains('429') || msg.contains('rate limit')) { return 'Too many requests. Wait a moment then try again.'; }
+    if (msg.contains('timeout') || msg.contains('socketexception') || msg.contains('network')) { return 'Connection timed out. Check your internet and try again.'; }
+    if (msg.contains('parse') || msg.contains('decode') || msg.contains('json')) { return 'The scan result couldn\'t be understood. Try again with a different image.'; }
+    return 'We couldn\'t read this document. Try a clearer photo with better lighting and make sure all text is fully visible.';
   }
 
   void _showProfilePicker(_EditableItem item) {
@@ -230,17 +290,345 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
               itemBuilder: (_, i) {
                 final p = _profiles[i];
                 final sel = item.profileId == p.id;
+                final displayMonth = DateFormat('MMM yyyy').format(item.date);
+                final displayName = p.isMonthly ? '${p.name} · $displayMonth' : p.name;
                 return ListTile(
-                  title: Text(p.name, style: GoogleFonts.dmSans(fontSize: 13,
+                  title: Text(displayName, style: GoogleFonts.dmSans(fontSize: 13,
                       fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: fg)),
+                  subtitle: p.isMonthly
+                      ? Text('Monthly', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary))
+                      : null,
                   trailing: sel ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent) : null,
                   onTap: () {
-                    setState(() { item.profileId = p.id; item.profileName = p.name; });
+                    setState(() {
+                      item.profileId = p.id;
+                      item.profileBaseName = p.name;
+                      item.isMonthlyProfile = p.isMonthly;
+                      item.profileName = displayName;
+                    });
                     Navigator.pop(context);
                   },
                 );
               },
             ),
+          ),
+          const SizedBox(height: 8),
+        ])),
+      ),
+    );
+  }
+
+  // Try to auto-link the entity from the AI hint so the chip starts green.
+  void _autoLinkEntity(_EditableItem item, String? entityType, String? hint) {
+    if (entityType == null) return;
+    final h = hint?.toLowerCase() ?? '';
+
+    switch (entityType) {
+      case 'subscription':
+        final subs = _subController.data ?? [];
+        final match = subs.where((s) =>
+            s.status == SubscriptionStatus.active &&
+            (h.isEmpty || s.name.toLowerCase().contains(h) || (s.provider?.toLowerCase().contains(h) ?? false))
+        ).firstOrNull;
+        if (match != null) {
+          item.subscriptionId = match.id;
+          item.entityLabel = match.name;
+        }
+      case 'debt_payment':
+        final debts = _debtController.data ?? [];
+        final match = debts.where((d) =>
+            d.type == DebtType.borrowing &&
+            d.status == DebtStatus.active &&
+            (h.isEmpty || d.personName.toLowerCase().contains(h))
+        ).firstOrNull;
+        if (match != null) {
+          item.debtId = match.id;
+          item.entityLabel = match.personName;
+        }
+      case 'lending':
+        final recv = _debtController.data ?? [];
+        final match = recv.where((d) =>
+            d.type == DebtType.lending &&
+            d.status == DebtStatus.active &&
+            (h.isEmpty || d.personName.toLowerCase().contains(h))
+        ).firstOrNull;
+        if (match != null) {
+          item.debtId = match.id;
+          item.entityLabel = match.personName;
+        }
+      case 'goal':
+        final goals = _goalController.data ?? [];
+        final match = goals.where((g) =>
+            g.status == GoalStatus.active &&
+            (h.isEmpty || g.name.toLowerCase().contains(h))
+        ).firstOrNull;
+        if (match != null) {
+          item.goalId = match.id;
+          item.entityLabel = match.name;
+        }
+    }
+  }
+
+  Future<void> _applyEntitySideEffects(_EditableItem item) async {
+    // ── Subscription: uses Hive pay() which sets lastBilledDate + advances nextBillingDate ─
+    if (item.subscriptionId != null) {
+      await _subController.pay(item.subscriptionId!);
+    }
+
+    // ── Debt / receivable: updateDebtPayment / updateDebt reload from Hive ────
+    // (payDebt only does an optimistic in-memory update which misses filtered caches)
+    if (item.debtId != null) {
+      final isPayment = item.entityType == 'debt_payment' ||
+          (item.entityType == 'lending' && item.type == TransactionType.income);
+      if (isPayment) {
+        // Reload if null OR if the specific debt isn't in the current (possibly filtered) cache
+        final cached = (_debtController.data ?? []).where((d) => d.id == item.debtId).firstOrNull;
+        if (cached == null) await _debtController.loadDebts();
+        final debt = (_debtController.data ?? [])
+            .where((d) => d.id == item.debtId)
+            .firstOrNull;
+        if (debt != null) {
+          final newRemaining = (debt.remainingAmount - item.amount).clamp(0.0, double.infinity);
+          if (newRemaining <= 0) {
+            await _debtController.updateDebt(debt.copyWith(
+              remainingAmount: 0,
+              status: DebtStatus.settled,
+            ));
+          } else {
+            await _debtController.updateDebtPayment(item.debtId!, newRemaining);
+          }
+        }
+      }
+    }
+
+    // ── Goal: contributeToGoal writes to Hive + reloads; savings sync ─────────
+    if (item.goalId != null) {
+      await _goalController.contributeToGoal(item.goalId!, item.amount);
+      if (_savingsController.data == null) await _savingsController.loadSavings();
+      final goal = (_goalController.data ?? []).where((g) => g.id == item.goalId).firstOrNull;
+      if (goal?.savingsBucketId != null) {
+        final bucket = (_savingsController.data ?? [])
+            .where((b) => b.id == goal!.savingsBucketId)
+            .firstOrNull;
+        if (bucket != null) {
+          await _savingsController.updateSavingsBucket(
+            bucket.copyWith(balance: bucket.balance + item.amount),
+          );
+        }
+      }
+    }
+  }
+
+  void _showEntityTypePicker(_EditableItem item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
+
+    final types = [
+      (icon: Icons.autorenew_rounded, label: 'Subscription', sub: 'Recurring service payment', type: 'subscription', color: AppColors.warning),
+      (icon: Icons.arrow_upward_rounded, label: 'Debt', sub: 'Money you owe to someone', type: 'debt_payment', color: AppColors.error),
+      (icon: Icons.arrow_downward_rounded, label: 'Receivable', sub: 'Money owed to you', type: 'lending', color: AppColors.success),
+      (icon: Icons.flag_outlined, label: 'Goal', sub: 'Savings contribution', type: 'goal', color: AppColors.accent),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 36, height: 4,
+              decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
+            child: Text('Link to…', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+          ),
+          Divider(height: 1, color: divColor),
+          ...types.map((t) => ListTile(
+            leading: Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(color: t.color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
+              child: Icon(t.icon, size: 17, color: t.color),
+            ),
+            title: Text(t.label, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
+            subtitle: Text(t.sub, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() { item.entityType = t.type; item.entityHint = null; });
+              _showEntityPicker(item);
+            },
+          )),
+          const SizedBox(height: 8),
+        ])),
+      ),
+    );
+  }
+
+  void _showEntityPicker(_EditableItem item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
+    final hint = item.entityHint?.toLowerCase() ?? '';
+
+    Widget buildList<T>(
+      List<T> items,
+      String Function(T) label,
+      String Function(T) id,
+      String? Function(T) subtitle,
+      Color Function(T) color,
+      void Function(T) onSelect,
+    ) {
+      final filtered = hint.isEmpty
+          ? items
+          : items.where((e) => label(e).toLowerCase().contains(hint)).toList();
+      final display = filtered.isEmpty ? items : filtered;
+      if (display.isEmpty) {
+        return Center(child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('No items found', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary)),
+        ));
+      }
+      return ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: display.length,
+        separatorBuilder: (_, __) => Divider(height: 1, color: divColor),
+        itemBuilder: (_, i) {
+          final e = display[i];
+          final sel = id(e) == (item.subscriptionId ?? item.debtId ?? item.goalId);
+          final sub = subtitle(e);
+          return ListTile(
+            leading: Container(
+              width: 8, height: 8,
+              decoration: BoxDecoration(color: color(e), shape: BoxShape.circle),
+            ),
+            title: Text(label(e), style: GoogleFonts.dmSans(fontSize: 13,
+                fontWeight: sel ? FontWeight.w600 : FontWeight.w400, color: textPrimary)),
+            subtitle: sub != null ? Text(sub, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)) : null,
+            trailing: sel ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent) : null,
+            onTap: () { onSelect(e); Navigator.pop(context); },
+          );
+        },
+      );
+    }
+
+    String title;
+    Widget listContent;
+
+    switch (item.entityType) {
+      case 'subscription':
+        title = 'Link Subscription';
+        final subs = (_subController.data ?? [])
+            .where((s) => s.status == SubscriptionStatus.active)
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+        listContent = buildList<Subscription>(
+          subs,
+          (s) => s.name,
+          (s) => s.id ?? '',
+          (s) => s.provider ?? s.billingCycle.displayName,
+          (_) => AppColors.warning,
+          (s) => setState(() { item.subscriptionId = s.id; item.entityLabel = s.name; }),
+        );
+      case 'debt_payment':
+        title = 'Link Debt';
+        final debts = (_debtController.data ?? [])
+            .where((d) => d.type == DebtType.borrowing && d.status == DebtStatus.active)
+            .toList()
+          ..sort((a, b) => a.personName.compareTo(b.personName));
+        listContent = buildList<Debt>(
+          debts,
+          (d) => d.personName,
+          (d) => d.id ?? '',
+          (d) => '${currencyFormatter.format(d.remainingAmount, decimalDigits: 0)} remaining',
+          (_) => AppColors.error,
+          (d) => setState(() { item.debtId = d.id; item.entityLabel = d.personName; }),
+        );
+      case 'lending':
+        title = 'Link Receivable';
+        final receivables = (_debtController.data ?? [])
+            .where((d) => d.type == DebtType.lending && d.status == DebtStatus.active)
+            .toList()
+          ..sort((a, b) => a.personName.compareTo(b.personName));
+        listContent = buildList<Debt>(
+          receivables,
+          (d) => d.personName,
+          (d) => d.id ?? '',
+          (d) => '${currencyFormatter.format(d.remainingAmount, decimalDigits: 0)} remaining',
+          (_) => AppColors.success,
+          (d) => setState(() { item.debtId = d.id; item.entityLabel = d.personName; }),
+        );
+      case 'goal':
+        title = 'Link Goal';
+        final goals = (_goalController.data ?? [])
+            .where((g) => g.status == GoalStatus.active)
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+        listContent = buildList<Goal>(
+          goals,
+          (g) => g.name,
+          (g) => g.id ?? '',
+          (g) => '${currencyFormatter.format(g.currentAmount, decimalDigits: 0)} / ${currencyFormatter.format(g.targetAmount, decimalDigits: 0)}',
+          (g) => g.colorHex != null
+              ? Color(int.parse(g.colorHex!.replaceFirst('#', '0xff')))
+              : AppColors.accent,
+          (g) => setState(() { item.goalId = g.id; item.entityLabel = g.name; }),
+        );
+      default:
+        return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 36, height: 4,
+              decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
+            child: Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+                if (item.entityHint != null)
+                  Text('Suggested: ${item.entityHint}', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+              ])),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary)),
+              ),
+            ]),
+          ),
+          Divider(height: 1, color: divColor),
+          // Remove link option
+          if (item.entityLabel != null || item.subscriptionId != null || item.debtId != null || item.goalId != null)
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              ListTile(
+                leading: Icon(Icons.link_off_rounded, size: 18, color: AppColors.error),
+                title: Text('Remove link', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.error)),
+                onTap: () {
+                  setState(() {
+                    item.subscriptionId = null;
+                    item.debtId = null;
+                    item.goalId = null;
+                    item.entityLabel = null;
+                    item.entityType = null;
+                    item.entityHint = null;
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              Divider(height: 1, color: divColor),
+            ]),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 320),
+            child: SingleChildScrollView(child: listContent),
           ),
           const SizedBox(height: 8),
         ])),
@@ -368,13 +756,15 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                 child: Row(children: [
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                      _errorMessage != null ? 'Could not read image'
-                          : _items.isEmpty ? 'Nothing found'
+                      _errorMessage != null ? 'Couldn\'t read document'
+                          : _items.isEmpty ? 'Nothing detected'
                           : '${_items.length} transaction${_items.length == 1 ? '' : 's'} found',
                       style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary),
                     ),
                     Text(
-                      _items.isEmpty ? 'Try a clearer photo' : 'Review and edit before saving',
+                      _errorMessage != null ? 'See tips below and try again'
+                          : _items.isEmpty ? 'Try a clearer photo of your document'
+                          : 'Review and edit before saving',
                       style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ])),
@@ -392,38 +782,99 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
             ]),
           ),
 
-          // Error banner
+          // Error state
           if (_errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.error.withValues(alpha: 0.2), width: 0.5),
+            Expanded(child: SingleChildScrollView(child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2), width: 0.5),
+                  ),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Icon(Icons.error_outline_rounded, size: 17, color: AppColors.error),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_errorMessage!, style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.error, height: 1.45))),
+                  ]),
                 ),
-                child: Row(children: [
-                  Icon(Icons.error_outline_rounded, size: 16, color: AppColors.error),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(_errorMessage!, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.error))),
-                ]),
-              ),
-            ),
+                const SizedBox(height: 20),
+                Text('Tips for a better scan', style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary, letterSpacing: 0.3)),
+                const SizedBox(height: 10),
+                ...[
+                  (Icons.light_mode_outlined, 'Use good lighting — avoid shadows and glare'),
+                  (Icons.crop_free_rounded, 'Fit the full document in the frame'),
+                  (Icons.blur_off_rounded, 'Hold your camera steady for a sharp photo'),
+                  (Icons.text_fields_rounded, 'Make sure all text is clearly readable'),
+                  (Icons.rotate_right_rounded, 'Try a different angle if text is skewed'),
+                ].map((tip) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 3),
+                      width: 6, height: 6,
+                      decoration: BoxDecoration(color: AppColors.textSecondary, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(tip.$2, style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary, height: 1.4))),
+                  ]),
+                )),
+              ]),
+            ))),
 
           // Empty state
           if (_items.isEmpty && _errorMessage == null)
             Expanded(child: Center(child: Padding(
               padding: const EdgeInsets.all(32),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.image_search_rounded, size: 48, color: AppColors.textTertiary),
-                const SizedBox(height: 12),
-                Text('No transactions detected', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: textPrimary)),
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: Icon(Icons.image_search_rounded, size: 28, color: AppColors.textTertiary),
+                ),
+                const SizedBox(height: 14),
+                Text('No transactions found', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
                 const SizedBox(height: 6),
-                Text('The image may be blurry or not contain expense data.',
-                    style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary), textAlign: TextAlign.center),
+                Text('The document may not contain recognisable expense data, or the image quality is too low. Try a clearer photo.',
+                    style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary, height: 1.5), textAlign: TextAlign.center),
               ]),
             ))),
+
+          // Entity link legend — shown when any item has an unlinked entity chip
+          if (_items.isNotEmpty && _items.any((i) => i.entityType != null))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.04) : AppColors.background,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4), width: 0.5),
+                ),
+                child: Row(children: [
+                  Icon(Icons.info_outline_rounded, size: 13, color: AppColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Expanded(child: RichText(text: TextSpan(children: [
+                    TextSpan(text: 'Entity chip: ', style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    WidgetSpan(alignment: PlaceholderAlignment.middle, child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                    )),
+                    TextSpan(text: 'red = tap to link  ', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+                    WidgetSpan(alignment: PlaceholderAlignment.middle, child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+                    )),
+                    TextSpan(text: 'green = linked', style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+                  ]))),
+                ]),
+              ),
+            ),
 
           // Item list
           if (_items.isNotEmpty)
@@ -437,9 +888,13 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                   key: ValueKey(_items[i].id),
                   item: _items[i],
                   isDark: isDark,
+                  currencySymbol: _settingsController.data?.currency.symbol ?? '₱',
                   onChanged: () => setState(() {}),
                   onPickProfile: () => _showProfilePicker(_items[i]),
                   onPickCategory: () => _showCategoryPicker(_items[i]),
+                  onPickEntity: () => _items[i].entityType != null
+                      ? _showEntityPicker(_items[i])
+                      : _showEntityTypePicker(_items[i]),
                 ),
               ),
             ),
@@ -482,7 +937,17 @@ class _EditableItem {
   FinanceCategory? category;
   String? profileId;
   String? profileName;
+  String? profileBaseName;
+  bool isMonthlyProfile;
   bool included;
+
+  // Entity linking
+  String? entityType;   // "subscription" | "debt_payment" | "lending" | "goal" | null
+  String? entityHint;   // AI-suggested name to pre-filter picker
+  String? subscriptionId;
+  String? debtId;
+  String? goalId;
+  String? entityLabel;  // display name of the linked entity
 
   _EditableItem({
     required this.id,
@@ -494,7 +959,11 @@ class _EditableItem {
     this.category,
     this.profileId,
     this.profileName,
+    this.profileBaseName,
+    this.isMonthlyProfile = false,
     this.included = true,
+    this.entityType,
+    this.entityHint,
   });
 }
 
@@ -503,17 +972,21 @@ class _EditableItem {
 class _ReviewItemTile extends StatefulWidget {
   final _EditableItem item;
   final bool isDark;
+  final String currencySymbol;
   final VoidCallback onChanged;
   final VoidCallback onPickProfile;
   final VoidCallback onPickCategory;
+  final VoidCallback? onPickEntity;
 
   const _ReviewItemTile({
     super.key,
     required this.item,
     required this.isDark,
+    required this.currencySymbol,
     required this.onChanged,
     required this.onPickProfile,
     required this.onPickCategory,
+    this.onPickEntity,
   });
 
   @override
@@ -523,6 +996,25 @@ class _ReviewItemTile extends StatefulWidget {
 class _ReviewItemTileState extends State<_ReviewItemTile> {
   late final TextEditingController _descCtrl;
   late final TextEditingController _amountCtrl;
+
+  IconData _entityIcon(String type) => switch (type) {
+    'subscription' => Icons.autorenew_rounded,
+    'debt_payment' => Icons.arrow_upward_rounded,
+    'lending'      => Icons.arrow_downward_rounded,
+    'goal'         => Icons.flag_outlined,
+    _              => Icons.link_rounded,
+  };
+
+  String _entityPlaceholder(String type, String? hint) {
+    final suffix = hint != null ? ' ($hint)' : '';
+    return switch (type) {
+      'subscription' => 'Link Subscription$suffix',
+      'debt_payment' => 'Link Debt$suffix',
+      'lending'      => 'Link Receivable$suffix',
+      'goal'         => 'Link Goal$suffix',
+      _              => 'Link Entity',
+    };
+  }
 
   @override
   void initState() {
@@ -546,7 +1038,12 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
-      setState(() => widget.item.date = picked);
+      setState(() {
+        widget.item.date = picked;
+        if (widget.item.isMonthlyProfile && widget.item.profileBaseName != null) {
+          widget.item.profileName = '${widget.item.profileBaseName!} · ${DateFormat('MMM yyyy').format(picked)}';
+        }
+      });
       widget.onChanged();
     }
   }
@@ -557,6 +1054,7 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
     final isDark = widget.isDark;
     final item = widget.item;
     final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final inputBg = isDark ? const Color(0xFF1E1E1C) : AppColors.background;
     final borderColor = item.included
         ? AppColors.accent.withValues(alpha: 0.35)
         : AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
@@ -577,7 +1075,7 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
 
           // ── Row 1: checkbox + description + type ────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 12, 4),
+            padding: const EdgeInsets.fromLTRB(8, 10, 12, 8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               SizedBox(
                 width: 28,
@@ -622,27 +1120,37 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
             ]),
           ),
 
-          // ── Row 2: Amount (prominent) ────────────────────────────────────
+          // ── Row 2: Amount input ──────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(36, 2, 12, 10),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('₱', style: GoogleFonts.dmMono(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-              const SizedBox(width: 2),
-              SizedBox(
-                width: 130,
-                child: TextField(
-                  controller: _amountCtrl,
-                  enabled: item.included,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: GoogleFonts.dmMono(
-                    fontSize: 28, fontWeight: FontWeight.w700, color: typeColor,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                  decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.zero, border: InputBorder.none),
-                  onChanged: (v) => item.amount = double.tryParse(v) ?? item.amount,
-                ),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: inputBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: typeColor.withValues(alpha: 0.25), width: 0.5),
               ),
-            ]),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                Text(
+                  widget.currencySymbol,
+                  style: GoogleFonts.dmMono(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: TextField(
+                    controller: _amountCtrl,
+                    enabled: item.included,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: GoogleFonts.dmMono(
+                      fontSize: 22, fontWeight: FontWeight.w700, color: typeColor,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                    decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.zero, border: InputBorder.none),
+                    onChanged: (v) => item.amount = double.tryParse(v) ?? item.amount,
+                  ),
+                ),
+              ]),
+            ),
           ),
 
           Divider(height: 1, color: divColor),
@@ -677,6 +1185,23 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
                 color: item.category != null ? AppColors.textSecondary : AppColors.warning,
                 isDark: isDark,
                 onTap: item.included ? widget.onPickCategory : null,
+              ),
+              // Entity link chip — always shown
+              const SizedBox(width: 6),
+              _ChipButton(
+                icon: item.entityType != null ? _entityIcon(item.entityType!) : Icons.link_rounded,
+                label: item.entityLabel != null
+                    ? item.entityLabel!
+                    : item.entityType != null
+                        ? _entityPlaceholder(item.entityType!, item.entityHint)
+                        : 'Link Entity',
+                color: item.entityLabel != null
+                    ? AppColors.success
+                    : item.entityType != null
+                        ? AppColors.error
+                        : AppColors.textSecondary,
+                isDark: isDark,
+                onTap: item.included && widget.onPickEntity != null ? widget.onPickEntity : null,
               ),
             ]),
           ),

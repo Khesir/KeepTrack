@@ -12,7 +12,6 @@ import 'package:keep_track/features/finance/modules/transaction/domain/entities/
 
 import '../helpers/budget_month_filter.dart';
 import '../sheets/budget_settings_sheet.dart';
-import '../sections/budget_overall_summary.dart';
 import '../sections/budget_summary_bar.dart';
 import '../sections/debt_section.dart';
 import '../sections/goal_section.dart';
@@ -143,10 +142,13 @@ class BudgetScreenBody extends StatelessWidget {
     final monthStart = DateTime(currentMonth.year, currentMonth.month, 1);
     final monthEnd = DateTime(currentMonth.year, currentMonth.month + 1, 1);
 
-    final monthTransactions = BudgetMonthFilter.filterTransactions(
+    final allMonthTxs = BudgetMonthFilter.filterTransactions(
       data.transactions,
       currentMonth,
     );
+    final monthTransactions = budgetProfileId != null
+        ? allMonthTxs.where((t) => t.budgetProfileId == budgetProfileId).toList()
+        : allMonthTxs;
     final spentByCategory = BudgetMonthFilter.buildSpentByCategory(
       monthTransactions,
     );
@@ -295,6 +297,11 @@ class BudgetScreenBody extends StatelessWidget {
           selectedDebt: selectedDebt,
           allBudgets: monthBudgets,
           allTransactions: monthTransactions,
+          subscriptions: monthSubscriptions,
+          debts: debts,
+          receivables: receivables,
+          goals: filteredGoals,
+          currentMonth: currentMonth,
           onClose: onClearGroup,
           onCategoryPanelClose: onClearCategory,
           onDebtClose: () => onDebtSelect(null),
@@ -332,34 +339,8 @@ class BudgetScreenBody extends StatelessWidget {
         // ── scrollable main content ───────────────────────────────────────────
         List<Widget> contentSlivers;
 
-        if (selectedTab == 0) {
-          // Summary tab: gate if no plan, otherwise full overview
-          contentSlivers = [
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            if (!hasMonthPlan)
-              SliverToBoxAdapter(
-                child: EmptyBudgetState(
-                  monthLabel: monthLabel,
-                  onStart: () => onStartPlanning(data.budgets),
-                ),
-              ),
-            if (hasMonthPlan)
-              SliverToBoxAdapter(
-                child: BudgetOverallSummary(
-                  monthBudgets: monthBudgets,
-                  spentByCategory: spentByCategory,
-                  subscriptions: monthSubscriptions,
-                  debts: debts,
-                  receivables: receivables,
-                  goals: filteredGoals,
-                  transactions: monthTransactions,
-                  currentMonth: currentMonth,
-                  isDark: isDark,
-                ),
-              ),
-          ];
-        } else if (selectedTab == 1) {
-          // Budget tab: reorderable budget groups only
+        if (selectedTab <= 1) {
+          // Budget tab (default)
           contentSlivers = [
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
             if (!hasMonthPlan)

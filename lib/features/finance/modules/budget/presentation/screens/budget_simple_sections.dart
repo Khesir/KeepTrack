@@ -13,6 +13,7 @@ import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.da
 import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
+import '../sheets/transaction_detail_sheet.dart';
 
 // ─── Month Nav ────────────────────────────────────────────────────────────────
 
@@ -1352,7 +1353,7 @@ class _RingRow {
   double get remaining => planned - spent;
 }
 
-class _CompactRingCard extends StatefulWidget {
+class _CompactRingCard extends StatelessWidget {
   final bool isDark;
   final String label;
   final double actual, planned;
@@ -1366,34 +1367,26 @@ class _CompactRingCard extends StatefulWidget {
     required this.rows,
   });
 
-  @override
-  State<_CompactRingCard> createState() => _CompactRingCardState();
-}
-
-class _CompactRingCardState extends State<_CompactRingCard> {
-  bool _showActual = true;
-
   void _openDetail(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _RingDetailSheet(
-        isDark: widget.isDark,
-        label: widget.label,
-        actual: widget.actual,
-        planned: widget.planned,
-        rows: widget.rows,
+        isDark: isDark,
+        label: label,
+        actual: actual,
+        planned: planned,
+        rows: rows,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final total = _showActual ? widget.actual : widget.planned;
-    final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final cardBg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final border = widget.isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
@@ -1413,8 +1406,6 @@ class _CompactRingCardState extends State<_CompactRingCard> {
             border: Border.all(color: border, width: 0.5),
           ),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            _TogglePills(showActual: _showActual, onToggle: (v) => setState(() => _showActual = v)),
-            const SizedBox(height: 12),
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: 1.0),
               duration: const Duration(milliseconds: 800),
@@ -1422,14 +1413,14 @@ class _CompactRingCardState extends State<_CompactRingCard> {
               builder: (_, ringV, __) => SizedBox(
                 width: 110, height: 110,
                 child: CustomPaint(
-                  painter: _RingPainter(rows: widget.rows, showActual: _showActual, isDark: widget.isDark, animProgress: ringV),
+                  painter: _RingPainter(rows: rows, showActual: true, isDark: isDark, animProgress: ringV),
                   child: Center(
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Text(widget.label,
+                      Text(label,
                           style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
                       const SizedBox(height: 2),
                       Text(
-                        currencyFormatter.format(total * ringV, decimalDigits: 0),
+                        currencyFormatter.format(actual * ringV, decimalDigits: 0),
                         style: GoogleFonts.dmMono(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary, fontFeatures: const [FontFeature.tabularFigures()]),
                       ),
                     ]),
@@ -1450,7 +1441,7 @@ class _CompactRingCardState extends State<_CompactRingCard> {
   }
 }
 
-class _RingDetailSheet extends StatefulWidget {
+class _RingDetailSheet extends StatelessWidget {
   final bool isDark;
   final String label;
   final double actual, planned;
@@ -1465,18 +1456,10 @@ class _RingDetailSheet extends StatefulWidget {
   });
 
   @override
-  State<_RingDetailSheet> createState() => _RingDetailSheetState();
-}
-
-class _RingDetailSheetState extends State<_RingDetailSheet> {
-  bool _showActual = true;
-
-  @override
   Widget build(BuildContext context) {
-    final total = _showActual ? widget.actual : widget.planned;
-    final sheetBg = widget.isDark ? const Color(0xFF1E1E1C) : Colors.white;
-    final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final divColor = widget.isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
+    final sheetBg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.55,
@@ -1496,11 +1479,7 @@ class _RingDetailSheetState extends State<_RingDetailSheet> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-            child: Row(children: [
-              Text(widget.label, style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
-              const Spacer(),
-              _TogglePills(showActual: _showActual, onToggle: (v) => setState(() => _showActual = v)),
-            ]),
+            child: Text(label, style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
           ),
           Divider(height: 1, thickness: 0.5, color: divColor),
           Expanded(
@@ -1516,17 +1495,17 @@ class _RingDetailSheetState extends State<_RingDetailSheet> {
                     child: SizedBox(
                       width: 150, height: 150,
                       child: CustomPaint(
-                        painter: _RingPainter(rows: widget.rows, showActual: _showActual, isDark: widget.isDark, animProgress: ringV),
+                        painter: _RingPainter(rows: rows, showActual: true, isDark: isDark, animProgress: ringV),
                         child: Center(
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Text(widget.label, style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                            Text(label, style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.5)),
                             const SizedBox(height: 3),
                             Text(
-                              currencyFormatter.format(total * ringV, decimalDigits: 0),
+                              currencyFormatter.format(actual * ringV, decimalDigits: 0),
                               style: GoogleFonts.dmMono(fontSize: 17, fontWeight: FontWeight.w700, color: textPrimary, fontFeatures: const [FontFeature.tabularFigures()]),
                             ),
                             Text(
-                              _showActual ? 'actual' : 'planned',
+                              'actual',
                               style: GoogleFonts.dmSans(fontSize: 9, color: AppColors.textTertiary),
                             ),
                           ]),
@@ -1546,7 +1525,7 @@ class _RingDetailSheetState extends State<_RingDetailSheet> {
                 ]),
                 const SizedBox(height: 8),
                 Divider(height: 1, thickness: 0.5, color: divColor),
-                ...widget.rows.asMap().entries.map((e) {
+                ...rows.asMap().entries.map((e) {
                   final i = e.key;
                   final r = e.value;
                   return TweenAnimationBuilder<double>(
@@ -1585,42 +1564,6 @@ class _RingDetailSheetState extends State<_RingDetailSheet> {
           ),
         ]),
       ),
-    );
-  }
-}
-
-class _TogglePills extends StatelessWidget {
-  final bool showActual;
-  final void Function(bool) onToggle;
-  const _TogglePills({required this.showActual, required this.onToggle});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.background;
-
-    Widget pill(String label, bool active, VoidCallback onTap) {
-      return GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: active ? AppColors.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(label, style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: active ? Colors.white : AppColors.textSecondary)),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        pill('Actual', showActual, () => onToggle(true)),
-        pill('Planned', !showActual, () => onToggle(false)),
-      ]),
     );
   }
 }
@@ -1783,7 +1726,9 @@ class _SimpleTransactionsSectionState extends State<SimpleTransactionsSection> {
                       ),
                       child: Column(children: [
                         if (i > 0) Divider(height: 1, thickness: 0.5, color: divColor, indent: 16, endIndent: 16),
-                        Padding(
+                        InkWell(
+                          onTap: () => TransactionDetailSheet.show(context, transaction: t),
+                          child: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                           child: Row(children: [
                             Container(
@@ -1807,8 +1752,10 @@ class _SimpleTransactionsSectionState extends State<SimpleTransactionsSection> {
                               if (t.hasFee)
                                 Text('+${currencyFormatter.format(t.fee, decimalDigits: 2)} fee', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
                             ]),
+                            const SizedBox(width: 4),
+                            Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
                           ]),
-                        ),
+                        )),
                       ]),
                     );
                   }),

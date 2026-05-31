@@ -4,6 +4,8 @@ import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
 
 import '../../../debt/domain/entities/debt.dart';
+import '../../../goal/domain/entities/goal.dart';
+import '../../../subscriptions/domain/entities/subscription.dart';
 import '../../../transaction/domain/entities/transaction.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/budget_category.dart';
@@ -20,6 +22,11 @@ class SideSummaryPanel extends ScopedScreen {
   final Debt? selectedDebt;
   final List<Budget> allBudgets;
   final List<Transaction> allTransactions;
+  final List<Subscription> subscriptions;
+  final List<Debt> debts;
+  final List<Debt> receivables;
+  final List<Goal> goals;
+  final DateTime currentMonth;
   final VoidCallback onClose;
   final VoidCallback onCategoryPanelClose;
   final VoidCallback onDebtClose;
@@ -43,6 +50,11 @@ class SideSummaryPanel extends ScopedScreen {
     required this.selectedDebt,
     required this.allBudgets,
     required this.allTransactions,
+    required this.subscriptions,
+    required this.debts,
+    required this.receivables,
+    required this.goals,
+    required this.currentMonth,
     required this.onClose,
     required this.onCategoryPanelClose,
     required this.onDebtClose,
@@ -427,7 +439,15 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
             controller: _tabController,
             children: group == null
                 ? [
-                    AllSummaryTab(budgets: widget.allBudgets, transactions: widget.allTransactions),
+                    AllSummaryTab(
+                      budgets: widget.allBudgets,
+                      transactions: widget.allTransactions,
+                      subscriptions: widget.subscriptions,
+                      debts: widget.debts,
+                      receivables: widget.receivables,
+                      goals: widget.goals,
+                      currentMonth: widget.currentMonth,
+                    ),
                     AllTransactionsTab(transactions: widget.allTransactions),
                   ]
                 : [

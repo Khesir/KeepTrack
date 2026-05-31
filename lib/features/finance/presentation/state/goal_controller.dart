@@ -66,9 +66,19 @@ class GoalController extends StreamState<AsyncState<List<Goal>>> {
   /// The caller is responsible for creating the transaction record.
   Future<void> contributeToGoal(String goalId, double amount) async {
     final previous = data;
-    final goal = previous?.where((g) => g.id == goalId).firstOrNull;
-    if (goal == null) return;
-    final newAmount = goal.currentAmount + amount;
+    var goal = previous?.where((g) => g.id == goalId).firstOrNull;
+
+    // If goal isn't in the current cache (e.g., filtered by profile), fetch directly.
+    if (goal == null) {
+      final result = await _repository.getGoals();
+      result.fold(
+        onSuccess: (goals) { goal = goals.where((g) => g.id == goalId).firstOrNull; },
+        onError: (_) {},
+      );
+      if (goal == null) return;
+    }
+
+    final newAmount = goal!.currentAmount + amount;
     if (previous != null) {
       emit(AsyncData(previous
           .map((g) => g.id == goalId

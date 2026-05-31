@@ -117,13 +117,44 @@ class MonthPlanController extends StreamState<AsyncState<List<MonthPlan>>> {
     return plan;
   }
 
-  /// Set the plan's status to closed.
+  Future<void> updateMonthPlan(MonthPlan plan) async {
+    await executeSilent(() async {
+      final result = await _repository.updateMonthPlan(plan);
+      final updated = result.unwrap();
+      final current = data ?? [];
+      return current.map((p) => p.id == plan.id ? updated : p).toList();
+    });
+  }
+
+  /// Get or create a plan for a monthly profile scoped to a specific month.
+  Future<MonthPlan> getOrCreateMonthPlanForMonthlyProfile(String month, String profileId) async {
+    MonthPlan? plan;
+    await executeSilent(() async {
+      final result = await _repository.getOrCreateMonthPlanForMonthlyProfile(month, profileId);
+      plan = result.unwrap();
+      final current = data ?? [];
+      final exists = current.any((p) => p.month == month && p.budgetProfileId == profileId);
+      if (!exists) return [...current, plan!];
+      return current.map((p) => p.month == month && p.budgetProfileId == profileId ? plan! : p).toList();
+    });
+    return plan!;
+  }
+
   Future<void> closeMonthPlan(String id) async {
     await executeSilent(() async {
       final result = await _repository.closeMonthPlan(id);
       final closed = result.unwrap();
       final current = data ?? [];
       return current.map((p) => p.id == id ? closed : p).toList();
+    });
+  }
+
+  Future<void> reopenMonthPlan(String id) async {
+    await executeSilent(() async {
+      final result = await _repository.reopenMonthPlan(id);
+      final reopened = result.unwrap();
+      final current = data ?? [];
+      return current.map((p) => p.id == id ? reopened : p).toList();
     });
   }
 
