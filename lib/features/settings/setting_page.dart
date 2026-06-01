@@ -517,7 +517,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       toast.success('Backup imported successfully');
       await Future.delayed(const Duration(milliseconds: 1500));
-      _goToDashboard();
+      if (mounted) AppRestartWidget.of(context).restart();
     } catch (e) {
       dismiss();
       toast.error(_backupErrorMessage(e));
@@ -538,7 +538,7 @@ class _SettingsPageState extends State<SettingsPage> {
       dismiss();
       toast.success('Backup restored successfully');
       await Future.delayed(const Duration(milliseconds: 1500));
-      _goToDashboard();
+      if (mounted) AppRestartWidget.of(context).restart();
     } catch (e) {
       dismiss();
       toast.error(_backupErrorMessage(e));

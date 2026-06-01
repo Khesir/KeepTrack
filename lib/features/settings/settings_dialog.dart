@@ -357,7 +357,7 @@ class _ContentPane extends StatelessWidget {
             isDark: isDark, settings: settings, controller: controller),
         _Section.budget =>
           _BudgetPane(isDark: isDark, settings: settings, controller: controller),
-        _Section.subscription => _SubscriptionPane(isDark: isDark),
+        _Section.subscription => _SubscriptionComingSoonPane(isDark: isDark),
         _Section.data => _DataPane(
             isDark: isDark,
             controller: controller,
@@ -893,80 +893,83 @@ class _BudgetPane extends StatelessWidget {
   }
 }
 
-// ─── Subscription pane ────────────────────────────────────────────────────────
+// ─── Subscription coming soon pane ───────────────────────────────────────────
 
-class _SubscriptionPane extends StatelessWidget {
+class _SubscriptionComingSoonPane extends StatelessWidget {
   final bool isDark;
-
-  const _SubscriptionPane({required this.isDark});
+  const _SubscriptionComingSoonPane({required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final cardBg = isDark
+        ? Colors.white.withValues(alpha: 0.04)
+        : AppColors.backgroundSecondary;
+    final borderColor = isDark
+        ? AppColors.border.withValues(alpha: 0.15)
+        : AppColors.border.withValues(alpha: 0.4);
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.accent.withValues(alpha: 0.12),
-                AppColors.accentDark.withValues(alpha: 0.06),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.accent.withValues(alpha: 0.2),
-              width: 0.5,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.star_rounded, color: AppColors.accent, size: 28),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Keep Track Free',
-                      style: GoogleFonts.dmSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: fg,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'You\'re on the free plan.',
-                      style: GoogleFonts.dmSans(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.2),
+                  width: 0.5,
                 ),
               ),
-            ],
-          ),
+              alignment: Alignment.center,
+              child: Icon(Icons.star_outline_rounded, size: 26, color: AppColors.accent),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Keep Track Plus',
+              style: GoogleFonts.dmSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Coming soon — cloud sync, AI insights,\nand more. Stay tuned.',
+              style: GoogleFonts.dmSans(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.6,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderColor, width: 0.5),
+              ),
+              child: Text(
+                'You\'re on the free plan — all features unlocked.',
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        Text(
-          'Pro features coming soon.',
-          style: GoogleFonts.dmSans(
-            fontSize: 13,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
-
 // ─── Data pane ────────────────────────────────────────────────────────────────
 
 class _DataPane extends StatefulWidget {
@@ -1060,28 +1063,30 @@ class _DataPaneState extends State<_DataPane> {
         ),
         _PaneRow(
           isDark: widget.isDark,
-          icon: Icons.cloud_upload_outlined,
-          iconColor: AppColors.accent,
-          label: 'Sync to Cloud',
-          subtitle: _lastSyncedSubtitle,
-          onTap: () => _syncToCloud(context),
-        ),
-        _PaneRow(
-          isDark: widget.isDark,
           icon: Icons.file_upload_outlined,
           iconColor: AppColors.info,
           label: 'Import from File',
           subtitle: 'Restore data from an encrypted backup file',
           onTap: () => _importFromFile(context),
         ),
-        _PaneRow(
-          isDark: widget.isDark,
-          icon: Icons.cloud_download_outlined,
-          iconColor: AppColors.info,
-          label: 'Restore from Cloud',
-          subtitle: _lastSyncedSubtitle,
-          onTap: () => _restoreFromCloud(context),
-        ),
+        if (widget.authController.isEffectivelyPlus) ...[
+          _PaneRow(
+            isDark: widget.isDark,
+            icon: Icons.cloud_upload_outlined,
+            iconColor: AppColors.accent,
+            label: 'Sync to Cloud',
+            subtitle: _lastSyncedSubtitle,
+            onTap: () => _syncToCloud(context),
+          ),
+          _PaneRow(
+            isDark: widget.isDark,
+            icon: Icons.cloud_download_outlined,
+            iconColor: AppColors.accent,
+            label: 'Restore from Cloud',
+            subtitle: _lastSyncedSubtitle,
+            onTap: () => _restoreFromCloud(context),
+          ),
+        ],
         _PaneLabel('Danger Zone', leftPadding: 0),
         _PaneRow(
           isDark: widget.isDark,
@@ -1245,7 +1250,7 @@ class _DataPaneState extends State<_DataPane> {
       dismiss();
       toast.success('Backup imported successfully');
       await Future.delayed(const Duration(milliseconds: 1500));
-      _goToDashboard();
+      if (mounted) AppRestartWidget.of(context).restart();
     } catch (e) {
       dismiss();
       toast.error(_backupErrorMessage(e));
@@ -1266,7 +1271,7 @@ class _DataPaneState extends State<_DataPane> {
       dismiss();
       toast.success('Backup restored successfully');
       await Future.delayed(const Duration(milliseconds: 1500));
-      _goToDashboard();
+      if (mounted) AppRestartWidget.of(context).restart();
     } catch (e) {
       dismiss();
       toast.error(_backupErrorMessage(e));

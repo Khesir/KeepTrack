@@ -6,6 +6,7 @@ import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 
 class FeatureFlagPopover extends StatelessWidget {
   final LayerLink link;
@@ -22,6 +23,7 @@ class FeatureFlagPopover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = locator.get<SettingsController>();
+    final auth = locator.get<AuthController>();
     final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.3)
@@ -112,6 +114,48 @@ class FeatureFlagPopover extends StatelessWidget {
                             locator.get<SettingsController>().setForceOfflineMode(v),
                       );
                     },
+                  ),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppColors.border.withValues(alpha: 0.2)
+                        : AppColors.border.withValues(alpha: 0.5),
+                  ),
+                  StreamBuilder<AsyncState<dynamic>>(
+                    stream: auth.stream,
+                    initialData: auth.state,
+                    builder: (_, __) => _FlagTile(
+                      isDark: isDark,
+                      icon: Icons.star_rounded,
+                      iconColor: AppColors.accent,
+                      label: 'Plus Mode',
+                      subtitle: auth.plusOverride
+                          ? 'Simulating Plus user'
+                          : 'Showing as free user',
+                      value: auth.plusOverride,
+                      onChanged: auth.setPlusOverride,
+                    ),
+                  ),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppColors.border.withValues(alpha: 0.2)
+                        : AppColors.border.withValues(alpha: 0.5),
+                  ),
+                  StreamBuilder<AsyncState<dynamic>>(
+                    stream: auth.stream,
+                    initialData: auth.state,
+                    builder: (_, __) => _FlagTile(
+                      isDark: isDark,
+                      icon: Icons.visibility_rounded,
+                      iconColor: AppColors.success,
+                      label: 'Production View',
+                      subtitle: auth.productionView
+                          ? 'Simulating production'
+                          : 'Showing dev UI',
+                      value: auth.productionView,
+                      onChanged: auth.setProductionView,
+                    ),
                   ),
                   Divider(
                     height: 1,

@@ -5,6 +5,7 @@ class User {
   final String? photoUrl;
   final DateTime createdAt;
   final bool isAdmin;
+  final bool isPlus;
   final Map<String, dynamic>? metadata;
 
   const User({
@@ -14,6 +15,7 @@ class User {
     this.photoUrl,
     required this.createdAt,
     this.isAdmin = false,
+    this.isPlus = false,
     this.metadata,
   });
 
@@ -25,6 +27,7 @@ class User {
       photoUrl: json['photo_url'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       isAdmin: json['is_admin'] as bool? ?? false,
+      isPlus: json['is_plus'] as bool? ?? false,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
@@ -37,6 +40,7 @@ class User {
       'photo_url': photoUrl,
       'created_at': createdAt.toIso8601String(),
       'is_admin': isAdmin,
+      'is_plus': isPlus,
       if (metadata != null) 'metadata': metadata,
     };
   }
@@ -48,6 +52,7 @@ class User {
     String? photoUrl,
     DateTime? createdAt,
     bool? isAdmin,
+    bool? isPlus,
     Map<String, dynamic>? metadata,
   }) {
     return User(
@@ -57,6 +62,7 @@ class User {
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
       isAdmin: isAdmin ?? this.isAdmin,
+      isPlus: isPlus ?? this.isPlus,
       metadata: metadata ?? this.metadata,
     );
   }

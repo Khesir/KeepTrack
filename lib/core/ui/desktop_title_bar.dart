@@ -5,12 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/feature_flags/feature_flag_panel.dart';
+import 'package:keep_track/features/inbox/domain/controller/inbox_controller.dart';
+import 'package:keep_track/features/inbox/domain/entities/announcement.dart';
 import 'package:keep_track/core/navigation/app_navigator.dart';
 import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/inbox_popover_widget.dart';
+import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/settings/data/services/backup_actions.dart';
 import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
@@ -81,6 +84,7 @@ class _InboxButtonState extends State<_InboxButton> {
   void _toggle() => _isOpen ? _close() : _open();
 
   void _open() {
+    locator.get<InboxController>().load();
     _overlay = OverlayEntry(
       builder: (_) => InboxPopoverWidget(
         link: _layerLink,
@@ -107,16 +111,42 @@ class _InboxButtonState extends State<_InboxButton> {
 
   @override
   Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: _TitleBarIconButton(
-        isDark: widget.isDark,
-        isActive: _isOpen,
-        tooltip: 'Inbox',
-        onTap: _toggle,
-        icon: Icons.inbox_outlined,
-        activeColor: AppColors.accent,
-      ),
+    final inbox = locator.get<InboxController>();
+    return StreamBuilder<AsyncState<List<Announcement>>>(
+      stream: inbox.stream,
+      initialData: inbox.state,
+      builder: (_, __) {
+        final count = inbox.unreadCount;
+        return CompositedTransformTarget(
+          link: _layerLink,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _TitleBarIconButton(
+                isDark: widget.isDark,
+                isActive: _isOpen,
+                tooltip: 'Inbox',
+                onTap: _toggle,
+                icon: Icons.inbox_outlined,
+                activeColor: AppColors.accent,
+              ),
+              if (count > 0)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -370,6 +400,7 @@ class _TitleBarIconButtonState extends State<_TitleBarIconButton> {
   }
 }
 
+
 // ─── Sync Status Chip ─────────────────────────────────────────────────────────
 
 class _SyncStatusChip extends StatefulWidget {
@@ -381,9 +412,12 @@ class _SyncStatusChip extends StatefulWidget {
 }
 
 class _SyncStatusChipState extends State<_SyncStatusChip> {
+  late final AuthController _auth;
+
   @override
   void initState() {
     super.initState();
+    _auth = locator.get<AuthController>();
     BackupSyncStatus.instance.load();
     BackupSyncStatus.instance.notifier.addListener(_onChanged);
   }
@@ -410,43 +444,51 @@ class _SyncStatusChipState extends State<_SyncStatusChip> {
 
   @override
   Widget build(BuildContext context) {
-    final ts = BackupSyncStatus.instance.notifier.value;
-    final synced = ts != null;
-    final color = synced ? AppColors.success : AppColors.textTertiary;
+    return StreamBuilder<AsyncState<dynamic>>(
+      stream: _auth.stream,
+      initialData: _auth.state,
+      builder: (_, __) {
+        if (!_auth.isEffectivelyPlus) return const SizedBox.shrink();
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          final ctx = AppNavigator.context;
-          if (ctx != null) syncToCloud(ctx);
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(synced ? Icons.cloud_done_outlined : Icons.cloud_off_outlined, size: 11, color: color),
-              const SizedBox(width: 4),
-              Text(
-                synced ? _format(ts!) : 'NOT SYNCED',
-                style: GoogleFonts.dmMono(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                  letterSpacing: 0.5,
-                ),
+        final ts = BackupSyncStatus.instance.notifier.value;
+        final synced = ts != null;
+        final color = synced ? AppColors.success : AppColors.textTertiary;
+
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () {
+              final ctx = AppNavigator.context;
+              if (ctx != null) syncToCloud(ctx);
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(synced ? Icons.cloud_done_outlined : Icons.cloud_off_outlined, size: 11, color: color),
+                  const SizedBox(width: 4),
+                  Text(
+                    synced ? _format(ts) : 'NOT SYNCED',
+                    style: GoogleFonts.dmMono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

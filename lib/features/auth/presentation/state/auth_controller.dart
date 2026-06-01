@@ -200,6 +200,25 @@ class AuthController extends StreamState<AsyncState<User?>> {
   /// Check if current user is admin
   bool get isAdmin => _authService.currentUser?.isAdmin ?? false;
 
+  bool _plusOverride = false;
+  bool get plusOverride => _plusOverride;
+
+  void setPlusOverride(bool value) {
+    _plusOverride = value;
+    emit(state);
+  }
+
+  bool get isEffectivelyPlus =>
+      _plusOverride || (currentUser?.isPlus ?? false);
+
+  bool _productionView = false;
+  bool get productionView => _productionView;
+
+  void setProductionView(bool value) {
+    _productionView = value;
+    emit(state);
+  }
+
   /// Initialize user data on first login (background task)
   /// This includes creating default finance categories and other setup
   Future<void> _initializeUserData(String userId) async {

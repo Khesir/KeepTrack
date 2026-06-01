@@ -1,6 +1,12 @@
+import 'package:flutter/foundation.dart';
+
 /// Application information and configuration
 class AppInfo {
   AppInfo._();
+
+  static const String _prodBase = 'https://keep-track.khesir.com';
+  static const String _devBase = 'http://localhost:3001';
+  static String get _landingBase => kDebugMode ? _devBase : _prodBase;
 
   /// GitHub repository owner
   static const String gitHubOwner = 'khesir';
@@ -12,7 +18,10 @@ class AppInfo {
   static String get gitHubRepoPath => '$gitHubOwner/$gitHubRepo';
 
   /// Primary download URL for app updates
-  static const String downloadUrl = 'https://keep-track.khesir.com/download';
+  static String get downloadUrl => '$_landingBase/download';
+
+  /// Announcements page URL
+  static String get announcementsUrl => '$_landingBase/announcements';
 
   /// GitHub releases URL (fallback)
   static String get releasesUrl =>

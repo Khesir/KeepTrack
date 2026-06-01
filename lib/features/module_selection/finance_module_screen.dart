@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -18,9 +19,6 @@ import 'package:keep_track/features/finance/presentation/screens/transaction_pla
 import 'package:keep_track/features/finance/presentation/screens/transactions/create_transaction_sheet.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
-import '../auth/presentation/screens/auth_settings_screen.dart';
-import '../settings/data/services/backup_actions.dart';
-import '../settings/data/services/backup_sync_status.dart';
 import '../settings/setting_page.dart';
 
 class FinanceModuleScreen extends StatefulWidget {
@@ -195,7 +193,6 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         ],
       ),
       actions: [
-        const _MobileSyncChip(),
         _ThemeToggle(layoutController: _layoutController),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/settings'),
@@ -608,10 +605,6 @@ class _FooterContentState extends State<_FooterContent> {
     _dismiss();
     if (!mounted) return;
     switch (action) {
-      case 'theme':
-        locator.get<SettingsController>().updateThemeMode(
-          widget.isDark ? AppThemeMode.light : AppThemeMode.dark,
-        );
       case 'settings':
         final isDesktop =
             MediaQuery.of(context).size.width >= ResponsiveBreakpoints.desktop;
@@ -635,10 +628,6 @@ class _FooterContentState extends State<_FooterContent> {
         } else {
           Navigator.of(context).pushNamed('/settings');
         }
-      case 'account':
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const AuthSettingsScreen()));
       case 'logs':
         Navigator.of(
           context,
@@ -723,10 +712,7 @@ class _FooterContentState extends State<_FooterContent> {
                     Expanded(
                       child: Text(
                         widget.isDark ? 'Light mode' : 'Dark mode',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
+                        style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -848,10 +834,7 @@ class _FooterContentState extends State<_FooterContent> {
                     Expanded(
                       child: Text(
                         widget.isDark ? 'Light mode' : 'Dark mode',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
+                        style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -1030,33 +1013,18 @@ class _UserMenuOverlay extends StatelessWidget {
                   Divider(height: 1, thickness: 0.5, color: borderColor),
                   const SizedBox(height: 4),
                   _MenuItem(
-                    icon: isDark
-                        ? Icons.light_mode_outlined
-                        : Icons.dark_mode_outlined,
-                    label: isDark ? 'Light mode' : 'Dark mode',
-                    isDark: isDark,
-                    onTap: () => onAction('theme'),
-                  ),
-                  Divider(height: 1, thickness: 0.5, color: borderColor),
-                  const SizedBox(height: 4),
-                  _MenuItem(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
                     isDark: isDark,
                     onTap: () => onAction('settings'),
                   ),
-                  _MenuItem(
-                    icon: Icons.manage_accounts_outlined,
-                    label: 'Account',
-                    isDark: isDark,
-                    onTap: () => onAction('account'),
-                  ),
-                  _MenuItem(
-                    icon: Icons.bug_report_outlined,
-                    label: 'Debug logs',
-                    isDark: isDark,
-                    onTap: () => onAction('logs'),
-                  ),
+                  if (kDebugMode && !locator.get<AuthController>().productionView)
+                    _MenuItem(
+                      icon: Icons.bug_report_outlined,
+                      label: 'Debug logs',
+                      isDark: isDark,
+                      onTap: () => onAction('logs'),
+                    ),
                   const SizedBox(height: 4),
                   Divider(height: 1, thickness: 0.5, color: borderColor),
                   const SizedBox(height: 4),
@@ -1185,78 +1153,6 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-class _MobileSyncChip extends StatefulWidget {
-  const _MobileSyncChip();
-
-  @override
-  State<_MobileSyncChip> createState() => _MobileSyncChipState();
-}
-
-class _MobileSyncChipState extends State<_MobileSyncChip> {
-  @override
-  void initState() {
-    super.initState();
-    BackupSyncStatus.instance.load();
-    BackupSyncStatus.instance.notifier.addListener(_onChanged);
-  }
-
-  void _onChanged() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    BackupSyncStatus.instance.notifier.removeListener(_onChanged);
-    super.dispose();
-  }
-
-  String _format(DateTime ts) {
-    final diff = DateTime.now().difference(ts.toLocal());
-    if (diff.inSeconds < 60) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    final d = ts.toLocal();
-    final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${d.day} ${months[d.month]}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ts = BackupSyncStatus.instance.notifier.value;
-    final synced = ts != null;
-    final color = synced ? AppColors.success : AppColors.textTertiary;
-
-    return GestureDetector(
-      onTap: () => syncToCloud(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(synced ? Icons.cloud_done_outlined : Icons.cloud_off_outlined, size: 11, color: color),
-              const SizedBox(width: 4),
-              Text(
-                synced ? _format(ts!) : 'no sync',
-                style: GoogleFonts.dmMono(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ThemeToggle extends StatelessWidget {
   final AppLayoutController layoutController;

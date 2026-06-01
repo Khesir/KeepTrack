@@ -22,6 +22,7 @@ import 'core/settings/presentation/settings_controller.dart';
 import 'core/state/stream_state.dart';
 import 'features/auth/auth.dart';
 import 'features/finance/finance_di.dart';
+import 'features/inbox/api.dart';
 import 'features/notifications/notifications_di.dart';
 
 late SharedPreferences _sharedPrefs;
@@ -83,6 +84,7 @@ void _setupDependencies(SharedPreferences sharedPreferences) {
   // Feature dependencies
   setupAuthDependencies(); // Auth must be first
   setupFinanceDependencies();
+  setupInboxDependencies();
   setupNotificationDependencies();
 }
 
