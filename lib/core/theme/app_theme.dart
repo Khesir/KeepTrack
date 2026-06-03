@@ -1,24 +1,20 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Keep Track brand color palette — wolf-inspired
+/// Keep Track brand color palette – wolf-inspired
 /// Light mode: Snow white surfaces, Midnight text
 /// Dark mode:  Void/Midnight surfaces, Snow text
 class AppColors {
-  // ── Primary (wolf midnight) ───────────────────────────────────────────────
   static const Color primary = Color(0xFF2C2C2A);           // midnight
   static const Color primaryForeground = Color(0xFFF1EFE8); // snow
 
-  // ── Secondary (soft snow) ─────────────────────────────────────────────────
   static const Color secondary = Color(0xFFF1EFE8);         // snow
   static const Color secondaryForeground = Color(0xFF2C2C2A);
 
-  // ── Accent (violet / insight) ─────────────────────────────────────────────
   static const Color accent = Color(0xFF534AB7);            // violet
   static const Color accentLight = Color(0xFFEEEDFE);       // violetLight
   static const Color accentDark = Color(0xFF3C3489);        // violetDark
 
-  // ── Semantic ──────────────────────────────────────────────────────────────
   static const Color success = Color(0xFF1D9E75);           // teal
   static const Color successLight = Color(0xFFE1F5EE);      // tealLight
   static const Color error = Color(0xFFE24B4A);             // red
@@ -28,7 +24,6 @@ class AppColors {
   static const Color info = Color(0xFF378ADD);              // blue
   static const Color infoLight = Color(0xFFE6F1FB);         // blueLight
 
-  // ── Surfaces (light mode) ─────────────────────────────────────────────────
   static const Color background = Color(0xFFF1EFE8);        // snow
   static const Color backgroundSecondary = Color(0xFFEBE9E1);
   static const Color surface = Color(0xFFFFFFFF);
@@ -37,38 +32,52 @@ class AppColors {
   static const Color borderLight = Color(0xFFE8E7DF);
   static const Color divider = Color(0xFFD3D1C7);           // ash
 
-  // ── Text ──────────────────────────────────────────────────────────────────
   static const Color textPrimary = Color(0xFF2C2C2A);       // midnight
   static const Color textSecondary = Color(0xFF888780);     // wolfGray
   static const Color textTertiary = Color(0xFFD3D1C7);      // ash
   static const Color textDisabled = Color(0xFFD3D1C7);      // ash
   static const Color textOnPrimary = Color(0xFFF1EFE8);     // snow
 
-  // ── Cards & inputs ────────────────────────────────────────────────────────
   static const Color card = Color(0xFFFFFFFF);
   static const Color cardBorder = Color(0xFFD3D1C7);        // ash
   static const Color input = Color(0xFFFFFFFF);
   static const Color inputBorder = Color(0xFFD3D1C7);       // ash
   static const Color inputFocus = Color(0xFF2C2C2A);        // midnight
 
-  // ── Muted ─────────────────────────────────────────────────────────────────
   static const Color muted = Color(0xFFF1EFE8);             // snow
   static const Color mutedForeground = Color(0xFF888780);   // wolfGray
 
-  // ── Semantic income/expense ───────────────────────────────────────────────
   static const Color income = Color(0xFF1D9E75);            // teal
   static const Color expense = Color(0xFFE24B4A);           // red
+
+  static const Color void_ = Color(0xFF1E1E1C);             // dark background
+  static const Color ember = Color(0xFF444441);             // dark borders
+
+  static const Color tealDark = Color(0xFF0F6E56);
+  static const Color goldDark = Color(0xFF633806);
+  static const Color redDark = Color(0xFFA32D2D);
+  static const Color blueDark = Color(0xFF0C447C);
+
+  static const Color surfaceDark = Color(0xFF2C2C2A);       // midnight
+  static const Color cardDark = Color(0xFF2C2C2A);          // midnight
+  static const Color borderDark = Color(0xFF444441);        // ember
+  static const Color inputDark = Color(0xFF2C2C2A);         // midnight
+  static const Color inputBorderDark = Color(0xFF444441);   // ember
+  static const Color inputFocusDark = Color(0xFFF1EFE8);   // snow
+  static const Color textPrimaryDark = Color(0xFFF1EFE8);  // snow
+  static const Color textTertiaryDark = Color(0xFF444441);  // ember
+  static const Color textDisabledDark = Color(0xFF444441);  // ember
 }
 
-/// Keep Track typography — DM Sans UI + DM Mono for numbers
+/// Keep Track typography – DM Sans UI + DM Mono for numbers
 class AppTextStyles {
-  // ── Display ───────────────────────────────────────────────────────────────
+  static TextTheme baseTextTheme() => GoogleFonts.dmSansTextTheme();
+
   static final TextStyle display = GoogleFonts.dmSans(
     fontSize: 36, fontWeight: FontWeight.w600, height: 1.2,
     letterSpacing: -1, color: AppColors.textPrimary,
   );
 
-  // ── Headers ───────────────────────────────────────────────────────────────
   static final TextStyle h1 = GoogleFonts.dmSans(
     fontSize: 30, fontWeight: FontWeight.w600, height: 1.2,
     letterSpacing: -0.8, color: AppColors.textPrimary,
@@ -86,7 +95,6 @@ class AppTextStyles {
     color: AppColors.textPrimary,
   );
 
-  // ── Body ──────────────────────────────────────────────────────────────────
   static final TextStyle bodyLarge = GoogleFonts.dmSans(
     fontSize: 16, fontWeight: FontWeight.w400, height: 1.5,
     color: AppColors.textPrimary,
@@ -100,7 +108,6 @@ class AppTextStyles {
     color: AppColors.textSecondary,
   );
 
-  // ── Labels ────────────────────────────────────────────────────────────────
   static final TextStyle label = GoogleFonts.dmSans(
     fontSize: 14, fontWeight: FontWeight.w500, height: 1.4,
     color: AppColors.textPrimary,
@@ -118,7 +125,6 @@ class AppTextStyles {
     color: AppColors.mutedForeground,
   );
 
-  // ── Currency / numbers (DM Mono) ──────────────────────────────────────────
   static final TextStyle currency = GoogleFonts.dmMono(
     fontSize: 24, fontWeight: FontWeight.w500, letterSpacing: -0.5,
     color: AppColors.textPrimary,
@@ -141,6 +147,15 @@ class AppButtons {
   static final ButtonStyle primary = ElevatedButton.styleFrom(
     backgroundColor: AppColors.primary,
     foregroundColor: AppColors.primaryForeground,
+    elevation: 0,
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    textStyle: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w500),
+  );
+
+  static final ButtonStyle primaryDark = ElevatedButton.styleFrom(
+    backgroundColor: AppColors.background,
+    foregroundColor: AppColors.primary,
     elevation: 0,
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -175,7 +190,7 @@ class AppButtons {
 
   static final ButtonStyle destructive = ElevatedButton.styleFrom(
     backgroundColor: AppColors.error,
-    foregroundColor: Colors.white,
+    foregroundColor: AppColors.textPrimaryDark,
     elevation: 0,
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

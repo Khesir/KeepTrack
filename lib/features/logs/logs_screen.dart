@@ -201,7 +201,6 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
   }
 }
 
-// ─── Filter Bar ───────────────────────────────────────────────────────────────
 
 class _FilterBar extends StatelessWidget {
   final String selected;
@@ -255,7 +254,6 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-// ─── Date Header ──────────────────────────────────────────────────────────────
 
 class _DateHeader extends StatelessWidget {
   final DateTime date;
@@ -288,7 +286,6 @@ class _DateHeader extends StatelessWidget {
   }
 }
 
-// ─── Transaction Row ──────────────────────────────────────────────────────────
 
 class _TransactionRow extends StatelessWidget {
   final Transaction transaction;
@@ -422,7 +419,6 @@ class _TransactionRow extends StatelessWidget {
   }
 }
 
-// ─── Edit Sheet ───────────────────────────────────────────────────────────────
 
 class _EditSheet extends StatefulWidget {
   final Transaction transaction;

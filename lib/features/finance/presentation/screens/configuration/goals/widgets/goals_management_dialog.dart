@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -41,6 +43,7 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
   GoalStatus _status = GoalStatus.active;
   Color _color = const Color(0xFF534AB7); // brand violet default
   bool _saving = false;
+  StreamSubscription<AsyncState<List<Wallet>>>? _walletSub;
 
   bool get _isEdit => widget.goal != null;
 
@@ -69,11 +72,28 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
     if (g?.colorHex != null) {
       try { _color = Color(int.parse(g!.colorHex!.replaceFirst('#', '0xFF'))); } catch (_) {}
     }
-    locator.get<WalletController>().loadWallets();
+    final walletCtrl = locator.get<WalletController>();
+    walletCtrl.loadWallets();
+    if (_savingsBucketId != null) {
+      _walletSub = walletCtrl.stream.listen((s) {
+        if (s is AsyncData<List<Wallet>> && _savingsBucketName == null && mounted) {
+          final name = s.data
+              .where((w) => w.id == _savingsBucketId)
+              .firstOrNull
+              ?.name;
+          if (name != null) {
+            setState(() => _savingsBucketName = name);
+            _walletSub?.cancel();
+            _walletSub = null;
+          }
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _walletSub?.cancel();
     _nameCtrl.dispose();
     _targetCtrl.dispose();
     _monthlyCtrl.dispose();
@@ -102,6 +122,7 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
         status: _status,
         monthlyContribution: double.tryParse(_monthlyCtrl.text) ?? 0,
         savingsBucketId: _savingsBucketId,
+        budgetProfileId: widget.goal?.budgetProfileId,
       ));
       if (mounted) Navigator.pop(context);
     } finally {
@@ -144,7 +165,7 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
@@ -358,7 +379,7 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
                   onPressed: _canSave && !_saving ? _save : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _canSave ? _color : AppColors.textTertiary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.textPrimaryDark,
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -376,7 +397,6 @@ class _GoalsManagementDialogState extends State<GoalsManagementDialog> {
   }
 }
 
-// ─── Savings Bucket Picker ────────────────────────────────────────────────────
 
 class _WalletPicker extends StatelessWidget {
   final bool isDark;
@@ -387,7 +407,7 @@ class _WalletPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
@@ -449,7 +469,6 @@ class _WalletPicker extends StatelessWidget {
   }
 }
 
-// ─── Date Picker ──────────────────────────────────────────────────────────────
 
 class _GoalDatePicker extends StatefulWidget {
   final bool isDark;
@@ -474,7 +493,7 @@ class _GoalDatePickerState extends State<_GoalDatePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final bg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = widget.isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = widget.isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final firstDay = DateTime(_view.year, _view.month, 1);
@@ -534,7 +553,6 @@ class _GoalDatePickerState extends State<_GoalDatePicker> {
   }
 }
 
-// ─── Field Label ──────────────────────────────────────────────────────────────
 
 class _FieldLabel extends StatelessWidget {
   final String text;

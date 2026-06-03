@@ -18,7 +18,6 @@ class AuthService {
   final TokenStorage _tokens = TokenStorage.instance;
   GoogleSignIn? _googleSignIn;
 
-  // ── State ─────────────────────────────────────────────────────────────────
 
   User? _currentUser;
   User? get currentUser => _currentUser;
@@ -27,8 +26,6 @@ class AuthService {
 
   final _stateController = _UserStreamController();
   Stream<User?> get authStateChanges => _stateController.stream;
-
-  // ── Google Sign-In ────────────────────────────────────────────────────────
 
   static const _googleClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
 
@@ -105,7 +102,6 @@ class AuthService {
     }
   }
 
-  // ── Email / Password ──────────────────────────────────────────────────────
 
   Future<Result<User>> signInWithEmail({
     required String email,
@@ -153,7 +149,6 @@ class AuthService {
     );
   }
 
-  // ── Session ───────────────────────────────────────────────────────────────
 
   /// Call on app start — restores session from secure storage
   Future<bool> restoreSession() async {
@@ -191,7 +186,6 @@ class AuthService {
     return Result.success(null);
   }
 
-  // ── Dev bypass ────────────────────────────────────────────────────────────
 
   Future<bool> _isDevMode() async {
     const v = String.fromEnvironment('DEV_BYPASS', defaultValue: 'false');
@@ -219,7 +213,6 @@ class AuthService {
     return signInWithEmail(email: email, password: password);
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   Future<Result<User>> _handleAuthResponse(Map<String, dynamic> data) async {
     final tokens = AuthTokens.fromJson(data);

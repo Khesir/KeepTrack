@@ -36,7 +36,7 @@ class _UserInfoCardState extends State<UserInfoCard> {
                 backgroundImage: NetworkImage(user!.photoUrl!),
                 backgroundColor: Theme.of(
                   context,
-                ).colorScheme.primary.withOpacity(0.1),
+                ).colorScheme.primary.withValues(alpha: 0.1),
               )
             else
               Container(
@@ -45,7 +45,7 @@ class _UserInfoCardState extends State<UserInfoCard> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                       Theme.of(context).colorScheme.primary,
                     ],
                     begin: Alignment.topLeft,
@@ -76,7 +76,7 @@ class _UserInfoCardState extends State<UserInfoCard> {
                       fontSize: 14,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -88,7 +88,7 @@ class _UserInfoCardState extends State<UserInfoCard> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(

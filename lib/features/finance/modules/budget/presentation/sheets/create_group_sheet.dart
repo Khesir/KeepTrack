@@ -25,7 +25,6 @@ class CreateGroupSheet extends StatefulWidget {
 
 class _CreateGroupSheetState extends State<CreateGroupSheet> {
   late final TextEditingController _titleCtrl;
-  BudgetType _budgetType = BudgetType.expense;
   bool _saving = false;
 
   @override
@@ -49,7 +48,7 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
           title: _titleCtrl.text.trim().isEmpty
               ? widget.monthLabel
               : _titleCtrl.text.trim(),
-          budgetType: _budgetType,
+          budgetType: BudgetType.expense,
           periodType: BudgetPeriodType.monthly,
           status: BudgetStatus.active,
         ),
@@ -121,27 +120,7 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Income / Expense toggle
-            Center(
-              child: SegmentedButton<BudgetType>(
-                segments: const [
-                  ButtonSegment(
-                    value: BudgetType.expense,
-                    label: Text('Expense'),
-                    icon: Icon(Icons.arrow_upward, size: 14),
-                  ),
-                  ButtonSegment(
-                    value: BudgetType.income,
-                    label: Text('Income'),
-                    icon: Icon(Icons.arrow_downward, size: 14),
-                  ),
-                ],
-                selected: {_budgetType},
-                onSelectionChanged: (s) =>
-                    setState(() => _budgetType = s.first),
-              ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
 
             SizedBox(
               width: double.infinity,

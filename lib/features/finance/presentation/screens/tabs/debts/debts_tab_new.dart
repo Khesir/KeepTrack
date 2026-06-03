@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
-import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import '../../../../modules/debt/domain/entities/debt.dart';
 import '../../../state/debt_controller.dart';
 import 'debt_history_screen.dart';
@@ -45,86 +47,25 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
         });
 
   Future<void> _showRecordPayment(Debt debt) async {
-    final amountCtrl = TextEditingController(
-      text: debt.monthlyPaymentAmount > 0 ? debt.monthlyPaymentAmount.toStringAsFixed(2) : '',
-    );
-    final feeCtrl = TextEditingController();
-    final isLending = debt.type == DebtType.lending;
-
-    final ok = await showDialog<bool>(
+    await showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isLending ? 'Collect from ${debt.personName}' : 'Pay ${debt.personName}'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: amountCtrl,
-                autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Amount',
-                  prefixText: '${currencyFormatter.currencySymbol} ',
-                  border: const OutlineInputBorder(),
-                  hintText: debt.monthlyPaymentAmount > 0
-                      ? 'Suggested: ${debt.monthlyPaymentAmount.toStringAsFixed(2)}'
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: feeCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Fee (optional)',
-                  prefixText: '${currencyFormatter.currencySymbol} ',
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final amount = double.tryParse(amountCtrl.text);
-              if (amount == null || amount <= 0) {
-                AppToast.error(ctx, 'Enter a valid amount');
-                return;
-              }
-              if (amount > debt.remainingAmount) {
-                AppToast.error(ctx, 'Cannot exceed remaining ${currencyFormatter.format(debt.remainingAmount, decimalDigits: 2)}');
-                return;
-              }
-              try {
-                final fee = double.tryParse(feeCtrl.text) ?? 0;
-                await ApiClient.instance.post('/debts/${debt.id}/pay', data: {
-                  'amount': amount,
-                  if (fee > 0) 'fee': fee,
-                });
-                _controller.loadDebts();
-                if (ctx.mounted) Navigator.pop(ctx, true);
-              } catch (e) {
-                if (ctx.mounted) AppToast.error(ctx, 'Failed: $e');
-              }
-            },
-            child: const Text('Record'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RecordPaymentSheet(
+        debt: debt,
+        onSave: (amount, wallet, fee) async {
+          await _controller.payDebtWithTransaction(
+            debt,
+            amount: amount,
+            wallet: wallet,
+            fee: fee,
+          );
+        },
       ),
     );
-
-    amountCtrl.dispose();
-    feeCtrl.dispose();
-
-    if (ok == true && mounted) {
-      AppToast.success(context, 'Payment recorded');
-      if (_selected != null) {
-        final updated = _controller.data?.where((d) => d.id == _selected!.id).firstOrNull;
-        if (updated != null) setState(() => _selected = updated);
-      }
+    if (mounted) {
+      final updated = _controller.data?.where((d) => d.id == debt.id).firstOrNull;
+      if (updated != null) setState(() => _selected = updated);
     }
   }
 
@@ -203,7 +144,6 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
   }
 }
 
-// ─── Desktop Layout ────────────────────────────────────────────────────────────
 
 class _DesktopLayout extends StatelessWidget {
   final List<Debt> debts;
@@ -351,7 +291,6 @@ class _DesktopLayout extends StatelessWidget {
   }
 }
 
-// ─── Mobile List View ──────────────────────────────────────────────────────────
 
 class _MobileListView extends StatelessWidget {
   final List<Debt> debts;
@@ -477,7 +416,6 @@ class _MobileListView extends StatelessWidget {
   }
 }
 
-// ─── Detail Panel ──────────────────────────────────────────────────────────────
 
 class _DetailPanel extends StatelessWidget {
   final Debt debt;
@@ -675,7 +613,6 @@ class _DetailPanel extends StatelessWidget {
   }
 }
 
-// ─── Detail Header ─────────────────────────────────────────────────────────────
 
 class _DetailHeader extends StatelessWidget {
   final Debt debt;
@@ -720,7 +657,6 @@ class _DetailHeader extends StatelessWidget {
   }
 }
 
-// ─── Debt List Row ─────────────────────────────────────────────────────────────
 
 class _DebtRow extends StatelessWidget {
   final Debt debt;
@@ -797,7 +733,6 @@ class _DebtRow extends StatelessWidget {
   }
 }
 
-// ─── Shared Widgets ────────────────────────────────────────────────────────────
 
 class _InfoCard extends StatelessWidget {
   final String label, value;
@@ -872,5 +807,209 @@ class _StatusBadge extends StatelessWidget {
       DebtStatus.settled => ('Settled', AppColors.success),
     };
     return _Chip(label: label, color: color);
+  }
+}
+
+// ---------------------------------------------------------------------------
+
+class _RecordPaymentSheet extends StatefulWidget {
+  final Debt debt;
+  final Future<void> Function(double amount, Wallet wallet, double fee) onSave;
+
+  const _RecordPaymentSheet({required this.debt, required this.onSave});
+
+  @override
+  State<_RecordPaymentSheet> createState() => _RecordPaymentSheetState();
+}
+
+class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
+  final _amountCtrl = TextEditingController();
+  final _feeCtrl = TextEditingController();
+
+  late final WalletController _walletController;
+
+  Wallet? _wallet;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _walletController = locator.get<WalletController>();
+    if (widget.debt.monthlyPaymentAmount > 0) {
+      _amountCtrl.text = widget.debt.monthlyPaymentAmount.toStringAsFixed(2);
+    }
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _feeCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _isLending => widget.debt.type == DebtType.lending;
+  Color get _typeColor => _isLending ? AppColors.success : AppColors.error;
+
+  bool get _canSave {
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    return amount > 0 &&
+        amount <= widget.debt.remainingAmount &&
+        _wallet != null;
+  }
+
+  Future<void> _save() async {
+    if (!_canSave || _saving) return;
+    final amount = double.parse(_amountCtrl.text);
+    final fee = double.tryParse(_feeCtrl.text) ?? 0;
+    setState(() => _saving = true);
+    try {
+      await widget.onSave(amount, _wallet!, fee);
+      if (mounted) {
+        Navigator.pop(context);
+        AppToast.success(context, 'Payment recorded');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.error(context, 'Failed: $e');
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  void _pickWallet(List<Wallet> wallets, bool isDark) {
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          Text('Select Wallet', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+          const SizedBox(height: 12),
+          ...wallets.map((w) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.account_balance_wallet_outlined, color: _typeColor),
+            title: Text(w.name, style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary)),
+            subtitle: Text(currencyFormatter.format(w.balance), style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+            trailing: _wallet?.id == w.id ? Icon(Icons.check_rounded, color: _typeColor, size: 18) : null,
+            onTap: () { setState(() => _wallet = w); Navigator.pop(context); },
+          )),
+        ]),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.void_ : Colors.white;
+    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 20),
+          Row(children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: _typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+              child: Icon(_isLending ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, size: 20, color: _typeColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(_isLending ? 'Collect from ${widget.debt.personName}' : 'Pay ${widget.debt.personName}',
+                  style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+              Text('Remaining: ${currencyFormatter.format(widget.debt.remainingAmount)}',
+                  style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+            ])),
+          ]),
+          const SizedBox(height: 20),
+
+          // Amount
+          TextField(
+            controller: _amountCtrl,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
+            decoration: InputDecoration(
+              labelText: 'Amount *',
+              prefixText: '${currencyFormatter.currencySymbol} ',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)),
+              hintText: widget.debt.monthlyPaymentAmount > 0 ? 'Suggested: ${widget.debt.monthlyPaymentAmount.toStringAsFixed(2)}' : null,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Fee
+          TextField(
+            controller: _feeCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
+            decoration: InputDecoration(
+              labelText: 'Fee (optional)',
+              prefixText: '${currencyFormatter.currencySymbol} ',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Wallet picker
+          AsyncStreamBuilder<List<Wallet>>(
+            state: _walletController,
+            builder: (_, wallets) => GestureDetector(
+              onTap: () => _pickWallet(wallets, isDark),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: _wallet != null ? _typeColor.withValues(alpha: 0.4) : border, width: _wallet != null ? 1 : 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                  color: _wallet != null ? _typeColor.withValues(alpha: 0.04) : Colors.transparent,
+                ),
+                child: Row(children: [
+                  Icon(Icons.account_balance_wallet_outlined, size: 16,
+                      color: _wallet != null ? _typeColor : AppColors.textSecondary),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(_wallet?.name ?? 'Select wallet *',
+                      style: GoogleFonts.dmSans(fontSize: 14, color: _wallet != null ? textPrimary : AppColors.textSecondary))),
+                  Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
+                ]),
+              ),
+            ),
+            loadingBuilder: (_) => const SizedBox.shrink(),
+            errorBuilder: (_, __) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 20),
+
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: FilledButton(
+              onPressed: _canSave && !_saving ? _save : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: _canSave ? _typeColor : AppColors.textTertiary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _saving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(_isLending ? 'Record Collection' : 'Record Payment',
+                      style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }

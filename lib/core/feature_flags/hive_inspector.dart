@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -59,7 +59,7 @@ class _HiveInspectorDialogState extends State<_HiveInspectorDialog> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF242422) : Colors.white;
-    final sidebarBg = isDark ? const Color(0xFF1E1E1C) : const Color(0xFFEBE9E1);
+    final sidebarBg = isDark ? AppColors.void_ : const Color(0xFFEBE9E1);
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
     return Dialog(
@@ -72,7 +72,7 @@ class _HiveInspectorDialogState extends State<_HiveInspectorDialog> {
         height: 600,
         child: Row(
           children: [
-            // Sidebar — box list
+            // Sidebar – box list
             Container(
               width: 180,
               color: sidebarBg,

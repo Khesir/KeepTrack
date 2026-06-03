@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/desktop_navbar.dart';
 import 'package:keep_track/core/ui/responsive/desktop_sidebar.dart';
@@ -195,7 +195,7 @@ class _ResponsiveLayoutWrapperState extends State<ResponsiveLayoutWrapper> {
         type: BottomNavigationBarType.fixed,
         backgroundColor: theme.scaffoldBackgroundColor,
         selectedItemColor: theme.colorScheme.primary,
-        unselectedItemColor: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withOpacity(0.6),
+        unselectedItemColor: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withValues(alpha: 0.6),
         selectedFontSize: 12,
         unselectedFontSize: 12,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
@@ -231,7 +231,7 @@ class DesktopContentWrapper extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return Container(
-      color: isDark ? const Color(0xFF09090B) : AppColors.backgroundSecondary,
+      color: isDark ? theme.scaffoldBackgroundColor : AppColors.backgroundSecondary,
       child: SingleChildScrollView(
         child: Center(
           child: ConstrainedBox(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -17,7 +17,6 @@ import 'package:keep_track/features/finance/presentation/state/finance_category_
 import 'package:keep_track/features/finance/presentation/state/savings_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 
-// ─── Main tab ─────────────────────────────────────────────────────────────────
 
 class SavingsTab extends StatefulWidget {
   const SavingsTab({super.key});
@@ -219,7 +218,6 @@ class _SavingsTabState extends State<SavingsTab> {
   }
 }
 
-// ─── Hero header ──────────────────────────────────────────────────────────────
 
 class _SavingsHero extends StatelessWidget {
   final double total;
@@ -236,7 +234,7 @@ class _SavingsHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.18)
         : AppColors.border.withValues(alpha: 0.45);
@@ -316,7 +314,6 @@ class _SavingsHero extends StatelessWidget {
   }
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onAdd;
@@ -366,7 +363,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ─── Bucket card ──────────────────────────────────────────────────────────────
 
 class _BucketCard extends StatelessWidget {
   final SavingsBucket bucket;
@@ -391,7 +387,7 @@ class _BucketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.12)
         : AppColors.border.withValues(alpha: 0.4);
@@ -414,7 +410,6 @@ class _BucketCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Top band ──────────────────────────────────────────────
               Container(
                 height: 4,
                 decoration: BoxDecoration(
@@ -523,7 +518,6 @@ class _BucketCard extends StatelessWidget {
   }
 }
 
-// ─── Add bucket ghost card ────────────────────────────────────────────────────
 
 class _AddBucketCard extends StatelessWidget {
   final bool isDark;
@@ -580,7 +574,6 @@ class _AddBucketCard extends StatelessWidget {
   }
 }
 
-// ─── Entry sheet ──────────────────────────────────────────────────────────────
 
 class _EntrySheet extends StatelessWidget {
   final SavingsBucket bucket;
@@ -619,7 +612,7 @@ class _EntrySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.12)
         : AppColors.border.withValues(alpha: 0.35);
@@ -769,7 +762,6 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-// ─── Transaction form sheet ───────────────────────────────────────────────────
 
 class _TransactionFormSheet extends StatefulWidget {
   final SavingsBucket bucket;
@@ -839,7 +831,7 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final isDeposit = _type == TransactionType.income;
     final typeColor = isDeposit ? AppColors.success : AppColors.error;

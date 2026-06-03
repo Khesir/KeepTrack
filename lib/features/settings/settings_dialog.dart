@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
@@ -12,17 +12,14 @@ import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
-import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
+import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/auth/presentation/widgets/login_dialog.dart';
-import 'package:keep_track/core/navigation/app_navigator.dart';
-import 'package:keep_track/core/routing/app_router.dart';
 import 'package:keep_track/features/settings/data/services/backup_service.dart';
 import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ─── Section model ────────────────────────────────────────────────────────────
 
 enum _Section { profile, appearance, budget, subscription, data }
 
@@ -57,7 +54,6 @@ const _groups = [
   _Group('activity', [_Section.data]),
 ];
 
-// ─── Root widget ──────────────────────────────────────────────────────────────
 
 class SettingsDialogContent extends StatefulWidget {
   const SettingsDialogContent({super.key});
@@ -82,7 +78,7 @@ class _SettingsDialogContentState extends State<SettingsDialogContent> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sidebarBg =
-        isDark ? const Color(0xFF1E1E1C) : const Color(0xFFEBE9E1);
+        isDark ? AppColors.void_ : const Color(0xFFEBE9E1);
     final contentBg = isDark ? const Color(0xFF242422) : Colors.white;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.2)
@@ -128,7 +124,6 @@ class _SettingsDialogContentState extends State<SettingsDialogContent> {
   }
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 class _Sidebar extends StatelessWidget {
   final _Section selected;
@@ -275,7 +270,6 @@ class _SidebarItemState extends State<_SidebarItem> {
   }
 }
 
-// ─── Content header ───────────────────────────────────────────────────────────
 
 class _ContentHeader extends StatelessWidget {
   final String title;
@@ -332,7 +326,6 @@ class _ContentHeader extends StatelessWidget {
   }
 }
 
-// ─── Content pane router ──────────────────────────────────────────────────────
 
 class _ContentPane extends StatelessWidget {
   final _Section section;
@@ -365,103 +358,245 @@ class _ContentPane extends StatelessWidget {
       };
 }
 
-// ─── Profile pane ─────────────────────────────────────────────────────────────
 
-class _ProfilePane extends StatelessWidget {
+class _ProfilePane extends StatefulWidget {
   final bool isDark;
   final AuthController authController;
 
   const _ProfilePane({required this.isDark, required this.authController});
 
   @override
+  State<_ProfilePane> createState() => _ProfilePaneState();
+}
+
+class _ProfilePaneState extends State<_ProfilePane> {
+  final _nameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+
+  bool _nameExpanded = false;
+  bool _nameLoading = false;
+  String? _nameError;
+
+  bool _passwordExpanded = false;
+  bool _passwordLoading = false;
+  bool _obscurePwd = true;
+  bool _obscureConfirm = true;
+  String? _passwordError;
+  String? _passwordSuccess;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl.text = widget.authController.currentUser?.displayName ?? '';
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveName() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Display name cannot be empty');
+      return;
+    }
+    setState(() { _nameLoading = true; _nameError = null; });
+    try {
+      await ApiClient.instance.patch('/users/me', data: {'displayName': name});
+      setState(() { _nameLoading = false; _nameExpanded = false; });
+    } catch (e) {
+      setState(() { _nameLoading = false; _nameError = 'Failed to update name'; });
+    }
+  }
+
+  Future<void> _savePassword() async {
+    final pwd = _passwordCtrl.text;
+    if (pwd.isEmpty) {
+      setState(() => _passwordError = 'Password cannot be empty');
+      return;
+    }
+    if (pwd.length < 6) {
+      setState(() => _passwordError = 'Password must be at least 6 characters');
+      return;
+    }
+    if (pwd != _confirmCtrl.text) {
+      setState(() => _passwordError = 'Passwords do not match');
+      return;
+    }
+    setState(() { _passwordLoading = true; _passwordError = null; _passwordSuccess = null; });
+    try {
+      await ApiClient.instance.patch('/auth/password', data: {'password': pwd});
+      _passwordCtrl.clear();
+      _confirmCtrl.clear();
+      setState(() {
+        _passwordLoading = false;
+        _passwordSuccess = 'Password updated';
+        _passwordExpanded = false;
+      });
+    } catch (e) {
+      setState(() { _passwordLoading = false; _passwordError = 'Failed to update password'; });
+    }
+  }
+
+  String _initials(String? name, String email) {
+    if (name != null && name.isNotEmpty) {
+      final parts = name.trim().split(' ');
+      if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      return name[0].toUpperCase();
+    }
+    return email.isNotEmpty ? email[0].toUpperCase() : 'U';
+  }
+
+  String _formatDate(DateTime dt) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<AsyncState<User?>>(
-      stream: authController.stream,
-      initialData: authController.state,
+      stream: widget.authController.stream,
+      initialData: widget.authController.state,
       builder: (_, snap) {
         final state = snap.data;
-        final user = state is AsyncData<User?> ? state.data : authController.currentUser;
-        return _buildContent(context, user);
+        final user = state is AsyncData<User?> ? state.data : widget.authController.currentUser;
+        return user == null ? _buildUnauthenticated(context) : _buildContent(context, user);
       },
     );
   }
 
-  Widget _buildContent(BuildContext context, User? user) {
-    if (user == null) return _buildUnauthenticated(context);
-
-    final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final initials = _initials(user.displayName);
+  Widget _buildContent(BuildContext context, User user) {
+    final isDark = widget.isDark;
+    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
+    final initials = _initials(user.displayName, user.email);
 
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Row(
-          children: [
-            user.photoUrl != null
-                ? CircleAvatar(
-                    radius: 36,
-                    backgroundImage: NetworkImage(user.photoUrl!),
-                  )
-                : Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppColors.accent, AppColors.accentDark],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initials,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.displayName?.isNotEmpty == true
-                        ? user.displayName!
-                        : 'No name set',
-                    style: GoogleFonts.dmSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: fg,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.accent, AppColors.accentDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-        const SizedBox(height: 28),
-        _PaneRow(
-          isDark: isDark,
-          icon: Icons.manage_accounts_outlined,
-          iconColor: AppColors.accent,
-          label: 'Manage Account',
-          subtitle: 'Authentication & profile',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const AuthSettingsScreen()),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 60, height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.18),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+                ),
+                alignment: Alignment.center,
+                child: user.photoUrl != null
+                    ? ClipOval(child: Image.network(user.photoUrl!, width: 60, height: 60, fit: BoxFit.cover))
+                    : Text(initials, style: GoogleFonts.dmSans(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          user.displayName?.isNotEmpty == true ? user.displayName! : user.email.split('@').first,
+                          style: GoogleFonts.dmSans(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                        if (user.isPlus) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text('PLUS', style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.8)),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(user.email, style: GoogleFonts.dmSans(fontSize: 12, color: Colors.white.withValues(alpha: 0.75))),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
+        const SizedBox(height: 24),
+
+        _PaneSectionLabel('Account Information'),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: border, width: 0.5)),
+          child: Column(
+            children: [
+              _InfoField(label: 'Email address', value: user.email, isDark: isDark),
+              Divider(height: 1, thickness: 0.5, indent: 16, endIndent: 16, color: border),
+              _InfoField(label: 'Member since', value: _formatDate(user.createdAt), isDark: isDark),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        _PaneSectionLabel('Profile'),
+        const SizedBox(height: 8),
+        _InlineEditCard(
+          isDark: isDark,
+          label: 'Display name',
+          value: user.displayName?.isNotEmpty == true ? user.displayName! : 'Not set',
+          expanded: _nameExpanded,
+          onToggle: () => setState(() { _nameExpanded = !_nameExpanded; _nameError = null; }),
+          child: _nameExpanded ? _NameEditFields(
+            controller: _nameCtrl,
+            error: _nameError,
+            loading: _nameLoading,
+            isDark: isDark,
+            onSave: _saveName,
+            onCancel: () => setState(() { _nameExpanded = false; _nameError = null; }),
+          ) : null,
+        ),
+        const SizedBox(height: 20),
+
+        _PaneSectionLabel('Security'),
+        const SizedBox(height: 8),
+        _InlineEditCard(
+          isDark: isDark,
+          label: 'Password',
+          value: _passwordSuccess ?? '••••••••',
+          valueColor: _passwordSuccess != null ? AppColors.success : null,
+          expanded: _passwordExpanded,
+          onToggle: () => setState(() { _passwordExpanded = !_passwordExpanded; _passwordError = null; _passwordSuccess = null; }),
+          child: _passwordExpanded ? _PasswordEditFields(
+            passwordCtrl: _passwordCtrl,
+            confirmCtrl: _confirmCtrl,
+            obscurePwd: _obscurePwd,
+            obscureConfirm: _obscureConfirm,
+            onTogglePwd: () => setState(() => _obscurePwd = !_obscurePwd),
+            onToggleConfirm: () => setState(() => _obscureConfirm = !_obscureConfirm),
+            error: _passwordError,
+            loading: _passwordLoading,
+            isDark: isDark,
+            onSave: _savePassword,
+            onCancel: () => setState(() { _passwordExpanded = false; _passwordError = null; }),
+          ) : null,
+        ),
+        const SizedBox(height: 20),
+
+        _PaneSectionLabel('Session'),
+        const SizedBox(height: 8),
         _PaneRow(
           isDark: isDark,
           icon: Icons.logout_rounded,
@@ -475,74 +610,38 @@ class _ProfilePane extends StatelessWidget {
   }
 
   Widget _buildUnauthenticated(BuildContext context) {
-    final cardBg = isDark
-        ? Colors.white.withValues(alpha: 0.04)
-        : AppColors.backgroundSecondary;
-    final borderColor = isDark
-        ? AppColors.border.withValues(alpha: 0.15)
-        : AppColors.border.withValues(alpha: 0.4);
+    final isDark = widget.isDark;
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.04) : AppColors.backgroundSecondary;
+    final borderColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text(
-          'Account',
-          style: GoogleFonts.dmSans(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.3,
-          ),
-        ),
+        Text('Account', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.3)),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderColor, width: 0.5),
-          ),
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: borderColor, width: 0.5)),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Your account',
-                      style: GoogleFonts.dmSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: fg,
-                      ),
-                    ),
+                    Text('Your account', style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: fg)),
                     const SizedBox(height: 4),
-                    Text(
-                      "You're not logged in. Sign in to sync your data across devices.",
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
+                    Text("You're not logged in. Sign in to sync your data across devices.",
+                        style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
               Row(
                 children: [
-                  _OutlineButton(
-                    label: 'Log in',
-                    isDark: isDark,
-                    onTap: () => LoginDialog.show(context),
-                  ),
+                  _OutlineButton(label: 'Log in', isDark: isDark, onTap: () => LoginDialog.show(context)),
                   const SizedBox(width: 8),
-                  _OutlineButton(
-                    label: 'Sign up',
-                    isDark: isDark,
-                    onTap: () => LoginDialog.show(context, signUp: true),
-                    primary: true,
-                  ),
+                  _OutlineButton(label: 'Sign up', isDark: isDark, onTap: () => LoginDialog.show(context, signUp: true), primary: true),
                 ],
               ),
             ],
@@ -557,42 +656,278 @@ class _ProfilePane extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Sign out?', style: AppTextStyles.h4),
-        content: Text(
-          'You will be signed out of Keep Track.',
-          style: AppTextStyles.bodySmall,
-        ),
+        content: Text('You will be signed out of Keep Track.', style: AppTextStyles.bodySmall),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await authController.signOut();
-            },
-            child: Text(
-              'Sign Out',
-              style: TextStyle(
-                color: AppColors.error,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            onPressed: () async { Navigator.pop(context); await widget.authController.signOut(); },
+            child: Text('Sign Out', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
   }
+}
 
-  String _initials(String? name) {
-    if (name == null || name.isEmpty) return 'U';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    return name[0].toUpperCase();
+
+class _PaneSectionLabel extends StatelessWidget {
+  final String text;
+  const _PaneSectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text.toUpperCase(),
+        style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.0),
+      );
+}
+
+class _InfoField extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isDark;
+  const _InfoField({required this.label, required this.value, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label.toUpperCase(), style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.6)),
+            const SizedBox(height: 4),
+            Text(value, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: isDark ? AppColors.primaryForeground : AppColors.textPrimary)),
+          ],
+        ),
+      );
+}
+
+class _InlineEditCard extends StatelessWidget {
+  final bool isDark;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget? child;
+
+  const _InlineEditCard({
+    required this.isDark,
+    required this.label,
+    required this.value,
+    required this.expanded,
+    required this.onToggle,
+    this.valueColor,
+    this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+
+    return Container(
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: border, width: 0.5)),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label.toUpperCase(), style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.6)),
+                      const SizedBox(height: 4),
+                      Text(value, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500,
+                          color: valueColor ?? (isDark ? AppColors.primaryForeground : AppColors.textPrimary))),
+                    ],
+                  ),
+                ),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: onToggle,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.07) : AppColors.background,
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(color: border),
+                      ),
+                      child: Text(
+                        expanded ? 'Cancel' : 'Edit',
+                        style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600,
+                            color: expanded ? AppColors.textSecondary : AppColors.accent),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (child != null) ...[
+            Divider(height: 1, thickness: 0.5, color: border),
+            child!,
+          ],
+        ],
+      ),
+    );
   }
 }
 
-// ─── Outline button for unauthenticated account pane ─────────────────────────
+class _NameEditFields extends StatelessWidget {
+  final TextEditingController controller;
+  final String? error;
+  final bool loading;
+  final bool isDark;
+  final VoidCallback onSave;
+  final VoidCallback onCancel;
+
+  const _NameEditFields({required this.controller, required this.error, required this.loading, required this.isDark, required this.onSave, required this.onCancel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ProfileTextField(controller: controller, label: 'New display name', isDark: isDark, error: error),
+          const SizedBox(height: 12),
+          _ProfileFormActions(loading: loading, onSave: onSave, onCancel: onCancel, isDark: isDark),
+        ],
+      ),
+    );
+  }
+}
+
+class _PasswordEditFields extends StatelessWidget {
+  final TextEditingController passwordCtrl;
+  final TextEditingController confirmCtrl;
+  final bool obscurePwd;
+  final bool obscureConfirm;
+  final VoidCallback onTogglePwd;
+  final VoidCallback onToggleConfirm;
+  final String? error;
+  final bool loading;
+  final bool isDark;
+  final VoidCallback onSave;
+  final VoidCallback onCancel;
+
+  const _PasswordEditFields({
+    required this.passwordCtrl, required this.confirmCtrl,
+    required this.obscurePwd, required this.obscureConfirm,
+    required this.onTogglePwd, required this.onToggleConfirm,
+    required this.error, required this.loading, required this.isDark,
+    required this.onSave, required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ProfileTextField(controller: passwordCtrl, label: 'New password', obscure: obscurePwd, onToggleObscure: onTogglePwd, isDark: isDark, error: error),
+          const SizedBox(height: 10),
+          _ProfileTextField(controller: confirmCtrl, label: 'Confirm new password', obscure: obscureConfirm, onToggleObscure: onToggleConfirm, isDark: isDark),
+          const SizedBox(height: 12),
+          _ProfileFormActions(loading: loading, onSave: onSave, onCancel: onCancel, isDark: isDark),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final bool obscure;
+  final VoidCallback? onToggleObscure;
+  final String? error;
+  final bool isDark;
+
+  const _ProfileTextField({required this.controller, required this.label, required this.isDark, this.obscure = false, this.onToggleObscure, this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final border = isDark ? AppColors.border.withValues(alpha: 0.3) : AppColors.border;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          obscureText: obscure,
+          style: GoogleFonts.dmSans(fontSize: 13, color: isDark ? AppColors.primaryForeground : AppColors.textPrimary),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            filled: true,
+            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: border, width: 0.5)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
+            suffixIcon: onToggleObscure != null
+                ? IconButton(icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 15, color: AppColors.textSecondary), onPressed: onToggleObscure)
+                : null,
+          ),
+        ),
+        if (error != null) ...[
+          const SizedBox(height: 5),
+          Text(error!, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.error)),
+        ],
+      ],
+    );
+  }
+}
+
+class _ProfileFormActions extends StatelessWidget {
+  final bool loading;
+  final VoidCallback onSave;
+  final VoidCallback onCancel;
+  final bool isDark;
+
+  const _ProfileFormActions({required this.loading, required this.onSave, required this.onCancel, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: onCancel,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textSecondary,
+              side: BorderSide(color: isDark ? AppColors.border.withValues(alpha: 0.3) : AppColors.border),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Cancel', style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w500)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton(
+            onPressed: loading ? null : onSave,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: loading
+                ? const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text('Save changes', style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 
 class _OutlineButton extends StatefulWidget {
   final String label;
@@ -650,7 +985,6 @@ class _OutlineButtonState extends State<_OutlineButton> {
   }
 }
 
-// ─── Appearance pane ──────────────────────────────────────────────────────────
 
 class _AppearancePane extends StatefulWidget {
   final bool isDark;
@@ -854,7 +1188,6 @@ class _ThemeOptionRowState extends State<_ThemeOptionRow> {
   }
 }
 
-// ─── Budget pane ──────────────────────────────────────────────────────────────
 
 class _BudgetPane extends StatelessWidget {
   final bool isDark;
@@ -880,8 +1213,8 @@ class _BudgetPane extends StatelessWidget {
           iconColor: AppColors.info,
           label: 'Budget View',
           subtitle: settings.budgetSheetMode
-              ? 'Sheet mode — full budget sheet'
-              : 'Simple mode — overview with tabs',
+              ? 'Sheet mode – full budget sheet'
+              : 'Simple mode – overview with tabs',
           trailing: Switch(
             value: settings.budgetSheetMode,
             onChanged: controller.updateBudgetSheetMode,
@@ -893,7 +1226,6 @@ class _BudgetPane extends StatelessWidget {
   }
 }
 
-// ─── Subscription coming soon pane ───────────────────────────────────────────
 
 class _SubscriptionComingSoonPane extends StatelessWidget {
   final bool isDark;
@@ -940,7 +1272,7 @@ class _SubscriptionComingSoonPane extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Coming soon — cloud sync, AI insights,\nand more. Stay tuned.',
+              'Coming soon – cloud sync, AI insights,\nand more. Stay tuned.',
               style: GoogleFonts.dmSans(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -957,7 +1289,7 @@ class _SubscriptionComingSoonPane extends StatelessWidget {
                 border: Border.all(color: borderColor, width: 0.5),
               ),
               child: Text(
-                'You\'re on the free plan — all features unlocked.',
+                'You\'re on the free plan – all features unlocked.',
                 style: GoogleFonts.dmSans(
                   fontSize: 12,
                   color: AppColors.textSecondary,
@@ -970,7 +1302,6 @@ class _SubscriptionComingSoonPane extends StatelessWidget {
     );
   }
 }
-// ─── Data pane ────────────────────────────────────────────────────────────────
 
 class _DataPane extends StatefulWidget {
   final bool isDark;
@@ -1044,7 +1375,7 @@ class _DataPaneState extends State<_DataPane> {
           iconColor: AppColors.accent,
           label: 'Demo Mode',
           subtitle: DemoMode.enabled
-              ? 'Using sample data — toggle to connect your account'
+              ? 'Using sample data – toggle to connect your account'
               : 'Show sample data to explore all features',
           trailing: Switch(
             value: DemoMode.enabled,
@@ -1192,7 +1523,7 @@ class _DataPaneState extends State<_DataPane> {
   }
 
   String _backupErrorMessage(Object e) => switch (e) {
-    WrongPasswordException() => 'Wrong password — backup could not be decrypted.',
+    WrongPasswordException() => 'Wrong password – backup could not be decrypted.',
     InvalidBackupException() => 'Invalid backup file. Select a valid .ktbak file.',
     _ => 'Something went wrong: $e',
   };
@@ -1278,12 +1609,6 @@ class _DataPaneState extends State<_DataPane> {
     }
   }
 
-  void _goToDashboard() {
-    AppNavigator.key.currentState?.pushNamedAndRemoveUntil(
-      AppRoutes.financeModule,
-      (_) => false,
-    );
-  }
 
   Future<void> _wipeAllData(BuildContext context) async {
     final cache = locator.get<LocalCache>();
@@ -1349,7 +1674,6 @@ class _DataPaneState extends State<_DataPane> {
   }
 }
 
-// ─── Shared pane widgets ──────────────────────────────────────────────────────
 
 class _PaneLabel extends StatelessWidget {
   final String text;

@@ -1,4 +1,4 @@
-import 'dart:math' show max;
+﻿import 'dart:math' show max;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -158,7 +158,7 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
     final effectiveTitle = (_selectedBudgetTitle != null && titles.contains(_selectedBudgetTitle))
         ? _selectedBudgetTitle
         : null;
-    final cardBg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = widget.isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = widget.isDark
         ? AppColors.border.withValues(alpha: 0.2)
         : AppColors.border.withValues(alpha: 0.5);
@@ -173,7 +173,6 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
         children: [
           _buildRangeChips(),
 
-          // ── Transactions Involved + Expense Breakdown ────────────────────
           const SizedBox(height: 14),
           SizedBox(
             height: 300,
@@ -191,7 +190,6 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
             ),
           ),
 
-          // ── Spending Trends ──────────────────────────────────────────────
           const SizedBox(height: 20),
           Text(
             'Spending Trends',
@@ -213,7 +211,6 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
             Expanded(child: _buildMonthlyBarCard(txs, months, TransactionType.income, 'Inflow', AppColors.success, cardBg, borderColor, _barsAnim, selectedIdx: _selectedBarIdx, onSelect: (i) => setState(() => _selectedBarIdx = i))),
           ]),
 
-          // ── Income vs Outflow comparison ─────────────────────────────────
           const SizedBox(height: 20),
           Text(
             'Income vs Outflow',
@@ -225,7 +222,7 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
           ),
           const SizedBox(height: 3),
           Text(
-            'Side-by-side view of earnings and spending per month — green bars above red means you saved.',
+            'Side-by-side view of earnings and spending per month – green bars above red means you saved.',
             style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 10),
@@ -351,7 +348,7 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.accent : (isDark ? const Color(0xFF2C2C2A) : Colors.white),
+                    color: isSelected ? AppColors.accent : (isDark ? AppColors.cardDark : AppColors.card),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isSelected ? AppColors.accent : (isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5)),
@@ -613,7 +610,6 @@ class _DashboardInsightsState extends State<DashboardInsights> with TickerProvid
   }
 }
 
-// ─── Painters ─────────────────────────────────────────────────────────────────
 
 class _DonutPainter extends CustomPainter {
   final List<_ChartItem> items;
@@ -720,7 +716,6 @@ class _ComparisonPainter extends CustomPainter {
   bool shouldRepaint(covariant _ComparisonPainter old) => old.income != income || old.expense != expense || old.animProgress != animProgress || old.selectedIdx != selectedIdx;
 }
 
-// ─── Small helpers ─────────────────────────────────────────────────────────────
 
 class _LegendRow extends StatelessWidget {
   final _ChartItem item;
@@ -762,7 +757,7 @@ class _BudgetDropdown extends StatelessWidget {
           value: selectedTitle,
           isDense: true,
           style: GoogleFonts.dmSans(fontSize: 11, color: isDark ? AppColors.primaryForeground : AppColors.textPrimary),
-          dropdownColor: isDark ? const Color(0xFF2C2C2A) : Colors.white,
+          dropdownColor: isDark ? AppColors.cardDark : AppColors.card,
           icon: Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: AppColors.textSecondary),
           items: [
             DropdownMenuItem<String?>(value: null, child: Text('All', style: GoogleFonts.dmSans(fontSize: 11))),
@@ -786,7 +781,7 @@ class _YearDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now().year;
     final years = List.generate(6, (i) => now - i);
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -796,7 +791,7 @@ class _YearDropdown extends StatelessWidget {
           value: selectedYear,
           isDense: true,
           style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? AppColors.primaryForeground : AppColors.textPrimary),
-          dropdownColor: isDark ? const Color(0xFF2C2C2A) : Colors.white,
+          dropdownColor: isDark ? AppColors.cardDark : AppColors.card,
           icon: Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: AppColors.textSecondary),
           items: years.map((y) => DropdownMenuItem(value: y, child: Text('$y'))).toList(),
           onChanged: (v) { if (v != null) onChanged(v); },

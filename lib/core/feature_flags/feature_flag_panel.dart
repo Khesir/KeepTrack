@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/feature_flags/hive_inspector.dart';
@@ -24,7 +24,7 @@ class FeatureFlagPopover extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = locator.get<SettingsController>();
     final auth = locator.get<AuthController>();
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.3)
         : AppColors.border.withValues(alpha: 0.7);
@@ -107,8 +107,8 @@ class FeatureFlagPopover extends StatelessWidget {
                         iconColor: AppColors.warning,
                         label: 'Offline Mode',
                         subtitle: s.forceOfflineMode
-                            ? 'Hive only — backend disabled'
-                            : 'Online — using backend',
+                            ? 'Hive only – backend disabled'
+                            : 'Online – using backend',
                         value: s.forceOfflineMode,
                         onChanged: (v) =>
                             locator.get<SettingsController>().setForceOfflineMode(v),

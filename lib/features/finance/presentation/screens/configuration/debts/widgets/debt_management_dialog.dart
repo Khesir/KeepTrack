@@ -13,7 +13,7 @@ class DebtManagementDialog extends StatefulWidget {
   final Debt? debt;
   final List<Wallet> wallets;
 
-  final Function(Debt, String?) onSave;
+  final Function(Debt, Wallet?) onSave;
 
   const DebtManagementDialog({
     this.debt,
@@ -144,7 +144,7 @@ class _DebtManagementDialogState extends State<DebtManagementDialog> {
         paymentFrequency: selectedPaymentFrequency,
       );
 
-      widget.onSave(debtEntity, selectedCategoryId);
+      widget.onSave(debtEntity, null);
       if (mounted) {
         Navigator.pop(context);
         AppToast.success(context, isEdit ? 'Debt updated' : 'Debt created');

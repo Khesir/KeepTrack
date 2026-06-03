@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
@@ -124,7 +124,7 @@ class _SavingsManagementDialogState extends State<SavingsManagementDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final isEdit = widget.bucket != null;
 

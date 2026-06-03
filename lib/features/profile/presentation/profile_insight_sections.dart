@@ -14,7 +14,6 @@ const _palette = [
   Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFF14B8A6), Color(0xFFF97316),
 ];
 
-// ─── Spending Breakdown (Donut) ───────────────────────────────────────────────
 
 class InsightSpendingSection extends StatelessWidget {
   final List<Budget> allBudgets;
@@ -66,7 +65,6 @@ class InsightSpendingSection extends StatelessWidget {
   }
 }
 
-// ─── Budget Performance (Grouped Bars) ───────────────────────────────────────
 
 class InsightBudgetBarsSection extends StatelessWidget {
   final List<Budget> allBudgets;
@@ -133,8 +131,6 @@ class InsightBudgetBarsSection extends StatelessWidget {
     );
   }
 }
-
-// ─── 6-Month Trend (Line Chart) ───────────────────────────────────────────────
 
 class InsightTrendSection extends StatelessWidget {
   final List<MonthPlan> plans;
@@ -219,7 +215,6 @@ class InsightTrendSection extends StatelessWidget {
   );
 }
 
-// ─── Savings Distribution (Donut) ────────────────────────────────────────────
 
 class InsightSavingsSection extends StatelessWidget {
   final List<Wallet> buckets;
@@ -269,7 +264,6 @@ class InsightSavingsSection extends StatelessWidget {
   }
 }
 
-// ─── Debt Overview ────────────────────────────────────────────────────────────
 
 class InsightDebtSection extends StatelessWidget {
   final List<Debt> debts, receivables;
@@ -299,7 +293,6 @@ class InsightDebtSection extends StatelessWidget {
   }
 }
 
-// ─── Subscriptions Overview ───────────────────────────────────────────────────
 
 class InsightSubscriptionsSection extends StatelessWidget {
   final List<Subscription> subs;
@@ -333,7 +326,6 @@ class InsightSubscriptionsSection extends StatelessWidget {
   }
 }
 
-// ─── Shared Widgets ───────────────────────────────────────────────────────────
 
 class _ChartCard extends StatelessWidget {
   final String title;

@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:keep_track/core/navigation/app_navigator.dart';
 import 'package:keep_track/core/routing/app_router.dart';
@@ -65,8 +65,19 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   String _month(int m) => const [
-    '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    '',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ][m];
 
   static bool get _isDesktop =>
@@ -87,7 +98,8 @@ class _SettingsPageState extends State<SettingsPage> {
       return const SettingsDialogContent();
     }
 
-    final isWideWeb = kIsWeb &&
+    final isWideWeb =
+        kIsWeb &&
         MediaQuery.sizeOf(context).width >= ResponsiveBreakpoints.desktop;
     if (isWideWeb) {
       return Scaffold(
@@ -124,191 +136,213 @@ class _SettingsPageState extends State<SettingsPage> {
               _DesktopSettingsHeader(isDark: isDark, isDialog: widget.isDialog),
               const SizedBox(height: 8),
             ],
-            // ── Profile card ────────────────────────────────────────────
             StreamBuilder<AsyncState<User?>>(
               stream: _authController.stream,
               initialData: _authController.state,
               builder: (_, snap) {
                 final state = snap.data;
-                final user = state is AsyncData<User?> ? state.data : _authController.currentUser;
+                final user = state is AsyncData<User?>
+                    ? state.data
+                    : _authController.currentUser;
                 return _ProfileCard(user: user, isDark: isDark);
               },
             ),
             const SizedBox(height: 24),
 
-            // ── Appearance ───────────────────────────────────────────────
             _SectionLabel('Appearance'),
-            _SettingsCard(isDark: isDark, children: [
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.brightness_4_outlined,
-                iconColor: AppColors.accent,
-                label: 'Theme',
-                value: settings.themeMode.displayName,
-                onTap: () => _showThemeSheet(context, settings.themeMode),
-              ),
-              _Divider(isDark: isDark),
-              _SettingsSwitchRow(
-                isDark: isDark,
-                icon: Icons.wifi_off_rounded,
-                iconColor: AppColors.warning,
-                label: 'Offline Mode',
-                subtitle: settings.forceOfflineMode
-                    ? 'Hive only — backend disabled'
-                    : 'Online — using backend',
-                value: settings.forceOfflineMode,
-                onChanged: (v) => _controller.setForceOfflineMode(v),
-              ),
-              _Divider(isDark: isDark),
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.paid_outlined,
-                iconColor: AppColors.success,
-                label: 'Currency',
-                value: '${settings.currency.symbol} ${settings.currency.code}',
-                onTap: () => _showCurrencySheet(context, settings.currency),
-              ),
-            ]),
-            const SizedBox(height: 20),
-
-            // ── Budget ───────────────────────────────────────────────────
-            _SectionLabel('Budget'),
-            _SettingsCard(isDark: isDark, children: [
-              _SettingsSwitchRow(
-                isDark: isDark,
-                icon: settings.budgetSheetMode
-                    ? Icons.table_rows_outlined
-                    : Icons.view_stream_outlined,
-                iconColor: AppColors.info,
-                label: 'Budget View',
-                subtitle: settings.budgetSheetMode
-                    ? 'Sheet mode — full budget sheet'
-                    : 'Simple mode — overview with tabs',
-                value: settings.budgetSheetMode,
-                onChanged: (v) => _controller.updateBudgetSheetMode(v),
-              ),
-            ]),
-            const SizedBox(height: 20),
-
-            // ── Account ──────────────────────────────────────────────────
-            _SectionLabel('Account'),
-            _SettingsCard(isDark: isDark, children: [
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.manage_accounts_outlined,
-                iconColor: AppColors.accent,
-                label: 'Manage Account',
-                subtitle: 'Authentication & security',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AuthSettingsScreen()),
+            _SettingsCard(
+              isDark: isDark,
+              children: [
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.brightness_4_outlined,
+                  iconColor: AppColors.accent,
+                  label: 'Theme',
+                  value: settings.themeMode.displayName,
+                  onTap: () => _showThemeSheet(context, settings.themeMode),
                 ),
-              ),
-              _Divider(isDark: isDark),
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.logout_rounded,
-                iconColor: AppColors.error,
-                label: 'Sign Out',
-                labelColor: AppColors.error,
-                onTap: () => _confirmSignOut(context),
-              ),
-            ]),
+                _Divider(isDark: isDark),
+                _SettingsSwitchRow(
+                  isDark: isDark,
+                  icon: Icons.wifi_off_rounded,
+                  iconColor: AppColors.warning,
+                  label: 'Offline Mode',
+                  subtitle: settings.forceOfflineMode
+                      ? 'Hive only – backend disabled'
+                      : 'Online – using backend',
+                  value: settings.forceOfflineMode,
+                  onChanged: (v) => _controller.setForceOfflineMode(v),
+                ),
+                _Divider(isDark: isDark),
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.paid_outlined,
+                  iconColor: AppColors.success,
+                  label: 'Currency',
+                  value:
+                      '${settings.currency.symbol} ${settings.currency.code}',
+                  onTap: () => _showCurrencySheet(context, settings.currency),
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
 
-            // ── Demo ─────────────────────────────────────────────────────
+            _SectionLabel('Budget'),
+            _SettingsCard(
+              isDark: isDark,
+              children: [
+                _SettingsSwitchRow(
+                  isDark: isDark,
+                  icon: settings.budgetSheetMode
+                      ? Icons.table_rows_outlined
+                      : Icons.view_stream_outlined,
+                  iconColor: AppColors.info,
+                  label: 'Budget View',
+                  subtitle: settings.budgetSheetMode
+                      ? 'Sheet mode – full budget sheet'
+                      : 'Simple mode – overview with tabs',
+                  value: settings.budgetSheetMode,
+                  onChanged: (v) => _controller.updateBudgetSheetMode(v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            _SectionLabel('Account'),
+            _SettingsCard(
+              isDark: isDark,
+              children: [
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.manage_accounts_outlined,
+                  iconColor: AppColors.accent,
+                  label: 'Manage Account',
+                  subtitle: 'Authentication & security',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AuthSettingsScreen(),
+                    ),
+                  ),
+                ),
+                _Divider(isDark: isDark),
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.logout_rounded,
+                  iconColor: AppColors.error,
+                  label: 'Sign Out',
+                  labelColor: AppColors.error,
+                  onTap: () => _confirmSignOut(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
             _SectionLabel('Demo'),
-            _SettingsCard(isDark: isDark, children: [
-              _SettingsSwitchRow(
-                isDark: isDark,
-                icon: Icons.science_outlined,
-                iconColor: AppColors.accent,
-                label: 'Demo Mode',
-                subtitle: DemoMode.enabled
-                    ? 'Using sample data — toggle to connect your account'
-                    : 'Show sample data to explore all features',
-                value: DemoMode.enabled,
-                onChanged: _toggleDemoMode,
-              ),
-            ]),
+            _SettingsCard(
+              isDark: isDark,
+              children: [
+                _SettingsSwitchRow(
+                  isDark: isDark,
+                  icon: Icons.science_outlined,
+                  iconColor: AppColors.accent,
+                  label: 'Demo Mode',
+                  subtitle: DemoMode.enabled
+                      ? 'Using sample data – toggle to connect your account'
+                      : 'Show sample data to explore all features',
+                  value: DemoMode.enabled,
+                  onChanged: _toggleDemoMode,
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
 
-            // ── Backup & Restore ──────────────────────────────────────────
             _SectionLabel('Backup & Restore'),
-            _SettingsCard(isDark: isDark, children: [
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.file_download_outlined,
-                iconColor: AppColors.success,
-                label: 'Export to File',
-                subtitle: 'Save an encrypted backup to your device',
-                onTap: () => _exportToFile(context),
-              ),
-              _Divider(isDark: isDark),
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.cloud_upload_outlined,
-                iconColor: AppColors.accent,
-                label: 'Sync to Cloud',
-                subtitle: _lastSyncedSubtitle,
-                onTap: () => _syncToCloud(context),
-              ),
-              _Divider(isDark: isDark),
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.file_upload_outlined,
-                iconColor: AppColors.info,
-                label: 'Import from File',
-                subtitle: 'Restore data from an encrypted backup file',
-                onTap: () => _importFromFile(context),
-              ),
-              _Divider(isDark: isDark),
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.cloud_download_outlined,
-                iconColor: AppColors.info,
-                label: 'Restore from Cloud',
-                subtitle: _lastSyncedSubtitle,
-                onTap: () => _restoreFromCloud(context),
-              ),
-            ]),
+            _SettingsCard(
+              isDark: isDark,
+              children: [
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.file_download_outlined,
+                  iconColor: AppColors.success,
+                  label: 'Export to File',
+                  subtitle: 'Save an encrypted backup to your device',
+                  onTap: () => _exportToFile(context),
+                ),
+                _Divider(isDark: isDark),
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.cloud_upload_outlined,
+                  iconColor: AppColors.accent,
+                  label: 'Sync to Cloud',
+                  subtitle: _lastSyncedSubtitle,
+                  onTap: () => _syncToCloud(context),
+                ),
+                _Divider(isDark: isDark),
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.file_upload_outlined,
+                  iconColor: AppColors.info,
+                  label: 'Import from File',
+                  subtitle: 'Restore data from an encrypted backup file',
+                  onTap: () => _importFromFile(context),
+                ),
+                _Divider(isDark: isDark),
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.cloud_download_outlined,
+                  iconColor: AppColors.info,
+                  label: 'Restore from Cloud',
+                  subtitle: _lastSyncedSubtitle,
+                  onTap: () => _restoreFromCloud(context),
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
 
-            // ── Danger Zone ───────────────────────────────────────────────
             _SectionLabel('Danger Zone'),
-            _SettingsCard(isDark: isDark, children: [
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.restore_rounded,
-                iconColor: AppColors.warning,
-                label: 'Reset to Defaults',
-                subtitle: 'Restore all settings to their original values',
-                onTap: () => _confirmReset(context),
-              ),
-              _Divider(isDark: isDark),
-              _SettingsRow(
-                isDark: isDark,
-                icon: Icons.delete_forever_rounded,
-                iconColor: AppColors.error,
-                label: 'Wipe All Data',
-                labelColor: AppColors.error,
-                subtitle: 'Delete all financial data and restore defaults',
-                onTap: () => _confirmWipe(context),
-              ),
-            ]),
+            _SettingsCard(
+              isDark: isDark,
+              children: [
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.restore_rounded,
+                  iconColor: AppColors.warning,
+                  label: 'Reset to Defaults',
+                  subtitle: 'Restore all settings to their original values',
+                  onTap: () => _confirmReset(context),
+                ),
+                _Divider(isDark: isDark),
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.delete_forever_rounded,
+                  iconColor: AppColors.error,
+                  label: 'Wipe All Data',
+                  labelColor: AppColors.error,
+                  subtitle: 'Delete all financial data and restore defaults',
+                  onTap: () => _confirmWipe(context),
+                ),
+              ],
+            ),
             const SizedBox(height: 32),
 
-            // ── Footer ───────────────────────────────────────────────────
             Center(
               child: Text(
                 'Keep Track',
-                style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textTertiary, fontWeight: FontWeight.w500),
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const SizedBox(height: 4),
             Center(
               child: Text(
                 'Zero-based Budgeting',
-                style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textTertiary),
+                style: GoogleFonts.dmSans(
+                  fontSize: 11,
+                  color: AppColors.textTertiary,
+                ),
               ),
             ),
           ],
@@ -317,7 +351,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // ── Action sheets ─────────────────────────────────────────────────────────
 
   void _showThemeSheet(BuildContext context, AppThemeMode current) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -327,12 +360,19 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (_) => _PickerSheet(
         isDark: isDark,
         title: 'Theme',
-        items: AppThemeMode.values.map((m) => _PickerItem(
-          icon: m.icon,
-          label: m.displayName,
-          selected: m == current,
-          onTap: () { _controller.updateThemeMode(m); Navigator.pop(context); },
-        )).toList(),
+        items: AppThemeMode.values
+            .map(
+              (m) => _PickerItem(
+                icon: m.icon,
+                label: m.displayName,
+                selected: m == current,
+                onTap: () {
+                  _controller.updateThemeMode(m);
+                  Navigator.pop(context);
+                },
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -351,7 +391,10 @@ class _SettingsPageState extends State<SettingsPage> {
           isDark: isDark,
           current: current,
           scrollController: ctrl,
-          onSelect: (c) { _controller.updateCurrency(c); Navigator.pop(context); },
+          onSelect: (c) {
+            _controller.updateCurrency(c);
+            Navigator.pop(context);
+          },
         ),
       ),
     );
@@ -362,12 +405,27 @@ class _SettingsPageState extends State<SettingsPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Sign out?', style: AppTextStyles.h4),
-        content: Text('You will be signed out of Keep Track.', style: AppTextStyles.bodySmall),
+        content: Text(
+          'You will be signed out of Keep Track.',
+          style: AppTextStyles.bodySmall,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
-            onPressed: () async { Navigator.pop(context); await _authController.signOut(); },
-            child: Text('Sign Out', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _authController.signOut();
+            },
+            child: Text(
+              'Sign Out',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -375,12 +433,15 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   BackupService _buildBackupService() => BackupService(
-        cache: locator.get<LocalCache>(),
-        encryption: BackupEncryptionService(),
-        remote: BackupRemoteDatasource(),
-      );
+    cache: locator.get<LocalCache>(),
+    encryption: BackupEncryptionService(),
+    remote: BackupRemoteDatasource(),
+  );
 
-  Future<String?> _showPasswordDialog(BuildContext context, {bool confirm = false}) {
+  Future<String?> _showPasswordDialog(
+    BuildContext context, {
+    bool confirm = false,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pwdCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
@@ -399,34 +460,43 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: confirm
               ? 'Choose a password to encrypt your backup. You will need it to restore.'
               : 'Enter the password used to encrypt this backup.',
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            _ThemedTextField(
-              controller: pwdCtrl,
-              label: 'Password',
-              obscure: obscure,
-              isDark: isDark,
-              error: error,
-              onToggleObscure: () => setS(() => obscure = !obscure),
-            ),
-            if (confirm) ...[
-              const SizedBox(height: 10),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               _ThemedTextField(
-                controller: confirmCtrl,
-                label: 'Confirm Password',
+                controller: pwdCtrl,
+                label: 'Password',
                 obscure: obscure,
                 isDark: isDark,
+                error: error,
                 onToggleObscure: () => setS(() => obscure = !obscure),
               ),
+              if (confirm) ...[
+                const SizedBox(height: 10),
+                _ThemedTextField(
+                  controller: confirmCtrl,
+                  label: 'Confirm Password',
+                  obscure: obscure,
+                  isDark: isDark,
+                  onToggleObscure: () => setS(() => obscure = !obscure),
+                ),
+              ],
             ],
-          ]),
+          ),
           cancelLabel: 'Cancel',
           confirmLabel: 'Continue',
           confirmColor: AppColors.accent,
           onCancel: () => Navigator.pop(ctx),
           onConfirm: () {
             final pwd = pwdCtrl.text.trim();
-            if (pwd.isEmpty) { setS(() => error = 'Password cannot be empty'); return; }
-            if (confirm && pwd != confirmCtrl.text.trim()) { setS(() => error = 'Passwords do not match'); return; }
+            if (pwd.isEmpty) {
+              setS(() => error = 'Password cannot be empty');
+              return;
+            }
+            if (confirm && pwd != confirmCtrl.text.trim()) {
+              setS(() => error = 'Passwords do not match');
+              return;
+            }
             Navigator.pop(ctx, pwd);
           },
         ),
@@ -444,7 +514,8 @@ class _SettingsPageState extends State<SettingsPage> {
         icon: Icons.warning_amber_rounded,
         iconColor: AppColors.warning,
         title: 'Replace all data?',
-        subtitle: 'This will permanently replace all your current data with the backup. This cannot be undone.',
+        subtitle:
+            'This will permanently replace all your current data with the backup. This cannot be undone.',
         cancelLabel: 'Cancel',
         confirmLabel: 'Replace',
         confirmColor: AppColors.warning,
@@ -456,8 +527,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   String _backupErrorMessage(Object e) => switch (e) {
-    WrongPasswordException() => 'Wrong password — backup could not be decrypted.',
-    InvalidBackupException() => 'Invalid backup file. Select a valid .ktbak file.',
+    WrongPasswordException() =>
+      'Wrong password – backup could not be decrypted.',
+    InvalidBackupException() =>
+      'Invalid backup file. Select a valid .ktbak file.',
     _ => 'Something went wrong: $e',
   };
 
@@ -500,7 +573,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final password = await _showPasswordDialog(context, confirm: false);
     if (password == null || !context.mounted) return;
 
-    // Capture before file picker — web deactivates the element during native dialogs.
+    // Capture before file picker – web deactivates the element during native dialogs.
     final toast = CapturedAppToast.capture(context);
     final service = _buildBackupService();
     final dismiss = toast.loading('Importing backup…');
@@ -555,14 +628,24 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _wipeAllData(BuildContext context) async {
     final cache = locator.get<LocalCache>();
     for (final box in [
-      'transactions', 'budgets', 'budget_categories', 'month_plans',
-      'goals', 'debts', 'planned_payments', 'wallets',
-      'subscriptions', 'transaction_plans', 'finance_categories',
+      'transactions',
+      'budgets',
+      'budget_categories',
+      'month_plans',
+      'goals',
+      'debts',
+      'planned_payments',
+      'wallets',
+      'subscriptions',
+      'transaction_plans',
+      'finance_categories',
       'budget_profiles',
     ]) {
       await cache.clear(box);
     }
-    await locator.get<FinanceInitializationService>().initializeDefaultCategories();
+    await locator
+        .get<FinanceInitializationService>()
+        .initializeDefaultCategories();
     if (context.mounted) {
       AppRestartWidget.of(context).restart();
     }
@@ -578,9 +661,15 @@ class _SettingsPageState extends State<SettingsPage> {
           style: AppTextStyles.bodySmall,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-            onPressed: () { Navigator.pop(context); _wipeAllData(context); },
+            onPressed: () {
+              Navigator.pop(context);
+              _wipeAllData(context);
+            },
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Wipe All Data'),
           ),
@@ -594,9 +683,15 @@ class _SettingsPageState extends State<SettingsPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Reset settings?', style: AppTextStyles.h4),
-        content: Text('All settings will return to defaults. This cannot be undone.', style: AppTextStyles.bodySmall),
+        content: Text(
+          'All settings will return to defaults. This cannot be undone.',
+          style: AppTextStyles.bodySmall,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
               _controller.resetToDefaults();
@@ -612,7 +707,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-// ─── Profile Card ─────────────────────────────────────────────────────────────
 
 class _ProfileCard extends StatelessWidget {
   final User? user;
@@ -628,49 +722,82 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
+    final border = isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5);
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: border, width: 0.5)),
-      child: Row(children: [
-        // Avatar
-        user?.photoUrl != null
-            ? CircleAvatar(radius: 28, backgroundImage: NetworkImage(user!.photoUrl!))
-            : Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [AppColors.accent, AppColors.accentDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          // Avatar
+          user?.photoUrl != null
+              ? CircleAvatar(
+                  radius: 28,
+                  backgroundImage: NetworkImage(user!.photoUrl!),
+                )
+              : Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.accent, AppColors.accentDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _initials(user?.displayName),
+                    style: GoogleFonts.dmSans(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: Text(_initials(user?.displayName), style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-              ),
-        const SizedBox(width: 16),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            (user?.displayName?.isNotEmpty == true) ? user!.displayName! : 'Name not set',
-            style: AppTextStyles.h4.copyWith(
-              color: (user?.displayName?.isNotEmpty == true)
-                  ? (isDark ? AppColors.primaryForeground : AppColors.textPrimary)
-                  : AppColors.textSecondary,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  (user?.displayName?.isNotEmpty == true)
+                      ? user!.displayName!
+                      : 'Name not set',
+                  style: AppTextStyles.h4.copyWith(
+                    color: (user?.displayName?.isNotEmpty == true)
+                        ? (isDark
+                              ? AppColors.primaryForeground
+                              : AppColors.textPrimary)
+                        : AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  (user?.email?.isNotEmpty == true) ? user!.email! : 'No email',
+                  style: AppTextStyles.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            maxLines: 1, overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 3),
-          Text(
-            (user?.email?.isNotEmpty == true) ? user!.email! : 'No email',
-            style: AppTextStyles.caption,
-            maxLines: 1, overflow: TextOverflow.ellipsis,
-          ),
-        ])),
-      ]),
+        ],
+      ),
     );
   }
 }
 
-// ─── Settings Card & Rows ─────────────────────────────────────────────────────
 
 class _SectionLabel extends StatelessWidget {
   final String text;
@@ -679,8 +806,15 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8, left: 4),
-    child: Text(text.toUpperCase(),
-        style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.0)),
+    child: Text(
+      text.toUpperCase(),
+      style: GoogleFonts.dmSans(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textSecondary,
+        letterSpacing: 1.0,
+      ),
+    ),
   );
 }
 
@@ -691,10 +825,16 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
+    final border = isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5);
     return Container(
-      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(14), border: Border.all(color: border, width: 0.5)),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border, width: 0.5),
+      ),
       child: Column(children: children),
     );
   }
@@ -706,8 +846,12 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Divider(
-    height: 1, thickness: 0.5, indent: 56,
-    color: isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5),
+    height: 1,
+    thickness: 0.5,
+    indent: 56,
+    color: isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5),
   );
 }
 
@@ -720,37 +864,89 @@ class _SettingsRow extends StatelessWidget {
   final Color? labelColor;
   final VoidCallback? onTap;
 
-  const _SettingsRow({required this.isDark, required this.icon, required this.iconColor, required this.label, this.subtitle, this.value, this.labelColor, this.onTap});
+  const _SettingsRow({
+    required this.isDark,
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    this.subtitle,
+    this.value,
+    this.labelColor,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final textPrimary = isDark
+        ? AppColors.primaryForeground
+        : AppColors.textPrimary;
 
     return MouseRegion(
-      cursor: onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          child: Row(children: [
-            Container(width: 34, height: 34, decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
-                alignment: Alignment.center, child: Icon(icon, size: 17, color: iconColor)),
-            const SizedBox(width: 13),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w500, color: labelColor ?? textPrimary)),
-              if (subtitle != null) ...[
-                const SizedBox(height: 1),
-                Text(subtitle!, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 17, color: iconColor),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: labelColor ?? textPrimary,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle!,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (value != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  value!,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
-            ])),
-            if (value != null) ...[
-              const SizedBox(width: 8),
-              Text(value!, style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppColors.textTertiary,
+              ),
             ],
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textTertiary),
-          ]),
+          ),
         ),
       ),
     );
@@ -766,78 +962,192 @@ class _SettingsSwitchRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const _SettingsSwitchRow({required this.isDark, required this.icon, required this.iconColor, required this.label, required this.value, required this.onChanged, this.subtitle});
+  const _SettingsSwitchRow({
+    required this.isDark,
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final textPrimary = isDark
+        ? AppColors.primaryForeground
+        : AppColors.textPrimary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(children: [
-        Container(width: 34, height: 34, decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
-            alignment: Alignment.center, child: Icon(icon, size: 17, color: iconColor)),
-        const SizedBox(width: 13),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w500, color: textPrimary)),
-          if (subtitle != null) ...[
-            const SizedBox(height: 1),
-            Text(subtitle!, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
-          ],
-        ])),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: AppColors.accent,
-          activeTrackColor: AppColors.accent.withValues(alpha: 0.4),
-        ),
-      ]),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 17, color: iconColor),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: textPrimary,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle!,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accent.withValues(alpha: 0.4),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ─── Theme Picker Sheet ───────────────────────────────────────────────────────
 
 class _PickerSheet extends StatelessWidget {
   final bool isDark;
   final String title;
   final List<_PickerItem> items;
-  const _PickerSheet({required this.isDark, required this.title, required this.items});
+  const _PickerSheet({
+    required this.isDark,
+    required this.title,
+    required this.items,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
-    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final border = isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5);
+    final textPrimary = isDark
+        ? AppColors.primaryForeground
+        : AppColors.textPrimary;
 
     return Container(
-      decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
-      child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 10),
-        Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
-        Padding(padding: const EdgeInsets.fromLTRB(20, 14, 20, 4), child: Row(children: [
-          Text(title, style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
-          const Spacer(),
-          GestureDetector(onTap: () => Navigator.pop(context), child: Padding(padding: const EdgeInsets.all(4), child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary))),
-        ])),
-        Divider(height: 16, color: border),
-        ...items.map((item) => MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: item.onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(children: [
-                Icon(item.icon, size: 20, color: item.selected ? AppColors.accent : AppColors.textSecondary),
-                const SizedBox(width: 14),
-                Expanded(child: Text(item.label, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: item.selected ? FontWeight.w600 : FontWeight.w400, color: item.selected ? AppColors.accent : textPrimary))),
-                if (item.selected) Icon(Icons.check_rounded, size: 18, color: AppColors.accent),
-              ]),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-        )),
-        const SizedBox(height: 8),
-      ])),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Row(
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 16, color: border),
+            ...items.map(
+              (item) => MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: item.onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.icon,
+                          size: 20,
+                          color: item.selected
+                              ? AppColors.accent
+                              : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            style: GoogleFonts.dmSans(
+                              fontSize: 14,
+                              fontWeight: item.selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: item.selected
+                                  ? AppColors.accent
+                                  : textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (item.selected)
+                          Icon(
+                            Icons.check_rounded,
+                            size: 18,
+                            color: AppColors.accent,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -847,17 +1157,26 @@ class _PickerItem {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _PickerItem({required this.icon, required this.label, required this.selected, required this.onTap});
+  const _PickerItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 }
 
-// ─── Currency Picker Sheet ────────────────────────────────────────────────────
 
 class _CurrencyPickerSheet extends StatefulWidget {
   final bool isDark;
   final AppCurrency current;
   final ScrollController scrollController;
   final void Function(AppCurrency) onSelect;
-  const _CurrencyPickerSheet({required this.isDark, required this.current, required this.scrollController, required this.onSelect});
+  const _CurrencyPickerSheet({
+    required this.isDark,
+    required this.current,
+    required this.scrollController,
+    required this.onSelect,
+  });
 
   @override
   State<_CurrencyPickerSheet> createState() => _CurrencyPickerSheetState();
@@ -868,66 +1187,163 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final border = widget.isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
-    final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final filtered = AppCurrency.values.where((c) =>
-        c.displayName.toLowerCase().contains(_search.toLowerCase()) ||
-        c.code.toLowerCase().contains(_search.toLowerCase())).toList();
+    final bg = widget.isDark ? AppColors.cardDark : AppColors.card;
+    final border = widget.isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5);
+    final textPrimary = widget.isDark
+        ? AppColors.primaryForeground
+        : AppColors.textPrimary;
+    final filtered = AppCurrency.values
+        .where(
+          (c) =>
+              c.displayName.toLowerCase().contains(_search.toLowerCase()) ||
+              c.code.toLowerCase().contains(_search.toLowerCase()),
+        )
+        .toList();
 
     return Container(
-      decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
-      child: Column(children: [
-        const SizedBox(height: 10),
-        Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
-        Padding(padding: const EdgeInsets.fromLTRB(20, 14, 20, 10), child: Row(children: [
-          Text('Currency', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
-          const Spacer(),
-          GestureDetector(onTap: () => Navigator.pop(context), child: Padding(padding: const EdgeInsets.all(4), child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary))),
-        ])),
-        Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 10), child: TextField(
-          onChanged: (v) => setState(() => _search = v),
-          decoration: InputDecoration(
-            hintText: 'Search currency…',
-            prefixIcon: const Icon(Icons.search_rounded, size: 18),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            isDense: true,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.textTertiary.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-        )),
-        Divider(height: 1, color: border),
-        Expanded(
-          child: ListView.separated(
-            controller: widget.scrollController,
-            itemCount: filtered.length,
-            separatorBuilder: (_, __) => Divider(height: 1, color: border, indent: 20, endIndent: 20),
-            itemBuilder: (_, i) {
-              final c = filtered[i];
-              final isSel = c == widget.current;
-              return MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: () => widget.onSelect(c),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Row(children: [
-                      Container(width: 36, height: 36, decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
-                          alignment: Alignment.center,
-                          child: Text(c.symbol, style: GoogleFonts.dmMono(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.success))),
-                      const SizedBox(width: 12),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(c.displayName, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: isSel ? FontWeight.w600 : FontWeight.w400, color: isSel ? AppColors.accent : textPrimary)),
-                        Text(c.code, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
-                      ])),
-                      if (isSel) Icon(Icons.check_rounded, size: 18, color: AppColors.accent),
-                    ]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+            child: Row(
+              children: [
+                Text(
+                  'Currency',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
                   ),
                 ),
-              );
-            },
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: TextField(
+              onChanged: (v) => setState(() => _search = v),
+              decoration: InputDecoration(
+                hintText: 'Search currency…',
+                prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                isDense: true,
+              ),
+            ),
+          ),
+          Divider(height: 1, color: border),
+          Expanded(
+            child: ListView.separated(
+              controller: widget.scrollController,
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: border, indent: 20, endIndent: 20),
+              itemBuilder: (_, i) {
+                final c = filtered[i];
+                final isSel = c == widget.current;
+                return MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => widget.onSelect(c),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              c.symbol,
+                              style: GoogleFonts.dmMono(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  c.displayName,
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 14,
+                                    fontWeight: isSel
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: isSel
+                                        ? AppColors.accent
+                                        : textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  c.code,
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSel)
+                            Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: AppColors.accent,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -935,18 +1351,14 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
 class _DesktopSettingsHeader extends StatelessWidget {
   final bool isDark;
   final bool isDialog;
-  const _DesktopSettingsHeader({
-    required this.isDark,
-    this.isDialog = false,
-  });
+  const _DesktopSettingsHeader({required this.isDark, this.isDialog = false});
 
   @override
   Widget build(BuildContext context) {
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.25)
         : AppColors.border.withValues(alpha: 0.5);
-    final fg =
-        isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
     return Container(
       height: 52,
@@ -974,7 +1386,11 @@ class _DesktopSettingsHeader extends StatelessWidget {
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
-                child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -984,7 +1400,6 @@ class _DesktopSettingsHeader extends StatelessWidget {
   }
 }
 
-// ─── Backup Dialog ────────────────────────────────────────────────────────────
 
 class _BackupDialog extends StatelessWidget {
   final bool isDark;
@@ -1015,9 +1430,13 @@ class _BackupDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
-    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final border = isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.4);
+    final textPrimary = isDark
+        ? AppColors.primaryForeground
+        : AppColors.textPrimary;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -1027,7 +1446,13 @@ class _BackupDialog extends StatelessWidget {
           color: bg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: border, width: 0.5),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1035,22 +1460,42 @@ class _BackupDialog extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(children: [
-                Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-                  alignment: Alignment.center,
-                  child: Icon(icon, size: 18, color: iconColor),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(title, style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
-                ),
-              ]),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(icon, size: 18, color: iconColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Text(subtitle, style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary, height: 1.5)),
+              child: Text(
+                subtitle,
+                style: GoogleFonts.dmSans(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
+              ),
             ),
             if (content != null)
               Padding(
@@ -1059,32 +1504,51 @@ class _BackupDialog extends StatelessWidget {
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-              child: Row(children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onCancel,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: BorderSide(color: border),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: onCancel,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        side: BorderSide(color: border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        cancelLabel,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
-                    child: Text(cancelLabel, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500)),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: onConfirm,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: confirmColor,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onConfirm,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: confirmColor,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        confirmLabel,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    child: Text(confirmLabel, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
           ],
         ),
@@ -1112,8 +1576,12 @@ class _ThemedTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = isDark ? AppColors.border.withValues(alpha: 0.3) : AppColors.border;
-    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final border = isDark
+        ? AppColors.border.withValues(alpha: 0.3)
+        : AppColors.border;
+    final textPrimary = isDark
+        ? AppColors.primaryForeground
+        : AppColors.textPrimary;
 
     return TextField(
       controller: controller,
@@ -1121,19 +1589,43 @@ class _ThemedTextField extends StatelessWidget {
       style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary),
+        labelStyle: GoogleFonts.dmSans(
+          fontSize: 13,
+          color: AppColors.textSecondary,
+        ),
         errorText: error,
         errorStyle: GoogleFonts.dmSans(fontSize: 12, color: AppColors.error),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         filled: true,
-        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border, width: 0.5)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.error)),
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : AppColors.background,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: border, width: 0.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
         suffixIcon: IconButton(
-          icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
+          icon: Icon(
+            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            size: 16,
+            color: AppColors.textSecondary,
+          ),
           onPressed: onToggleObscure,
         ),
       ),

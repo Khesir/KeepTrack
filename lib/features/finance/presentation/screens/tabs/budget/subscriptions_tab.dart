@@ -134,7 +134,6 @@ class _SubscriptionsTabState extends State<SubscriptionsTab> {
   }
 }
 
-// ─── Desktop Layout ────────────────────────────────────────────────────────────
 
 class _DesktopLayout extends StatelessWidget {
   final List<Subscription> all;
@@ -270,7 +269,6 @@ class _DesktopLayout extends StatelessWidget {
   }
 }
 
-// ─── Mobile Layout ─────────────────────────────────────────────────────────────
 
 class _MobileLayout extends StatelessWidget {
   final List<Subscription> all;
@@ -386,7 +384,6 @@ class _MobileLayout extends StatelessWidget {
   }
 }
 
-// ─── Detail Header (mobile) ────────────────────────────────────────────────────
 
 class _DetailHeader extends StatelessWidget {
   final Subscription sub;
@@ -432,7 +429,6 @@ class _DetailHeader extends StatelessWidget {
   }
 }
 
-// ─── Detail Panel ──────────────────────────────────────────────────────────────
 
 class _DetailPanel extends StatelessWidget {
   final Subscription sub;
@@ -584,7 +580,6 @@ class _DetailPanel extends StatelessWidget {
   }
 }
 
-// ─── Sub List Row ──────────────────────────────────────────────────────────────
 
 class _SubRow extends StatelessWidget {
   final Subscription sub;
@@ -651,7 +646,6 @@ class _SubRow extends StatelessWidget {
   }
 }
 
-// ─── Subscription Dialog ───────────────────────────────────────────────────────
 
 class _SubscriptionDialog extends StatefulWidget {
   final Subscription? subscription;
@@ -821,7 +815,6 @@ class _SubscriptionDialogState extends State<_SubscriptionDialog> {
   }
 }
 
-// ─── Shared Widgets ────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final String filter;

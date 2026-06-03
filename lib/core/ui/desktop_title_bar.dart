@@ -35,8 +35,9 @@ class DesktopTitleBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark =
         isDarkOverride ?? (Theme.of(context).brightness == Brightness.dark);
-    final bg = isDark ? const Color(0xFF242422) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF3A3A38) : AppColors.border;
+    final theme = Theme.of(context);
+    final bg = isDark ? theme.scaffoldBackgroundColor : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.border;
 
     return Container(
       height: height,
@@ -173,10 +174,10 @@ class _OfflineIndicator extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.15),
+            color: AppColors.warning.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: AppColors.warning.withValues(alpha: 0.4),
+              color: AppColors.warning.withValues(alpha: 0.25),
               width: 0.5,
             ),
           ),
@@ -401,7 +402,6 @@ class _TitleBarIconButtonState extends State<_TitleBarIconButton> {
 }
 
 
-// ─── Sync Status Chip ─────────────────────────────────────────────────────────
 
 class _SyncStatusChip extends StatefulWidget {
   final bool isDark;
@@ -493,7 +493,6 @@ class _SyncStatusChipState extends State<_SyncStatusChip> {
   }
 }
 
-// ─── Window Controls ──────────────────────────────────────────────────────────
 
 class _WindowControls extends StatelessWidget {
   final bool isDark;

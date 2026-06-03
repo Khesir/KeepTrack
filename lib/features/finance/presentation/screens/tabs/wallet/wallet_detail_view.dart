@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -239,7 +239,6 @@ class _WalletDetailViewState extends State<WalletDetailView> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
-// ─── Top bar ──────────────────────────────────────────────────────────────────
 
 class _TopBar extends StatelessWidget {
   final Wallet wallet;
@@ -371,7 +370,6 @@ class _ActionBtn extends StatelessWidget {
   }
 }
 
-// ─── Balance summary ──────────────────────────────────────────────────────────
 
 class _BalanceSummary extends StatelessWidget {
   final Wallet wallet;
@@ -438,6 +436,16 @@ class _BalanceSummary extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (wallet.notes != null && wallet.notes!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      wallet.notes!,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 12,
+                        color: walletColor.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -465,7 +473,6 @@ class _BalanceSummary extends StatelessWidget {
   }
 }
 
-// ─── Section label ────────────────────────────────────────────────────────────
 
 class _SectionLabel extends StatelessWidget {
   final String label;
@@ -499,7 +506,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-// ─── Linked goals ─────────────────────────────────────────────────────────────
 
 class _LinkedGoalsSection extends StatelessWidget {
   final List<Goal> goals;
@@ -574,7 +580,7 @@ class _GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.12)
         : AppColors.border.withValues(alpha: 0.4);
@@ -649,7 +655,6 @@ class _GoalCard extends StatelessWidget {
   }
 }
 
-// ─── History ──────────────────────────────────────────────────────────────────
 
 class _EmptyHistory extends StatelessWidget {
   final bool isDark;

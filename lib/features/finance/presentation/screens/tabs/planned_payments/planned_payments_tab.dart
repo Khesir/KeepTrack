@@ -261,7 +261,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                               style: TextStyle(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.onSurface.withOpacity(0.6),
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -323,7 +323,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                       style: TextStyle(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -416,7 +416,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color.withOpacity(0.7), color],
+            colors: [color.withValues(alpha: 0.7), color],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -430,7 +430,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: Colors.white, size: 18),
@@ -542,12 +542,12 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
           _selectedFilter = label;
         });
       },
-      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
       checkmarkColor: Theme.of(context).colorScheme.primary,
       labelStyle: TextStyle(
         color: isSelected
             ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
     );
@@ -583,7 +583,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: payment.category.color.withOpacity(0.1),
+                        color: payment.category.color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -613,7 +613,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                               fontSize: 11,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.6),
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -627,7 +627,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(payment.status).withOpacity(0.1),
+                        color: _getStatusColor(payment.status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -657,7 +657,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                               fontSize: 10,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.6),
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -687,7 +687,7 @@ class _PlannedPaymentsTabNewState extends State<PlannedPaymentsTabNew> {
                             fontSize: 10,
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 2),

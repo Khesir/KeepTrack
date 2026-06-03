@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
@@ -41,7 +41,7 @@ class BudgetGroupCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isIncome = group.budgetType == BudgetType.income;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final cardColor = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
     final groupColor = isIncome ? AppColors.success : AppColors.accent;
 
@@ -55,7 +55,6 @@ class BudgetGroupCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Group header row ──────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Row(
@@ -91,7 +90,7 @@ class BudgetGroupCard extends StatelessWidget {
                   ),
                 ),
 
-                // "Planned" column label — aligns with CategoryRow planned field
+                // "Planned" column label – aligns with CategoryRow planned field
                 SizedBox(
                   width: 80,
                   child: Text(
@@ -102,7 +101,7 @@ class BudgetGroupCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
 
-                // "Spent" column label — aligns with CategoryRow actual field
+                // "Spent" column label – aligns with CategoryRow actual field
                 SizedBox(
                   width: 72,
                   child: Text(
@@ -112,7 +111,7 @@ class BudgetGroupCard extends StatelessWidget {
                   ),
                 ),
 
-                // Edit + drag — after Spent, matching CategoryRow's optional Pay position
+                // Edit + drag – after Spent, matching CategoryRow's optional Pay position
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: onEditGroup,
@@ -138,7 +137,6 @@ class BudgetGroupCard extends StatelessWidget {
 
           Divider(height: 1, color: borderColor),
 
-          // ── Category rows ─────────────────────────────────────────────
           for (int i = 0; i < group.categories.length; i++) ...[
             TweenAnimationBuilder<double>(
               key: ValueKey(group.categories[i].id ?? group.categories[i].financeCategoryId),
@@ -163,7 +161,6 @@ class BudgetGroupCard extends StatelessWidget {
             Divider(height: 1, color: borderColor),
           ],
 
-          // ── Add Item — plain accent text link (Every Dollar style) ─────
           GestureDetector(
             onTap: onAddRow,
             child: Padding(

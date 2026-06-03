@@ -129,7 +129,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -154,8 +154,8 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
             ],
           ),
         ),
@@ -178,7 +178,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                             icon: const Icon(Icons.notifications_active),
                             tooltip: 'Test Notification',
                             style: IconButton.styleFrom(
-                              backgroundColor: Colors.orange.withOpacity(0.1),
+                              backgroundColor: Colors.orange.withValues(alpha: 0.1),
                               foregroundColor: Colors.orange,
                             ),
                           ),
@@ -204,7 +204,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                     Text(
                       'Choose your workspace',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -303,7 +303,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                     user?.email ?? 'No email',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -339,7 +339,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -350,7 +350,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                   CircleAvatar(
                     radius: 16,
                     backgroundImage: NetworkImage(user!.photoUrl!),
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   )
                 else
                   Container(
@@ -359,7 +359,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                           Theme.of(context).colorScheme.primary,
                         ],
                         begin: Alignment.topLeft,
@@ -381,7 +381,7 @@ class _ModuleSelectionScreenState extends State<ModuleSelectionScreen> {
                 Icon(
                   Icons.arrow_drop_down,
                   size: 20,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ],
             ),
@@ -427,8 +427,8 @@ class _ModuleCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  color.withOpacity(0.1),
-                  color.withOpacity(0.05),
+                  color.withValues(alpha: 0.1),
+                  color.withValues(alpha: 0.05),
                 ],
               ),
             ),
@@ -439,7 +439,7 @@ class _ModuleCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -465,7 +465,7 @@ class _ModuleCard extends StatelessWidget {
                 Text(
                   description,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),

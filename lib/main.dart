@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:keep_track/core/cache/cache_factory.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
+import 'package:keep_track/core/cache/local_migration_runner.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/theme/theme.dart';
 import 'package:keep_track/features/module_selection/finance_module_screen.dart';
@@ -50,8 +51,12 @@ void main() async {
   // Initialize SharedPreferences
   _sharedPrefs = await SharedPreferences.getInstance();
 
+  // Run local schema migrations before any feature code touches the cache
+  final cache = createLocalCache();
+  await LocalMigrationRunner(cache, _sharedPrefs).run();
+
   // Setup app dependencies
-  _setupDependencies(_sharedPrefs);
+  _setupDependencies(_sharedPrefs, cache);
 
   // Initialize notifications (mobile only — safe to call on any platform)
   await initializeNotifications();
@@ -64,13 +69,13 @@ void main() async {
 
 void reinitializeDependencies() {
   locator.reset();
-  _setupDependencies(_sharedPrefs);
+  _setupDependencies(_sharedPrefs, createLocalCache());
 }
 
 /// Setup all dependencies
-void _setupDependencies(SharedPreferences sharedPreferences) {
+void _setupDependencies(SharedPreferences sharedPreferences, LocalCache cache) {
   // Core local cache
-  locator.registerLazySingleton<LocalCache>(() => createLocalCache());
+  locator.registerSingleton<LocalCache>(cache);
 
   // Core settings
   locator.registerSingleton<SharedPreferences>(sharedPreferences);

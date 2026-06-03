@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/scoped_screen.dart';
@@ -136,7 +136,7 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final headerBg = isDark ? const Color(0xFF1E1E1C) : AppColors.background;
+    final headerBg = isDark ? AppColors.void_ : AppColors.background;
     final headerBorder = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.5);
 
     final slideIn = Tween<Offset>(begin: const Offset(0.12, 0), end: Offset.zero)
@@ -362,7 +362,7 @@ class _SideSummaryPanelState extends ScopedScreenState<SideSummaryPanel>
 
   Widget _buildGroupMode(Color headerBg, Color headerBorder) {
     final group = widget.selectedGroup;
-    final isDark = headerBg == const Color(0xFF1E1E1C) || headerBg.computeLuminance() < 0.1;
+    final isDark = headerBg == AppColors.void_ || headerBg.computeLuminance() < 0.1;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
     final tabLabelStyle = GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600);

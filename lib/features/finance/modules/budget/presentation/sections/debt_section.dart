@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import '../../../debt/domain/entities/debt.dart';
@@ -37,7 +37,7 @@ class DebtSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
     final accentColor = isReceivable ? AppColors.success : AppColors.error;
     final addLabel = isReceivable ? 'Add Receivable' : 'Add Debt';
@@ -52,7 +52,6 @@ class DebtSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section header ─────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
             child: Row(
@@ -79,7 +78,7 @@ class DebtSection extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 8),
-                // Column labels — match DebtRow widths
+                // Column labels – match DebtRow widths
                 SizedBox(
                   width: 70,
                   child: Text(
@@ -113,7 +112,6 @@ class DebtSection extends StatelessWidget {
 
           Divider(height: 1, color: borderColor),
 
-          // ── Debt rows ──────────────────────────────────────────────────
           if (debts.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -139,7 +137,6 @@ class DebtSection extends StatelessWidget {
               Divider(height: 1, color: borderColor),
             ]),
 
-          // ── Add link ───────────────────────────────────────────────────
           if (!isLocked)
             GestureDetector(
               onTap: onAdd,

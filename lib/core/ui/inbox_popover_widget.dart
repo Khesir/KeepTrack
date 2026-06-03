@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/config/app_info.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -24,7 +24,7 @@ class InboxPopoverWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = locator.get<InboxController>();
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.3)
         : AppColors.border.withValues(alpha: 0.7);

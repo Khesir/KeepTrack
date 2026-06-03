@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -333,7 +333,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
 
   void _showProfilePicker(_EditableItem item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     showModalBottomSheet(
       context: context,
@@ -445,12 +445,10 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
   }
 
   Future<void> _applyEntitySideEffects(_EditableItem item) async {
-    // ── Subscription: uses Hive pay() which sets lastBilledDate + advances nextBillingDate ─
     if (item.subscriptionId != null) {
       await _subController.pay(item.subscriptionId!);
     }
 
-    // ── Debt / receivable: updateDebtPayment / updateDebt reload from Hive ────
     // (payDebt only does an optimistic in-memory update which misses filtered caches)
     if (item.debtId != null) {
       final isPayment = item.entityType == 'debt_payment' ||
@@ -476,7 +474,6 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
       }
     }
 
-    // ── Goal: contributeToGoal writes to Hive + reloads; savings sync ─────────
     if (item.goalId != null) {
       await _goalController.contributeToGoal(item.goalId!, item.amount);
       if (_walletController.data == null) await _walletController.loadWallets();
@@ -496,7 +493,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
 
   void _showEntityTypePicker(_EditableItem item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
 
@@ -543,7 +540,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
 
   void _showEntityPicker(_EditableItem item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
     final hint = item.entityHint?.toLowerCase() ?? '';
@@ -722,10 +719,9 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     };
   }
 
-  // ── Pick ─────────────────────────────────────────────────────────────────
 
   Widget _buildPickStep(bool isDark) {
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final bottomPad = MediaQuery.of(context).viewInsets.bottom + 24;
 
@@ -866,10 +862,9 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     );
   }
 
-  // ── Loading ───────────────────────────────────────────────────────────────
 
   Widget _buildLoadingStep(bool isDark) {
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     return Container(
       height: 240,
@@ -895,11 +890,10 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     );
   }
 
-  // ── Review ────────────────────────────────────────────────────────────────
 
   Widget _buildReviewStep(bool isDark) {
-    final bg = isDark ? const Color(0xFF1E1E1C) : AppColors.background;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.void_ : AppColors.background;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final includedCount = _items.where((i) => i.included).length;
 
@@ -986,9 +980,9 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
                   (Icons.format_list_numbered_rounded, 'List one expense per line for clarity'),
                   (Icons.place_rounded, 'Mention the wallet name, e.g. "from GCash" or "BDO"'),
                   (Icons.calendar_today_outlined, 'Include dates like "yesterday" or "last Monday"'),
-                  (Icons.translate_rounded, 'Filipino-English mixing is fine — be natural'),
+                  (Icons.translate_rounded, 'Filipino-English mixing is fine – be natural'),
                 ] : [
-                  (Icons.light_mode_outlined, 'Use good lighting — avoid shadows and glare'),
+                  (Icons.light_mode_outlined, 'Use good lighting – avoid shadows and glare'),
                   (Icons.crop_free_rounded, 'Fit the full document in the frame'),
                   (Icons.blur_off_rounded, 'Hold your camera steady for a sharp photo'),
                   (Icons.text_fields_rounded, 'Make sure all text is clearly readable'),
@@ -1031,7 +1025,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
               ]),
             ))),
 
-          // Entity link legend — shown when any item has an unlinked entity chip
+          // Entity link legend – shown when any item has an unlinked entity chip
           if (_items.isNotEmpty && _items.any((i) => i.entityType != null))
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -1097,7 +1091,7 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
   void _showItemWalletPicker(_EditableItem item) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final wallets = _walletController.data ?? [];
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
@@ -1168,10 +1162,9 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
     );
   }
 
-  // ── Saving ────────────────────────────────────────────────────────────────
 
   Widget _buildSavingStep(bool isDark) {
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     return Container(
       height: 200,
@@ -1187,7 +1180,6 @@ class _ScanExpensesSheetState extends State<ScanExpensesSheet> {
   }
 }
 
-// ── Editable item ─────────────────────────────────────────────────────────────
 
 class _EditableItem {
   final String id;
@@ -1235,7 +1227,6 @@ class _EditableItem {
   });
 }
 
-// ── Review tile ───────────────────────────────────────────────────────────────
 
 class _ReviewItemTile extends StatefulWidget {
   final _EditableItem item;
@@ -1323,8 +1314,8 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final item = widget.item;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
-    final inputBg = isDark ? const Color(0xFF1E1E1C) : AppColors.background;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
+    final inputBg = isDark ? AppColors.void_ : AppColors.background;
     final borderColor = item.included
         ? AppColors.accent.withValues(alpha: 0.35)
         : AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
@@ -1333,164 +1324,137 @@ class _ReviewItemTileState extends State<_ReviewItemTile> {
     final typeColor = item.type == TransactionType.income ? AppColors.success : AppColors.error;
 
     return AnimatedOpacity(
-      opacity: item.included ? 1.0 : 0.4,
+      opacity: item.included ? 1.0 : 0.45,
       duration: const Duration(milliseconds: 160),
       child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor, width: 0.5),
+          color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: item.included ? borderColor : AppColors.border.withValues(alpha: isDark ? 0.1 : 0.3),
+            width: 0.5,
+          ),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-          // ── Row 1: checkbox + description + type ────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 12, 8),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              SizedBox(
-                width: 28,
-                child: Checkbox(
-                  value: item.included,
-                  onChanged: (v) { setState(() => item.included = v ?? true); widget.onChanged(); },
-                  activeColor: AppColors.accent,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                ),
+          // Header row: checkbox + description + amount + type toggle
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: item.included,
+                onChanged: (v) { setState(() => item.included = v ?? true); widget.onChanged(); },
+                activeColor: AppColors.accent,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
               ),
-              Expanded(
-                child: TextField(
-                  controller: _descCtrl,
-                  enabled: item.included,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                    border: InputBorder.none,
-                    hintText: 'Description',
-                    hintStyle: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textTertiary),
-                  ),
-                  onChanged: (v) => item.description = v,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: TextField(
+                controller: _descCtrl,
+                enabled: item.included,
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 2),
+                  border: InputBorder.none,
+                  hintText: 'Description',
+                  hintStyle: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textTertiary),
                 ),
+                onChanged: (v) => item.description = v,
               ),
-              const SizedBox(width: 8),
-              // Type toggle
-              GestureDetector(
-                onTap: item.included ? () { setState(() { item.type = item.type == TransactionType.income ? TransactionType.expense : TransactionType.income; }); widget.onChanged(); } : null,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: typeColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: typeColor.withValues(alpha: 0.3), width: 0.5),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 80,
+              child: TextField(
+                controller: _amountCtrl,
+                enabled: item.included,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textAlign: TextAlign.right,
+                style: GoogleFonts.dmMono(fontSize: 13, fontWeight: FontWeight.w700, color: typeColor),
+                decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.zero, border: InputBorder.none),
+                onChanged: (v) => item.amount = double.tryParse(v) ?? item.amount,
+              ),
+            ),
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: item.included ? () { setState(() { item.type = item.type == TransactionType.income ? TransactionType.expense : TransactionType.income; }); widget.onChanged(); } : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: typeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(
+                    item.type == TransactionType.income ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                    size: 11, color: typeColor,
                   ),
-                  child: Text(
-                    item.type == TransactionType.income ? 'Income' : 'Expense',
+                  const SizedBox(width: 3),
+                  Text(
+                    item.type == TransactionType.income ? 'In' : 'Out',
                     style: GoogleFonts.dmSans(fontSize: 11, fontWeight: FontWeight.w700, color: typeColor),
                   ),
-                ),
+                ]),
+              ),
+            ),
+          ]),
+
+          if (item.included) ...[
+            const SizedBox(height: 8),
+            // Chips row
+            Wrap(spacing: 5, runSpacing: 5, children: [
+              _ChipButton(
+                icon: Icons.account_balance_wallet_outlined,
+                label: item.profileName ?? 'Budget',
+                color: item.profileName != null ? AppColors.accent : AppColors.error,
+                isDark: isDark,
+                onTap: widget.onPickProfile,
+              ),
+              _ChipButton(
+                icon: Icons.category_outlined,
+                label: item.category?.name ?? 'Category',
+                color: item.category != null ? AppColors.textSecondary : AppColors.warning,
+                isDark: isDark,
+                onTap: widget.onPickCategory,
+              ),
+              _ChipButton(
+                icon: Icons.account_balance_wallet_outlined,
+                label: item.walletName ?? 'Wallet',
+                color: item.walletId != null ? AppColors.accent : AppColors.warning,
+                isDark: isDark,
+                onTap: widget.onPickWallet,
+              ),
+              _ChipButton(
+                icon: Icons.calendar_today_outlined,
+                label: DateFormat('MMM d').format(item.date),
+                color: AppColors.textSecondary,
+                isDark: isDark,
+                onTap: _pickDate,
+              ),
+              _ChipButton(
+                icon: item.entityType != null ? _entityIcon(item.entityType!) : Icons.link_rounded,
+                label: item.entityLabel != null
+                    ? item.entityLabel!
+                    : item.entityType != null
+                        ? _entityPlaceholder(item.entityType!, item.entityHint)
+                        : 'Link',
+                color: item.entityLabel != null ? AppColors.success : item.entityType != null ? AppColors.error : AppColors.textSecondary,
+                isDark: isDark,
+                onTap: widget.onPickEntity,
               ),
             ]),
-          ),
-
-          // ── Row 2: Amount input ──────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: inputBg,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: typeColor.withValues(alpha: 0.25), width: 0.5),
-              ),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                Text(
-                  widget.currencySymbol,
-                  style: GoogleFonts.dmMono(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: TextField(
-                    controller: _amountCtrl,
-                    enabled: item.included,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: GoogleFonts.dmMono(
-                      fontSize: 22, fontWeight: FontWeight.w700, color: typeColor,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                    decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.zero, border: InputBorder.none),
-                    onChanged: (v) => item.amount = double.tryParse(v) ?? item.amount,
-                  ),
-                ),
-              ]),
-            ),
-          ),
-
-          Divider(height: 1, color: divColor),
-
-          // ── Chips ─────────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _ChipButton(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: item.profileName ?? 'Select Budget',
-                  color: item.profileName != null ? AppColors.accent : AppColors.error,
-                  isDark: isDark,
-                  onTap: item.included ? widget.onPickProfile : null,
-                ),
-                _ChipButton(
-                  icon: Icons.calendar_today_outlined,
-                  label: DateFormat('MMM d, yyyy').format(item.date),
-                  color: AppColors.textSecondary,
-                  isDark: isDark,
-                  onTap: item.included ? _pickDate : null,
-                ),
-                _ChipButton(
-                  icon: Icons.category_outlined,
-                  label: item.category?.name ?? 'Select Category',
-                  color: item.category != null ? AppColors.textSecondary : AppColors.warning,
-                  isDark: isDark,
-                  onTap: item.included ? widget.onPickCategory : null,
-                ),
-                _ChipButton(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: item.walletName ?? 'Select Wallet',
-                  color: item.walletId != null ? AppColors.accent : AppColors.warning,
-                  isDark: isDark,
-                  onTap: item.included ? widget.onPickWallet : null,
-                ),
-                _ChipButton(
-                  icon: item.entityType != null ? _entityIcon(item.entityType!) : Icons.link_rounded,
-                  label: item.entityLabel != null
-                      ? item.entityLabel!
-                      : item.entityType != null
-                          ? _entityPlaceholder(item.entityType!, item.entityHint)
-                          : 'Link Entity',
-                  color: item.entityLabel != null
-                      ? AppColors.success
-                      : item.entityType != null
-                          ? AppColors.error
-                          : AppColors.textSecondary,
-                  isDark: isDark,
-                  onTap: item.included && widget.onPickEntity != null ? widget.onPickEntity : null,
-                ),
-              ],
-            ),
-          ),
+          ],
         ]),
       ),
     );
   }
 }
 
-// ── Chip button ───────────────────────────────────────────────────────────────
 
 class _ChipButton extends StatelessWidget {
   final IconData icon;
@@ -1534,7 +1498,6 @@ class _ChipButton extends StatelessWidget {
   }
 }
 
-// ── Confirm bar ───────────────────────────────────────────────────────────────
 
 class _ConfirmBar extends StatelessWidget {
   final bool isDark;
@@ -1545,7 +1508,7 @@ class _ConfirmBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: BoxDecoration(
@@ -1571,7 +1534,6 @@ class _ConfirmBar extends StatelessWidget {
   }
 }
 
-// ── Source card ───────────────────────────────────────────────────────────────
 
 class _SourceCard extends StatelessWidget {
   final bool isDark;
@@ -1590,7 +1552,7 @@ class _SourceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = color ?? AppColors.accent;
-    final bg = isDark ? const Color(0xFF2C2C2A) : AppColors.background;
+    final bg = isDark ? AppColors.cardDark : AppColors.background;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     return GestureDetector(
@@ -1625,7 +1587,6 @@ class _SourceCard extends StatelessWidget {
   }
 }
 
-// ── Drag handle ───────────────────────────────────────────────────────────────
 
 class _Handle extends StatelessWidget {
   @override

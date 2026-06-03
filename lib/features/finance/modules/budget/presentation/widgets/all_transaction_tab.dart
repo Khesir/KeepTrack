@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
@@ -23,7 +23,7 @@ class _AllTransactionsTabState extends State<AllTransactionsTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
@@ -122,7 +122,7 @@ class _AllTransactionsTabState extends State<AllTransactionsTab> {
                                 Expanded(
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Text(
-                                      t.description ?? '—',
+                                      t.description ?? '–',
                                       style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w500, color: textPrimary),
                                       maxLines: 1, overflow: TextOverflow.ellipsis,
                                     ),

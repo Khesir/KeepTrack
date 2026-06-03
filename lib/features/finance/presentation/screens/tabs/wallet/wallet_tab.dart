@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -16,7 +16,6 @@ import 'package:keep_track/features/finance/presentation/screens/tabs/wallet/wal
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 
-// ─── Main tab ─────────────────────────────────────────────────────────────────
 
 class WalletTab extends StatefulWidget {
   const WalletTab({super.key});
@@ -214,7 +213,6 @@ class _WalletTabState extends State<WalletTab> {
   }
 }
 
-// ─── Hero header ──────────────────────────────────────────────────────────────
 
 class _WalletHero extends StatelessWidget {
   final double totalBalance;
@@ -233,7 +231,7 @@ class _WalletHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.18)
         : AppColors.border.withValues(alpha: 0.45);
@@ -319,7 +317,6 @@ class _WalletHero extends StatelessWidget {
   }
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onAdd;
@@ -363,7 +360,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ─── Wallet card ──────────────────────────────────────────────────────────────
 
 class _WalletCard extends StatelessWidget {
   final Wallet wallet;
@@ -386,7 +382,7 @@ class _WalletCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.12)
         : AppColors.border.withValues(alpha: 0.4);
@@ -509,7 +505,6 @@ class _WalletCard extends StatelessWidget {
   }
 }
 
-// ─── Add wallet ghost card ────────────────────────────────────────────────────
 
 class _AddWalletCard extends StatelessWidget {
   final bool isDark;
@@ -556,7 +551,6 @@ class _AddWalletCard extends StatelessWidget {
   }
 }
 
-// ─── Entry sheet ──────────────────────────────────────────────────────────────
 
 class _EntrySheet extends StatelessWidget {
   final Wallet wallet;
@@ -595,7 +589,7 @@ class _EntrySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.12)
         : AppColors.border.withValues(alpha: 0.35);
@@ -737,7 +731,6 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-// ─── Transaction form sheet ───────────────────────────────────────────────────
 
 class _TransactionFormSheet extends StatefulWidget {
   final Wallet wallet;
@@ -856,7 +849,7 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
     final wallets = (widget.walletController.data ?? [])
         .where((w) => w.id != widget.wallet.id)
         .toList();
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.2)
         : AppColors.border.withValues(alpha: 0.5);
@@ -958,7 +951,7 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.15)
@@ -999,7 +992,7 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
               ],
             ),
             const SizedBox(height: 24),
-            // Type selector — Deposit / Withdraw / Transfer
+            // Type selector – Deposit / Withdraw / Transfer
             Row(
               children: [
                 Expanded(child: _TypeButton(
@@ -1122,7 +1115,6 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
   }
 }
 
-// ─── Wallet chip (from/to display in transfer row) ───────────────────────────
 
 class _WalletChip extends StatelessWidget {
   final String label;

@@ -3,13 +3,11 @@
 /// Each "box" is a named collection (e.g. "accounts", "tasks").
 /// Each entry is a plain Map<String, dynamic> (model JSON).
 abstract class LocalCache {
-  // ── Read ──────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> get(String box, String key);
 
   Future<List<Map<String, dynamic>>> getAll(String box);
 
-  // ── Write ─────────────────────────────────────────────────────────────────
 
   Future<void> put(
     String box,
@@ -28,7 +26,6 @@ abstract class LocalCache {
 
   Future<void> clearAll();
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   Future<void> init();
 

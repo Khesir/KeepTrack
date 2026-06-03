@@ -62,16 +62,18 @@ class TransactionController extends StreamState<AsyncState<List<Transaction>>> {
   }
 
   /// Create a new transaction
-  Future<void> createTransaction(Transaction transaction) async {
+  Future<Transaction> createTransaction(Transaction transaction) async {
+    Transaction? created;
     await executeSilent(() async {
-      final created = await _repository
+      created = await _repository
           .createTransaction(transaction)
           .then((r) => r.unwrap());
       final current = data ?? [];
-      return [...current, created];
+      return [...current, created!];
     });
     _cache.invalidateAll();
     onMutated?.call();
+    return created!;
   }
 
   /// Update an existing transaction

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -91,7 +91,7 @@ class _BudgetProfileSheetState extends State<BudgetProfileSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final surfaceBg = isDark ? const Color(0xFF1E1E1C) : AppColors.surface;
+    final surfaceBg = isDark ? AppColors.void_ : AppColors.surface;
     final fmt = DateFormat('MMM d, yyyy');
     final isEdit = widget.existing != null;
     final accentColor = _colorHex != null

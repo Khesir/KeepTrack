@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -59,7 +59,7 @@ class _SheetCalendarState extends State<SheetCalendar> {
 
   @override
   Widget build(BuildContext context) {
-    final bg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = widget.isDark ? AppColors.cardDark : AppColors.card;
     final border = widget.isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final now = DateTime.now();

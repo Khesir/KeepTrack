@@ -51,7 +51,6 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
 
   void _toggleView() => setState(() => _sheetMode = !_sheetMode);
 
-  // ── Settings ──────────────────────────────────────────────────────────────
 
   void _openSettings(List<Budget> monthBudgets) {
     final profile = _activeProfile!;
@@ -166,7 +165,6 @@ class _BudgetTabScreenState extends State<BudgetTabScreen> {
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {

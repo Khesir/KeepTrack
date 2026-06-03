@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
@@ -43,7 +43,7 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final isIncome = widget.group.budgetType == BudgetType.income;
@@ -145,7 +145,7 @@ class _AddCategorySheetState extends State<AddCategorySheet> {
                         label: Text(_saving ? 'Adding…' : 'Add Category'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.textPrimaryDark,
                           elevation: 0,
                           textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

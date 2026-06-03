@@ -1,21 +1,28 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/helpers/finance_category.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/core/state/state.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/presentation/state/debt_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
 
-// ─── Subscription Detail Sheet ────────────────────────────────────────────────
 
 class SubDetailSheet extends StatefulWidget {
   final Subscription sub;
@@ -165,12 +172,11 @@ class _SubEditBody extends StatelessWidget {
   ]);
 }
 
-// ─── Debt Detail Sheet ────────────────────────────────────────────────────────
 
 class DebtDetailSheet extends StatefulWidget {
   final Debt debt;
   final DebtController debtController;
-  final Future<void> Function(double amount, double? fee) onPay;
+  final Future<void> Function(double amount, double? fee, Wallet wallet) onPay;
   final Future<void> Function(Debt updated) onUpdate;
 
   const DebtDetailSheet({super.key, required this.debt, required this.debtController, required this.onPay, required this.onUpdate});
@@ -209,9 +215,9 @@ class _DebtDetailSheetState extends State<DebtDetailSheet> {
   void _showPayDrawer(Debt current) {
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => _PaymentDrawer(debt: current, onConfirm: (amount, fee) async {
+      builder: (_) => _PaymentDrawer(debt: current, onConfirm: (amount, fee, wallet) async {
         setState(() => _loading = true);
-        try { await widget.onPay(amount, fee); }
+        try { await widget.onPay(amount, fee, wallet); }
         finally { if (mounted) setState(() => _loading = false); }
       }),
     );
@@ -358,7 +364,6 @@ class _DebtEditBody extends StatelessWidget {
   ]);
 }
 
-// ─── Category Detail Sheet ────────────────────────────────────────────────────
 
 class CategoryDetailSheet extends StatelessWidget {
   final Budget group;
@@ -417,11 +422,10 @@ class CategoryDetailSheet extends StatelessWidget {
   }
 }
 
-// ─── Payment Drawer ───────────────────────────────────────────────────────────
 
 class _PaymentDrawer extends StatefulWidget {
   final Debt debt;
-  final Future<void> Function(double amount, double? fee) onConfirm;
+  final Future<void> Function(double amount, double? fee, Wallet wallet) onConfirm;
 
   const _PaymentDrawer({required this.debt, required this.onConfirm});
 
@@ -432,17 +436,61 @@ class _PaymentDrawer extends StatefulWidget {
 class _PaymentDrawerState extends State<_PaymentDrawer> {
   late final TextEditingController _amtCtrl;
   late final TextEditingController _feeCtrl;
+  late final WalletController _walletController;
+
+  Wallet? _wallet;
   bool _loading = false;
 
   @override
   void initState() {
     super.initState();
-    _amtCtrl = TextEditingController(text: widget.debt.monthlyPaymentAmount > 0 ? widget.debt.monthlyPaymentAmount.toStringAsFixed(2) : '');
+    _amtCtrl = TextEditingController(
+      text: widget.debt.monthlyPaymentAmount > 0
+          ? widget.debt.monthlyPaymentAmount.toStringAsFixed(2)
+          : '',
+    );
     _feeCtrl = TextEditingController();
+    _walletController = locator.get<WalletController>();
   }
 
   @override
-  void dispose() { _amtCtrl.dispose(); _feeCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _amtCtrl.dispose();
+    _feeCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canConfirm {
+    final amt = double.tryParse(_amtCtrl.text) ?? 0;
+    return amt > 0 && _wallet != null;
+  }
+
+  void _pickWallet(List<Wallet> wallets, bool isDark, Color color) {
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          Text('Select Wallet', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+          const SizedBox(height: 12),
+          ...wallets.map((w) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.account_balance_wallet_outlined, color: color),
+            title: Text(w.name, style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary)),
+            subtitle: Text(currencyFormatter.format(w.balance), style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+            trailing: _wallet?.id == w.id ? Icon(Icons.check_rounded, color: color, size: 18) : null,
+            onTap: () { setState(() => _wallet = w); Navigator.pop(context); },
+          )),
+        ]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -450,7 +498,7 @@ class _PaymentDrawerState extends State<_PaymentDrawer> {
     final d = widget.debt;
     final isReceivable = d.type == DebtType.lending;
     final color = isReceivable ? AppColors.success : AppColors.error;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
@@ -473,28 +521,75 @@ class _PaymentDrawerState extends State<_PaymentDrawer> {
           ])),
           Divider(height: 20, color: borderColor),
           Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 16), child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: _amtCtrl, autofocus: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(labelText: 'Amount', border: const OutlineInputBorder(),
-                    helperText: d.monthlyPaymentAmount > 0 ? 'Planned: ${currencyFormatter.format(d.monthlyPaymentAmount, decimalDigits: 2)}/mo' : null)),
+            // Amount
+            TextField(
+              controller: _amtCtrl,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: 'Amount *',
+                border: const OutlineInputBorder(),
+                helperText: d.monthlyPaymentAmount > 0
+                    ? 'Planned: ${currencyFormatter.format(d.monthlyPaymentAmount, decimalDigits: 2)}/mo'
+                    : null,
+              ),
+            ),
             const SizedBox(height: 12),
-            TextField(controller: _feeCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Fee (optional)', border: OutlineInputBorder())),
+            // Fee
+            TextField(
+              controller: _feeCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Fee (optional)', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            // Wallet picker
+            AsyncStreamBuilder<List<Wallet>>(
+              state: _walletController,
+              builder: (_, wallets) => GestureDetector(
+                onTap: () => _pickWallet(wallets, isDark, color),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _wallet != null ? color.withValues(alpha: 0.4) : borderColor, width: _wallet != null ? 1 : 0.5),
+                    borderRadius: BorderRadius.circular(10),
+                    color: _wallet != null ? color.withValues(alpha: 0.04) : Colors.transparent,
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.account_balance_wallet_outlined, size: 16, color: _wallet != null ? color : AppColors.textSecondary),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_wallet?.name ?? 'Select wallet *',
+                        style: GoogleFonts.dmSans(fontSize: 14, color: _wallet != null ? textPrimary : AppColors.textSecondary))),
+                    Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
+                  ]),
+                ),
+              ),
+              loadingBuilder: (_) => const SizedBox.shrink(),
+              errorBuilder: (_, __) => const SizedBox.shrink(),
+            ),
             const SizedBox(height: 20),
-            _ActionButton(label: confirmLabel, icon: Icons.check_circle_outline_rounded, color: color, loading: _loading, onTap: () async {
-              final amount = double.tryParse(_amtCtrl.text);
-              if (amount == null || amount <= 0) return;
-              final fee = double.tryParse(_feeCtrl.text);
-              final nav = Navigator.of(context);
-              setState(() => _loading = true);
-              try {
-                await widget.onConfirm(amount, fee);
-                nav.pop();
-              } catch (e, st) {
-                debugPrint('[PaymentDrawer] error: $e\n$st');
-                if (mounted) AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
-              } finally {
-                if (mounted) setState(() => _loading = false);
-              }
-            }),
+            _ActionButton(
+              label: confirmLabel,
+              icon: Icons.check_circle_outline_rounded,
+              color: _canConfirm ? color : AppColors.textTertiary,
+              loading: _loading,
+              onTap: !_canConfirm ? null : () async {
+                final amount = double.tryParse(_amtCtrl.text);
+                if (amount == null || amount <= 0) return;
+                final fee = double.tryParse(_feeCtrl.text);
+                final nav = Navigator.of(context);
+                setState(() => _loading = true);
+                try {
+                  await widget.onConfirm(amount, fee, _wallet!);
+                  nav.pop();
+                } catch (e, st) {
+                  debugPrint('[PaymentDrawer] error: $e\n$st');
+                  if (mounted) AppToast.error(context, e.toString().replaceFirst('Exception: ', ''));
+                } finally {
+                  if (mounted) setState(() => _loading = false);
+                }
+              },
+            ),
             const SizedBox(height: 8),
             _ActionButton(label: 'Cancel', icon: Icons.close_rounded, color: AppColors.textSecondary, outlined: true, onTap: () => Navigator.pop(context), isDark: isDark),
           ])),
@@ -504,7 +599,6 @@ class _PaymentDrawerState extends State<_PaymentDrawer> {
   }
 }
 
-// ─── Goal Detail Sheet ────────────────────────────────────────────────────────
 
 class GoalDetailSheet extends StatefulWidget {
   final Goal goal;
@@ -539,14 +633,12 @@ class _GoalDetailSheetState extends State<GoalDetailSheet> {
   }
 
   void _showEditDialog(Goal current) {
-    showDialog(
-      context: context,
-      builder: (_) => GoalsManagementDialog(
-        goal: current,
-        onSave: (updated) async {
-          await widget.onUpdate(updated);
-        },
-      ),
+    GoalsManagementDialog.show(
+      context,
+      goal: current,
+      onSave: (updated) async {
+        await widget.onUpdate(updated);
+      },
     );
   }
 
@@ -717,6 +809,7 @@ class _ContributionDrawer extends StatefulWidget {
 class _ContributionDrawerState extends State<_ContributionDrawer> {
   late final TextEditingController _amtCtrl;
   bool _loading = false;
+  Wallet? _selectedWallet;
 
   @override
   void initState() {
@@ -726,10 +819,80 @@ class _ContributionDrawerState extends State<_ContributionDrawer> {
           ? widget.goal.monthlyContribution.toStringAsFixed(2)
           : '',
     );
+    locator.get<WalletController>().loadWallets();
   }
 
   @override
   void dispose() { _amtCtrl.dispose(); super.dispose(); }
+
+  void _pickWallet(bool isDark) {
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final bc = AppColors.border.withValues(alpha: isDark ? 0.2 : 0.5);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
+          Padding(padding: const EdgeInsets.fromLTRB(20, 14, 16, 10), child: Row(children: [
+            Text('Select Wallet', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary)),
+            const Spacer(),
+            GestureDetector(onTap: () => Navigator.pop(sheetCtx), child: Padding(padding: const EdgeInsets.all(4), child: Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary))),
+          ])),
+          Divider(height: 1, color: bc),
+          AsyncStreamBuilder<List<Wallet>>(
+            state: locator.get<WalletController>(),
+            builder: (_, allWallets) {
+              final wallets = allWallets
+                  .where((w) => w.id != widget.goal.savingsBucketId)
+                  .toList();
+              if (wallets.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(children: [
+                    Icon(Icons.account_balance_wallet_outlined, size: 40, color: AppColors.textTertiary),
+                    const SizedBox(height: 8),
+                    Text('No wallets yet', style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textSecondary)),
+                  ]),
+                );
+              }
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: wallets.map((w) {
+                  final isSelected = w.id == _selectedWallet?.id;
+                  final color = w.colorHex != null
+                      ? Color(int.parse(w.colorHex!.replaceFirst('#', '0xff')))
+                      : AppColors.success;
+                  return Column(children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                          child: Icon(Icons.account_balance_wallet_outlined, size: 20, color: color)),
+                      title: Text(w.name, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400, color: textPrimary)),
+                      subtitle: Text(currencyFormatter.format(w.balance, decimalDigits: 2), style: GoogleFonts.dmMono(fontSize: 12, color: AppColors.success)),
+                      trailing: isSelected ? Icon(Icons.check_rounded, size: 20, color: AppColors.accent) : null,
+                      onTap: () {
+                        setState(() => _selectedWallet = w);
+                        Navigator.pop(sheetCtx);
+                      },
+                    ),
+                    Divider(height: 1, color: bc, indent: 20, endIndent: 20),
+                  ]);
+                }).toList(),
+              );
+            },
+            loadingBuilder: (_) => const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()),
+            errorBuilder: (_, __) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 8),
+        ])),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -738,7 +901,7 @@ class _ContributionDrawerState extends State<_ContributionDrawer> {
     final color = g.colorHex != null
         ? Color(int.parse(g.colorHex!.replaceFirst('#', '0xff')))
         : AppColors.accent;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
@@ -781,6 +944,26 @@ class _ContributionDrawerState extends State<_ContributionDrawer> {
                 helperText: g.monthlyContribution > 0 ? 'Planned: ${currencyFormatter.format(g.monthlyContribution, decimalDigits: 2)}/mo' : null,
               ),
             ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _pickWallet(isDark),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: borderColor),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(children: [
+                  Expanded(
+                    child: _selectedWallet == null
+                        ? Text('Select wallet *', style: GoogleFonts.dmSans(fontSize: 14, color: AppColors.textSecondary))
+                        : Text(_selectedWallet!.name, style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary)),
+                  ),
+                  Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary),
+                ]),
+              ),
+            ),
             if (newProgress != null) ...[
               const SizedBox(height: 12),
               Container(
@@ -805,10 +988,19 @@ class _ContributionDrawerState extends State<_ContributionDrawer> {
               onTap: () async {
                 final amount = double.tryParse(_amtCtrl.text);
                 if (amount == null || amount <= 0) return;
+                if (_selectedWallet == null) {
+                  AppToast.error(context, 'Please select a wallet');
+                  return;
+                }
                 final nav = Navigator.of(context);
                 setState(() => _loading = true);
                 try {
                   await widget.onConfirm(amount);
+                  await locator.get<WalletController>().updateWallet(
+                    _selectedWallet!.copyWith(
+                      balance: _selectedWallet!.balance - amount,
+                    ),
+                  );
                 } finally {
                   if (mounted) setState(() => _loading = false);
                 }
@@ -824,7 +1016,6 @@ class _ContributionDrawerState extends State<_ContributionDrawer> {
   }
 }
 
-// ─── Compact Frame (shared by all detail sheets) ──────────────────────────────
 
 class _CompactFrame extends StatelessWidget {
   final bool isDark;
@@ -837,7 +1028,7 @@ class _CompactFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
@@ -865,7 +1056,6 @@ class _CompactFrame extends StatelessWidget {
   }
 }
 
-// ─── Shared Helpers ───────────────────────────────────────────────────────────
 
 class _InfoRow extends StatelessWidget {
   final bool isDark;
@@ -914,7 +1104,7 @@ class _ActionButton extends StatelessWidget {
         onPressed: loading ? null : onTap,
         icon: loading ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Icon(icon, size: 15),
         label: Text(label),
-        style: ElevatedButton.styleFrom(backgroundColor: onTap == null ? AppColors.textTertiary : color, foregroundColor: Colors.white, elevation: 0,
+        style: ElevatedButton.styleFrom(backgroundColor: onTap == null ? AppColors.textTertiary : color, foregroundColor: AppColors.textPrimaryDark, elevation: 0,
           textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))));
   }
 }

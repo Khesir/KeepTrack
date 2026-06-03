@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
@@ -89,7 +89,7 @@ class _ProfileCreateGroupSheetState extends State<ProfileCreateGroupSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceBg = isDark ? const Color(0xFF1E1E1C) : AppColors.surface;
+    final surfaceBg = isDark ? AppColors.void_ : AppColors.surface;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final profileColor = widget.profile.colorHex != null
         ? Color(int.parse(widget.profile.colorHex!.replaceFirst('#', '0xFF')))

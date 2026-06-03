@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -25,7 +25,7 @@ class SavingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
 
     return Container(
@@ -38,7 +38,6 @@ class SavingsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section header ─────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
             child: Row(
@@ -83,7 +82,7 @@ class SavingsSection extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 8),
-                // Column labels — match _SavingsRow widths
+                // Column labels – match _SavingsRow widths
                 SizedBox(
                   width: 90,
                   child: Text(
@@ -108,12 +107,11 @@ class SavingsSection extends StatelessWidget {
 
           Divider(height: 1, color: borderColor),
 
-          // ── Savings rows ───────────────────────────────────────────────
           if (buckets.isEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Text(
-                'No savings buckets selected — tap edit to add',
+                'No savings buckets selected – tap edit to add',
                 style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textTertiary),
               ),
             )
@@ -156,7 +154,7 @@ class _SavingsRow extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Planned deposit — ${bucket.name}'),
+        title: Text('Planned deposit – ${bucket.name}'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -199,7 +197,7 @@ class _SavingsRow extends StatelessWidget {
             child: SizedBox(
               width: 90,
               child: Text(
-                planned > 0 ? currencyFormatter.format(planned, decimalDigits: 2) : '—',
+                planned > 0 ? currencyFormatter.format(planned, decimalDigits: 2) : '–',
                 textAlign: TextAlign.right,
                 style: GoogleFonts.dmMono(
                   fontSize: 13,

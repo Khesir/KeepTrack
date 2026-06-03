@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
@@ -26,7 +26,7 @@ class GoalSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
 
     final activeGoals = goals.where((g) => g.status == GoalStatus.active).length;
@@ -42,7 +42,6 @@ class GoalSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section header ─────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
             child: Row(
@@ -106,7 +105,6 @@ class GoalSection extends StatelessWidget {
 
           Divider(height: 1, color: borderColor),
 
-          // ── Goal rows ──────────────────────────────────────────────────
           if (goals.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -126,7 +124,6 @@ class GoalSection extends StatelessWidget {
               Divider(height: 1, color: borderColor),
             ]),
 
-          // ── Add link ────────────────────────────────��──────────────────
           if (!isLocked)
             GestureDetector(
               onTap: onAdd,

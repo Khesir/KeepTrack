@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
 import 'tabs/budget/budget_tab_screen.dart';
@@ -48,32 +49,18 @@ class _FinanceMainScreenState extends ScopedScreenState<FinanceMainScreen>
         Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: [AppShadows.sm],
           ),
           child: TabBar(
             controller: _tabController,
             labelColor: Theme.of(context).colorScheme.primary,
-            unselectedLabelColor: Theme.of(
-              context,
-            ).colorScheme.onSurface.withOpacity(0.6),
+            unselectedLabelColor: AppColors.mutedForeground,
             indicatorColor: Theme.of(context).colorScheme.primary,
             indicatorWeight: 3,
             isScrollable: true,
             tabAlignment: TabAlignment.center,
-            labelStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.normal,
-            ),
+            labelStyle: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w600),
+            unselectedLabelStyle: AppTextStyles.labelSmall,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             tabs: const [
               Tab(

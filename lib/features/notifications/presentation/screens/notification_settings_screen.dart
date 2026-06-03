@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/core/state/stream_state.dart';
+import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/theme/gcash_theme.dart';
 import 'package:keep_track/features/notifications/domain/entities/notification_settings.dart';
 import 'package:keep_track/features/notifications/presentation/state/notification_settings_controller.dart';
@@ -54,7 +55,7 @@ class _NotificationSettingsScreenState
       appBar: AppBar(
         title: const Text('Notification Settings'),
         backgroundColor: GCashColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textPrimaryDark,
       ),
       body: StreamBuilder<AsyncState<NotificationSettings>>(
         stream: _controller.stream,
@@ -203,7 +204,7 @@ class _NotificationSettingsScreenState
                   onPressed: _requestPermissions,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.textPrimaryDark,
                   ),
                   child: const Text('Enable Notifications'),
                 ),
@@ -470,7 +471,7 @@ class _NotificationSettingsScreenState
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textPrimaryDark,
             ),
             child: const Text('Reset'),
           ),

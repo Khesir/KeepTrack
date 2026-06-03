@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
@@ -45,6 +45,7 @@ class WalletManagementDialog extends StatefulWidget {
 class _WalletManagementDialogState extends State<WalletManagementDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _balanceCtrl;
+  late final TextEditingController _notesCtrl;
 
   String _colorHex = _kColors.first;
   IconData _selectedIcon = IconHelper.defaultIcon;
@@ -69,6 +70,7 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
     _balanceCtrl = TextEditingController(
       text: w != null && w.balance > 0 ? w.balance.toStringAsFixed(2) : '',
     );
+    _notesCtrl = TextEditingController(text: w?.notes ?? '');
     _colorHex = w?.colorHex ?? _kColors.first;
     _selectedIcon = IconHelper.fromString(w?.iconCodePoint);
     _walletType = w?.type ?? WalletType.standard;
@@ -78,6 +80,7 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
   void dispose() {
     _nameCtrl.dispose();
     _balanceCtrl.dispose();
+    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -86,6 +89,7 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
     if (name.isEmpty) return;
     setState(() => _saving = true);
     try {
+      final notes = _notesCtrl.text.trim();
       final wallet = Wallet(
         id: widget.wallet?.id,
         userId: widget.userId,
@@ -94,6 +98,7 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
         type: _walletType,
         colorHex: _colorHex,
         iconCodePoint: _selectedIcon.codePoint.toString(),
+        notes: notes.isEmpty ? null : notes,
       );
       await widget.onSave(wallet);
       if (mounted) Navigator.pop(context);
@@ -127,7 +132,7 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final isEdit = widget.wallet != null;
 
@@ -243,6 +248,18 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
                   onSubmitted: (_) => _save(),
                 ),
                 const SizedBox(height: 14),
+
+                // Notes
+                const SizedBox(height: 14),
+                _Label('Notes'),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _notesCtrl,
+                  maxLines: 2,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
+                  decoration: _inputDeco(isDark, 'e.g., Daily expenses, emergency fund…'),
+                ),
 
                 // Starting balance (create only)
                 if (!isEdit) ...[

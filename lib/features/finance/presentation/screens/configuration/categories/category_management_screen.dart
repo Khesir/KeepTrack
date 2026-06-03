@@ -148,7 +148,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: type.color.withOpacity(0.1),
+                            color: type.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Icon(type.icon, color: type.color, size: 16),
@@ -165,7 +165,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: type.color.withOpacity(0.1),
+                            color: type.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -194,7 +194,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: category.type.color.withOpacity(0.1),
+                              color: category.type.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 
 /// Desktop top navbar component (shadcn-inspired)
@@ -14,8 +14,8 @@ class DesktopNavbar extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final borderColor = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.06);
 
     return Container(
       height: 64,
@@ -78,7 +78,7 @@ class Breadcrumbs extends StatelessWidget {
         theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
     final secondaryTextColor =
         theme.textTheme.bodySmall?.color ??
-        theme.colorScheme.onSurface.withOpacity(0.6);
+        theme.colorScheme.onSurface.withValues(alpha: 0.6);
     return Row(
       children: [
         for (int i = 0; i < items.length; i++) ...[
@@ -107,7 +107,7 @@ class Breadcrumbs extends StatelessWidget {
         theme.textTheme.bodyMedium?.color ?? theme.colorScheme.onSurface;
     final secondaryTextColor =
         theme.textTheme.bodySmall?.color ??
-        theme.colorScheme.onSurface.withOpacity(0.6);
+        theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final textStyle = isLast
         ? AppTextStyles.bodyMedium.copyWith(
             color: textColor,

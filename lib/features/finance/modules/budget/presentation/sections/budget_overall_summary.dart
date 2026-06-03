@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -32,7 +32,6 @@ class BudgetOverallSummary extends StatelessWidget {
     required this.isDark,
   });
 
-  // ── Planned ───────────────────────────────────────────────────────────────
 
   double get _plannedIncome => _sumBudgets(BudgetType.income, (b) => b.budgetTarget);
   double get _plannedExpenses => _sumBudgets(BudgetType.expense, (b) => b.budgetTarget);
@@ -53,7 +52,6 @@ class BudgetOverallSummary extends StatelessWidget {
       .where((g) => g.status == GoalStatus.active && g.monthlyContribution > 0)
       .fold(0.0, (s, g) => s + g.monthlyContribution);
 
-  // ── Actual ────────────────────────────────────────────────────────────────
 
   double _groupSpent(Budget b) => b.categories.fold(
         0.0, (s, c) => s + (spentByCategory[c.financeCategoryId] ?? 0.0));
@@ -98,7 +96,6 @@ class BudgetOverallSummary extends StatelessWidget {
       .where((t) => t.goalId != null)
       .fold(0.0, (s, t) => s + t.amount);
 
-  // ── Totals ────────────────────────────────────────────────────────────────
 
   double get _totalInPlanned => _plannedIncome + _receivablePlanned;
   double get _totalOutPlanned => _plannedExpenses + _subCostPlanned + _debtPaymentsPlanned + _goalPlanned;
@@ -114,7 +111,7 @@ class BudgetOverallSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final cardColor = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
     final headerBg = isDark ? Colors.white.withValues(alpha: 0.04) : AppColors.background;
 
@@ -135,7 +132,6 @@ class BudgetOverallSummary extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Column header ─────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
               decoration: BoxDecoration(
@@ -151,7 +147,6 @@ class BudgetOverallSummary extends StatelessWidget {
               ]),
             ),
 
-            // ── INFLOWS group ─────────────────────────────────────────────
             _GroupLabel(label: 'INFLOWS', color: AppColors.success, borderColor: borderColor),
 
             if (hasIncome)
@@ -174,7 +169,6 @@ class BudgetOverallSummary extends StatelessWidget {
                 borderColor: borderColor,
               ),
 
-            // ── OUTFLOWS group ────────────────────────────────────────────
             _GroupLabel(label: 'OUTFLOWS', color: AppColors.error, borderColor: borderColor, topBorder: true),
 
             _TableRow(
@@ -216,7 +210,6 @@ class BudgetOverallSummary extends StatelessWidget {
                 borderColor: borderColor,
               ),
 
-            // ── NET footer ────────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
               decoration: BoxDecoration(
@@ -249,7 +242,6 @@ class BudgetOverallSummary extends StatelessWidget {
   }
 }
 
-// ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _ColLabel extends StatelessWidget {
   final String text;
@@ -332,7 +324,7 @@ class _TableRow extends StatelessWidget {
             ? _AmountCell(value: actual!, color: actualOverColor ?? defaultColor, bold: true)
             : SizedBox(
                 width: 74,
-                child: Text('—', textAlign: TextAlign.right,
+                child: Text('–', textAlign: TextAlign.right,
                   style: GoogleFonts.dmMono(fontSize: 13, color: AppColors.textTertiary)),
               ),
       ]),

@@ -123,7 +123,6 @@ class BudgetSummaryBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Main header row ───────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 14, 12, 12),
           child: Row(
@@ -253,7 +252,6 @@ class BudgetSummaryBar extends StatelessWidget {
 
         Divider(height: 1, color: divColor),
 
-        // ── Tab pills — responsive (wrap on narrow, scroll on wide) ──────
         LayoutBuilder(
           builder: (context, constraints) {
             final pills = [

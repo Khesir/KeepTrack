@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -23,7 +23,9 @@ import 'package:keep_track/features/finance/presentation/state/planned_payment_c
 import 'package:keep_track/features/finance/modules/budget/presentation/state/budget_section_type.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/modules/subscriptions/domain/entities/subscription.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/presentation/state/goal_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/subscription_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
@@ -255,15 +257,13 @@ class _BudgetMonthScreenState extends ScopedScreenState<BudgetMonthScreen> {
       icon: const Icon(Icons.add),
       label: const Text('New Transaction'),
       backgroundColor: AppColors.accent,
-      foregroundColor: Colors.white,
+      foregroundColor: AppColors.textPrimaryDark,
     );
   }
 }
 
-// ---- Helpers ----------
 // ignore: library_private_types_in_public_api
 extension BudgetMonthHelpers on _BudgetMonthScreenState {
-  // ── Month helpers ─────────────────────────────────────────────────────────
 
   String get _monthKey =>
       '${_currentMonth.year}-${_currentMonth.month.toString().padLeft(2, '0')}';
@@ -322,7 +322,6 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
     _transactionController.loadTransactionsByDateRange(start, end);
   }
 
-  // ── Show Summary Sheet ─────────────────────────────────────────────────────────
 
   void _showSummarySheet(BuildContext context, Widget content) {
     showModalBottomSheet(
@@ -360,7 +359,6 @@ extension BudgetMonthHelpers on _BudgetMonthScreenState {
   }
 }
 
-// ---- Dialogs ----------
 // ignore: library_private_types_in_public_api
 extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
   void _showAddCategorySheet(Budget group) {
@@ -469,7 +467,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
     );
   }
 
-  /// Shown when no budget exists for the month — creates the MonthPlan first,
+  /// Shown when no budget exists for the month – creates the MonthPlan first,
   /// then offers "Copy from previous month" or "Start fresh".
   void _showStartPlanningSheet(List<Budget> allBudgets) {
     final prevBudgets = widget.profileIsMonthly && widget.budgetProfileId != null
@@ -675,28 +673,13 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       builder: (_) => DebtDetailSheet(
         debt: debt,
         debtController: _debtController,
-        onPay: (amount, fee) async {
-          final isReceivable = debt.type == DebtType.lending;
-          final userId = locator.get<AuthController>().currentUser?.id ?? '';
-          final categoryId = await _categoryController.findOrCreate(
-            name: isReceivable ? 'Receivables' : 'Debt Payment',
-            type: isReceivable ? CategoryType.income : CategoryType.expense,
-            userId: userId,
-          );
-          if (categoryId == null) return;
-          await _transactionController.createTransaction(Transaction(
+        onPay: (amount, fee, wallet) async {
+          await _debtController.payDebtWithTransaction(
+            debt,
             amount: amount,
-            fee: fee ?? 0.0,
-            type: isReceivable ? TransactionType.income : TransactionType.expense,
-            date: DateTime.now(),
-            debtId: debt.id,
-            financeCategoryId: categoryId,
-            description: isReceivable
-                ? 'Collection from ${debt.personName}'
-                : 'Payment to ${debt.personName}',
-            budgetProfileId: widget.budgetProfileId,
-          ));
-          await _debtController.payDebt(debt.id!, amount: amount, fee: fee);
+            wallet: wallet,
+            fee: fee ?? 0,
+          );
           _budgetController.refreshBudgetsWithSpentAmounts();
         },
         onUpdate: (updated) => _debtController.updateDebt(updated),
@@ -743,11 +726,9 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       isScrollControlled: true,
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
-        onSave: (debt, _) async {
-          await _debtController.createDebtOnly(
-            debt.copyWith(budgetProfileId: widget.budgetProfileId),
-          );
-        },
+        onSave: (debt) async => _debtController.createDebt(
+          debt.copyWith(budgetProfileId: widget.budgetProfileId),
+        ),
       ),
     );
   }
@@ -781,8 +762,20 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       builder: (_) => GoalDetailSheet(
         goal: goal,
         goalController: _goalController,
-        onContribute: (currentGoal, amount) =>
-            _goalController.contributeToGoal(currentGoal.id!, amount),
+        onContribute: (currentGoal, amount) async {
+          await _goalController.contributeToGoal(currentGoal.id!, amount);
+          if (currentGoal.savingsBucketId != null) {
+            final walletCtrl = locator.get<WalletController>();
+            final wallet = (walletCtrl.data ?? [])
+                .where((w) => w.id == currentGoal.savingsBucketId)
+                .firstOrNull;
+            if (wallet != null) {
+              await walletCtrl.updateWallet(
+                wallet.copyWith(balance: wallet.balance + amount),
+              );
+            }
+          }
+        },
         onUpdate: (updated) => _goalController.updateGoal(updated),
       ),
     );

@@ -63,13 +63,13 @@ class RecentTransactionsCard extends StatelessWidget {
                     Icon(
                       Icons.receipt_outlined,
                       size: 48,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'No transactions yet',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontSize: 14,
                       ),
                     ),
@@ -138,7 +138,7 @@ class RecentTransactionsCard extends StatelessWidget {
             _formatDate(transaction.date),
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           if (hasFee)
@@ -146,7 +146,7 @@ class RecentTransactionsCard extends StatelessWidget {
               '${currencyFormatter.currencySymbol}${transaction.amount.toStringAsFixed(2)} + ${currencyFormatter.currencySymbol}${transaction.fee.toStringAsFixed(2)} fee',
               style: TextStyle(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -173,7 +173,7 @@ class RecentTransactionsCard extends StatelessWidget {
               transaction.feeDescription ?? 'Fee',
               style: TextStyle(
                 fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
         ],

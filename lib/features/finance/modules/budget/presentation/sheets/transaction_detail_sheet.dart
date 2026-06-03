@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
@@ -126,14 +126,14 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
       final from = wallets.where((w) => w.id == t.walletId).firstOrNull;
       final to = wallets.where((w) => w.id == t.toWalletId).firstOrNull;
       if (from != null || to != null) {
-        return '${from?.name ?? '—'} → ${to?.name ?? '—'}';
+        return '${from?.name ?? '–'} → ${to?.name ?? '–'}';
       }
       return null;
     }
     if (t.goalId != null) {
       final goals = locator.get<GoalController>().data ?? [];
       final goal = goals.where((g) => g.id == t.goalId).firstOrNull;
-      return 'Goal: ${goal?.name ?? '—'}';
+      return 'Goal: ${goal?.name ?? '–'}';
     }
     if (t.debtId != null) {
       final debts = locator.get<DebtController>().data ?? [];
@@ -146,12 +146,12 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
     if (t.subscriptionId != null) {
       final subs = locator.get<SubscriptionController>().data ?? [];
       final sub = subs.where((s) => s.id == t.subscriptionId).firstOrNull;
-      return 'Subscription: ${sub?.name ?? '—'}';
+      return 'Subscription: ${sub?.name ?? '–'}';
     }
     if (t.walletId != null) {
       final wallets = locator.get<WalletController>().data ?? [];
       final wallet = wallets.where((w) => w.id == t.walletId).firstOrNull;
-      return 'Wallet: ${wallet?.name ?? '—'}';
+      return 'Wallet: ${wallet?.name ?? '–'}';
     }
     return null;
   }
@@ -176,7 +176,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
 
   void _showProfilePicker(bool isDark) {
     final profiles = locator.get<BudgetProfileController>().data ?? [];
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
@@ -434,7 +434,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
   }
 
   void _showEntityTypePicker(bool isDark) {
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
 
@@ -485,7 +485,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
   }
 
   void _showEntityPicker(String entityType, bool isDark) {
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
 
@@ -582,7 +582,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
     final isIncome = t.type == TransactionType.income;
     final isTransfer = t.type == TransactionType.transfer;
     final color = isTransfer ? AppColors.info : (isIncome ? AppColors.success : AppColors.error);
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
@@ -606,7 +606,7 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
               ],
               Expanded(
                 child: Text(
-                  _editMode ? 'Edit Transaction' : (t.description ?? '—'),
+                  _editMode ? 'Edit Transaction' : (t.description ?? '–'),
                   style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700, color: textPrimary),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
@@ -909,7 +909,7 @@ class _Button extends StatelessWidget {
         label: Text(label),
         style: ElevatedButton.styleFrom(
           backgroundColor: onTap == null ? AppColors.textTertiary : color,
-          foregroundColor: Colors.white, elevation: 0,
+          foregroundColor: AppColors.textPrimaryDark, elevation: 0,
           textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),

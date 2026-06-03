@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
         state: _authController,
         loadingBuilder: (_) => _buildLoading(),
         errorBuilder: (_, msg) {
-          // Stay on the form — capture error in local state and reset controller
+          // Stay on the form – capture error in local state and reset controller
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               setState(() => _errorMessage = _humanize(msg));
@@ -156,7 +156,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 16),
           _buildPasswordField(),
-          // ── Inline error banner ─────────────────────────────────────
           if (_errorMessage != null) ...[
             const SizedBox(height: 14),
             Container(
@@ -342,7 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
         onPressed: _submit,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accent,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.textPrimaryDark,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),

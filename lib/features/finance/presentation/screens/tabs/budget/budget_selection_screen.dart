@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -86,7 +86,7 @@ class _BudgetSelectionScreenState extends State<BudgetSelectionScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Only show the main card when a profile is explicitly pinned as main.
-        // No fallback "Monthly Budget" — users must create a real profile.
+        // No fallback "Monthly Budget" – users must create a real profile.
         if (mainProfile != null) ...[
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: 1.0),
@@ -150,7 +150,6 @@ class _BudgetSelectionScreenState extends State<BudgetSelectionScreen> {
   }
 }
 
-// ─── Main Card (monthly budget = "main branch") ───────────────────────────────
 
 class _MainCard extends StatelessWidget {
   final bool isDark;
@@ -360,7 +359,6 @@ class _MiniProgressRow extends StatelessWidget {
   }
 }
 
-// ─── Branches List ────────────────────────────────────────────────────────────
 
 class _BranchesList extends StatelessWidget {
   final bool isDark;
@@ -578,7 +576,7 @@ class _BranchesList extends StatelessWidget {
 }
 
 void _showProfileActions(BuildContext context, BudgetProfile profile, bool isDark) {
-  final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+  final bg = isDark ? AppColors.cardDark : AppColors.card;
   final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
   final accentColor = profile.colorHex != null
       ? Color(int.parse(profile.colorHex!.replaceFirst('#', '0xFF')))
@@ -634,7 +632,6 @@ void _showProfileActions(BuildContext context, BudgetProfile profile, bool isDar
   );
 }
 
-// ─── Empty Branches State ─────────────────────────────────────────────────────
 
 class _EmptyBranches extends StatelessWidget {
   final bool isDark;
@@ -669,7 +666,6 @@ class _EmptyBranches extends StatelessWidget {
   }
 }
 
-// ─── Count Pill Row ───────────────────────────────────────────────────────────
 
 class _CountPillRow extends StatelessWidget {
   final bool isDark;

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -147,7 +147,6 @@ class _TransactionPlannerScreenState extends ScopedScreenState<TransactionPlanne
   }
 }
 
-// ─── Feed ─────────────────────────────────────────────────────────────────────
 
 class _Feed extends StatelessWidget {
   final List<TransactionPlan> plans;
@@ -184,7 +183,6 @@ class _Feed extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        // ── Upcoming plans ────────────────────────────────────────
         SliverToBoxAdapter(
           child: _SectionLabel(
             label: 'UPCOMING PLANS',
@@ -203,7 +201,7 @@ class _Feed extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1C) : const Color(0xFFF8F8F8),
+                  color: isDark ? AppColors.void_ : const Color(0xFFF8F8F8),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: borderColor, width: 0.5),
                 ),
@@ -250,7 +248,6 @@ class _Feed extends StatelessWidget {
             ),
           ),
 
-        // ── History ───────────────────────────────────────────────
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -346,7 +343,6 @@ class _Feed extends StatelessWidget {
       a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
-// ─── Plan card ────────────────────────────────────────────────────────────────
 
 class _PlanCard extends StatelessWidget {
   final TransactionPlan plan;
@@ -364,7 +360,7 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIncome = plan.type == TransactionType.income;
     final typeColor = isIncome ? AppColors.success : AppColors.error;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = plan.isOverdue
         ? AppColors.error.withValues(alpha: 0.35)
         : (isDark ? AppColors.border.withValues(alpha: 0.18) : AppColors.border.withValues(alpha: 0.4));
@@ -514,7 +510,6 @@ class _PopupMenu extends StatelessWidget {
   );
 }
 
-// ─── Date header ──────────────────────────────────────────────────────────────
 
 class _DateHeader extends StatelessWidget {
   final DateTime date;
@@ -545,7 +540,6 @@ class _DateHeader extends StatelessWidget {
   }
 }
 
-// ─── Transaction row ──────────────────────────────────────────────────────────
 
 class _TxRow extends StatelessWidget {
   final Transaction transaction;
@@ -663,7 +657,6 @@ class _TxRow extends StatelessWidget {
       };
 }
 
-// ─── Section label ────────────────────────────────────────────────────────────
 
 class _SectionLabel extends StatelessWidget {
   final String label;
@@ -695,7 +688,6 @@ class _Badge extends StatelessWidget {
   );
 }
 
-// ─── Filter chip ──────────────────────────────────────────────────────────────
 
 class _FilterChip extends StatelessWidget {
   final String label;
@@ -721,7 +713,6 @@ class _FilterChip extends StatelessWidget {
   );
 }
 
-// ─── Complete plan sheet ──────────────────────────────────────────────────────
 
 class _CompletePlanSheet extends StatefulWidget {
   final TransactionPlan plan;
@@ -761,7 +752,7 @@ class _CompletePlanSheetState extends State<_CompletePlanSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final isIncome = widget.plan.type == TransactionType.income;
     final color = isIncome ? AppColors.success : AppColors.error;
@@ -841,7 +832,6 @@ class _CompletePlanSheetState extends State<_CompletePlanSheet> {
   }
 }
 
-// ─── Plan form sheet ──────────────────────────────────────────────────────────
 
 class _PlanFormSheet extends StatefulWidget {
   final TransactionPlan? plan;
@@ -931,7 +921,7 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final isIncome = _type == TransactionType.income;
     final typeColor = isIncome ? AppColors.success : AppColors.error;
@@ -1020,7 +1010,7 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
             ),
           ),
           const SizedBox(height: 10),
-          // Category picker — only shown after profile is selected
+          // Category picker – only shown after profile is selected
           if (_selectedProfileId != null) ...[
             InkWell(
               onTap: () => _pickCategory(context),
@@ -1076,7 +1066,7 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
 
   void _pickProfile(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final s = _profileController.state;
     final profiles = s is AsyncData<List<BudgetProfile>> ? s.data : <BudgetProfile>[];
@@ -1115,7 +1105,7 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
 
   void _pickCategory(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final fg = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
     final targetType = _type == TransactionType.income ? CategoryType.income : CategoryType.expense;

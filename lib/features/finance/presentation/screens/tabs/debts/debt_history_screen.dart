@@ -179,7 +179,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
           margin: const EdgeInsets.only(bottom: 20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [color.withOpacity(0.7), color],
+              colors: [color.withValues(alpha: 0.7), color],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -190,7 +190,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -246,7 +246,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 letterSpacing: 0.5,
               ),
             ),
@@ -288,7 +288,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -319,7 +319,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.6),
+                                .withValues(alpha: 0.6),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -333,7 +333,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -391,7 +391,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                 Icon(
                   Icons.calendar_today,
                   size: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -401,7 +401,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.5),
+                        .withValues(alpha: 0.5),
                   ),
                 ),
                 if (settledDate != null) ...[
@@ -409,7 +409,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                   Icon(
                     Icons.check_circle,
                     size: 12,
-                    color: Colors.green.withOpacity(0.7),
+                    color: Colors.green.withValues(alpha: 0.7),
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -433,7 +433,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
-                      .withOpacity(0.05),
+                      .withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -443,7 +443,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6),
+                        .withValues(alpha: 0.6),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -469,7 +469,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen>
           label,
           style: TextStyle(
             fontSize: 10,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
           ),
         ),
         const SizedBox(height: 2),

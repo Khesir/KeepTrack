@@ -1,4 +1,4 @@
-import 'dart:math' show pi;
+﻿import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +15,6 @@ import 'package:keep_track/features/finance/modules/subscriptions/domain/entitie
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../sheets/transaction_detail_sheet.dart';
 
-// ─── Month Nav ────────────────────────────────────────────────────────────────
 
 class SimpleMonthNav extends StatelessWidget {
   final DateTime month;
@@ -80,7 +79,6 @@ class SimpleMonthNav extends StatelessWidget {
   }
 }
 
-// ─── Net Balance Card ─────────────────────────────────────────────────────────
 
 class SimpleNetCard extends StatelessWidget {
   final bool isDark;
@@ -91,7 +89,7 @@ class SimpleNetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPos = net >= 0;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final netColor = isPos ? AppColors.success : AppColors.error;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
@@ -178,7 +176,6 @@ class _NetStat extends StatelessWidget {
   }
 }
 
-// ─── Subscriptions Summary Card ──────────────────────────────────────────────
 
 class SimpleSubsSummaryCard extends StatelessWidget {
   final bool isDark;
@@ -192,7 +189,7 @@ class SimpleSubsSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final monthlyTotal = subs.fold(0.0, (s, sub) => s + sub.monthlyEquivalent);
     final paidCount = subs.where(_paidThisMonth).length;
@@ -239,7 +236,6 @@ class SimpleSubsSummaryCard extends StatelessWidget {
   }
 }
 
-// ─── Debts Summary Card ───────────────────────────────────────────────────────
 
 class SimpleDebtSummaryCard extends StatelessWidget {
   final bool isDark;
@@ -250,7 +246,7 @@ class SimpleDebtSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
     // Single-type view (debts only or receivables only)
@@ -341,7 +337,6 @@ class SimpleDebtSummaryCard extends StatelessWidget {
   }
 }
 
-// ─── Goals Summary Card ───────────────────────────────────────────────────────
 
 class SimpleGoalsSummaryCard extends StatelessWidget {
   final bool isDark;
@@ -351,7 +346,7 @@ class SimpleGoalsSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final totalSaved = goals.fold(0.0, (s, g) => s + g.currentAmount);
     final totalTarget = goals.fold(0.0, (s, g) => s + g.targetAmount);
@@ -418,7 +413,6 @@ class SimpleGoalsSummaryCard extends StatelessWidget {
   }
 }
 
-// ─── Shared summary helpers ───────────────────────────────────────────────────
 
 class _SummaryPill extends StatelessWidget {
   final String label;
@@ -456,7 +450,6 @@ class _StatMini extends StatelessWidget {
   }
 }
 
-// ─── Budget Groups Section ────────────────────────────────────────────────────
 
 class SimpleBudgetSection extends StatelessWidget {
   final bool isDark, isIncome;
@@ -471,7 +464,7 @@ class SimpleBudgetSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final color = isIncome ? AppColors.success : AppColors.accent;
 
@@ -661,7 +654,6 @@ class _GroupRowState extends State<_GroupRow> {
   }
 }
 
-// ─── Subscriptions Section ────────────────────────────────────────────────────
 
 class SimpleSubscriptionsSection extends StatelessWidget {
   final bool isDark;
@@ -806,7 +798,6 @@ class _SubEntry {
   const _SubEntry({required this.sub, required this.paid});
 }
 
-// ─── Debts & Receivables Section ─────────────────────────────────────────────
 
 class SimpleDebtsSection extends StatelessWidget {
   final bool isDark;
@@ -938,7 +929,6 @@ class _DebtRow extends StatelessWidget {
   }
 }
 
-// ─── Shared Section Shell ─────────────────────────────────────────────────────
 
 class _SimpleSection extends StatelessWidget {
   final bool isDark;
@@ -954,7 +944,7 @@ class _SimpleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
     return Padding(
@@ -1031,7 +1021,6 @@ class _EmptyRow extends StatelessWidget {
   );
 }
 
-// ─── HP Bar ───────────────────────────────────────────────────────────────────
 
 class _HpBar extends StatelessWidget {
   final double spent, planned;
@@ -1071,7 +1060,6 @@ class _HpBar extends StatelessWidget {
   }
 }
 
-// ─── Goals Section ────────────────────────────────────────────────────────────
 
 class SimpleGoalsSection extends StatelessWidget {
   final bool isDark;
@@ -1096,7 +1084,7 @@ class SimpleGoalsSection extends StatelessWidget {
       addLabel: 'Add Goal',
       isLocked: isLocked,
       child: goals.isEmpty
-          ? _EmptyRow(isDark: isDark, text: 'No goals yet — tap Add Goal to get started')
+          ? _EmptyRow(isDark: isDark, text: 'No goals yet – tap Add Goal to get started')
           : Column(
               children: goals.asMap().entries.expand((e) {
                 final i = e.key;
@@ -1169,7 +1157,6 @@ class SimpleGoalsSection extends StatelessWidget {
   }
 }
 
-// ─── Savings Summary Card ─────────────────────────────────────────────────────
 
 class SimpleSavingsSummaryCard extends StatelessWidget {
   final bool isDark;
@@ -1180,7 +1167,7 @@ class SimpleSavingsSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = buckets.fold(0.0, (s, b) => s + b.balance);
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
     return Padding(
@@ -1205,7 +1192,6 @@ class SimpleSavingsSummaryCard extends StatelessWidget {
   }
 }
 
-// ─── Savings Section ──────────────────────────────────────────────────────────
 
 class SimpleSavingsSection extends StatelessWidget {
   final bool isDark;
@@ -1259,7 +1245,6 @@ class SimpleSavingsSection extends StatelessWidget {
   }
 }
 
-// ─── Donut Insight Card ───────────────────────────────────────────────────────
 
 class SimpleDonutInsightCard extends StatelessWidget {
   final bool isDark;
@@ -1385,7 +1370,7 @@ class _CompactRingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
 
     return TweenAnimationBuilder<double>(
@@ -1457,7 +1442,7 @@ class _RingDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sheetBg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final sheetBg = isDark ? AppColors.void_ : Colors.white;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
 
@@ -1644,7 +1629,6 @@ class _RingPainter extends CustomPainter {
   bool shouldRepaint(_RingPainter old) => old.rows != rows || old.showActual != showActual || old.animProgress != animProgress;
 }
 
-// ─── Transactions Section ─────────────────────────────────────────────────────
 
 class SimpleTransactionsSection extends StatefulWidget {
   final bool isDark;
@@ -1669,7 +1653,7 @@ class _SimpleTransactionsSectionState extends State<SimpleTransactionsSection> {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
@@ -1738,7 +1722,7 @@ class _SimpleTransactionsSectionState extends State<SimpleTransactionsSection> {
                             ),
                             const SizedBox(width: 10),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(t.description ?? '—', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(t.description ?? '–', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
                               Text(
                                 [DateFormat('MMM d').format(t.date), if (catName != null) catName].join(' · '),
                                 style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary),

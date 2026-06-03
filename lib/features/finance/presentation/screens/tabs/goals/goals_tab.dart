@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/network/api_client.dart';
@@ -7,7 +8,9 @@ import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/goals/widgets/goals_management_dialog.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import '../../../../../../core/theme/app_theme.dart';
 import '../../../../../../core/ui/responsive/desktop_aware_screen.dart';
 import '../../../state/goal_controller.dart';
@@ -32,19 +35,17 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
   }
 
   void _showGoalDialog({Goal? goal}) {
-    showDialog(
-      context: context,
-      builder: (_) => GoalsManagementDialog(
-        goal: goal,
-        onSave: (g) async {
-          if (goal != null) {
-            await _controller.updateGoal(g);
-            if (_selectedGoal?.id == g.id) setState(() => _selectedGoal = g);
-          } else {
-            await _controller.createGoal(g);
-          }
-        },
-      ),
+    GoalsManagementDialog.show(
+      context,
+      goal: goal,
+      onSave: (g) async {
+        if (goal != null) {
+          await _controller.updateGoal(g);
+          if (_selectedGoal?.id == g.id) setState(() => _selectedGoal = g);
+        } else {
+          await _controller.createGoal(g);
+        }
+      },
     );
   }
 
@@ -53,113 +54,285 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
       text: goal.monthlyContribution > 0 ? goal.monthlyContribution.toStringAsFixed(2) : '',
     );
     final feeController = TextEditingController();
+    Wallet? selectedWallet;
+    double? submittedAmount;
 
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (ctx, setDialogState) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (ctx, setDialogState) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+          final borderColor = AppColors.border.withValues(alpha: isDark ? 0.2 : 0.4);
+          final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Record Payment', style: AppTextStyles.h4),
+                              const SizedBox(height: 2),
+                              Text(goal.name,
+                                  style: AppTextStyles.bodySmall
+                                      .copyWith(color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () => Navigator.pop(dialogContext, false),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: amountController,
+                      decoration: InputDecoration(
+                        labelText: 'Amount',
+                        prefixText: '${currencyFormatter.currencySymbol} ',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: feeController,
+                      decoration: InputDecoration(
+                        labelText: 'Fee (optional)',
+                        prefixText: '${currencyFormatter.currencySymbol} ',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () {
+                        final bg = isDark ? AppColors.cardDark : AppColors.card;
+                        final bc = AppColors.border.withValues(alpha: isDark ? 0.2 : 0.5);
+                        showModalBottomSheet(
+                          context: ctx,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (sheetCtx) => Container(
+                            decoration: BoxDecoration(
+                              color: bg,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
+                            child: SafeArea(
+                              top: false,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    width: 36,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.textTertiary.withValues(alpha: 0.4),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
+                                    child: Row(
+                                      children: [
+                                        Text('Select Wallet',
+                                            style: GoogleFonts.dmSans(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                color: textPrimary)),
+                                        const Spacer(),
+                                        GestureDetector(
+                                          onTap: () => Navigator.pop(sheetCtx),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(4),
+                                            child: Icon(Icons.close_rounded,
+                                                size: 18, color: AppColors.textSecondary),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Divider(height: 1, color: bc),
+                                  AsyncStreamBuilder<List<Wallet>>(
+                                    state: locator.get<WalletController>(),
+                                    builder: (_, wallets) {
+                                      if (wallets.isEmpty) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Text('No wallets yet',
+                                              style: GoogleFonts.dmSans(
+                                                  fontSize: 14,
+                                                  color: AppColors.textSecondary)),
+                                        );
+                                      }
+                                      return Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: wallets.map((w) {
+                                          final isSelected = w.id == selectedWallet?.id;
+                                          final color = w.colorHex != null
+                                              ? Color(int.parse(
+                                                  w.colorHex!.replaceFirst('#', '0xff')))
+                                              : AppColors.success;
+                                          return Column(children: [
+                                            ListTile(
+                                              contentPadding: const EdgeInsets.symmetric(
+                                                  horizontal: 20, vertical: 4),
+                                              leading: Container(
+                                                width: 40,
+                                                height: 40,
+                                                decoration: BoxDecoration(
+                                                  color: color.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Icon(
+                                                    Icons.account_balance_wallet_outlined,
+                                                    size: 20,
+                                                    color: color),
+                                              ),
+                                              title: Text(w.name,
+                                                  style: GoogleFonts.dmSans(
+                                                      fontSize: 14,
+                                                      fontWeight: isSelected
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w400,
+                                                      color: textPrimary)),
+                                              subtitle: Text(
+                                                  currencyFormatter.format(w.balance,
+                                                      decimalDigits: 2),
+                                                  style: GoogleFonts.dmMono(
+                                                      fontSize: 12,
+                                                      color: AppColors.success)),
+                                              trailing: isSelected
+                                                  ? Icon(Icons.check_rounded,
+                                                      size: 20, color: AppColors.accent)
+                                                  : null,
+                                              onTap: () {
+                                                setDialogState(() => selectedWallet = w);
+                                                Navigator.pop(sheetCtx);
+                                              },
+                                            ),
+                                            Divider(
+                                                height: 1,
+                                                color: bc,
+                                                indent: 20,
+                                                endIndent: 20),
+                                          ]);
+                                        }).toList(),
+                                      );
+                                    },
+                                    loadingBuilder: (_) => const Padding(
+                                        padding: EdgeInsets.all(20),
+                                        child: CircularProgressIndicator()),
+                                    errorBuilder: (_, __) => const SizedBox.shrink(),
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: borderColor),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
                           children: [
-                            Text('Record Payment', style: AppTextStyles.h4),
-                            const SizedBox(height: 2),
-                            Text(goal.name,
-                                style: AppTextStyles.bodySmall
-                                    .copyWith(color: AppColors.textSecondary)),
+                            Expanded(
+                              child: selectedWallet == null
+                                  ? Text('Select wallet *',
+                                      style: AppTextStyles.bodySmall
+                                          .copyWith(color: AppColors.textSecondary))
+                                  : Text(selectedWallet!.name,
+                                      style: AppTextStyles.bodySmall
+                                          .copyWith(color: textPrimary)),
+                            ),
+                            Icon(Icons.chevron_right,
+                                size: 18, color: AppColors.textSecondary),
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () => Navigator.pop(dialogContext, false),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: amountController,
-                    decoration: InputDecoration(
-                      labelText: 'Amount',
-                      prefixText: '${currencyFormatter.currencySymbol} ',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: feeController,
-                    decoration: InputDecoration(
-                      labelText: 'Fee (optional)',
-                      prefixText: '${currencyFormatter.currencySymbol} ',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext, false),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () async {
-                          final amount = double.tryParse(amountController.text);
-                          if (amount == null || amount <= 0) {
-                            AppToast.error(dialogContext, 'Please enter a valid amount');
-                            return;
-                          }
-                          try {
-                            final fee = double.tryParse(feeController.text) ?? 0;
-                            await ApiClient.instance.post(
-                              '/goals/${goal.id}/contribute',
-                              data: {
-                                'amount': amount,
-                                if (fee > 0) 'fee': fee,
-                              },
-                            );
-                            _controller.loadGoals();
-                            if (dialogContext.mounted) Navigator.pop(dialogContext, true);
-                          } catch (e) {
-                            if (dialogContext.mounted) {
-                              AppToast.error(dialogContext, 'Failed to record payment: $e');
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, false),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () async {
+                            final amount = double.tryParse(amountController.text);
+                            if (amount == null || amount <= 0) {
+                              AppToast.error(dialogContext, 'Please enter a valid amount');
+                              return;
                             }
-                          }
-                        },
-                        child: const Text('Record Payment'),
-                      ),
-                    ],
-                  ),
-                ],
+                            if (selectedWallet == null) {
+                              AppToast.error(dialogContext, 'Please select a wallet');
+                              return;
+                            }
+                            try {
+                              final fee = double.tryParse(feeController.text) ?? 0;
+                              await ApiClient.instance.post(
+                                '/goals/${goal.id}/contribute',
+                                data: {
+                                  'amount': amount,
+                                  if (fee > 0) 'fee': fee,
+                                },
+                              );
+                              submittedAmount = amount;
+                              _controller.loadGoals();
+                              if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                            } catch (e) {
+                              if (dialogContext.mounted) {
+                                AppToast.error(dialogContext, 'Failed to record payment: $e');
+                              }
+                            }
+                          },
+                          child: const Text('Record Payment'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
 
     if (result == true && mounted) {
-      AppToast.success(context, 'Payment recorded successfully');
+      if (selectedWallet != null && submittedAmount != null) {
+        final walletCtrl = locator.get<WalletController>();
+        await walletCtrl.updateWallet(
+          selectedWallet!.copyWith(balance: selectedWallet!.balance - submittedAmount!),
+        );
+      }
+      if (mounted) AppToast.success(context, 'Payment recorded successfully');
     }
 
     amountController.dispose();
@@ -284,7 +457,6 @@ class _GoalsTabNewState extends State<GoalsTabNew> {
   }
 }
 
-// ─── Desktop Layout ────────────────────────────────────────────────────────────
 
 class _DesktopLayout extends StatelessWidget {
   final List<Goal> goals;
@@ -484,7 +656,6 @@ class _DesktopLayout extends StatelessWidget {
   }
 }
 
-// ─── Mobile List View ──────────────────────────────────────────────────────────
 
 class _MobileListView extends StatelessWidget {
   final List<Goal> goals;
@@ -710,7 +881,6 @@ class _MobileListView extends StatelessWidget {
   }
 }
 
-// ─── Mobile Detail View ────────────────────────────────────────────────────────
 
 class _MobileDetailView extends StatelessWidget {
   final Goal goal;
@@ -736,7 +906,6 @@ class _MobileDetailView extends StatelessWidget {
   }
 }
 
-// ─── Desktop Detail Panel ──────────────────────────────────────────────────────
 
 class _GoalDetailPanel extends StatelessWidget {
   final Goal goal;
@@ -777,7 +946,6 @@ class _EmptyDetailPanel extends StatelessWidget {
   }
 }
 
-// ─── Goal Detail Header ────────────────────────────────────────────────────────
 
 class _GoalDetailHeader extends StatelessWidget {
   final Goal goal;
@@ -850,7 +1018,6 @@ class _GoalDetailHeader extends StatelessWidget {
   }
 }
 
-// ─── Goal Detail Content ───────────────────────────────────────────────────────
 
 class _GoalDetailContent extends StatelessWidget {
   final Goal goal;
@@ -1035,7 +1202,6 @@ class _GoalDetailContent extends StatelessWidget {
   }
 }
 
-// ─── Goal List Row ─────────────────────────────────────────────────────────────
 
 class _GoalListRow extends StatelessWidget {
   final Goal goal;
@@ -1133,7 +1299,6 @@ class _GoalListRow extends StatelessWidget {
   }
 }
 
-// ─── Info Card ─────────────────────────────────────────────────────────────────
 
 class _InfoCard extends StatelessWidget {
   final String label;
@@ -1184,7 +1349,6 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-// ─── Filter Chip ───────────────────────────────────────────────────────────────
 
 class _FilterChip extends StatelessWidget {
   final String label;
@@ -1220,7 +1384,6 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// ─── Chips & Badges ────────────────────────────────────────────────────────────
 
 class _Chip extends StatelessWidget {
   final String label;
@@ -1257,7 +1420,6 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 Color _parseColor(String? hex) {
   if (hex == null) return AppColors.accent;

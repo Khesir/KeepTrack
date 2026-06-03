@@ -28,18 +28,16 @@ class _GoalsManagementScreenState extends State<GoalsManagementScreen> {
   }
 
   void _showCreateEditDialog({Goal? goal}) {
-    showDialog(
-      context: context,
-      builder: (context) => GoalsManagementDialog(
-        goal: goal,
-        onSave: (saveGoal) {
-          if (goal != null) {
-            _controller.updateGoal(saveGoal);
-          } else {
-            _controller.createGoal(saveGoal);
-          }
-        },
-      ),
+    GoalsManagementDialog.show(
+      context,
+      goal: goal,
+      onSave: (saveGoal) {
+        if (goal != null) {
+          _controller.updateGoal(saveGoal);
+        } else {
+          _controller.createGoal(saveGoal);
+        }
+      },
     );
   }
 

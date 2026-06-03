@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -125,28 +125,40 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 
   Widget _buildDesktop() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: isDark ? AppColors.void_ : AppColors.backgroundSecondary,
       floatingActionButton: FloatingActionButton(
         onPressed: () => CreateTransactionSheet.show(context, onCreated: _refreshTransactions, initialProfileId: _activeProfileId, initialMonthKey: _currentMonthKey),
         backgroundColor: AppColors.accent,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textPrimaryDark,
         child: const Icon(Icons.add),
       ),
-      body: Row(
-        children: [
-          _AppSidebar(
-            currentIndex: _currentIndex,
-            items: _navItems,
-            layoutController: _layoutController,
-            onSelect: _switchTab,
-          ),
-          Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _handleScroll,
-              child: _screens[_currentIndex],
+      body: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: _AppSidebar(
+                currentIndex: _currentIndex,
+                items: _navItems,
+                layoutController: _layoutController,
+                onSelect: _switchTab,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _handleScroll,
+                  child: _screens[_currentIndex],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -212,7 +224,7 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
 
   Widget _buildFloatingNav(bool isDark) {
     final navBg = isDark
-        ? const Color(0xFF2C2C2A).withValues(alpha: 0.82)
+        ? AppColors.cardDark.withValues(alpha: 0.82)
         : Colors.white.withValues(alpha: 0.82);
     final shadowColor = isDark
         ? Colors.black.withValues(alpha: 0.5)
@@ -323,7 +335,6 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
   }
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
 class _AppSidebar extends StatefulWidget {
   final int currentIndex;
   final List<_NavItem> items;
@@ -347,16 +358,17 @@ class _AppSidebarState extends State<_AppSidebar> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF242422) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.25)
-        : AppColors.border.withValues(alpha: 0.6);
+        : Colors.transparent;
 
     return Container(
       width: 232,
       decoration: BoxDecoration(
         color: bg,
-        border: Border(right: BorderSide(color: borderColor, width: 0.5)),
+        border: Border.all(color: borderColor, width: 0.5),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -931,7 +943,7 @@ class _UserMenuOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.3)
         : AppColors.border.withValues(alpha: 0.7);
@@ -1177,7 +1189,6 @@ class _ThemeToggle extends StatelessWidget {
   }
 }
 
-// ─── Data types ───────────────────────────────────────────────────────────────
 
 class _NavItem {
   final IconData icon, activeIcon;

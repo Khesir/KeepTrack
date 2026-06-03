@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
@@ -138,7 +138,6 @@ class BudgetScreenBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── filtering ────────────────────────────────────────────────────────────
     final monthStart = DateTime(currentMonth.year, currentMonth.month, 1);
     final monthEnd = DateTime(currentMonth.year, currentMonth.month + 1, 1);
 
@@ -159,18 +158,18 @@ class BudgetScreenBody extends StatelessWidget {
       if (t.debtId != null) {
         paidThisMonthByDebt[t.debtId!] = (paidThisMonthByDebt[t.debtId!] ?? 0) + t.amount;
       }
-      if (t.goalId != null) {
+      if (t.goalId != null && t.type == TransactionType.income) {
         contributedThisMonthByGoal[t.goalId!] = (contributedThisMonthByGoal[t.goalId!] ?? 0) + t.amount;
       }
     }
 
-    // Monthly plan (month key match — only for non-profile mode)
+    // Monthly plan (month key match – only for non-profile mode)
     final monthPlan = data.monthPlans.cast<MonthPlan?>().firstWhere(
       (p) => p?.month == monthKey,
       orElse: () => null,
     );
 
-    // Profile plan (budgetProfileId match — profile plans have month: null)
+    // Profile plan (budgetProfileId match – profile plans have month: null)
     final profilePlan = budgetProfileId != null
         ? data.monthPlans.cast<MonthPlan?>().firstWhere(
             (p) => p?.budgetProfileId == budgetProfileId,
@@ -195,7 +194,7 @@ class BudgetScreenBody extends StatelessWidget {
             : (profilePlan != null || monthBudgets.isNotEmpty)
         : monthPlan != null;
 
-    // Profile scope filter — mirrors the simple view's matchesProfile logic
+    // Profile scope filter – mirrors the simple view's matchesProfile logic
     bool matchesProfile(String? itemProfileId) => budgetProfileId != null
         ? itemProfileId == budgetProfileId
         : itemProfileId == null;
@@ -229,7 +228,7 @@ class BudgetScreenBody extends StatelessWidget {
         .toList()
       ..sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
 
-    // All-active (not month-filtered): used for tabs 2-5 and pill counts —
+    // All-active (not month-filtered): used for tabs 2-5 and pill counts –
     // debts, subs, receivables, and goals are not month-specific.
     int debtOrder(DebtStatus s) => s == DebtStatus.active ? 0 : 1;
     final allDebts = (data.debts
@@ -245,11 +244,12 @@ class BudgetScreenBody extends StatelessWidget {
         .toList()
       ..sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
 
-    final filteredGoals = data.goals
+    int goalOrder(GoalStatus s) => switch (s) { GoalStatus.active => 0, GoalStatus.paused => 1, _ => 2 };
+    final filteredGoals = (data.goals
         .where((g) => matchesProfile(g.budgetProfileId))
-        .toList();
+        .toList()
+      ..sort((a, b) => goalOrder(a.status).compareTo(goalOrder(b.status))));
 
-    // ── sync selection ────────────────────────────────────────────────────────
     final syncedSelected = selectedGroup == null
         ? null
         : monthBudgets.firstWhere(
@@ -280,7 +280,6 @@ class BudgetScreenBody extends StatelessWidget {
         final isWide = constraints.maxWidth >= 600;
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
-        // ── summary panel ─────────────────────────────────────────────────────
         void settings() => (onOverrideSettings ?? () => BudgetSettingsSheet.show(
           context,
           monthLabel: monthLabel,
@@ -323,10 +322,9 @@ class BudgetScreenBody extends StatelessWidget {
 
         // Gray scroll area so white group cards pop (Every Dollar style)
         final bg = isDark ? const Color(0xFF1A1A18) : AppColors.background;
-        final panelBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+        final panelBg = isDark ? AppColors.cardDark : AppColors.card;
         final divColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
 
-        // ── budget group order (tab 0 only) ──────────────────────────────────
         final budgetGroupKeys = itemOrder.where((k) => !kSectionKeys.contains(k)).toList();
 
         void onBudgetGroupReorder(int filteredOld, int filteredNew) {
@@ -336,7 +334,6 @@ class BudgetScreenBody extends StatelessWidget {
           onItemReorder(fullOld, fullNew);
         }
 
-        // ── scrollable main content ───────────────────────────────────────────
         List<Widget> contentSlivers;
 
         if (selectedTab <= 1) {
@@ -436,7 +433,6 @@ class BudgetScreenBody extends StatelessWidget {
           ],
         );
 
-        // ── Shared summary bar widget ─────────────────────────────────────────
         final now = DateTime.now();
         final isCurrentMonth = currentMonth.year == now.year && currentMonth.month == now.month;
         final realMonthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
@@ -481,7 +477,6 @@ class BudgetScreenBody extends StatelessWidget {
           ),
         );
 
-        // ── layout ────────────────────────────────────────────────────────────
         if (isWide) {
           // Wide: side panel covers FULL HEIGHT (including header row)
           return Row(
@@ -520,7 +515,6 @@ class BudgetScreenBody extends StatelessWidget {
     );
   }
 
-  // ── item builder ──────────────────────────────────────────────────────────
   Widget _buildItem(
     BuildContext context, {
     required String key,
@@ -564,7 +558,7 @@ class BudgetScreenBody extends StatelessWidget {
           );
     }
 
-    // Section items — each is now a self-contained card with its own margin
+    // Section items – each is now a self-contained card with its own margin
     return switch (key) {
       'debts' => DebtSection(
           title: 'Debts',
@@ -620,7 +614,6 @@ class BudgetScreenBody extends StatelessWidget {
     };
   }
 
-  // ── helpers ───────────────────────────────────────────────────────────────
   void _showSummarySheet(BuildContext context, Widget content) {
     showModalBottomSheet(
       context: context,

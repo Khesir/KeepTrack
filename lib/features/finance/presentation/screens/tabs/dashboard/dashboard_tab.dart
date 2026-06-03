@@ -1,4 +1,4 @@
-import 'dart:math' show max;
+﻿import 'dart:math' show max;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -166,7 +166,6 @@ class _DashboardTabState extends State<DashboardTab> {
 
     final profileBudgets = budgets.where((b) => b.budgetProfileId == selectedProfileId).toList();
 
-    // ── Insights view ──────────────────────────────────────────────────────────
     if (_showingInsights) {
       return CustomScrollView(
         slivers: [
@@ -188,7 +187,6 @@ class _DashboardTabState extends State<DashboardTab> {
       );
     }
 
-    // ── Normal dashboard ───────────────────────────────────────────────────────
     return CustomScrollView(
       slivers: [
         if (profiles.isNotEmpty)
@@ -203,14 +201,19 @@ class _DashboardTabState extends State<DashboardTab> {
           )),
         SliverToBoxAdapter(child: _MonthOverviewCard(
           isDark: isDark,
-          totalSavings: totalSavings,
-          totalCreditOwed: totalCreditOwed,
           netDebt: totalReceivables - totalDebt,
           actualIncome: actualIncome, plannedIncome: plannedIncome,
           actualExpenses: actualExpenses, plannedExpenses: plannedExpenses,
           hasBudgets: monthBudgets.isNotEmpty,
-          hasWallets: wallets.isNotEmpty,
         )),
+        if (wallets.isNotEmpty)
+          SliverToBoxAdapter(child: _WalletOverviewCard(
+            isDark: isDark,
+            totalSavings: totalSavings,
+            totalCreditOwed: totalCreditOwed,
+            walletCount: wallets.where((w) => w.type == WalletType.standard).length,
+            creditCount: wallets.where((w) => w.type == WalletType.creditCard).length,
+          )),
         SliverToBoxAdapter(child: _SpendingChart(transactions: currentMonthTxs, isDark: isDark)),
         SliverToBoxAdapter(
           child: Padding(
@@ -260,30 +263,26 @@ class _DashboardTabState extends State<DashboardTab> {
   }
 }
 
-// ─── Month Overview ───────────────────────────────────────────────────────────
 
 class _MonthOverviewCard extends StatelessWidget {
   final bool isDark;
-  final double totalSavings, totalCreditOwed, netDebt;
+  final double netDebt;
   final double actualIncome, plannedIncome, actualExpenses, plannedExpenses;
-  final bool hasBudgets, hasWallets;
+  final bool hasBudgets;
 
   const _MonthOverviewCard({
     required this.isDark,
-    required this.totalSavings,
-    required this.totalCreditOwed,
     required this.netDebt,
     required this.actualIncome,
     required this.plannedIncome,
     required this.actualExpenses,
     required this.plannedExpenses,
     required this.hasBudgets,
-    required this.hasWallets,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.2)
         : AppColors.border.withValues(alpha: 0.5);
@@ -362,36 +361,6 @@ class _MonthOverviewCard extends StatelessWidget {
                 icon: Icons.arrow_upward_rounded,
               ),
             ],
-            if (hasWallets) ...[
-              const SizedBox(height: 14),
-              IntrinsicHeight(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _WalletStatChip(
-                        isDark: isDark,
-                        icon: Icons.account_balance_wallet_outlined,
-                        label: 'Wallets',
-                        value: currencyFormatter.format(totalSavings, decimalDigits: 0),
-                        color: AppColors.accent,
-                      ),
-                    ),
-                    if (totalCreditOwed > 0) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _WalletStatChip(
-                          isDark: isDark,
-                          icon: Icons.credit_card_outlined,
-                          label: 'Credit Owed',
-                          value: currencyFormatter.format(totalCreditOwed, decimalDigits: 0),
-                          color: AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
             const SizedBox(height: 16),
             Row(
               children: [
@@ -419,6 +388,115 @@ class _MonthOverviewCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WalletOverviewCard extends StatelessWidget {
+  final bool isDark;
+  final double totalSavings, totalCreditOwed;
+  final int walletCount, creditCount;
+
+  const _WalletOverviewCard({
+    required this.isDark,
+    required this.totalSavings,
+    required this.totalCreditOwed,
+    required this.walletCount,
+    required this.creditCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
+    final borderColor = isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.5);
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final net = totalSavings - totalCreditOwed;
+    final isNegative = net < 0;
+    final netColor = isNegative ? AppColors.error : AppColors.success;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor, width: 0.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.account_balance_wallet_outlined, size: 13, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
+                Text(
+                  'Wallets',
+                  style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.background,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$walletCount ${walletCount == 1 ? 'account' : 'accounts'}${creditCount > 0 ? ' · $creditCount credit' : ''}',
+                    style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              currencyFormatter.format(net, decimalDigits: 2),
+              style: GoogleFonts.dmMono(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: netColor,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Net balance',
+              style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _WalletStatChip(
+                      isDark: isDark,
+                      icon: Icons.account_balance_wallet_outlined,
+                      label: 'Cash & Savings',
+                      value: currencyFormatter.format(totalSavings, decimalDigits: 0),
+                      color: AppColors.accent,
+                    ),
+                  ),
+                  if (totalCreditOwed > 0) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _WalletStatChip(
+                        isDark: isDark,
+                        icon: Icons.credit_card_outlined,
+                        label: 'Credit Owed',
+                        value: currencyFormatter.format(totalCreditOwed, decimalDigits: 0),
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
@@ -527,7 +605,6 @@ class _ProgressRow extends StatelessWidget {
   }
 }
 
-// ─── Upcoming ─────────────────────────────────────────────────────────────────
 
 class _UpcomingCard extends StatefulWidget {
   final bool isDark;
@@ -570,7 +647,7 @@ class _UpcomingCardState extends State<_UpcomingCard> with SingleTickerProviderS
     final overdueDebts = widget.overdueDebts;
     final plannedPayments = widget.plannedPayments;
     final txPlans = widget.txPlans;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
@@ -736,7 +813,6 @@ class _UpcomingRow extends StatelessWidget {
   }
 }
 
-// ─── Recent Transactions ──────────────────────────────────────────────────────
 
 class _RecentTransactionsCard extends StatefulWidget {
   final bool isDark;
@@ -780,7 +856,7 @@ class _RecentTransactionsCardState extends State<_RecentTransactionsCard> with S
     final isDark = widget.isDark;
     final transactions = widget.transactions;
     final profileNames = widget.profileNames;
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
@@ -852,7 +928,7 @@ class _TxDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sheetBg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final sheetBg = isDark ? AppColors.void_ : Colors.white;
     final divColor = isDark ? AppColors.border.withValues(alpha: 0.15) : AppColors.border.withValues(alpha: 0.4);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
@@ -963,7 +1039,6 @@ class _TxRow extends StatelessWidget {
   }
 }
 
-// ─── Daily Activity Chart ─────────────────────────────────────────────────────
 
 class _SpendingChart extends StatefulWidget {
   final List<Transaction> transactions;
@@ -1021,7 +1096,7 @@ class _SpendingChartState extends State<_SpendingChart> with SingleTickerProvide
     final totalExpense = expenseValues.fold(0.0, (s, v) => s + v);
     final net = totalIncome - totalExpense;
 
-    final cardBg = widget.isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = widget.isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = widget.isDark
         ? AppColors.border.withValues(alpha: 0.2)
         : AppColors.border.withValues(alpha: 0.5);
@@ -1188,7 +1263,6 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-// ─── Dual Bar Painter ─────────────────────────────────────────────────────────
 
 class _DualBarPainter extends CustomPainter {
   final List<double> income;
@@ -1253,7 +1327,6 @@ class _DualBarPainter extends CustomPainter {
       old.income != income || old.expense != expense || old.selectedIndex != selectedIndex || old.animProgress != animProgress;
 }
 
-// ─── Profile Pills ────────────────────────────────────────────────────────────
 
 class _ProfilePills extends StatelessWidget {
   final List<BudgetProfile> profiles;
@@ -1290,7 +1363,7 @@ class _ProfilePills extends StatelessWidget {
           final isSelected = profile.id == selectedId;
           final pillColor = isSelected
               ? AppColors.accent
-              : (isDark ? const Color(0xFF2C2C2A) : Colors.white);
+              : (isDark ? AppColors.cardDark : AppColors.card);
           final textColor = isSelected
               ? Colors.white
               : AppColors.textSecondary;
@@ -1326,7 +1399,6 @@ class _ProfilePills extends StatelessWidget {
   }
 }
 
-// ─── Staggered entrance helper ────────────────────────────────────────────────
 
 class _FadeSlideIn extends StatelessWidget {
   final Widget child;
@@ -1357,7 +1429,6 @@ class _FadeSlideIn extends StatelessWidget {
   }
 }
 
-// ─── Insights Entry Card ──────────────────────────────────────────────────────
 
 class _InsightsEntryCard extends StatelessWidget {
   final bool isDark;
@@ -1376,7 +1447,7 @@ class _InsightsEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
@@ -1431,7 +1502,6 @@ class _InsightsEntryCard extends StatelessWidget {
   }
 }
 
-// ─── Insights View Header ─────────────────────────────────────────────────────
 
 class _InsightsHeader extends StatelessWidget {
   final bool isDark;
@@ -1474,7 +1544,6 @@ class _InsightsHeader extends StatelessWidget {
   }
 }
 
-// ─── X-axis labels ────────────────────────────────────────────────────────────
 
 class _XAxisLabels extends StatelessWidget {
   final int today;

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -77,7 +77,7 @@ class _AddSubscriptionSheetState extends State<AddSubscriptionSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
@@ -158,7 +158,7 @@ class _AddSubscriptionSheetState extends State<AddSubscriptionSheet> {
                   onPressed: _canSave && !_saving ? _save : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _canSave ? AppColors.error : AppColors.textTertiary,
-                    foregroundColor: Colors.white, elevation: 0,
+                    foregroundColor: AppColors.textPrimaryDark, elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _saving

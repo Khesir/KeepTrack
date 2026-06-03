@@ -182,7 +182,6 @@ class _ProfileScreenState extends ScopedScreenState<ProfileScreen> with AppLayou
   );
 }
 
-// ─── Month Selector ───────────────────────────────────────────────────────────
 
 class _MonthSelector extends StatelessWidget {
   final List<MonthPlan> plans;

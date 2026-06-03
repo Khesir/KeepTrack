@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
@@ -26,7 +26,7 @@ class SubscriptionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.card;
     final borderColor = AppColors.border.withValues(alpha: isDark ? 0.15 : 0.4);
 
     return Container(
@@ -39,7 +39,6 @@ class SubscriptionSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section header ─────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
             child: Row(
@@ -66,7 +65,7 @@ class SubscriptionSection extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 8),
-                // Column labels — match _SubscriptionRow widths
+                // Column labels – match _SubscriptionRow widths
                 SizedBox(
                   width: 80,
                   child: Text(
@@ -100,7 +99,6 @@ class SubscriptionSection extends StatelessWidget {
 
           Divider(height: 1, color: borderColor),
 
-          // ── Subscription rows ──────────────────────────────────────────
           if (subscriptions.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -115,7 +113,6 @@ class SubscriptionSection extends StatelessWidget {
               Divider(height: 1, color: borderColor),
             ]),
 
-          // ── Add link ───────────────────────────────────────────────────
           if (!isLocked)
             GestureDetector(
               onTap: onAdd,

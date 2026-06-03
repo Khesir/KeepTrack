@@ -137,10 +137,10 @@ class _ContributionActivityFeedState extends State<ContributionActivityFeed> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _getActivityColor(activity.type).withOpacity(0.05),
+        color: _getActivityColor(activity.type).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _getActivityColor(activity.type).withOpacity(0.2),
+          color: _getActivityColor(activity.type).withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -149,7 +149,7 @@ class _ContributionActivityFeedState extends State<ContributionActivityFeed> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _getActivityColor(activity.type).withOpacity(0.1),
+              color: _getActivityColor(activity.type).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

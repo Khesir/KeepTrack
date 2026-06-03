@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -111,7 +111,7 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF1E1E1C) : Colors.white;
+    final bg = isDark ? AppColors.void_ : Colors.white;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
     return Container(
@@ -216,7 +216,7 @@ class _OptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = isPrimary
         ? AppColors.accent
-        : (isDark ? const Color(0xFF2C2C2A) : AppColors.background);
+        : (isDark ? AppColors.cardDark : AppColors.background);
     final border = isDark
         ? AppColors.border.withValues(alpha: 0.2)
         : AppColors.border.withValues(alpha: 0.5);

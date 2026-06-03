@@ -137,7 +137,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   String get _monthLabel => DateFormat('MMMM yyyy').format(_month);
   bool get _isCurrentMonth { final n = DateTime.now(); return _month.year == n.year && _month.month == n.month; }
 
-  // ── Action methods ──────────────────────────────────────────────────────────
 
   Future<void> _startPlanningMonthly() async {
     try {
@@ -396,7 +395,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       context: context, isScrollControlled: true,
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
-        onSave: (debt, _) async => _debtController.createDebtOnly(
+        onSave: (debt) async => _debtController.createDebt(
           widget._isProfileMode && widget.budgetProfileId != null
               ? debt.copyWith(budgetProfileId: widget.budgetProfileId)
               : debt,
@@ -438,27 +437,13 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       builder: (_) => DebtDetailSheet(
         debt: debt,
         debtController: _debtController,
-        onPay: (amount, fee) async {
-          final isReceivable = debt.type == DebtType.lending;
-          final userId = locator.get<AuthController>().currentUser?.id ?? '';
-          final categoryId = await _categoryController.findOrCreate(
-            name: isReceivable ? 'Receivables' : 'Debt Payment',
-            type: isReceivable ? CategoryType.income : CategoryType.expense,
-            userId: userId,
-          );
-          await _txController.createTransaction(Transaction(
+        onPay: (amount, fee, wallet) async {
+          await _debtController.payDebtWithTransaction(
+            debt,
             amount: amount,
-            fee: fee ?? 0.0,
-            type: isReceivable ? TransactionType.income : TransactionType.expense,
-            date: DateTime.now(),
-            debtId: debt.id,
-            financeCategoryId: categoryId,
-            description: isReceivable
-                ? 'Collection from ${debt.personName}'
-                : 'Payment to ${debt.personName}',
-            budgetProfileId: widget.budgetProfileId,
-          ));
-          await _debtController.payDebt(debt.id!, amount: amount, fee: fee);
+            wallet: wallet,
+            fee: fee ?? 0,
+          );
         },
         onUpdate: (updated) => _debtController.updateDebt(updated),
       ),
@@ -528,7 +513,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   }
 
 
-  // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -585,7 +569,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       if (t.debtId != null) {
         paidThisMonthByDebt[t.debtId!] = (paidThisMonthByDebt[t.debtId!] ?? 0) + t.amount;
       }
-      if (t.goalId != null) {
+      if (t.goalId != null && t.type == TransactionType.income) {
         contributedThisMonthByGoal[t.goalId!] = (contributedThisMonthByGoal[t.goalId!] ?? 0) + t.amount;
       }
     }
@@ -651,7 +635,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       _ => SimpleNetCard(isDark: isDark, net: net, plannedNet: plannedNet, actualIncome: actualIncome, plannedIncome: plannedIncome, actualExpenses: actualExpenses, plannedExpenses: plannedExpenses),
     };
 
-    // ── Plan gate ─────────────────────────────────────────────────────────────
     final plans = _monthPlanController.data ?? [];
 
     // Only show "Back to current" when the current real month has a plan
@@ -688,7 +671,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             : false
         : monthPlan?.isClosed ?? false;
 
-    // ── Shared header slivers ─────────────────────────────────────────────────
     final headerSlivers = <Widget>[
       if (!widget._isProfileMode && widget.onBack != null)
         SliverToBoxAdapter(
@@ -752,7 +734,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           : () => _showStartPlanning(budgets),
     );
 
-    // ── Content (tab bar always visible; gate only on budget/summary tabs) ────
     return CustomScrollView(slivers: [
       ...headerSlivers,
       SliverToBoxAdapter(child: BudgetSimpleTabBar(
@@ -871,7 +852,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
   }
 }
 
-// ─── No Plan Gate ─────────────────────────────────────────────────────────────
 
 class _NoPlanGate extends StatelessWidget {
   final bool isDark;
@@ -922,7 +902,6 @@ class _NoPlanGate extends StatelessWidget {
   }
 }
 
-// ─── Profile Header ──────────────────────────────────────────────────────────
 
 class _ProfileHeader extends StatelessWidget {
   final bool isDark;
@@ -959,7 +938,6 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-// ─── Monthly Profile Header ───────────────────────────────────────────────────
 
 class _MonthlyProfileHeader extends StatelessWidget {
   final bool isDark;
@@ -1039,7 +1017,6 @@ class _MonthlyProfileHeader extends StatelessWidget {
   }
 }
 
-// ─── Simple Tab Bar ───────────────────────────────────────────────────────────
 
 class BudgetSimpleTabBar extends StatelessWidget {
   final bool isDark;

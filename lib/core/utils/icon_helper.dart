@@ -161,7 +161,7 @@ class IconHelper {
 
   /// Get IconData from int code point
   static IconData fromCodePoint(int codePoint) {
-    return _iconMap[codePoint] ?? defaultIcon;
+    return _iconMap[codePoint] ?? Icons.category_outlined;
   }
 
   /// Convert IconData to string code point for storage

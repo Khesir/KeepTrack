@@ -39,11 +39,12 @@ class _DebtsManagementScreenState extends State<DebtsManagementScreen> {
       builder: (context) => DebtManagementDialog(
         debt: debt,
         wallets: wallets,
-        onSave: (savedDebt, categoryId) => {
-          if (debt != null)
-            {_debtController.updateDebt(savedDebt)}
-          else
-            {_debtController.createDebtWithCategory(savedDebt, categoryId)},
+        onSave: (savedDebt, wallet) {
+          if (debt != null) {
+            _debtController.updateDebt(savedDebt);
+          } else {
+            _debtController.createDebt(savedDebt);
+          }
         },
       ),
     );

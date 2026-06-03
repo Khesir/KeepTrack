@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -9,7 +8,6 @@ class WelcomeScreen extends StatelessWidget {
   final VoidCallback onContinueFree;
   const WelcomeScreen({super.key, required this.onContinueFree});
 
-  static const _bg = Color(0xFF1E1E1C);
 
   Future<void> _continueFree(BuildContext context) async {
     await locator.get<SettingsController>().setForceOfflineMode(true);
@@ -25,7 +23,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: AppColors.void_,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -36,20 +34,18 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Keep Track',
-                style: GoogleFonts.dmSans(
+                style: AppTextStyles.h2.copyWith(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: AppColors.textPrimaryDark,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Zero-based budgeting, fully offline.\nGive every peso a purpose.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.5),
-                  height: 1.5,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textPrimaryDark.withValues(alpha: 0.5),
                 ),
               ),
               const Spacer(flex: 3),
@@ -89,7 +85,7 @@ class _Logo extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       alignment: Alignment.center,
-      child: const Icon(Icons.track_changes_rounded, color: Colors.white, size: 36),
+      child: const Icon(Icons.track_changes_rounded, color: AppColors.textPrimaryDark, size: 36),
     );
   }
 }
@@ -120,7 +116,7 @@ class _PrimaryButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 20),
+            Icon(icon, color: AppColors.textPrimaryDark, size: 20),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -128,23 +124,21 @@ class _PrimaryButton extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.dmSans(
+                    style: AppTextStyles.label.copyWith(
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: AppColors.textPrimaryDark,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.75),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textPrimaryDark.withValues(alpha: 0.75),
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_rounded, color: Colors.white.withValues(alpha: 0.75), size: 18),
+            Icon(Icons.arrow_forward_rounded, color: AppColors.textPrimaryDark.withValues(alpha: 0.75), size: 18),
           ],
         ),
       ),
@@ -171,16 +165,16 @@ class _SecondaryButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: AppColors.textPrimaryDark.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: AppColors.textPrimaryDark.withValues(alpha: 0.1),
             width: 0.5,
           ),
         ),
         child: Row(
           children: [
-            Icon(Icons.verified_user_outlined, color: Colors.white.withValues(alpha: 0.7), size: 20),
+            Icon(Icons.verified_user_outlined, color: AppColors.textPrimaryDark.withValues(alpha: 0.7), size: 20),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -188,23 +182,21 @@ class _SecondaryButton extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.dmSans(
+                    style: AppTextStyles.label.copyWith(
                       fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: AppColors.textPrimaryDark.withValues(alpha: 0.9),
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.45),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textPrimaryDark.withValues(alpha: 0.45),
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_rounded, color: Colors.white.withValues(alpha: 0.4), size: 18),
+            Icon(Icons.arrow_forward_rounded, color: AppColors.textPrimaryDark.withValues(alpha: 0.4), size: 18),
           ],
         ),
       ),

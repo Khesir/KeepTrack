@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/cache/local_cache.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -50,7 +50,7 @@ Future<void> importFromFile(BuildContext context) async {
 
 Future<bool> _showConfirmReplaceDialog(BuildContext context) async {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+  final bg = isDark ? AppColors.cardDark : AppColors.card;
   final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
   final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
 
@@ -131,7 +131,7 @@ Future<String?> _showPasswordDialog(BuildContext context, {bool confirm = true})
     barrierColor: Colors.black.withValues(alpha: 0.4),
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setS) {
-        final bg = isDark ? const Color(0xFF2C2C2A) : Colors.white;
+        final bg = isDark ? AppColors.cardDark : AppColors.card;
         final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.4);
         final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
         final fieldBorder = isDark ? AppColors.border.withValues(alpha: 0.3) : AppColors.border;
@@ -217,7 +217,7 @@ Future<String?> _showPasswordDialog(BuildContext context, {bool confirm = true})
 }
 
 String _errorMessage(Object e) => switch (e) {
-  WrongPasswordException() => 'Wrong password — backup could not be decrypted.',
+  WrongPasswordException() => 'Wrong password – backup could not be decrypted.',
   InvalidBackupException() => 'Invalid backup file. Select a valid .ktbak file.',
   _ => 'Something went wrong: $e',
 };
