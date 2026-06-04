@@ -21,6 +21,7 @@ class Wallet {
   final String? colorHex;
   final String? iconCodePoint;
   final String? notes;
+  final List<String> labels;
 
   const Wallet({
     this.id,
@@ -31,6 +32,7 @@ class Wallet {
     this.colorHex,
     this.iconCodePoint,
     this.notes,
+    this.labels = const [],
   });
 
   Wallet copyWith({
@@ -42,6 +44,7 @@ class Wallet {
     String? colorHex,
     String? iconCodePoint,
     String? notes,
+    List<String>? labels,
   }) {
     return Wallet(
       id: id ?? this.id,
@@ -52,6 +55,7 @@ class Wallet {
       colorHex: colorHex ?? this.colorHex,
       iconCodePoint: iconCodePoint ?? this.iconCodePoint,
       notes: notes ?? this.notes,
+      labels: labels ?? this.labels,
     );
   }
 

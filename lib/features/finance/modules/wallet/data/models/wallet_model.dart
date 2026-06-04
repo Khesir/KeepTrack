@@ -10,6 +10,7 @@ class WalletModel extends Wallet {
     super.colorHex,
     super.iconCodePoint,
     super.notes,
+    super.labels,
   });
 
   factory WalletModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +26,7 @@ class WalletModel extends Wallet {
       colorHex: json['colorHex'] as String?,
       iconCodePoint: json['iconCodePoint']?.toString(),
       notes: json['notes'] as String?,
+      labels: (json['labels'] as List<dynamic>?)?.cast<String>() ?? [],
     );
   }
 
@@ -38,6 +40,7 @@ class WalletModel extends Wallet {
       if (colorHex != null) 'colorHex': colorHex,
       if (iconCodePoint != null) 'iconCodePoint': iconCodePoint,
       if (notes != null) 'notes': notes,
+      'labels': labels,
     };
   }
 
@@ -51,6 +54,7 @@ class WalletModel extends Wallet {
       colorHex: wallet.colorHex,
       iconCodePoint: wallet.iconCodePoint,
       notes: wallet.notes,
+      labels: wallet.labels,
     );
   }
 }

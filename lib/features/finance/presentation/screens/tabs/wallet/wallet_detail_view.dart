@@ -446,6 +446,29 @@ class _BalanceSummary extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (wallet.labels.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: wallet.labels.map((label) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: walletColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: walletColor.withValues(alpha: 0.25), width: 1),
+                        ),
+                        child: Text(
+                          label,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: walletColor.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                  ],
                 ],
               ),
             ),

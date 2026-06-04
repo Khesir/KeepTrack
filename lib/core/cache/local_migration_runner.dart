@@ -16,6 +16,7 @@ class LocalMigrationRunner {
   static final List<_Migration> _migrations = [
     _v1_add_wallet_notes,
     _v2_add_transaction_image_paths,
+    _v3_add_wallet_labels,
   ];
 
   Future<void> run() async {
@@ -48,6 +49,18 @@ class LocalMigrationRunner {
         await cache.put('transactions', entry['id'] as String, {
           ...entry,
           'imagePaths': <String>[],
+        });
+      }
+    }
+  }
+
+  static Future<void> _v3_add_wallet_labels(LocalCache cache) async {
+    final entries = await cache.getAll('wallets');
+    for (final entry in entries) {
+      if (!entry.containsKey('labels')) {
+        await cache.put('wallets', entry['id'] as String, {
+          ...entry,
+          'labels': <String>[],
         });
       }
     }

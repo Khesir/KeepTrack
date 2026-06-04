@@ -171,35 +171,43 @@ class _WalletTabState extends State<WalletTab> {
                     Wrap(
                       spacing: h,
                       runSpacing: h,
-                      children: standardWallets.asMap().entries.map((e) {
-                        final i = e.key;
-                        final w = e.value;
-                        return TweenAnimationBuilder<double>(
-                          key: ValueKey(w.id),
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          duration: const Duration(milliseconds: 450),
-                          curve: Interval(
-                            (i * 0.08).clamp(0.0, 0.6),
-                            ((i * 0.08) + 0.4).clamp(0.0, 1.0),
-                            curve: Curves.easeOut,
-                          ),
-                          builder: (_, v, child) => Opacity(
-                            opacity: v,
-                            child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
-                          ),
-                          child: SizedBox(
-                            width: 200,
-                            height: 160,
-                            child: _WalletCard(
-                              wallet: w,
-                              isDark: isDark,
-                              onTap: () => _openAddEntry(context, w),
-                              onEdit: () => _openEdit(context, w),
-                              onViewHistory: () => setState(() => _selectedWallet = w),
+                      children: [
+                        ...standardWallets.asMap().entries.map((e) {
+                          final i = e.key;
+                          final w = e.value;
+                          return TweenAnimationBuilder<double>(
+                            key: ValueKey(w.id),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 450),
+                            curve: Interval(
+                              (i * 0.08).clamp(0.0, 0.6),
+                              ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                              curve: Curves.easeOut,
                             ),
+                            builder: (_, v, child) => Opacity(
+                              opacity: v,
+                              child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                            ),
+                            child: SizedBox(
+                              width: 200,
+                              height: 185,
+                              child: _WalletCard(
+                                wallet: w,
+                                isDark: isDark,
+                                onTap: () => _openAddEntry(context, w),
+                                onEdit: () => _openEdit(context, w),
+                                onViewHistory: () => setState(() => _selectedWallet = w),
+                              ),
+                            ),
+                          );
+                        }),
+                        if (creditWallets.isEmpty)
+                          SizedBox(
+                            width: 200,
+                            height: 185,
+                            child: _AddWalletCard(isDark: isDark, onTap: () => _openCreate(context)),
                           ),
-                        );
-                      }).toList(),
+                      ],
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -218,56 +226,45 @@ class _WalletTabState extends State<WalletTab> {
                     Wrap(
                       spacing: h,
                       runSpacing: h,
-                      children: creditWallets.asMap().entries.map((e) {
-                        final i = standardWallets.length + e.key;
-                        final w = e.value;
-                        return TweenAnimationBuilder<double>(
-                          key: ValueKey(w.id),
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          duration: const Duration(milliseconds: 450),
-                          curve: Interval(
-                            (i * 0.08).clamp(0.0, 0.6),
-                            ((i * 0.08) + 0.4).clamp(0.0, 1.0),
-                            curve: Curves.easeOut,
-                          ),
-                          builder: (_, v, child) => Opacity(
-                            opacity: v,
-                            child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
-                          ),
-                          child: SizedBox(
-                            width: 200,
-                            height: 160,
-                            child: _WalletCard(
-                              wallet: w,
-                              isDark: isDark,
-                              onTap: () => _openAddEntry(context, w),
-                              onEdit: () => _openEdit(context, w),
-                              onViewHistory: () => setState(() => _selectedWallet = w),
+                      children: [
+                        ...creditWallets.asMap().entries.map((e) {
+                          final i = standardWallets.length + e.key;
+                          final w = e.value;
+                          return TweenAnimationBuilder<double>(
+                            key: ValueKey(w.id),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 450),
+                            curve: Interval(
+                              (i * 0.08).clamp(0.0, 0.6),
+                              ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                              curve: Curves.easeOut,
                             ),
-                          ),
-                        );
-                      }).toList(),
+                            builder: (_, v, child) => Opacity(
+                              opacity: v,
+                              child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                            ),
+                            child: SizedBox(
+                              width: 200,
+                              height: 185,
+                              child: _WalletCard(
+                                wallet: w,
+                                isDark: isDark,
+                                onTap: () => _openAddEntry(context, w),
+                                onEdit: () => _openEdit(context, w),
+                                onViewHistory: () => setState(() => _selectedWallet = w),
+                              ),
+                            ),
+                          );
+                        }),
+                        SizedBox(
+                          width: 200,
+                          height: 185,
+                          child: _AddWalletCard(isDark: isDark, onTap: () => _openCreate(context)),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                   ],
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 450),
-                    curve: Interval(
-                      (wallets.length * 0.08).clamp(0.0, 0.6),
-                      ((wallets.length * 0.08) + 0.4).clamp(0.0, 1.0),
-                      curve: Curves.easeOut,
-                    ),
-                    builder: (_, v, child) => Opacity(
-                      opacity: v,
-                      child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
-                    ),
-                    child: SizedBox(
-                      width: 200,
-                      height: 160,
-                      child: _AddWalletCard(isDark: isDark, onTap: () => _openCreate(context)),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -557,6 +554,25 @@ class _WalletCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (wallet.labels.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: wallet.labels.take(2).map((label) => Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _color.withValues(alpha: 0.25), width: 1),
+                            ),
+                            child: Text(
+                              label,
+                              style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: _color.withValues(alpha: 0.85)),
+                            ),
+                          )).toList(),
+                        ),
+                      ],
                     ],
                   ),
                 ),

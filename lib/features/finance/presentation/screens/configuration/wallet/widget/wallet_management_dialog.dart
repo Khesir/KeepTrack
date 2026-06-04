@@ -46,15 +46,22 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _balanceCtrl;
   late final TextEditingController _notesCtrl;
+  late final TextEditingController _labelInputCtrl;
 
   String _colorHex = _kColors.first;
   IconData _selectedIcon = IconHelper.defaultIcon;
   WalletType _walletType = WalletType.standard;
+  List<String> _labels = [];
   bool _saving = false;
 
   static const _kColors = [
     '#1D9E75', '#378ADD', '#534AB7', '#EC4899',
     '#EF9F27', '#E24B4A', '#0CA678', '#AE3EC9',
+  ];
+
+  static const _kSuggestedLabels = [
+    'Daily', 'Emergency', 'Business', 'Savings',
+    'Travel', 'Food', 'Bills', 'Personal',
   ];
 
   List<(IconData, String, String)> get _icons => IconHelper.getAvailableIcons();
@@ -71,9 +78,11 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
       text: w != null && w.balance > 0 ? w.balance.toStringAsFixed(2) : '',
     );
     _notesCtrl = TextEditingController(text: w?.notes ?? '');
+    _labelInputCtrl = TextEditingController();
     _colorHex = w?.colorHex ?? _kColors.first;
     _selectedIcon = IconHelper.fromString(w?.iconCodePoint);
     _walletType = w?.type ?? WalletType.standard;
+    _labels = List<String>.from(w?.labels ?? []);
   }
 
   @override
@@ -81,12 +90,18 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
     _nameCtrl.dispose();
     _balanceCtrl.dispose();
     _notesCtrl.dispose();
+    _labelInputCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
+    final pendingLabel = _labelInputCtrl.text.trim();
+    if (pendingLabel.isNotEmpty && !_labels.contains(pendingLabel)) {
+      setState(() => _labels.add(pendingLabel));
+    }
+    _labelInputCtrl.clear();
     setState(() => _saving = true);
     try {
       final notes = _notesCtrl.text.trim();
@@ -99,6 +114,7 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
         colorHex: _colorHex,
         iconCodePoint: _selectedIcon.codePoint.toString(),
         notes: notes.isEmpty ? null : notes,
+        labels: _labels,
       );
       await widget.onSave(wallet);
       if (mounted) Navigator.pop(context);
@@ -259,6 +275,83 @@ class _WalletManagementDialogState extends State<WalletManagementDialog> {
                   textCapitalization: TextCapitalization.sentences,
                   style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
                   decoration: _inputDeco(isDark, 'e.g., Daily expenses, emergency fund…'),
+                ),
+
+                // Labels
+                const SizedBox(height: 14),
+                _Label('Labels'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ..._labels.map((label) => _LabelChip(
+                      label: label,
+                      accentColor: _accentColor,
+                      isDark: isDark,
+                      onRemove: () => setState(() => _labels.remove(label)),
+                    )),
+                    SizedBox(
+                      width: 120,
+                      height: 30,
+                      child: TextField(
+                        controller: _labelInputCtrl,
+                        textCapitalization: TextCapitalization.words,
+                        style: GoogleFonts.dmSans(fontSize: 12, color: textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Add label…',
+                          hintStyle: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textTertiary),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(color: _accentColor, width: 1.5),
+                          ),
+                        ),
+                        onSubmitted: (value) {
+                          final trimmed = value.trim();
+                          if (trimmed.isNotEmpty && !_labels.contains(trimmed)) {
+                            setState(() => _labels.add(trimmed));
+                          }
+                          _labelInputCtrl.clear();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _kSuggestedLabels.where((s) => !_labels.contains(s)).map((s) {
+                    return GestureDetector(
+                      onTap: () => setState(() => _labels.add(s)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.backgroundSecondary,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.border, width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_rounded, size: 11, color: AppColors.textTertiary),
+                            const SizedBox(width: 3),
+                            Text(s, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
 
                 // Starting balance (create only)
@@ -428,4 +521,45 @@ class _Label extends StatelessWidget {
       Text('*', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.error)),
     ],
   ]);
+}
+
+class _LabelChip extends StatelessWidget {
+  final String label;
+  final Color accentColor;
+  final bool isDark;
+  final VoidCallback onRemove;
+
+  const _LabelChip({
+    required this.label,
+    required this.accentColor,
+    required this.isDark,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w500, color: accentColor),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(Icons.close_rounded, size: 13, color: accentColor.withValues(alpha: 0.7)),
+          ),
+        ],
+      ),
+    );
+  }
 }
