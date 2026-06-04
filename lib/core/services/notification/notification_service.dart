@@ -1,12 +1,12 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:local_notifier/local_notifier.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:keep_track/core/logging/app_logger.dart';
 
-/// Core notification service for handling local notifications
-/// Only initializes on mobile platforms (Android/iOS)
 class NotificationService {
   NotificationService._();
 
@@ -16,20 +16,18 @@ class NotificationService {
   FlutterLocalNotificationsPlugin? _plugin;
   bool _initialized = false;
 
-  /// Check if the current platform supports notifications
+  // Windows uses Timers for scheduling since flutter_local_notifications doesn't support Windows
+  final Map<int, Timer> _windowsTimers = {};
+
   bool get isSupportedPlatform {
     if (kIsWeb) return false;
-    return Platform.isAndroid || Platform.isIOS;
+    return Platform.isAndroid || Platform.isIOS || Platform.isWindows;
   }
 
-  /// Check if the service is initialized
   bool get isInitialized => _initialized;
 
-  /// Get the notification plugin (only available on mobile)
   FlutterLocalNotificationsPlugin? get plugin => _plugin;
 
-  /// Initialize the notification service
-  /// Safe to call on any platform - will no-op on unsupported platforms
   Future<bool> initialize() async {
     if (!isSupportedPlatform) {
       AppLogger.info('NotificationService: Platform not supported, skipping initialization');
@@ -42,18 +40,27 @@ class NotificationService {
     }
 
     try {
-      // Initialize timezone database
-      tz_data.initializeTimeZones();
-      final localTimezone = DateTime.now().timeZoneName;
-      AppLogger.info('NotificationService: Timezone initialized - $localTimezone');
+      if (Platform.isWindows) {
+        await localNotifier.setup(appName: 'Keep Track');
+        _initialized = true;
+        AppLogger.info('NotificationService: Windows notifications initialized');
+        return true;
+      }
 
-      // Create plugin instance
+      // Initialize timezone database (Android/iOS)
+      tz_data.initializeTimeZones();
+      try {
+        final localTimezone = DateTime.now().timeZoneName;
+        tz.setLocalLocation(tz.getLocation(localTimezone));
+        AppLogger.info('NotificationService: Timezone set to $localTimezone');
+      } catch (e) {
+        AppLogger.warning('NotificationService: Could not set local timezone, defaulting to UTC');
+      }
+
       _plugin = FlutterLocalNotificationsPlugin();
 
-      // Android initialization settings
       const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-      // iOS initialization settings
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -65,7 +72,6 @@ class NotificationService {
         iOS: iosSettings,
       );
 
-      // Initialize the plugin
       final success = await _plugin!.initialize(
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
@@ -74,10 +80,7 @@ class NotificationService {
       if (success == true) {
         _initialized = true;
         AppLogger.info('NotificationService: Initialized successfully');
-
-        // Create notification channels for Android
         await _createNotificationChannels();
-
         return true;
       } else {
         AppLogger.warning('NotificationService: Initialization returned false');
@@ -89,13 +92,10 @@ class NotificationService {
     }
   }
 
-  /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
     AppLogger.info('NotificationService: Notification tapped - ${response.payload}');
-    // TODO: Handle navigation based on payload if needed
   }
 
-  /// Create Android notification channels
   Future<void> _createNotificationChannels() async {
     if (!Platform.isAndroid || _plugin == null) return;
 
@@ -104,7 +104,6 @@ class NotificationService {
 
     if (androidPlugin == null) return;
 
-    // Finance reminders channel
     await androidPlugin.createNotificationChannel(
       const AndroidNotificationChannel(
         'finance_reminders',
@@ -114,7 +113,6 @@ class NotificationService {
       ),
     );
 
-    // Task reminders channel (high priority)
     await androidPlugin.createNotificationChannel(
       const AndroidNotificationChannel(
         'task_reminders',
@@ -124,7 +122,6 @@ class NotificationService {
       ),
     );
 
-    // Payment reminders channel (high priority)
     await androidPlugin.createNotificationChannel(
       const AndroidNotificationChannel(
         'payment_reminders',
@@ -137,7 +134,6 @@ class NotificationService {
     AppLogger.info('NotificationService: Notification channels created');
   }
 
-  /// Show an immediate notification
   Future<void> showNotification({
     required int id,
     required String title,
@@ -145,10 +141,17 @@ class NotificationService {
     String? payload,
     String channelId = 'task_reminders',
   }) async {
-    if (!_initialized || _plugin == null) {
+    if (!_initialized) {
       AppLogger.warning('NotificationService: Cannot show notification - not initialized');
       return;
     }
+
+    if (Platform.isWindows) {
+      await _showWindowsNotification(id: id, title: title, body: body);
+      return;
+    }
+
+    if (_plugin == null) return;
 
     final androidDetails = AndroidNotificationDetails(
       channelId,
@@ -163,13 +166,23 @@ class NotificationService {
       presentSound: true,
     );
 
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
     await _plugin!.show(id, title, body, details, payload: payload);
     AppLogger.info('NotificationService: Notification shown - $title');
+  }
+
+  Future<void> _showWindowsNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    final notification = LocalNotification(
+      identifier: id.toString(),
+      title: title,
+      body: body,
+    );
+    await notification.show();
+    AppLogger.info('NotificationService: Windows notification shown - $title');
   }
 
   String _getChannelName(String channelId) {
@@ -189,7 +202,6 @@ class NotificationService {
     return channelId == 'task_reminders' || channelId == 'payment_reminders';
   }
 
-  /// Schedule a notification at a specific time
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -198,16 +210,28 @@ class NotificationService {
     String? payload,
     String channelId = 'task_reminders',
   }) async {
-    if (!_initialized || _plugin == null) {
+    if (!_initialized) {
       AppLogger.warning('NotificationService: Cannot schedule notification - not initialized');
       return;
     }
 
-    // Don't schedule notifications in the past
     if (scheduledTime.isBefore(DateTime.now())) {
       AppLogger.warning('NotificationService: Skipping past notification - $title at $scheduledTime');
       return;
     }
+
+    if (Platform.isWindows) {
+      final delay = scheduledTime.difference(DateTime.now());
+      _windowsTimers[id]?.cancel();
+      _windowsTimers[id] = Timer(delay, () async {
+        await _showWindowsNotification(id: id, title: title, body: body);
+        _windowsTimers.remove(id);
+      });
+      AppLogger.info('NotificationService: Windows notification scheduled - $title at $scheduledTime');
+      return;
+    }
+
+    if (_plugin == null) return;
 
     final androidDetails = AndroidNotificationDetails(
       channelId,
@@ -222,10 +246,7 @@ class NotificationService {
       presentSound: true,
     );
 
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _plugin!.zonedSchedule(
       id,
@@ -242,7 +263,6 @@ class NotificationService {
     AppLogger.info('NotificationService: Notification scheduled - $title at $scheduledTime');
   }
 
-  /// Schedule a daily repeating notification
   Future<void> scheduleDailyNotification({
     required int id,
     required String title,
@@ -252,10 +272,18 @@ class NotificationService {
     String? payload,
     String channelId = 'task_reminders',
   }) async {
-    if (!_initialized || _plugin == null) {
+    if (!_initialized) {
       AppLogger.warning('NotificationService: Cannot schedule daily notification - not initialized');
       return;
     }
+
+    if (Platform.isWindows) {
+      _scheduleWindowsDaily(id: id, title: title, body: body, hour: hour, minute: minute);
+      AppLogger.info('NotificationService: Windows daily notification scheduled - $title at $hour:$minute');
+      return;
+    }
+
+    if (_plugin == null) return;
 
     final androidDetails = AndroidNotificationDetails(
       channelId,
@@ -270,10 +298,7 @@ class NotificationService {
       presentSound: true,
     );
 
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _plugin!.zonedSchedule(
       id,
@@ -291,7 +316,26 @@ class NotificationService {
     AppLogger.info('NotificationService: Daily notification scheduled - $title at $hour:$minute');
   }
 
-  /// Get the next instance of a specific time
+  void _scheduleWindowsDaily({
+    required int id,
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+  }) {
+    _windowsTimers[id]?.cancel();
+
+    final now = DateTime.now();
+    var next = DateTime(now.year, now.month, now.day, hour, minute);
+    if (next.isBefore(now)) next = next.add(const Duration(days: 1));
+
+    _windowsTimers[id] = Timer(next.difference(now), () async {
+      await _showWindowsNotification(id: id, title: title, body: body);
+      // Reschedule for the next day
+      _scheduleWindowsDaily(id: id, title: title, body: body, hour: hour, minute: minute);
+    });
+  }
+
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
@@ -303,15 +347,22 @@ class NotificationService {
     return scheduledDate;
   }
 
-  /// Cancel a notification by ID
   Future<void> cancelNotification(int id) async {
-    if (!_initialized || _plugin == null) return;
+    if (!_initialized) return;
+
+    if (Platform.isWindows) {
+      _windowsTimers[id]?.cancel();
+      _windowsTimers.remove(id);
+      AppLogger.info('NotificationService: Windows notification cancelled - ID: $id');
+      return;
+    }
+
+    if (_plugin == null) return;
 
     try {
       await _plugin!.cancel(id);
       AppLogger.info('NotificationService: Notification cancelled - ID: $id');
     } catch (e, stackTrace) {
-      // Handle corrupted notification cache (Missing type parameter error)
       AppLogger.warning(
         'NotificationService: Failed to cancel notification $id, attempting cache clear',
       );
@@ -319,15 +370,24 @@ class NotificationService {
     }
   }
 
-  /// Cancel all notifications
   Future<void> cancelAllNotifications() async {
-    if (!_initialized || _plugin == null) return;
+    if (!_initialized) return;
+
+    if (Platform.isWindows) {
+      for (final timer in _windowsTimers.values) {
+        timer.cancel();
+      }
+      _windowsTimers.clear();
+      AppLogger.info('NotificationService: All Windows notifications cancelled');
+      return;
+    }
+
+    if (_plugin == null) return;
 
     try {
       await _plugin!.cancelAll();
       AppLogger.info('NotificationService: All notifications cancelled');
     } catch (e, stackTrace) {
-      // Handle corrupted notification cache
       AppLogger.warning(
         'NotificationService: Failed to cancel all notifications, attempting cache clear',
       );
@@ -335,24 +395,19 @@ class NotificationService {
     }
   }
 
-  /// Handle corrupted notification cache by clearing it
   Future<void> _clearNotificationCacheOnError(Object error, StackTrace stackTrace) async {
     AppLogger.error('NotificationService: Notification cache error', error, stackTrace);
 
-    // On Android, try to clear the notification cache
     if (Platform.isAndroid && _plugin != null) {
       try {
         final androidPlugin = _plugin!.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
-          // Clear all notifications from the system
           await androidPlugin.cancelAll();
           AppLogger.info('NotificationService: Cleared all notifications via Android plugin');
         }
       } catch (e2) {
         AppLogger.error('NotificationService: Could not clear notification cache', e2, stackTrace);
-        // The corrupted cache is stored in SharedPreferences
-        // User may need to clear app data from device settings
       }
     }
   }

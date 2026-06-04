@@ -14,7 +14,7 @@ class PlatformNotificationHelper {
   /// Check if the current platform supports notifications
   bool get isSupportedPlatform {
     if (kIsWeb) return false;
-    return Platform.isAndroid || Platform.isIOS;
+    return Platform.isAndroid || Platform.isIOS || Platform.isWindows;
   }
 
   /// Request notification permissions
@@ -24,6 +24,9 @@ class PlatformNotificationHelper {
       AppLogger.info('Notifications: Platform not supported, skipping permission request');
       return false;
     }
+
+    // Windows does not require runtime notification permission
+    if (Platform.isWindows) return true;
 
     try {
       // Request notification permission (Android 13+ and iOS)
@@ -54,6 +57,8 @@ class PlatformNotificationHelper {
   Future<bool> areNotificationsEnabled() async {
     if (!isSupportedPlatform) return false;
 
+    if (Platform.isWindows) return true;
+
     try {
       final status = await Permission.notification.status;
       return status.isGranted;
@@ -66,6 +71,8 @@ class PlatformNotificationHelper {
   /// Open app notification settings
   Future<bool> openNotificationSettings() async {
     if (!isSupportedPlatform) return false;
+
+    if (Platform.isWindows) return false;
 
     try {
       return await openAppSettings();
