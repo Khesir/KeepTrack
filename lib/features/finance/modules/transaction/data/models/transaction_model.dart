@@ -23,6 +23,7 @@ class TransactionModel extends Transaction {
     super.walletId,
     super.toWalletId,
     super.subscriptionId,
+    super.imagePaths,
   });
 
   factory TransactionModel.fromEntity(Transaction transaction) {
@@ -48,6 +49,7 @@ class TransactionModel extends Transaction {
       walletId: transaction.walletId,
       toWalletId: transaction.toWalletId,
       subscriptionId: transaction.subscriptionId,
+      imagePaths: transaction.imagePaths,
     );
   }
 
@@ -77,6 +79,7 @@ class TransactionModel extends Transaction {
       walletId: json['walletId'] as String?,
       toWalletId: json['toWalletId'] as String?,
       subscriptionId: json['subscriptionId'] as String?,
+      imagePaths: (json['imagePaths'] as List?)?.cast<String>() ?? [],
     );
   }
 
@@ -99,6 +102,7 @@ class TransactionModel extends Transaction {
       if (walletId != null) 'walletId': walletId,
       if (toWalletId != null) 'toWalletId': toWalletId,
       if (subscriptionId != null) 'subscriptionId': subscriptionId,
+      if (imagePaths.isNotEmpty) 'imagePaths': imagePaths,
     };
   }
 
@@ -125,6 +129,7 @@ class TransactionModel extends Transaction {
       if (walletId != null) 'walletId': walletId,
       if (toWalletId != null) 'toWalletId': toWalletId,
       if (subscriptionId != null) 'subscriptionId': subscriptionId,
+      'imagePaths': imagePaths,
     };
   }
 }

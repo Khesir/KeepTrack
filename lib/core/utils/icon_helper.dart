@@ -1,176 +1,35 @@
 import 'package:flutter/material.dart';
 
-/// Helper class for converting icon code points to const IconData instances
-/// This allows Flutter to tree-shake unused icons
 class IconHelper {
   IconHelper._();
 
-  /// Default icon to use when code point is not found or invalid
   static const IconData defaultIcon = Icons.account_balance_wallet;
 
-  /// Map of common icon code points to their const IconData
-  static const Map<int, IconData> _iconMap = {
-    // Finance & Money
-    0xe047: Icons.account_balance_wallet,
-    0xe0af: Icons.account_balance,
-    0xe84f: Icons.credit_card,
-    0xe8a6: Icons.money,
-    0xf05d7: Icons.wallet,
-    0xe227: Icons.savings,
-    0xe850: Icons.credit_score,
-    0xe263: Icons.attach_money,
-    0xe8d1: Icons.payment,
-    0xf04e9: Icons.currency_exchange,
-    0xf04ea: Icons.price_check,
-    0xf04eb: Icons.receipt_long,
-    0xf04ec: Icons.point_of_sale,
-    0xe0c8: Icons.local_atm,
+  static Map<int, IconData>? _reverseMap;
 
-    // Shopping
-    0xe536: Icons.shopping_cart,
-    0xe54e: Icons.shopping_bag,
-    0xe59c: Icons.store,
-    0xe0c6: Icons.local_offer,
-    0xf0507: Icons.sell,
-    0xe161: Icons.redeem,
-    0xe0b7: Icons.card_giftcard,
-    0xe533: Icons.local_mall,
-
-    // Food & Dining
-    0xe1bc: Icons.restaurant,
-    0xe56c: Icons.fastfood,
-    0xe531: Icons.local_cafe,
-    0xe530: Icons.local_bar,
-    0xe532: Icons.local_dining,
-    0xef6f: Icons.coffee,
-    0xf0533: Icons.ramen_dining,
-    0xf0534: Icons.lunch_dining,
-    0xf0535: Icons.brunch_dining,
-    0xf0536: Icons.breakfast_dining,
-    0xf0537: Icons.dinner_dining,
-
-    // Transport
-    0xe557: Icons.directions_car,
-    0xe1c4: Icons.directions_bus,
-    0xe1c3: Icons.directions_subway,
-    0xe63d: Icons.flight,
-    0xe53b: Icons.local_taxi,
-    0xef4d: Icons.two_wheeler,
-    0xef11: Icons.pedal_bike,
-    0xe558: Icons.local_shipping,
-    0xef3b: Icons.electric_car,
-
-    // Health & Medical
-    0xe87c: Icons.medical_services,
-    0xe195: Icons.local_hospital,
-    0xe1c1: Icons.local_pharmacy,
-    0xe3be: Icons.fitness_center,
-    0xe1e0: Icons.spa,
-    0xf0622: Icons.self_improvement,
-    0xf05c3: Icons.psychology,
-    0xf059e: Icons.vaccines,
-    0xf0453: Icons.health_and_safety,
-
-    // Home & Living
-    0xe88a: Icons.home,
-    0xe068: Icons.apartment,
-    0xf04c5: Icons.cottage,
-    0xe43c: Icons.weekend,
-    0xe1fa: Icons.bed,
-    0xe1f2: Icons.bathtub,
-    0xe56d: Icons.kitchen,
-    0xef12: Icons.chair,
-    0xe3f0: Icons.light,
-    0xe86e: Icons.construction,
-
-    // Technology
-    0xe8b8: Icons.phone_android,
-    0xe30a: Icons.laptop,
-    0xe1b1: Icons.devices,
-    0xe1db: Icons.headphones,
-    0xe3af: Icons.camera_alt,
-    0xe30d: Icons.computer,
-    0xe334: Icons.watch,
-    0xe32f: Icons.tablet_android,
-    0xf06a4: Icons.smart_toy,
-
-    // Entertainment
-    0xe40b: Icons.theaters,
-    0xe404: Icons.movie,
-    0xe405: Icons.music_note,
-    0xe039: Icons.sports_esports,
-    0xe114: Icons.casino,
-    0xe1d7: Icons.local_activity,
-    0xef5b: Icons.celebration,
-    0xe40a: Icons.palette,
-    0xef43: Icons.sports,
-
-    // Education
-    0xe8a1: Icons.school,
-    0xe865: Icons.book,
-    0xe3f4: Icons.menu_book,
-    0xef52: Icons.auto_stories,
-    0xe8b0: Icons.science,
-    0xea16: Icons.calculate,
-    0xea3b: Icons.architecture,
-    0xea3d: Icons.engineering,
-
-    // Travel
-    0xe577: Icons.hotel,
-    0xf04fc: Icons.luggage,
-    0xf04b7: Icons.travel_explore,
-    0xe1c0: Icons.beach_access,
-    0xe3f7: Icons.landscape,
-    0xef75: Icons.hiking,
-    0xe3ff: Icons.terrain,
-    0xef62: Icons.festival,
-
-    // Work & Business
-    0xe7f4: Icons.work,
-    0xe0d4: Icons.business,
-    0xe0d8: Icons.business_center,
-    0xea36: Icons.factory,
-    0xe7fd: Icons.manage_accounts,
-
-    // Symbols & Goals
-    0xe153: Icons.flag,
-    0xe80e: Icons.emoji_events,
-    0xe83e: Icons.grade,
-    0xe838: Icons.stars,
-    0xe8e4: Icons.military_tech,
-    0xe87e: Icons.workspace_premium,
-    0xe1af: Icons.trending_up,
-    0xe1b0: Icons.trending_down,
-    0xe8f5: Icons.show_chart,
-    0xe8f4: Icons.pie_chart,
-    0xe26b: Icons.bar_chart,
-  };
-
-  /// Get IconData from string code point
-  static IconData fromString(String? codePointString) {
-    if (codePointString == null || codePointString.isEmpty) {
-      return defaultIcon;
+  static Map<int, IconData> get _iconMap {
+    if (_reverseMap != null) return _reverseMap!;
+    _reverseMap = {};
+    for (final entry in getAvailableIcons()) {
+      _reverseMap![entry.$1.codePoint] = entry.$1;
     }
+    return _reverseMap!;
+  }
+
+  static IconData fromString(String? codePointString) {
+    if (codePointString == null || codePointString.isEmpty) return defaultIcon;
     try {
       final codePoint = int.parse(codePointString);
-      return fromCodePoint(codePoint);
-    } catch (e) {
+      return _iconMap[codePoint] ?? defaultIcon;
+    } catch (_) {
       return defaultIcon;
     }
   }
 
-  /// Get IconData from int code point
-  static IconData fromCodePoint(int codePoint) {
-    return _iconMap[codePoint] ?? Icons.category_outlined;
-  }
-
-  /// Convert IconData to string code point for storage
   static String toCodePointString(IconData iconData) {
     return iconData.codePoint.toString();
   }
 
-  /// Get list of available icons for selection.
-  /// Returns list of (iconData, name, category) tuples.
   static List<(IconData, String, String)> getAvailableIcons() {
     return [
       // Finance & Money
@@ -292,7 +151,6 @@ class IconHelper {
       (Icons.business, 'Business', 'Work'),
       (Icons.business_center, 'Business Center', 'Work'),
       (Icons.factory, 'Factory', 'Work'),
-      (Icons.engineering, 'Engineering', 'Work'),
       (Icons.manage_accounts, 'Manage Accounts', 'Work'),
 
       // Symbols & Goals

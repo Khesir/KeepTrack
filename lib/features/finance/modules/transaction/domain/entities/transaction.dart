@@ -22,6 +22,7 @@ class Transaction {
   final String? walletId;
   final String? toWalletId;
   final String? subscriptionId;
+  final List<String> imagePaths;
 
   Transaction({
     this.id,
@@ -45,6 +46,7 @@ class Transaction {
     this.walletId,
     this.toWalletId,
     this.subscriptionId,
+    this.imagePaths = const [],
   });
 
   Transaction copyWith({
@@ -69,6 +71,7 @@ class Transaction {
     String? walletId,
     String? toWalletId,
     String? subscriptionId,
+    List<String>? imagePaths,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -92,6 +95,7 @@ class Transaction {
       walletId: walletId ?? this.walletId,
       toWalletId: toWalletId ?? this.toWalletId,
       subscriptionId: subscriptionId ?? this.subscriptionId,
+      imagePaths: imagePaths ?? this.imagePaths,
     );
   }
 

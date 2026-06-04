@@ -204,6 +204,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: settings.budgetSheetMode,
                   onChanged: (v) => _controller.updateBudgetSheetMode(v),
                 ),
+                _Divider(isDark: isDark),
+                _SettingsRow(
+                  isDark: isDark,
+                  icon: Icons.photo_library_outlined,
+                  iconColor: AppColors.accent,
+                  label: 'Attachment Gallery',
+                  subtitle: 'Browse all transaction receipt photos',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.transactionAttachmentGallery,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),

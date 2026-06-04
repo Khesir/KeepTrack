@@ -17,6 +17,7 @@ import '../../features/finance/presentation/screens/configuration/goals/goals_ma
 import '../../features/finance/presentation/screens/configuration/debts/debts_management_screen.dart';
 import '../../features/finance/presentation/screens/configuration/planned_payments/planned_payments_management_screen.dart';
 import '../../features/finance/presentation/screens/transactions/create_transaction_screen.dart';
+import '../../features/finance/presentation/screens/transactions/transaction_attachment_gallery_screen.dart';
 import '../../features/finance/presentation/screens/finance_main_screen.dart';
 import '../../features/settings/subpages/app_configuration_page.dart';
 
@@ -50,6 +51,7 @@ class AppRoutes {
 
   // Transaction
   static const String transactionCreate = '/create';
+  static const String transactionAttachmentGallery = '/transaction-attachments';
 }
 
 /// App router - handles all route generation
@@ -155,6 +157,13 @@ class AppRouter {
       case AppRoutes.plannedPaymentsManagement:
         return MaterialPageRoute(
           builder: (_) => const PlannedPaymentsManagementScreen(),
+          settings: settings,
+        );
+
+      // Transaction Attachment Gallery
+      case AppRoutes.transactionAttachmentGallery:
+        return MaterialPageRoute(
+          builder: (_) => const TransactionAttachmentGalleryScreen(),
           settings: settings,
         );
 

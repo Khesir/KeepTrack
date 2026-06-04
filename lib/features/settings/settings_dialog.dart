@@ -15,6 +15,13 @@ import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/core/network/api_client.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/auth/presentation/widgets/login_dialog.dart';
+import 'dart:io';
+import 'package:intl/intl.dart';
+import 'package:keep_track/core/settings/utils/currency_formatter.dart';
+import 'package:keep_track/core/utils/transaction_image_service.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/sheets/transaction_detail_sheet.dart';
+import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
+import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
 import 'package:keep_track/features/settings/data/services/backup_service.dart';
 import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -1189,7 +1196,7 @@ class _ThemeOptionRowState extends State<_ThemeOptionRow> {
 }
 
 
-class _BudgetPane extends StatelessWidget {
+class _BudgetPane extends StatefulWidget {
   final bool isDark;
   final AppSettings settings;
   final SettingsController controller;
@@ -1201,24 +1208,261 @@ class _BudgetPane extends StatelessWidget {
   });
 
   @override
+  State<_BudgetPane> createState() => _BudgetPaneState();
+}
+
+class _BudgetPaneState extends State<_BudgetPane> {
+  bool _showGallery = false;
+
+  @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
+    return _showGallery
+        ? _GalleryPane(
+            isDark: widget.isDark,
+            onBack: () => setState(() => _showGallery = false),
+          )
+        : ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              _PaneRow(
+                isDark: widget.isDark,
+                icon: widget.settings.budgetSheetMode
+                    ? Icons.table_rows_outlined
+                    : Icons.view_stream_outlined,
+                iconColor: AppColors.info,
+                label: 'Budget View',
+                subtitle: widget.settings.budgetSheetMode
+                    ? 'Sheet mode – full budget sheet'
+                    : 'Simple mode – overview with tabs',
+                trailing: Switch(
+                  value: widget.settings.budgetSheetMode,
+                  onChanged: widget.controller.updateBudgetSheetMode,
+                  activeThumbColor: AppColors.accent,
+                ),
+              ),
+              _PaneRow(
+                isDark: widget.isDark,
+                icon: Icons.photo_library_outlined,
+                iconColor: AppColors.accent,
+                label: 'Attachment Gallery',
+                subtitle: 'Browse all transaction receipt photos',
+                onTap: () => setState(() => _showGallery = true),
+              ),
+            ],
+          );
+  }
+}
+
+class _GalleryPane extends StatefulWidget {
+  final bool isDark;
+  final VoidCallback onBack;
+
+  const _GalleryPane({required this.isDark, required this.onBack});
+
+  @override
+  State<_GalleryPane> createState() => _GalleryPaneState();
+}
+
+class _GalleryPaneState extends State<_GalleryPane> {
+  late final TransactionController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = locator.get<TransactionController>();
+    if (_controller.data == null) _controller.loadAllTransactions();
+  }
+
+  List<({Transaction transaction, String path})> _buildEntries(
+    List<Transaction> transactions,
+  ) {
+    final entries = <({Transaction transaction, String path})>[];
+    for (final tx in transactions) {
+      for (final path in tx.imagePaths) {
+        if (TransactionImageService.fileExists(path)) {
+          entries.add((transaction: tx, path: path));
+        }
+      }
+    }
+    entries.sort((a, b) => b.transaction.date.compareTo(a.transaction.date));
+    return entries;
+  }
+
+  void _openViewer(String path) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.85),
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: double.infinity,
+              child: InteractiveViewer(
+                child: Image.file(File(path), fit: BoxFit.contain, width: double.infinity),
+              ),
+            ),
+            Positioned(
+              top: 48,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    final borderColor = widget.isDark
+        ? AppColors.border.withValues(alpha: 0.2)
+        : AppColors.border.withValues(alpha: 0.4);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _PaneRow(
-          isDark: isDark,
-          icon: settings.budgetSheetMode
-              ? Icons.table_rows_outlined
-              : Icons.view_stream_outlined,
-          iconColor: AppColors.info,
-          label: 'Budget View',
-          subtitle: settings.budgetSheetMode
-              ? 'Sheet mode – full budget sheet'
-              : 'Simple mode – overview with tabs',
-          trailing: Switch(
-            value: settings.budgetSheetMode,
-            onChanged: controller.updateBudgetSheetMode,
-            activeThumbColor: AppColors.accent,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            children: [
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: widget.onBack,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_back_ios_rounded, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Budget',
+                        style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
+              const SizedBox(width: 4),
+              Text(
+                'Attachment Gallery',
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: fg),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: borderColor),
+        Expanded(
+          child: AsyncStreamBuilder<List<Transaction>>(
+            state: _controller,
+            loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+            errorBuilder: (_, msg) => Center(
+              child: Text(msg, style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary)),
+            ),
+            builder: (context, transactions) {
+              final entries = _buildEntries(transactions);
+              if (entries.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.photo_library_outlined, size: 40, color: AppColors.textTertiary),
+                      const SizedBox(height: 10),
+                      Text(
+                        'No attachments yet',
+                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Add images when creating a transaction',
+                        style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textTertiary),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return GridView.builder(
+                padding: const EdgeInsets.all(4),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 3,
+                  mainAxisSpacing: 3,
+                ),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  final entry = entries[index];
+                  final tx = entry.transaction;
+                  final isIncome = tx.type == TransactionType.income;
+                  final isTransfer = tx.type == TransactionType.transfer;
+                  final amountColor = isTransfer
+                      ? AppColors.info
+                      : (isIncome ? AppColors.success : AppColors.error);
+                  final sign = isTransfer ? '↔' : (isIncome ? '+' : '-');
+                  return MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => _openViewer(entry.path),
+                      onSecondaryTap: () => TransactionDetailSheet.show(context, transaction: tx),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.file(File(entry.path), fit: BoxFit.cover),
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.65),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    tx.description ?? DateFormat('MMM d').format(tx.date),
+                                    style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.white),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '$sign${currencyFormatter.format(tx.amount)}',
+                                    style: GoogleFonts.dmMono(fontSize: 10, fontWeight: FontWeight.w700, color: amountColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ),
       ],
