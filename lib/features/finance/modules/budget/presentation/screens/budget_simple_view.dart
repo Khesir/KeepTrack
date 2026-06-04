@@ -427,6 +427,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           await _subController.pay(sub.id!);
         },
         onUpdate: (updated) => _subController.updateSubscription(updated),
+        onDelete: () => _subController.deleteSubscription(sub.id!),
       ),
     );
   }
@@ -446,6 +447,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           );
         },
         onUpdate: (updated) => _debtController.updateDebt(updated),
+        onDelete: () => _debtController.deleteDebt(debt.id!),
       ),
     );
   }
@@ -497,6 +499,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           }
         },
         onUpdate: (updated) => _goalController.updateGoal(updated),
+        onDelete: () => _goalController.deleteGoal(goal.id!),
       ),
     );
   }

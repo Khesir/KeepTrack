@@ -461,7 +461,7 @@ class _WalletCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       Text(
-                        currencyFormatter.format(wallet.balance, decimalDigits: 0),
+                        currencyFormatter.format(wallet.balance, decimalDigits: 2),
                         style: GoogleFonts.dmMono(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,

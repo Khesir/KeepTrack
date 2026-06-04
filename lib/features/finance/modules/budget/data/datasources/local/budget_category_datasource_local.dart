@@ -14,7 +14,7 @@ class BudgetCategoryDataSourceLocal implements BudgetCategoryDataSource {
   BudgetCategoryDataSourceLocal(this._cache);
 
   Future<BudgetCategoryModel> _hydrate(BudgetCategoryModel cat) async {
-    if (cat.financeCategory != null || cat.financeCategoryId.isEmpty) return cat;
+    if (cat.financeCategoryId.isEmpty) return cat;
     final data = await _cache.get(_fcBox, cat.financeCategoryId);
     if (data == null) return cat;
     final fc = FinanceCategoryModel.fromJson(data);

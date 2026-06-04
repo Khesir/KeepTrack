@@ -683,6 +683,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
           _budgetController.refreshBudgetsWithSpentAmounts();
         },
         onUpdate: (updated) => _debtController.updateDebt(updated),
+        onDelete: () => _debtController.deleteDebt(debt.id!),
       ),
     );
   }
@@ -716,6 +717,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
           await _subscriptionController.pay(sub.id!);
         },
         onUpdate: (updated) => _subscriptionController.updateSubscription(updated),
+        onDelete: () => _subscriptionController.deleteSubscription(sub.id!),
       ),
     );
   }
@@ -777,6 +779,7 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
           }
         },
         onUpdate: (updated) => _goalController.updateGoal(updated),
+        onDelete: () => _goalController.deleteGoal(goal.id!),
       ),
     );
   }

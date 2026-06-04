@@ -30,8 +30,17 @@ class SubDetailSheet extends StatefulWidget {
   final DateTime month;
   final Future<void> Function() onPay;
   final Future<void> Function(Subscription) onUpdate;
+  final VoidCallback? onDelete;
 
-  const SubDetailSheet({super.key, required this.sub, required this.subController, required this.month, required this.onPay, required this.onUpdate});
+  const SubDetailSheet({
+    super.key,
+    required this.sub,
+    required this.subController,
+    required this.month,
+    required this.onPay,
+    required this.onUpdate,
+    this.onDelete,
+  });
 
   @override
   State<SubDetailSheet> createState() => _SubDetailSheetState();
@@ -80,6 +89,28 @@ class _SubDetailSheetState extends State<SubDetailSheet> {
     }
   }
 
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Navigator.of(context).pop();
+      widget.onDelete?.call();
+    }
+  }
+
   Future<void> _save(Subscription current) async {
     final amount = double.tryParse(_amountCtrl.text);
     if (_nameCtrl.text.trim().isEmpty || amount == null || amount <= 0) return;
@@ -115,7 +146,7 @@ class _SubDetailSheetState extends State<SubDetailSheet> {
           onBack: _editMode ? () => setState(() => _editMode = false) : null,
           child: _editMode
               ? _SubEditBody(nameCtrl: _nameCtrl, amountCtrl: _amountCtrl, providerCtrl: _providerCtrl, loading: _loading, onSave: () => _save(s), onCancel: () => setState(() => _editMode = false), isDark: isDark)
-              : _SubViewBody(sub: s, paidThisMonth: paid, loading: _loading, onPay: paid ? null : () => _pay(context), onEdit: () => setState(() => _editMode = true), isDark: isDark),
+              : _SubViewBody(sub: s, paidThisMonth: paid, loading: _loading, onPay: paid ? null : () => _pay(context), onEdit: () => setState(() => _editMode = true), onDelete: widget.onDelete != null ? () => _confirmDelete(context) : null, isDark: isDark),
         );
       },
     );
@@ -127,8 +158,9 @@ class _SubViewBody extends StatelessWidget {
   final bool paidThisMonth, loading, isDark;
   final VoidCallback? onPay;
   final VoidCallback onEdit;
+  final VoidCallback? onDelete;
 
-  const _SubViewBody({required this.sub, required this.paidThisMonth, required this.loading, required this.onPay, required this.onEdit, required this.isDark});
+  const _SubViewBody({required this.sub, required this.paidThisMonth, required this.loading, required this.onPay, required this.onEdit, this.onDelete, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -144,9 +176,66 @@ class _SubViewBody extends StatelessWidget {
             sub: paidThisMonth ? 'Paid this month ✓' : null, subColor: AppColors.success),
       _InfoRow(isDark: isDark, label: 'Monthly cost', value: currencyFormatter.format(sub.monthlyEquivalent, decimalDigits: 2)),
       const SizedBox(height: 20),
-      _ActionButton(label: paidThisMonth ? 'Already paid this month' : 'Mark as Paid · ${currencyFormatter.format(sub.amount, decimalDigits: 2)}', icon: Icons.check_circle_outline_rounded, color: AppColors.success, loading: loading, onTap: onPay),
-      const SizedBox(height: 8),
-      _ActionButton(label: 'Edit Subscription', icon: Icons.edit_outlined, color: isDark ? AppColors.primaryForeground : AppColors.textPrimary, outlined: true, onTap: onEdit, isDark: isDark),
+      Row(
+        children: [
+          Expanded(
+            flex: 7,
+            child: SizedBox(
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: loading ? null : onPay,
+                icon: loading
+                    ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.check_circle_outline_rounded, size: 15),
+                label: Text(paidThisMonth ? 'Already paid' : 'Mark as Paid · ${currencyFormatter.format(sub.amount, decimalDigits: 2)}'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: onPay == null ? AppColors.textTertiary : AppColors.success,
+                  foregroundColor: AppColors.textPrimaryDark,
+                  elevation: 0,
+                  textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 1,
+            child: SizedBox(
+              height: 46,
+              child: OutlinedButton(
+                onPressed: onEdit,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
+                  side: BorderSide(color: (isDark ? AppColors.primaryForeground : AppColors.textPrimary).withValues(alpha: 0.4)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: EdgeInsets.zero,
+                ),
+                child: const Icon(Icons.edit_outlined, size: 16),
+              ),
+            ),
+          ),
+          if (onDelete != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 1,
+              child: SizedBox(
+                height: 46,
+                child: OutlinedButton(
+                  onPressed: onDelete,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.delete_outlined, size: 16),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     ]);
   }
 }
@@ -178,8 +267,16 @@ class DebtDetailSheet extends StatefulWidget {
   final DebtController debtController;
   final Future<void> Function(double amount, double? fee, Wallet wallet) onPay;
   final Future<void> Function(Debt updated) onUpdate;
+  final VoidCallback? onDelete;
 
-  const DebtDetailSheet({super.key, required this.debt, required this.debtController, required this.onPay, required this.onUpdate});
+  const DebtDetailSheet({
+    super.key,
+    required this.debt,
+    required this.debtController,
+    required this.onPay,
+    required this.onUpdate,
+    this.onDelete,
+  });
 
   @override
   State<DebtDetailSheet> createState() => _DebtDetailSheetState();
@@ -211,6 +308,31 @@ class _DebtDetailSheetState extends State<DebtDetailSheet> {
 
   @override
   void dispose() { _nameCtrl.dispose(); _monthlyCtrl.dispose(); _notesCtrl.dispose(); super.dispose(); }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Navigator.of(context).pop();
+      widget.onDelete?.call();
+    }
+  }
 
   void _showPayDrawer(Debt current) {
     showModalBottomSheet(
@@ -259,7 +381,7 @@ class _DebtDetailSheetState extends State<DebtDetailSheet> {
           onBack: _editMode ? () => setState(() => _editMode = false) : null,
           child: _editMode
               ? _DebtEditBody(nameCtrl: _nameCtrl, monthlyCtrl: _monthlyCtrl, notesCtrl: _notesCtrl, loading: _loading, onSave: () => _save(d), onCancel: () => setState(() => _editMode = false), isDark: isDark)
-              : _DebtViewBody(debt: d, loading: _loading, onCollect: isSettled ? null : () => _showPayDrawer(d), onEdit: () => setState(() => _editMode = true), isDark: isDark),
+              : _DebtViewBody(debt: d, loading: _loading, onCollect: isSettled ? null : () => _showPayDrawer(d), onEdit: () => setState(() => _editMode = true), onDelete: widget.onDelete != null ? () => _confirmDelete(context) : null, isDark: isDark),
         );
       },
     );
@@ -271,8 +393,9 @@ class _DebtViewBody extends StatelessWidget {
   final bool loading, isDark;
   final VoidCallback? onCollect;
   final VoidCallback onEdit;
+  final VoidCallback? onDelete;
 
-  const _DebtViewBody({required this.debt, required this.loading, this.onCollect, required this.onEdit, required this.isDark});
+  const _DebtViewBody({required this.debt, required this.loading, this.onCollect, required this.onEdit, this.onDelete, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -324,17 +447,70 @@ class _DebtViewBody extends StatelessWidget {
       if (d.notes != null && d.notes!.isNotEmpty) _InfoRow(isDark: isDark, label: 'Notes', value: d.notes!),
       if (d.isOverdue) _InfoRow(isDark: isDark, label: 'Status', value: 'Payment overdue', valueColor: AppColors.error),
       const SizedBox(height: 20),
-      _ActionButton(
-        label: onCollect == null
-            ? (isReceivable ? 'Fully Collected' : 'Fully Paid')
-            : (isReceivable ? 'Collect Payment' : 'Record Payment'),
-        icon: Icons.payments_outlined,
-        color: color,
-        loading: loading,
-        onTap: onCollect,
+      Row(
+        children: [
+          Expanded(
+            flex: 7,
+            child: SizedBox(
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: loading ? null : onCollect,
+                icon: loading
+                    ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.payments_outlined, size: 15),
+                label: Text(
+                  onCollect == null
+                      ? (isReceivable ? 'Fully Collected' : 'Fully Paid')
+                      : (isReceivable ? 'Collect Payment' : 'Record Payment'),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: onCollect == null ? AppColors.textTertiary : color,
+                  foregroundColor: AppColors.textPrimaryDark,
+                  elevation: 0,
+                  textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 1,
+            child: SizedBox(
+              height: 46,
+              child: OutlinedButton(
+                onPressed: onEdit,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
+                  side: BorderSide(color: (isDark ? AppColors.primaryForeground : AppColors.textPrimary).withValues(alpha: 0.4)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: EdgeInsets.zero,
+                ),
+                child: const Icon(Icons.edit_outlined, size: 16),
+              ),
+            ),
+          ),
+          if (onDelete != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 1,
+              child: SizedBox(
+                height: 46,
+                child: OutlinedButton(
+                  onPressed: onDelete,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.delete_outlined, size: 16),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
-      const SizedBox(height: 8),
-      _ActionButton(label: 'Edit ${isReceivable ? 'Receivable' : 'Debt'}', icon: Icons.edit_outlined, color: isDark ? AppColors.primaryForeground : AppColors.textPrimary, outlined: true, onTap: onEdit, isDark: isDark),
     ]);
   }
 }
@@ -605,6 +781,7 @@ class GoalDetailSheet extends StatefulWidget {
   final GoalController goalController;
   final Future<void> Function(Goal currentGoal, double amount) onContribute;
   final Future<void> Function(Goal updated) onUpdate;
+  final VoidCallback? onDelete;
 
   const GoalDetailSheet({
     super.key,
@@ -612,6 +789,7 @@ class GoalDetailSheet extends StatefulWidget {
     required this.goalController,
     required this.onContribute,
     required this.onUpdate,
+    this.onDelete,
   });
 
   @override
@@ -630,6 +808,28 @@ class _GoalDetailSheetState extends State<GoalDetailSheet> {
       }
     }
     return widget.goal;
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      Navigator.of(context).pop();
+      widget.onDelete?.call();
+    }
   }
 
   void _showEditDialog(Goal current) {
@@ -692,6 +892,7 @@ class _GoalDetailSheetState extends State<GoalDetailSheet> {
                 ? () => _showContributeDrawer(g)
                 : null,
             onEdit: () => _showEditDialog(g),
+            onDelete: widget.onDelete != null ? () => _confirmDelete(context) : null,
           ),
         );
       },
@@ -705,6 +906,7 @@ class _GoalViewBody extends StatelessWidget {
   final bool isDark, loading;
   final VoidCallback? onContribute;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _GoalViewBody({
     required this.goal,
@@ -713,6 +915,7 @@ class _GoalViewBody extends StatelessWidget {
     required this.loading,
     required this.onContribute,
     this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -775,23 +978,68 @@ class _GoalViewBody extends StatelessWidget {
       if (g.savingsBucketId != null)
         _InfoRow(isDark: isDark, label: 'Linked to', value: 'Savings bucket', sub: 'Contributions update both goal & bucket balance'),
       const SizedBox(height: 20),
-      _ActionButton(
-        label: isComplete ? 'Goal Completed' : 'Add Contribution',
-        icon: isComplete ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
-        color: isComplete ? AppColors.success : color,
-        loading: loading,
-        onTap: onContribute,
+      Row(
+        children: [
+          Expanded(
+            flex: 7,
+            child: SizedBox(
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: loading ? null : onContribute,
+                icon: loading
+                    ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Icon(isComplete ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded, size: 15),
+                label: Text(isComplete ? 'Goal Completed' : 'Add Contribution'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: onContribute == null ? AppColors.textTertiary : (isComplete ? AppColors.success : color),
+                  foregroundColor: AppColors.textPrimaryDark,
+                  elevation: 0,
+                  textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ),
+          if (onEdit != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 1,
+              child: SizedBox(
+                height: 46,
+                child: OutlinedButton(
+                  onPressed: onEdit,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
+                    side: BorderSide(color: (isDark ? AppColors.primaryForeground : AppColors.textPrimary).withValues(alpha: 0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.edit_outlined, size: 16),
+                ),
+              ),
+            ),
+          ],
+          if (onDelete != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 1,
+              child: SizedBox(
+                height: 46,
+                child: OutlinedButton(
+                  onPressed: onDelete,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.delete_outlined, size: 16),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
-      if (onEdit != null) ...[
-        const SizedBox(height: 8),
-        _ActionButton(
-          label: 'Edit Goal',
-          icon: Icons.edit_outlined,
-          color: isDark ? AppColors.primaryForeground : AppColors.textPrimary,
-          outlined: true,
-          onTap: onEdit,
-        ),
-      ],
     ]);
   }
 }

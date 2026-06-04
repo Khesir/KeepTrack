@@ -9,8 +9,14 @@ import 'sheet_helpers.dart';
 class AddDebtSheet extends StatefulWidget {
   final bool isReceivable;
   final Future<void> Function(Debt debt) onSave;
+  final Debt? initialDebt;
 
-  const AddDebtSheet({super.key, required this.isReceivable, required this.onSave});
+  const AddDebtSheet({
+    super.key,
+    required this.isReceivable,
+    required this.onSave,
+    this.initialDebt,
+  });
 
   @override
   State<AddDebtSheet> createState() => _AddDebtSheetState();
@@ -25,10 +31,19 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
   DateTime? _dueDate;
   bool _saving = false;
 
+  bool get _isEditing => widget.initialDebt != null;
+
   @override
   void initState() {
     super.initState();
     _type = widget.isReceivable ? DebtType.lending : DebtType.borrowing;
+    if (_isEditing) {
+      final d = widget.initialDebt!;
+      _personCtrl.text = d.personName;
+      _descCtrl.text = d.description;
+      _monthlyCtrl.text = d.monthlyPaymentAmount > 0 ? d.monthlyPaymentAmount.toStringAsFixed(2) : '';
+      _dueDate = d.dueDate;
+    }
   }
 
   @override
@@ -42,24 +57,53 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
 
   bool get _isReceivable => _type == DebtType.lending;
   Color get _typeColor => _isReceivable ? AppColors.success : AppColors.error;
-  bool get _canSave =>
-      _personCtrl.text.trim().isNotEmpty &&
-      (double.tryParse(_amountCtrl.text) ?? 0) > 0;
+  bool get _canSave {
+    if (_isEditing) return _personCtrl.text.trim().isNotEmpty;
+    return _personCtrl.text.trim().isNotEmpty &&
+        (double.tryParse(_amountCtrl.text) ?? 0) > 0;
+  }
 
   Future<void> _save() async {
     if (!_canSave || _saving) return;
     setState(() => _saving = true);
     try {
-      final debt = Debt(
-        type: _type,
-        personName: _personCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
-        originalAmount: double.parse(_amountCtrl.text),
-        remainingAmount: double.parse(_amountCtrl.text),
-        startDate: DateTime.now(),
-        dueDate: _dueDate,
-        monthlyPaymentAmount: double.tryParse(_monthlyCtrl.text) ?? 0,
-      );
+      final Debt debt;
+      if (_isEditing) {
+        final d = widget.initialDebt!;
+        debt = Debt(
+          id: d.id,
+          type: d.type,
+          personName: _personCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          originalAmount: d.originalAmount,
+          remainingAmount: d.remainingAmount,
+          startDate: d.startDate,
+          dueDate: _dueDate,
+          status: d.status,
+          notes: d.notes,
+          createdAt: d.createdAt,
+          updatedAt: DateTime.now(),
+          settledAt: d.settledAt,
+          userId: d.userId,
+          transactionId: d.transactionId,
+          monthlyPaymentAmount: double.tryParse(_monthlyCtrl.text) ?? 0,
+          feeAmount: d.feeAmount,
+          nextPaymentDate: d.nextPaymentDate,
+          paymentFrequency: d.paymentFrequency,
+          budgetProfileId: d.budgetProfileId,
+        );
+      } else {
+        debt = Debt(
+          type: _type,
+          personName: _personCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          originalAmount: double.parse(_amountCtrl.text),
+          remainingAmount: double.parse(_amountCtrl.text),
+          startDate: DateTime.now(),
+          dueDate: _dueDate,
+          monthlyPaymentAmount: double.tryParse(_monthlyCtrl.text) ?? 0,
+        );
+      }
       await widget.onSave(debt);
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -134,7 +178,9 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _isReceivable ? 'New Receivable' : 'New Debt',
+                    _isEditing
+                        ? (_isReceivable ? 'Edit Receivable' : 'Edit Debt')
+                        : (_isReceivable ? 'New Receivable' : 'New Debt'),
                     style: GoogleFonts.dmSans(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -167,16 +213,18 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 16),
-                  SheetLabel('Amount *'),
-                  SheetField(
-                    ctrl: _amountCtrl,
-                    hint: '0.00',
-                    prefix: '${currencyFormatter.currencySymbol} ',
-                    isDark: isDark,
-                    numeric: true,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 16),
+                  if (!_isEditing) ...[
+                    SheetLabel('Amount *'),
+                    SheetField(
+                      ctrl: _amountCtrl,
+                      hint: '0.00',
+                      prefix: '${currencyFormatter.currencySymbol} ',
+                      isDark: isDark,
+                      numeric: true,
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   SheetLabel('Monthly Payment (optional)'),
                   SheetField(
                     ctrl: _monthlyCtrl,
@@ -255,7 +303,9 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : Text(
-                              _isReceivable ? 'Add Receivable' : 'Add Debt',
+                              _isEditing
+                                  ? 'Save Changes'
+                                  : (_isReceivable ? 'Add Receivable' : 'Add Debt'),
                               style: GoogleFonts.dmSans(
                                   fontSize: 15, fontWeight: FontWeight.w700),
                             ),

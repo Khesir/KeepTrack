@@ -8,9 +8,15 @@ import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_layout_controller.dart';
 import 'package:keep_track/core/ui/ui.dart';
+import '../finance/modules/debt/domain/entities/debt.dart';
+import '../finance/modules/goal/domain/entities/goal.dart';
+import '../finance/modules/subscriptions/domain/entities/subscription.dart';
 import '../finance/modules/transaction/domain/entities/transaction.dart';
 import '../finance/modules/finance_category/domain/entities/finance_category.dart';
 import '../finance/modules/finance_category/domain/entities/finance_category_enums.dart';
+import '../finance/presentation/state/debt_controller.dart';
+import '../finance/presentation/state/goal_controller.dart';
+import '../finance/presentation/state/subscription_controller.dart';
 import '../finance/presentation/state/transaction_controller.dart';
 import '../finance/presentation/state/finance_category_controller.dart';
 
@@ -134,6 +140,39 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
       ),
     );
     if (ok == true && t.id != null) {
+      if (t.goalId != null) {
+        final goalCtrl = locator.get<GoalController>();
+        await goalCtrl.withdrawFromGoal(t.goalId!, t.amount);
+        final updated = (goalCtrl.data ?? []).where((g) => g.id == t.goalId).firstOrNull;
+        if (updated != null && updated.status == GoalStatus.completed && updated.currentAmount < updated.targetAmount) {
+          await goalCtrl.updateGoal(updated.copyWith(status: GoalStatus.active));
+        }
+      }
+      if (t.debtId != null) {
+        final debtCtrl = locator.get<DebtController>();
+        final debt = (debtCtrl.data ?? []).where((d) => d.id == t.debtId).firstOrNull;
+        if (debt != null) {
+          final newRemaining = debt.remainingAmount + t.amount;
+          await debtCtrl.updateDebt(debt.copyWith(
+            remainingAmount: newRemaining,
+            status: newRemaining > 0 ? DebtStatus.active : debt.status,
+          ));
+        }
+      }
+      if (t.subscriptionId != null) {
+        final subCtrl = locator.get<SubscriptionController>();
+        final sub = (subCtrl.data ?? []).where((s) => s.id == t.subscriptionId).firstOrNull;
+        if (sub != null) {
+          await subCtrl.updateSubscription(Subscription(
+            id: sub.id, userId: sub.userId, name: sub.name, provider: sub.provider,
+            amount: sub.amount, billingCycle: sub.billingCycle, status: sub.status,
+            nextBillingDate: sub.nextBillingDate, lastBilledDate: null,
+            budgetCategoryId: sub.budgetCategoryId, notes: sub.notes,
+            colorHex: sub.colorHex, iconCodePoint: sub.iconCodePoint,
+            budgetProfileId: sub.budgetProfileId,
+          ));
+        }
+      }
       await _controller.deleteTransaction(t.id!);
       if (mounted) {
         AppToast.success(context, 'Transaction deleted');

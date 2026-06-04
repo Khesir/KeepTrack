@@ -371,7 +371,12 @@ class _TransactionDetailSheetState extends State<TransactionDetailSheet> {
       final t = widget.transaction;
 
       if (t.goalId != null) {
-        await locator.get<GoalController>().withdrawFromGoal(t.goalId!, t.amount);
+        final goalCtrl = locator.get<GoalController>();
+        await goalCtrl.withdrawFromGoal(t.goalId!, t.amount);
+        final updated = (goalCtrl.data ?? []).where((g) => g.id == t.goalId).firstOrNull;
+        if (updated != null && updated.status == GoalStatus.completed && updated.currentAmount < updated.targetAmount) {
+          await goalCtrl.updateGoal(updated.copyWith(status: GoalStatus.active));
+        }
       }
       if (t.debtId != null) {
         final debtCtrl = locator.get<DebtController>();

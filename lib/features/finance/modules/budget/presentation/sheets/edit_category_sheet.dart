@@ -205,6 +205,7 @@ class _EditCategorySheetState extends State<EditCategorySheet> {
       final fc = widget.category.financeCategory;
       if (fc != null && fc.name != name) {
         await widget.categoryController.updateCategory(fc.copyWith(name: name));
+        await widget.budgetController.loadBudgetsWithSpentAmounts();
       }
       if (amount != widget.category.targetAmount) {
         await widget.budgetController.updateCategory(
