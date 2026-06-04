@@ -16,8 +16,10 @@ import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/auth/domain/entities/user.dart';
+import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/features/auth/presentation/screens/auth_settings_screen.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
+import 'package:keep_track/features/notifications/presentation/screens/notification_settings_screen.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
 import 'package:keep_track/features/settings/data/services/backup_service.dart';
 import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
@@ -248,6 +250,28 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             const SizedBox(height: 20),
+
+            if (PlatformNotificationHelper.instance.isSupportedPlatform) ...[
+              _SectionLabel('Notifications'),
+              _SettingsCard(
+                isDark: isDark,
+                children: [
+                  _SettingsRow(
+                    isDark: isDark,
+                    icon: Icons.notifications_outlined,
+                    iconColor: AppColors.info,
+                    label: 'Push Notifications',
+                    subtitle: 'Reminders for tasks and finances',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationSettingsScreen(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
 
             _SectionLabel('Demo'),
             _SettingsCard(

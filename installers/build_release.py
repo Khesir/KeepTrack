@@ -75,12 +75,19 @@ def build_windows(defines: list[str]):
     print(f"Installer output: {INSTALLERS_DIR}")
 
 
-def build_apk(defines: list[str]):
+def build_apk(defines: list[str], version: str):
     print("\n=== Building Android APK release ===")
     run(["flutter", "clean"])
     run(["flutter", "pub", "get"])
     run(["flutter", "build", "apk", "--release"] + defines)
-    print("APK build complete: build/app/outputs/flutter-apk/app-release.apk")
+
+    src = os.path.join(FRONTEND_DIR, "build", "app", "outputs", "flutter-apk", "app-release.apk")
+    dst = os.path.join(FRONTEND_DIR, "build", "app", "outputs", "flutter-apk", f"KeepTrack-v{version}.apk")
+    if os.path.exists(src):
+        os.rename(src, dst)
+        print(f"APK build complete: {dst}")
+    else:
+        print("APK build complete (output file not found to rename)")
 
 
 def main():
@@ -99,7 +106,7 @@ def main():
         build_windows(defines)
 
     if "apk" in targets:
-        build_apk(defines)
+        build_apk(defines, version)
 
     print("\nAll builds complete.")
 

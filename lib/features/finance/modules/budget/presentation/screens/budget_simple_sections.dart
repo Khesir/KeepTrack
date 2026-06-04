@@ -840,7 +840,7 @@ class SimpleDebtsSection extends StatelessWidget {
                     curve: Curves.easeOut,
                   ),
                   builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
-                  child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: isLocked ? null : () => onRowTap(e.value)),
+                  child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value), isLocked: isLocked),
                 ),
               ]),
               ...receivables.asMap().entries.expand((e) {
@@ -857,7 +857,7 @@ class SimpleDebtsSection extends StatelessWidget {
                       curve: Curves.easeOut,
                     ),
                     builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
-                    child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: isLocked ? null : () => onRowTap(e.value)),
+                    child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value), isLocked: isLocked),
                   ),
                 ];
               }),
@@ -872,8 +872,9 @@ class _DebtRow extends StatelessWidget {
   final Color textPrimary;
   final double paidThisMonth;
   final VoidCallback? onTap;
+  final bool isLocked;
 
-  const _DebtRow({required this.isDark, required this.debt, required this.textPrimary, required this.onTap, this.paidThisMonth = 0});
+  const _DebtRow({required this.isDark, required this.debt, required this.textPrimary, required this.onTap, this.paidThisMonth = 0, this.isLocked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -883,9 +884,10 @@ class _DebtRow extends StatelessWidget {
     final color = isSettled ? baseColor.withValues(alpha: 0.4) : baseColor;
     final icon = isReceivable ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
     final hasMonthly = debt.monthlyPaymentAmount > 0;
+    final canTap = isSettled || !isLocked;
 
     return InkWell(
-      onTap: isSettled ? null : onTap,
+      onTap: canTap ? onTap : null,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
         child: Row(children: [
@@ -919,10 +921,8 @@ class _DebtRow extends StatelessWidget {
             else if (!isSettled)
               Text('Remaining', style: GoogleFonts.dmSans(fontSize: 10, color: AppColors.textTertiary)),
           ]),
-          if (!isSettled) ...[
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
-          ],
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
         ]),
       ),
     );

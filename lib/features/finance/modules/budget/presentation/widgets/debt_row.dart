@@ -243,7 +243,7 @@ class _DebtRowState extends State<DebtRow> {
               ),
 
               const SizedBox(width: 4),
-              // Pay / Collect button
+              // Pay / Collect / Edit button
               if (d.status == DebtStatus.active && !widget.isLocked)
                 GestureDetector(
                   onTap: widget.onPay,
@@ -263,6 +263,41 @@ class _DebtRowState extends State<DebtRow> {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: widget.isReceivable ? AppColors.success : AppColors.error,
+                      ),
+                    ),
+                  ),
+                )
+              else if (d.status == DebtStatus.settled)
+                SizedBox(
+                  width: 62,
+                  child: GestureDetector(
+                    onTap: widget.onEdit,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.textTertiary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.textTertiary.withValues(alpha: 0.2),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_outlined, size: 10, color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Text(
+                            widget.isReceivable ? 'Collected' : 'Settled',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.dmSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

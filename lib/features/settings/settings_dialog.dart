@@ -22,6 +22,8 @@ import 'package:keep_track/core/utils/transaction_image_service.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/sheets/transaction_detail_sheet.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
 import 'package:keep_track/features/finance/presentation/state/transaction_controller.dart';
+import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
+import 'package:keep_track/features/notifications/presentation/screens/notification_settings_screen.dart';
 import 'package:keep_track/features/settings/data/services/backup_service.dart';
 import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -601,6 +603,22 @@ class _ProfilePaneState extends State<_ProfilePane> {
           ) : null,
         ),
         const SizedBox(height: 20),
+
+        if (PlatformNotificationHelper.instance.isSupportedPlatform) ...[
+          _PaneSectionLabel('Notifications'),
+          const SizedBox(height: 8),
+          _PaneRow(
+            isDark: isDark,
+            icon: Icons.notifications_outlined,
+            iconColor: AppColors.info,
+            label: 'Push Notifications',
+            subtitle: 'Reminders for tasks and finances',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
 
         _PaneSectionLabel('Session'),
         const SizedBox(height: 8),

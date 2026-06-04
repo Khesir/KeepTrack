@@ -153,39 +153,103 @@ class _WalletTabState extends State<WalletTab> {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(pad, 0, pad, 100),
-              child: Wrap(
-                spacing: h,
-                runSpacing: h,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ...wallets.asMap().entries.map((e) {
-                    final i = e.key;
-                    final w = e.value;
-                    return TweenAnimationBuilder<double>(
-                      key: ValueKey(w.id),
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 450),
-                      curve: Interval(
-                        (i * 0.08).clamp(0.0, 0.6),
-                        ((i * 0.08) + 0.4).clamp(0.0, 1.0),
-                        curve: Curves.easeOut,
-                      ),
-                      builder: (_, v, child) => Opacity(
-                        opacity: v,
-                        child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
-                      ),
-                      child: SizedBox(
-                        width: 200,
-                        height: 160,
-                        child: _WalletCard(
-                          wallet: w,
-                          isDark: isDark,
-                          onTap: () => _openAddEntry(context, w),
-                          onEdit: () => _openEdit(context, w),
-                          onViewHistory: () => setState(() => _selectedWallet = w),
+                  if (standardWallets.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Standard',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                    );
-                  }),
+                    ),
+                    Wrap(
+                      spacing: h,
+                      runSpacing: h,
+                      children: standardWallets.asMap().entries.map((e) {
+                        final i = e.key;
+                        final w = e.value;
+                        return TweenAnimationBuilder<double>(
+                          key: ValueKey(w.id),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 450),
+                          curve: Interval(
+                            (i * 0.08).clamp(0.0, 0.6),
+                            ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                            curve: Curves.easeOut,
+                          ),
+                          builder: (_, v, child) => Opacity(
+                            opacity: v,
+                            child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                          ),
+                          child: SizedBox(
+                            width: 200,
+                            height: 160,
+                            child: _WalletCard(
+                              wallet: w,
+                              isDark: isDark,
+                              onTap: () => _openAddEntry(context, w),
+                              onEdit: () => _openEdit(context, w),
+                              onViewHistory: () => setState(() => _selectedWallet = w),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (creditWallets.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Credit Cards',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    Wrap(
+                      spacing: h,
+                      runSpacing: h,
+                      children: creditWallets.asMap().entries.map((e) {
+                        final i = standardWallets.length + e.key;
+                        final w = e.value;
+                        return TweenAnimationBuilder<double>(
+                          key: ValueKey(w.id),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 450),
+                          curve: Interval(
+                            (i * 0.08).clamp(0.0, 0.6),
+                            ((i * 0.08) + 0.4).clamp(0.0, 1.0),
+                            curve: Curves.easeOut,
+                          ),
+                          builder: (_, v, child) => Opacity(
+                            opacity: v,
+                            child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
+                          ),
+                          child: SizedBox(
+                            width: 200,
+                            height: 160,
+                            child: _WalletCard(
+                              wallet: w,
+                              isDark: isDark,
+                              onTap: () => _openAddEntry(context, w),
+                              onEdit: () => _openEdit(context, w),
+                              onViewHistory: () => setState(() => _selectedWallet = w),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.0, end: 1.0),
                     duration: const Duration(milliseconds: 450),

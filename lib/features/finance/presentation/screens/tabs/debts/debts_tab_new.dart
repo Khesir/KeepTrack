@@ -9,6 +9,7 @@ import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
 import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
+import 'package:keep_track/features/finance/presentation/screens/configuration/debts/widgets/debt_management_dialog.dart';
 import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import '../../../../modules/debt/domain/entities/debt.dart';
 import '../../../state/debt_controller.dart';
@@ -23,6 +24,7 @@ class DebtsTabNew extends StatefulWidget {
 
 class _DebtsTabNewState extends State<DebtsTabNew> {
   late final DebtController _controller;
+  late final WalletController _walletController;
   Debt? _selected;
   String _filter = 'All';
 
@@ -30,21 +32,67 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
   void initState() {
     super.initState();
     _controller = locator.get<DebtController>();
+    _walletController = locator.get<WalletController>();
   }
 
-  List<Debt> _applyFilter(List<Debt> all) => switch (_filter) {
-        'Lending' => all.where((d) => d.type == DebtType.lending).toList(),
-        'Borrowing' => all.where((d) => d.type == DebtType.borrowing).toList(),
-        'Overdue' => all.where((d) => d.isOverdue).toList(),
-        _ => all,
-      }..sort((a, b) {
-          int priority(DebtStatus s) => switch (s) {
-                DebtStatus.overdue => 0,
-                DebtStatus.active => 1,
-                _ => 2,
-              };
-          return priority(a.status).compareTo(priority(b.status));
+  void _showEditDialog(Debt debt) {
+    showDialog(
+      context: context,
+      builder: (_) => DebtManagementDialog(
+        debt: debt,
+        wallets: _walletController.wallets,
+        onSave: (updated, wallet) => _controller.updateDebt(updated),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(Debt debt) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Record'),
+        content: Text('Delete "${debt.personName}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              _controller.deleteDebt(debt.id!);
+              Navigator.pop(context);
+              if (_selected?.id == debt.id) setState(() => _selected = null);
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Debt> _applyFilter(List<Debt> all) {
+    if (_filter == 'Settled') {
+      return all.where((d) => d.status == DebtStatus.settled).toList()
+        ..sort((a, b) {
+          final aDate = a.settledAt ?? a.updatedAt ?? a.startDate;
+          final bDate = b.settledAt ?? b.updatedAt ?? b.startDate;
+          return bDate.compareTo(aDate);
         });
+    }
+    final active = switch (_filter) {
+      'Lending' => all.where((d) => d.type == DebtType.lending && d.status != DebtStatus.settled),
+      'Borrowing' => all.where((d) => d.type == DebtType.borrowing && d.status != DebtStatus.settled),
+      'Overdue' => all.where((d) => d.isOverdue),
+      _ => all.where((d) => d.status != DebtStatus.settled),
+    };
+    return active.toList()
+      ..sort((a, b) {
+        int priority(DebtStatus s) => switch (s) {
+          DebtStatus.overdue => 0,
+          DebtStatus.active => 1,
+          _ => 2,
+        };
+        return priority(a.status).compareTo(priority(b.status));
+      });
+  }
 
   Future<void> _showRecordPayment(Debt debt) async {
     await showModalBottomSheet(
@@ -95,6 +143,8 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 onFilterChange: (f) => setState(() { _filter = f; _selected = null; }),
                 onSelect: (d) => setState(() => _selected = d),
                 onRecord: _showRecordPayment,
+                onEdit: _showEditDialog,
+                onDelete: _showDeleteConfirmation,
                 onHistory: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtHistoryScreen())),
               );
             }
@@ -104,6 +154,8 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
                 debt: _selected!,
                 onBack: () => setState(() => _selected = null),
                 onRecord: () => _showRecordPayment(_selected!),
+                onEdit: _showEditDialog,
+                onDelete: _showDeleteConfirmation,
               );
             }
 
@@ -154,13 +206,16 @@ class _DesktopLayout extends StatelessWidget {
   final ValueChanged<String> onFilterChange;
   final ValueChanged<Debt> onSelect;
   final Future<void> Function(Debt) onRecord;
+  final void Function(Debt) onEdit;
+  final void Function(Debt) onDelete;
   final VoidCallback onHistory;
 
   const _DesktopLayout({
     required this.debts, required this.totalLending, required this.totalBorrowing,
     required this.overdueCount, required this.filter, required this.selected,
     required this.onFilterChange, required this.onSelect,
-    required this.onRecord, required this.onHistory,
+    required this.onRecord, required this.onEdit, required this.onDelete,
+    required this.onHistory,
   });
 
   @override
@@ -235,7 +290,7 @@ class _DesktopLayout extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        for (final f in ['All', 'Lending', 'Borrowing', 'Overdue']) ...[
+                        for (final f in ['All', 'Lending', 'Borrowing', 'Overdue', 'Settled']) ...[
                           _FilterChip(label: f, selected: filter == f, onTap: () => onFilterChange(f)),
                           const SizedBox(width: 5),
                         ],
@@ -284,7 +339,7 @@ class _DesktopLayout extends StatelessWidget {
                     ],
                   ),
                 )
-              : _DetailPanel(debt: selected!, onRecord: () => onRecord(selected!)),
+              : _DetailPanel(debt: selected!, onRecord: () => onRecord(selected!), onEdit: onEdit, onDelete: onDelete),
         ),
       ],
     );
@@ -362,7 +417,7 @@ class _MobileListView extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    for (final f in ['All', 'Lending', 'Borrowing', 'Overdue']) ...[
+                    for (final f in ['All', 'Lending', 'Borrowing', 'Overdue', 'Settled']) ...[
                       _FilterChip(label: f, selected: filter == f, onTap: () => onFilterChange(f)),
                       const SizedBox(width: 6),
                     ],
@@ -421,8 +476,16 @@ class _DetailPanel extends StatelessWidget {
   final Debt debt;
   final VoidCallback? onBack;
   final VoidCallback onRecord;
+  final void Function(Debt) onEdit;
+  final void Function(Debt) onDelete;
 
-  const _DetailPanel({required this.debt, this.onBack, required this.onRecord});
+  const _DetailPanel({
+    required this.debt,
+    this.onBack,
+    required this.onRecord,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   Color get _color => debt.type == DebtType.lending ? AppColors.success : AppColors.error;
 
@@ -592,6 +655,36 @@ class _DetailPanel extends StatelessWidget {
               ),
             ),
           ],
+          if (debt.status == DebtStatus.settled) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => onEdit(debt),
+                    icon: const Icon(Icons.edit_outlined, size: 15),
+                    label: const Text('Edit'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => onDelete(debt),
+                    icon: const Icon(Icons.delete_outline, size: 15),
+                    label: const Text('Delete'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: BorderSide(color: AppColors.error.withValues(alpha: 0.4)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -604,12 +697,10 @@ class _DetailPanel extends StatelessWidget {
         ],
       );
     }
-    return Column(
-      children: [
-        _DetailHeader(debt: debt, onBack: null, color: _color, borderColor: borderColor),
-        Expanded(child: content),
-      ],
-    );
+    return Column(children: [
+      _DetailHeader(debt: debt, onBack: null, color: _color, borderColor: borderColor),
+      Expanded(child: content),
+    ]);
   }
 }
 
@@ -722,6 +813,15 @@ class _DebtRow extends StatelessWidget {
                 ),
                 if (debt.isOverdue)
                   _Chip(label: 'Overdue', color: AppColors.error)
+                else if (debt.status == DebtStatus.settled)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _StatusBadge(status: debt.status),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.textTertiary),
+                    ],
+                  )
                 else
                   _StatusBadge(status: debt.status),
               ],
