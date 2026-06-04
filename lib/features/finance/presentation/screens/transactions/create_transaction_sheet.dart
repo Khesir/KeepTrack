@@ -990,12 +990,6 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
     );
   }
 
-  bool _isMainCreateOnly(String type) {
-    if (type == 'debt_received') return true;
-    if (type == 'lending') return _type == TransactionType.expense;
-    return false;
-  }
-
   String _entityDescription(String type) => switch (type) {
     'debt_payment' => 'Pay back an existing debt',
     'lending' =>
@@ -1055,12 +1049,6 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
               label: 'Receivable Collected',
               color: AppColors.success,
             ),
-            (
-              type: 'debt_received',
-              icon: Icons.arrow_downward_rounded,
-              label: 'Loan Received',
-              color: AppColors.error,
-            ),
           ]
         : [
             (
@@ -1068,12 +1056,6 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
               icon: Icons.arrow_upward_rounded,
               label: 'Debt Payment',
               color: AppColors.error,
-            ),
-            (
-              type: 'lending',
-              icon: Icons.arrow_downward_rounded,
-              label: 'New Receivable',
-              color: AppColors.success,
             ),
             (
               type: 'goal',
@@ -1198,17 +1180,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
                               _category = null;
                             });
                             Navigator.pop(context);
-                            if (_isMainCreateOnly(t.type)) {
-                              _addMainEntityInline(
-                                t.type,
-                                (id, label) => setState(() {
-                                  _entityLabel = label;
-                                  _debtId = id;
-                                }),
-                              );
-                            } else {
-                              _pickMainEntityItem(t.type);
-                            }
+                            _pickMainEntityItem(t.type);
                           },
                         ),
                       ),
@@ -1285,19 +1257,6 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
           .toList();
     }
 
-    final canAdd =
-        type == 'lending' ||
-        type == 'debt_received' ||
-        type == 'goal' ||
-        type == 'subscription';
-    final addLabel = switch (type) {
-      'lending' => 'New Receivable',
-      'debt_received' => 'New Loan',
-      'goal' => 'New Goal',
-      'subscription' => 'New Subscription',
-      _ => '',
-    };
-
     void selectItem(String id, String label) {
       setState(() {
         _entityLabel = label;
@@ -1340,45 +1299,13 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
               const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Select',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: textPrimary,
-                        ),
-                      ),
-                    ),
-                    if (canAdd)
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(sheetCtx);
-                          _addMainEntityInline(type, selectItem);
-                        },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.add_rounded,
-                              size: 15,
-                              color: AppColors.accent,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              addLabel,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.accent,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  'Select',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
@@ -1387,9 +1314,7 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
                     ? Padding(
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                         child: Text(
-                          canAdd
-                              ? 'None yet — tap + to create one'
-                              : 'No active records to link',
+                          'No active records to link',
                           style: GoogleFonts.dmSans(
                             fontSize: 13,
                             color: AppColors.textSecondary,
@@ -1441,55 +1366,6 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
         ),
       ),
     );
-  }
-
-  void _addMainEntityInline(
-    String type,
-    void Function(String id, String label) onCreated,
-  ) {
-    if (type == 'lending' || type == 'debt_received') {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => AddDebtSheet(
-          isReceivable: type == 'lending',
-          onSave: (debt) async {
-            await _debtController.createDebt(debt);
-            final debtType = type == 'lending'
-                ? DebtType.lending
-                : DebtType.borrowing;
-            final created = _debtController.data
-                ?.where((d) => d.type == debtType)
-                .lastOrNull;
-            if (created?.id != null)
-              onCreated(created!.id!, created.personName);
-          },
-        ),
-      );
-    } else if (type == 'goal') {
-      GoalsManagementDialog.show(
-        context,
-        onSave: (goal) async {
-          await _goalController.createGoal(goal);
-          final created = _goalController.data?.lastOrNull;
-          if (created?.id != null) onCreated(created!.id!, created.name);
-        },
-      );
-    } else if (type == 'subscription') {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => AddSubscriptionSheet(
-          onSave: (sub) async {
-            await _subController.createSubscription(sub);
-            final created = _subController.data?.lastOrNull;
-            if (created?.id != null) onCreated(created!.id!, created.name);
-          },
-        ),
-      );
-    }
   }
 
   @override
@@ -1853,24 +1729,36 @@ class _CreateTransactionSheetState extends State<CreateTransactionSheet> {
             // Split panel
             if (_splitMode) ...[
               const SizedBox(height: 10),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.4,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var i = 0; i < _splitEntries.length; i++)
+                        _SplitEntryRow(
+                          key: ObjectKey(_splitEntries[i]),
+                          entry: _splitEntries[i],
+                          isDark: isDark,
+                          borderColor: borderColor,
+                          canRemove: _splitEntries.length > 1,
+                          onChanged: () => setState(() {}),
+                          onPickCategory: () => _pickSplitCategory(i),
+                          onRemove: () => _removeSplitEntry(i),
+                          onPickImage: () => _pickSplitImage(i),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var i = 0; i < _splitEntries.length; i++)
-                      _SplitEntryRow(
-                        key: ObjectKey(_splitEntries[i]),
-                        entry: _splitEntries[i],
-                        isDark: isDark,
-                        borderColor: borderColor,
-                        canRemove: _splitEntries.length > 1,
-                        onChanged: () => setState(() {}),
-                        onPickCategory: () => _pickSplitCategory(i),
-                        onRemove: () => _removeSplitEntry(i),
-                        onPickImage: () => _pickSplitImage(i),
-                      ),
-                    const SizedBox(height: 8),
                     Row(
                       children: [
                         GestureDetector(
@@ -2290,8 +2178,6 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
         : AppColors.textPrimary;
     final isIncome = widget.entry.type == TransactionType.income;
 
-    // Income: only debt types (collecting receivable or recording loan received)
-    // Expense: all types
     final types = isIncome
         ? [
             (
@@ -2300,12 +2186,6 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
               label: 'Receivable Collected',
               color: AppColors.success,
             ),
-            (
-              type: 'debt_received',
-              icon: Icons.arrow_downward_rounded,
-              label: 'Loan Received',
-              color: AppColors.error,
-            ),
           ]
         : [
             (
@@ -2313,12 +2193,6 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
               icon: Icons.arrow_upward_rounded,
               label: 'Debt Payment',
               color: AppColors.error,
-            ),
-            (
-              type: 'lending',
-              icon: Icons.arrow_downward_rounded,
-              label: 'New Receivable',
-              color: AppColors.success,
             ),
             (
               type: 'goal',
@@ -2444,17 +2318,7 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
                               widget.entry.category = null;
                             });
                             Navigator.pop(context);
-                            if (_isCreateOnly(t.type)) {
-                              _addEntityInline(
-                                t.type,
-                                (id, label) => setState(() {
-                                  widget.entry.entityLabel = label;
-                                  widget.entry.debtId = id;
-                                }),
-                              );
-                            } else {
-                              _pickEntityItem(t.type);
-                            }
+                            _pickEntityItem(t.type);
                           },
                         ),
                       ),
@@ -2531,20 +2395,6 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
           .toList();
     }
 
-    // Types that support inline creation
-    final canAdd =
-        type == 'lending' ||
-        type == 'debt_received' ||
-        type == 'goal' ||
-        type == 'subscription';
-    final addLabel = switch (type) {
-      'lending' => 'New Receivable',
-      'debt_received' => 'New Loan',
-      'goal' => 'New Goal',
-      'subscription' => 'New Subscription',
-      _ => '',
-    };
-
     void selectItem(String id, String label) {
       setState(() {
         widget.entry.entityLabel = label;
@@ -2589,45 +2439,13 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
               const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Select',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: textPrimary,
-                        ),
-                      ),
-                    ),
-                    if (canAdd)
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(sheetCtx);
-                          _addEntityInline(type, selectItem);
-                        },
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.add_rounded,
-                              size: 15,
-                              color: AppColors.accent,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              addLabel,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.accent,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  'Select',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
@@ -2636,9 +2454,7 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
                     ? Padding(
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                         child: Text(
-                          canAdd
-                              ? 'None yet — tap + to create one'
-                              : 'No active records to link',
+                          'No active records to link',
                           style: GoogleFonts.dmSans(
                             fontSize: 13,
                             color: AppColors.textSecondary,
@@ -2690,56 +2506,6 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
         ),
       ),
     );
-  }
-
-  void _addEntityInline(
-    String type,
-    void Function(String id, String label) onCreated,
-  ) {
-    if (type == 'lending' || type == 'debt_received') {
-      final isReceivable = type == 'lending';
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => AddDebtSheet(
-          isReceivable: isReceivable,
-          onSave: (debt) async {
-            await _debtController.createDebt(debt);
-            final debtType = isReceivable
-                ? DebtType.lending
-                : DebtType.borrowing;
-            final created = _debtController.data
-                ?.where((d) => d.type == debtType)
-                .lastOrNull;
-            if (created?.id != null)
-              onCreated(created!.id!, created.personName);
-          },
-        ),
-      );
-    } else if (type == 'goal') {
-      GoalsManagementDialog.show(
-        context,
-        onSave: (goal) async {
-          await _goalController.createGoal(goal);
-          final created = _goalController.data?.lastOrNull;
-          if (created?.id != null) onCreated(created!.id!, created.name);
-        },
-      );
-    } else if (type == 'subscription') {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => AddSubscriptionSheet(
-          onSave: (sub) async {
-            await _subController.createSubscription(sub);
-            final created = _subController.data?.lastOrNull;
-            if (created?.id != null) onCreated(created!.id!, created.name);
-          },
-        ),
-      );
-    }
   }
 
   @override
@@ -3003,8 +2769,32 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
                   isDark: widget.isDark,
                   onTap: _pickEntity,
                 ),
+              _SplitChip(
+                icon: Icons.attach_file_rounded,
+                label: widget.entry.imagePaths.isEmpty
+                    ? 'Attach'
+                    : 'Files (${widget.entry.imagePaths.length})',
+                color: widget.entry.imagePaths.isNotEmpty
+                    ? AppColors.accent
+                    : AppColors.textSecondary,
+                isDark: widget.isDark,
+                onTap: widget.onPickImage,
+              ),
             ],
           ),
+          if (widget.entry.imagePaths.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: _AttachmentList(
+                imagePaths: widget.entry.imagePaths,
+                onRemove: (path) {
+                  TransactionImageService.deleteImage(path).ignore();
+                  setState(() => widget.entry.imagePaths.remove(path));
+                  widget.onChanged();
+                },
+                onView: (path) => _ImageViewerDialog.show(context, path),
+              ),
+            ),
           // Entity metadata banner
           Builder(
             builder: (_) {
@@ -3057,12 +2847,6 @@ class _SplitEntryRowState extends State<_SplitEntryRow> {
         ],
       ),
     );
-  }
-
-  bool _isCreateOnly(String type) {
-    if (type == 'debt_received') return true;
-    if (type == 'lending') return widget.entry.type == TransactionType.expense;
-    return false;
   }
 
   String _entityDescription(String type) => switch (type) {

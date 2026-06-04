@@ -728,9 +728,14 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       isScrollControlled: true,
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
-        onSave: (debt) async => _debtController.createDebt(
-          debt.copyWith(budgetProfileId: widget.budgetProfileId),
-        ),
+        onSave: (debt, wallet) async {
+          final d = debt.copyWith(budgetProfileId: widget.budgetProfileId);
+          if (wallet != null) {
+            await _debtController.createDebtWithTransaction(d, wallet);
+          } else {
+            await _debtController.createDebt(d);
+          }
+        },
       ),
     );
   }

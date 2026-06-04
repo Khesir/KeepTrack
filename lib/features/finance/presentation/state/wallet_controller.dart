@@ -10,6 +10,8 @@ class WalletController extends StreamState<AsyncState<List<Wallet>>> {
     loadWallets();
   }
 
+  List<Wallet> get wallets => data ?? [];
+
   Future<void> loadWallets() async {
     await execute(() async {
       return await _repository.getWallets().then((r) => r.unwrap());

@@ -395,11 +395,16 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       context: context, isScrollControlled: true,
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
-        onSave: (debt) async => _debtController.createDebt(
-          widget._isProfileMode && widget.budgetProfileId != null
+        onSave: (debt, wallet) async {
+          final d = widget._isProfileMode && widget.budgetProfileId != null
               ? debt.copyWith(budgetProfileId: widget.budgetProfileId)
-              : debt,
-        ),
+              : debt;
+          if (wallet != null) {
+            await _debtController.createDebtWithTransaction(d, wallet);
+          } else {
+            await _debtController.createDebt(d);
+          }
+        },
       ),
     );
   }

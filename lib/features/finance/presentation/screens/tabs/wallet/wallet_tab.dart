@@ -751,16 +751,19 @@ class _TransactionFormSheet extends StatefulWidget {
 
 class _TransactionFormSheetState extends State<_TransactionFormSheet> {
   final _amountCtrl = TextEditingController();
+  final _feeCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   TransactionType _type = TransactionType.income;
   Wallet? _toWallet;
   bool _saving = false;
 
-  double _fromDelta(double amount) {
+  double _fromDelta(double amount, double fee) {
     if (widget.wallet.type == WalletType.creditCard) {
-      return _type == TransactionType.income ? -amount : amount;
+      if (_type == TransactionType.income) return -(amount + fee);
+      return amount + fee;
     }
-    return _type == TransactionType.income ? amount : -amount;
+    if (_type == TransactionType.income) return amount - fee;
+    return -(amount + fee);
   }
 
   double _toDelta(Wallet toWallet, double amount) {
@@ -794,6 +797,7 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
   @override
   void dispose() {
     _amountCtrl.dispose();
+    _feeCtrl.dispose();
     _descCtrl.dispose();
     super.dispose();
   }
@@ -802,23 +806,25 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
     final amount = double.tryParse(_amountCtrl.text);
     if (amount == null || amount <= 0) return;
     if (_type == TransactionType.transfer && _toWallet == null) return;
+    final fee = double.tryParse(_feeCtrl.text) ?? 0;
     setState(() => _saving = true);
     try {
       await widget.txController.createTransaction(Transaction(
         amount: amount,
+        fee: fee,
         type: _type,
         description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         date: DateTime.now(),
         walletId: widget.wallet.id,
         toWalletId: _type == TransactionType.transfer ? _toWallet!.id : null,
       ));
-      // Update source wallet balance
+      // Update source wallet balance (fee always reduces source)
       await widget.walletController.updateWallet(
-        widget.wallet.copyWith(balance: widget.wallet.balance + _fromDelta(amount)),
+        widget.wallet.copyWith(balance: widget.wallet.balance + _fromDelta(amount, fee)),
       );
-      // Update destination wallet balance for transfers
+      // Update destination wallet balance for transfers (destination gets amount only, not fee)
       if (_type == TransactionType.transfer && _toWallet != null) {
-        final wallets = widget.walletController.data ?? [];
+        final wallets = widget.walletController.wallets;
         final fresh = wallets.where((w) => w.id == _toWallet!.id).firstOrNull ?? _toWallet!;
         await widget.walletController.updateWallet(
           fresh.copyWith(balance: fresh.balance + _toDelta(fresh, amount)),
@@ -1072,6 +1078,21 @@ class _TransactionFormSheetState extends State<_TransactionFormSheet> {
               style: GoogleFonts.dmMono(fontSize: 15, color: fg),
               decoration: InputDecoration(
                 labelText: 'Amount',
+                prefixText: '${currencyFormatter.currencySymbol} ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: _typeColor, width: 1.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _feeCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: GoogleFonts.dmMono(fontSize: 15, color: fg),
+              decoration: InputDecoration(
+                labelText: 'Fee (optional)',
                 prefixText: '${currencyFormatter.currencySymbol} ',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 focusedBorder: OutlineInputBorder(

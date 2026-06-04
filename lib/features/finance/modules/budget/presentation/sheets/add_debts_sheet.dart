@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
+import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
+import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
 import 'sheet_helpers.dart';
 
 class AddDebtSheet extends StatefulWidget {
   final bool isReceivable;
-  final Future<void> Function(Debt debt) onSave;
+  final Future<void> Function(Debt debt, Wallet? wallet) onSave;
   final Debt? initialDebt;
 
   const AddDebtSheet({
@@ -25,11 +28,15 @@ class AddDebtSheet extends StatefulWidget {
 class _AddDebtSheetState extends State<AddDebtSheet> {
   final _personCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
+  final _feeCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _monthlyCtrl = TextEditingController();
   late final DebtType _type;
+  late final WalletController _walletController;
   DateTime? _dueDate;
   bool _saving = false;
+  bool _createTx = false;
+  Wallet? _selectedWallet;
 
   bool get _isEditing => widget.initialDebt != null;
 
@@ -37,6 +44,7 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
   void initState() {
     super.initState();
     _type = widget.isReceivable ? DebtType.lending : DebtType.borrowing;
+    _walletController = locator.get<WalletController>();
     if (_isEditing) {
       final d = widget.initialDebt!;
       _personCtrl.text = d.personName;
@@ -50,6 +58,7 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
   void dispose() {
     _personCtrl.dispose();
     _amountCtrl.dispose();
+    _feeCtrl.dispose();
     _descCtrl.dispose();
     _monthlyCtrl.dispose();
     super.dispose();
@@ -59,8 +68,10 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
   Color get _typeColor => _isReceivable ? AppColors.success : AppColors.error;
   bool get _canSave {
     if (_isEditing) return _personCtrl.text.trim().isNotEmpty;
-    return _personCtrl.text.trim().isNotEmpty &&
-        (double.tryParse(_amountCtrl.text) ?? 0) > 0;
+    if (_personCtrl.text.trim().isEmpty) return false;
+    if ((double.tryParse(_amountCtrl.text) ?? 0) <= 0) return false;
+    if (_createTx && _selectedWallet == null) return false;
+    return true;
   }
 
   Future<void> _save() async {
@@ -93,22 +104,92 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
           budgetProfileId: d.budgetProfileId,
         );
       } else {
+        final principal = double.parse(_amountCtrl.text);
+        final fee = double.tryParse(_feeCtrl.text) ?? 0;
         debt = Debt(
           type: _type,
           personName: _personCtrl.text.trim(),
           description: _descCtrl.text.trim(),
-          originalAmount: double.parse(_amountCtrl.text),
-          remainingAmount: double.parse(_amountCtrl.text),
+          originalAmount: principal,
+          remainingAmount: principal + fee,
           startDate: DateTime.now(),
           dueDate: _dueDate,
           monthlyPaymentAmount: double.tryParse(_monthlyCtrl.text) ?? 0,
+          feeAmount: fee,
         );
       }
-      await widget.onSave(debt);
+      await widget.onSave(debt, _createTx ? _selectedWallet : null);
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _pickWallet(bool isDark) {
+    final wallets = _walletController.wallets;
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text('Select Wallet',
+                    style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary)),
+              ),
+              const SizedBox(height: 4),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  itemCount: wallets.length,
+                  itemBuilder: (_, i) {
+                    final w = wallets[i];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.account_balance_wallet_outlined,
+                          size: 18, color: AppColors.textSecondary),
+                      title: Text(w.name,
+                          style: GoogleFonts.dmSans(fontSize: 13, color: textPrimary)),
+                      subtitle: Text(currencyFormatter.format(w.balance),
+                          style: GoogleFonts.dmMono(fontSize: 12, color: AppColors.textSecondary)),
+                      trailing: _selectedWallet?.id == w.id
+                          ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent)
+                          : null,
+                      onTap: () {
+                        setState(() => _selectedWallet = w);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _pickDate(bool isDark) {
@@ -224,6 +305,15 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
                       onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 16),
+                    SheetLabel('Fee (optional)'),
+                    SheetField(
+                      ctrl: _feeCtrl,
+                      hint: '0.00',
+                      prefix: '${currencyFormatter.currencySymbol} ',
+                      isDark: isDark,
+                      numeric: true,
+                    ),
+                    const SizedBox(height: 16),
                   ],
                   SheetLabel('Monthly Payment (optional)'),
                   SheetField(
@@ -281,6 +371,85 @@ class _AddDebtSheetState extends State<AddDebtSheet> {
                       hint: 'Add a note…',
                       isDark: isDark,
                       maxLines: 2),
+                  if (!_isEditing) ...[
+                    const SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _createTx = !_createTx;
+                        if (!_createTx) _selectedWallet = null;
+                      }),
+                      child: Row(children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Record initial transaction',
+                                style: GoogleFonts.dmSans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary),
+                              ),
+                              Text(
+                                _isReceivable
+                                    ? 'Creates an expense for money lent out'
+                                    : 'Creates an income for money received',
+                                style: GoogleFonts.dmSans(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: _createTx,
+                          onChanged: (v) => setState(() {
+                            _createTx = v;
+                            if (!v) _selectedWallet = null;
+                          }),
+                          activeColor: AppColors.accent,
+                        ),
+                      ]),
+                    ),
+                    if (_createTx) ...[
+                      const SizedBox(height: 12),
+                      SheetLabel('Wallet *'),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _pickWallet(isDark),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _selectedWallet == null
+                                  ? AppColors.error.withValues(alpha: 0.5)
+                                  : border,
+                              width: 0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(children: [
+                            Icon(Icons.account_balance_wallet_outlined,
+                                size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _selectedWallet?.name ?? 'Select a wallet',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 14,
+                                  color: _selectedWallet != null
+                                      ? textPrimary
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded,
+                                size: 16, color: AppColors.textTertiary),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
