@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/feature_flags/hive_inspector.dart';
@@ -7,6 +8,7 @@ import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 
 class FeatureFlagPopover extends StatelessWidget {
@@ -170,6 +172,13 @@ class FeatureFlagPopover extends StatelessWidget {
                         ? AppColors.border.withValues(alpha: 0.2)
                         : AppColors.border.withValues(alpha: 0.5),
                   ),
+                  _HealthCheckButton(isDark: isDark),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppColors.border.withValues(alpha: 0.2)
+                        : AppColors.border.withValues(alpha: 0.5),
+                  ),
                   _TestNotificationButton(isDark: isDark),
                   Divider(
                     height: 1,
@@ -185,6 +194,102 @@ class FeatureFlagPopover extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _HealthCheckButton extends StatefulWidget {
+  final bool isDark;
+  const _HealthCheckButton({required this.isDark});
+
+  @override
+  State<_HealthCheckButton> createState() => _HealthCheckButtonState();
+}
+
+class _HealthCheckButtonState extends State<_HealthCheckButton> {
+  static const _apiUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:3000/api/v1',
+  );
+
+  bool _checking = false;
+
+  Future<void> _check() async {
+    if (_checking) return;
+    final toast = CapturedAppToast.capture(context);
+    setState(() => _checking = true);
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 5);
+      final req = await client.getUrl(Uri.parse('$_apiUrl/health'));
+      final res = await req.close();
+      await res.drain<void>();
+      client.close();
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        toast.success('Backend is healthy');
+      } else {
+        toast.error('Backend returned ${res.statusCode}');
+      }
+    } catch (_) {
+      if (!mounted) return;
+      toast.error('Backend is unreachable');
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = widget.isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _check,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.dns_outlined, size: 15, color: AppColors.info),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Check Backend',
+                      style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary),
+                    ),
+                    Text(
+                      _apiUrl,
+                      style: GoogleFonts.dmMono(fontSize: 10, color: AppColors.textTertiary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (_checking)
+                SizedBox(
+                  width: 13,
+                  height: 13,
+                  child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.info),
+                )
+              else
+                Icon(Icons.monitor_heart_outlined, size: 13, color: AppColors.textTertiary),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
