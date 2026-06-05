@@ -7,6 +7,7 @@ import 'package:keep_track/features/auth/domain/entities/user.dart';
 import 'package:keep_track/features/auth/presentation/widgets/auth_guard.dart';
 import 'package:keep_track/features/finance/data/services/finance_initialization_service.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/controllers/budget_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/month_plan_controller.dart';
 
 class AuthController extends StreamState<AsyncState<User?>> {
@@ -42,6 +43,7 @@ class AuthController extends StreamState<AsyncState<User?>> {
           locator.get<BudgetController>().clear();
           locator.get<MonthPlanController>().clear();
           emit(const AsyncData(null));
+          _initializeUserData('');
         }
       },
       onError: (error) {
@@ -77,6 +79,7 @@ class AuthController extends StreamState<AsyncState<User?>> {
     // After 2 seconds, if still no user, assume not logged in
     AppLogger.info('No authenticated user found');
     emit(const AsyncData(null));
+    _initializeUserData('');
   }
 
   /// Sign in with Google
@@ -235,17 +238,13 @@ class AuthController extends StreamState<AsyncState<User?>> {
       financeResult.fold(
         onSuccess: (wasInitialized) {
           if (wasInitialized) {
-            AppLogger.info(
-              '✅ Finance data initialization completed successfully',
-            );
+            AppLogger.info('✅ Finance data initialization completed successfully');
+            locator.get<FinanceCategoryController>().loadCategories();
           } else {
-            AppLogger.info(
-              'Finance data  already exists, skipping initialization',
-            );
+            AppLogger.info('Finance data already exists, skipping initialization');
           }
         },
         onError: (failure) {
-          // Log error but don't block user from using the app
           AppLogger.warning(
             'Failed to initialize user data (non-blocking): ${failure.message}',
           );

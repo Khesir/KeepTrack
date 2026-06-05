@@ -72,7 +72,13 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
   /// Creates a debt record and a linked wallet transaction atomically.
   /// Borrowing → income transaction (wallet receives money).
   /// Lending → expense transaction (wallet sends money).
-  Future<void> createDebtWithTransaction(Debt debt, Wallet wallet) async {
+  Future<void> createDebtWithTransaction(
+    Debt debt,
+    Wallet wallet, {
+    String? categoryId,
+    String? budgetProfileId,
+    List<String> imagePaths = const [],
+  }) async {
     final created = await _debtRepository.createDebt(_withProfile(debt)).then((r) => r.unwrap());
 
     final txType = debt.type == DebtType.borrowing
@@ -82,7 +88,6 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
         ? 'Loan from ${debt.personName}'
         : 'Lent to ${debt.personName}';
 
-    // Gap 2: create transaction and link back to debt via transactionId
     final tx = await locator.get<TransactionController>().createTransaction(Transaction(
       amount: debt.originalAmount,
       type: txType,
@@ -90,6 +95,9 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
       walletId: wallet.id,
       debtId: created.id,
       description: description,
+      financeCategoryId: categoryId,
+      budgetProfileId: budgetProfileId ?? created.budgetProfileId,
+      imagePaths: imagePaths,
     ));
 
     if (tx.id != null) {
@@ -186,10 +194,14 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     required double amount,
     required Wallet wallet,
     double fee = 0,
+    String? categoryId,
+    String? budgetProfileId,
+    List<String> imagePaths = const [],
+    DateTime? date,
+    String? description,
   }) async {
     final updated = await payDebt(debt.id!, amount: amount, fee: fee > 0 ? fee : null);
 
-    // Gap 3: auto-settle when fully paid
     if (updated.remainingAmount <= 0 && updated.status != DebtStatus.settled) {
       await settleDebt(debt.id!);
     }
@@ -197,18 +209,21 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     final txType = debt.type == DebtType.borrowing
         ? TransactionType.expense
         : TransactionType.income;
-    final description = debt.type == DebtType.borrowing
+    final autoDesc = debt.type == DebtType.borrowing
         ? 'Payment to ${debt.personName}'
         : 'Collected from ${debt.personName}';
 
     await locator.get<TransactionController>().createTransaction(Transaction(
       amount: amount,
       type: txType,
-      date: DateTime.now(),
+      date: date ?? DateTime.now(),
       walletId: wallet.id,
       debtId: debt.id,
-      description: description,
+      description: description ?? autoDesc,
       fee: fee,
+      financeCategoryId: categoryId,
+      budgetProfileId: budgetProfileId,
+      imagePaths: imagePaths,
     ));
 
     // Gap: wallet update — fetch fresh copy to avoid stale balance

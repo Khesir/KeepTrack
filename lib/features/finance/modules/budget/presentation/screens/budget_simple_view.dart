@@ -395,12 +395,18 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       context: context, isScrollControlled: true,
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
-        onSave: (debt, wallet) async {
+        onSave: (debt, txDetails) async {
           final d = widget._isProfileMode && widget.budgetProfileId != null
               ? debt.copyWith(budgetProfileId: widget.budgetProfileId)
               : debt;
-          if (wallet != null) {
-            await _debtController.createDebtWithTransaction(d, wallet);
+          if (txDetails != null) {
+            await _debtController.createDebtWithTransaction(
+              d,
+              txDetails.wallet,
+              categoryId: txDetails.categoryId,
+              budgetProfileId: txDetails.budgetProfileId,
+              imagePaths: txDetails.imagePaths,
+            );
           } else {
             await _debtController.createDebt(d);
           }
@@ -416,20 +422,28 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         sub: sub,
         subController: _subController,
         month: _month,
-        onPay: () async {
+        onPay: (config) async {
           final userId = locator.get<AuthController>().currentUser?.id ?? '';
-          final categoryId = await locator.get<FinanceCategoryController>()
+          String? categoryId = config.categoryId;
+          categoryId ??= await locator.get<FinanceCategoryController>()
               .findOrCreate(name: 'Subscriptions', type: CategoryType.expense, userId: userId);
           await _txController.createTransaction(Transaction(
             amount: sub.amount,
             type: TransactionType.expense,
-            date: DateTime.now(),
+            date: config.date,
             subscriptionId: sub.id,
             financeCategoryId: categoryId,
-            description: sub.name,
-            budgetProfileId: widget.budgetProfileId,
+            description: config.description ?? sub.name,
+            budgetProfileId: config.budgetProfileId ?? widget.budgetProfileId,
+            walletId: config.wallet?.id,
+            imagePaths: config.imagePaths,
           ));
           await _subController.pay(sub.id!);
+          if (config.wallet != null) {
+            final wallets = _walletController.data ?? [];
+            final fresh = wallets.firstWhere((w) => w.id == config.wallet!.id, orElse: () => config.wallet!);
+            await _walletController.updateWallet(fresh.copyWith(balance: fresh.balance - sub.amount));
+          }
         },
         onUpdate: (updated) => _subController.updateSubscription(updated),
         onDelete: () => _subController.deleteSubscription(sub.id!),
@@ -443,12 +457,17 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       builder: (_) => DebtDetailSheet(
         debt: debt,
         debtController: _debtController,
-        onPay: (amount, fee, wallet) async {
+        onPay: (amount, fee, config) async {
           await _debtController.payDebtWithTransaction(
             debt,
             amount: amount,
-            wallet: wallet,
+            wallet: config.wallet!,
             fee: fee ?? 0,
+            categoryId: config.categoryId,
+            budgetProfileId: config.budgetProfileId,
+            imagePaths: config.imagePaths,
+            date: config.date,
+            description: config.description,
           );
         },
         onUpdate: (updated) => _debtController.updateDebt(updated),
@@ -467,40 +486,37 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
       builder: (_) => GoalDetailSheet(
         goal: goal,
         goalController: _goalController,
-        onContribute: (currentGoal, amount) async {
-          final userId =
-              locator.get<AuthController>().currentUser?.id ?? '';
-          final catCtrl =
-              locator.get<FinanceCategoryController>();
-          final categoryId =
-              await catCtrl.findOrCreateSavingsCategory(userId);
+        onContribute: (currentGoal, amount, config) async {
+          final userId = locator.get<AuthController>().currentUser?.id ?? '';
+          final catCtrl = locator.get<FinanceCategoryController>();
+          final categoryId = config.categoryId ?? await catCtrl.findOrCreateSavingsCategory(userId);
 
-          // 1. Create a reversible transaction record
           await _txController.createTransaction(Transaction(
             amount: amount,
             type: TransactionType.income,
-            date: DateTime.now(),
+            date: config.date,
             goalId: currentGoal.id,
             walletId: currentGoal.savingsBucketId,
             financeCategoryId: categoryId,
-            description: 'Contribution to ${currentGoal.name}',
-            budgetProfileId: widget.budgetProfileId,
+            description: config.description ?? 'Contribution to ${currentGoal.name}',
+            budgetProfileId: config.budgetProfileId ?? widget.budgetProfileId,
+            imagePaths: config.imagePaths,
           ));
 
-          // 2. Update goal progress (optimistic + server)
           await _goalController.contributeToGoal(currentGoal.id!, amount);
 
-          // 3. Sync linked savings bucket balance
           if (currentGoal.savingsBucketId != null) {
             final wallets = _walletController.data ?? [];
-            final wallet = wallets
-                .where((w) => w.id == currentGoal.savingsBucketId)
-                .firstOrNull;
-            if (wallet != null) {
-              await _walletController.updateWallet(
-                wallet.copyWith(balance: wallet.balance + amount),
-              );
+            final bucket = wallets.where((w) => w.id == currentGoal.savingsBucketId).firstOrNull;
+            if (bucket != null) {
+              await _walletController.updateWallet(bucket.copyWith(balance: bucket.balance + amount));
             }
+          }
+
+          if (config.wallet != null) {
+            final wallets = _walletController.data ?? [];
+            final fresh = wallets.firstWhere((w) => w.id == config.wallet!.id, orElse: () => config.wallet!);
+            await _walletController.updateWallet(fresh.copyWith(balance: fresh.balance - amount));
           }
         },
         onUpdate: (updated) => _goalController.updateGoal(updated),

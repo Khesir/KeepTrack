@@ -673,12 +673,17 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       builder: (_) => DebtDetailSheet(
         debt: debt,
         debtController: _debtController,
-        onPay: (amount, fee, wallet) async {
+        onPay: (amount, fee, config) async {
           await _debtController.payDebtWithTransaction(
             debt,
             amount: amount,
-            wallet: wallet,
+            wallet: config.wallet!,
             fee: fee ?? 0,
+            categoryId: config.categoryId,
+            budgetProfileId: config.budgetProfileId,
+            imagePaths: config.imagePaths,
+            date: config.date,
+            description: config.description,
           );
           _budgetController.refreshBudgetsWithSpentAmounts();
         },
@@ -697,24 +702,29 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
         sub: sub,
         subController: _subscriptionController,
         month: _currentMonth,
-        onPay: () async {
+        onPay: (config) async {
           final userId = locator.get<AuthController>().currentUser?.id ?? '';
-          final categoryId = await _categoryController.findOrCreate(
-            name: 'Subscriptions',
-            type: CategoryType.expense,
-            userId: userId,
-          );
+          String? categoryId = config.categoryId;
+          categoryId ??= await _categoryController.findOrCreate(name: 'Subscriptions', type: CategoryType.expense, userId: userId);
           if (categoryId == null) return;
           await _transactionController.createTransaction(Transaction(
             amount: sub.amount,
             type: TransactionType.expense,
-            date: DateTime.now(),
+            date: config.date,
             subscriptionId: sub.id,
             financeCategoryId: categoryId,
-            description: sub.name,
-            budgetProfileId: widget.budgetProfileId,
+            description: config.description ?? sub.name,
+            budgetProfileId: config.budgetProfileId ?? widget.budgetProfileId,
+            walletId: config.wallet?.id,
+            imagePaths: config.imagePaths,
           ));
           await _subscriptionController.pay(sub.id!);
+          if (config.wallet != null) {
+            final walletCtrl = locator.get<WalletController>();
+            final wallets = walletCtrl.data ?? [];
+            final fresh = wallets.firstWhere((w) => w.id == config.wallet!.id, orElse: () => config.wallet!);
+            await walletCtrl.updateWallet(fresh.copyWith(balance: fresh.balance - sub.amount));
+          }
         },
         onUpdate: (updated) => _subscriptionController.updateSubscription(updated),
         onDelete: () => _subscriptionController.deleteSubscription(sub.id!),
@@ -728,10 +738,16 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       isScrollControlled: true,
       builder: (_) => AddDebtSheet(
         isReceivable: isReceivable,
-        onSave: (debt, wallet) async {
+        onSave: (debt, txDetails) async {
           final d = debt.copyWith(budgetProfileId: widget.budgetProfileId);
-          if (wallet != null) {
-            await _debtController.createDebtWithTransaction(d, wallet);
+          if (txDetails != null) {
+            await _debtController.createDebtWithTransaction(
+              d,
+              txDetails.wallet,
+              categoryId: txDetails.categoryId,
+              budgetProfileId: txDetails.budgetProfileId,
+              imagePaths: txDetails.imagePaths,
+            );
           } else {
             await _debtController.createDebt(d);
           }
@@ -769,18 +785,31 @@ extension BudgetMonthDialogSheets on _BudgetMonthScreenState {
       builder: (_) => GoalDetailSheet(
         goal: goal,
         goalController: _goalController,
-        onContribute: (currentGoal, amount) async {
+        onContribute: (currentGoal, amount, config) async {
+          final userId = locator.get<AuthController>().currentUser?.id ?? '';
+          final categoryId = config.categoryId ?? await _categoryController.findOrCreateSavingsCategory(userId);
+          await _transactionController.createTransaction(Transaction(
+            amount: amount,
+            type: TransactionType.income,
+            date: config.date,
+            goalId: currentGoal.id,
+            walletId: currentGoal.savingsBucketId,
+            financeCategoryId: categoryId,
+            description: config.description ?? 'Contribution to ${currentGoal.name}',
+            budgetProfileId: config.budgetProfileId ?? widget.budgetProfileId,
+            imagePaths: config.imagePaths,
+          ));
           await _goalController.contributeToGoal(currentGoal.id!, amount);
           if (currentGoal.savingsBucketId != null) {
             final walletCtrl = locator.get<WalletController>();
-            final wallet = (walletCtrl.data ?? [])
-                .where((w) => w.id == currentGoal.savingsBucketId)
-                .firstOrNull;
-            if (wallet != null) {
-              await walletCtrl.updateWallet(
-                wallet.copyWith(balance: wallet.balance + amount),
-              );
-            }
+            final bucket = (walletCtrl.data ?? []).where((w) => w.id == currentGoal.savingsBucketId).firstOrNull;
+            if (bucket != null) await walletCtrl.updateWallet(bucket.copyWith(balance: bucket.balance + amount));
+          }
+          if (config.wallet != null) {
+            final walletCtrl = locator.get<WalletController>();
+            final wallets = walletCtrl.data ?? [];
+            final fresh = wallets.firstWhere((w) => w.id == config.wallet!.id, orElse: () => config.wallet!);
+            await walletCtrl.updateWallet(fresh.copyWith(balance: fresh.balance - amount));
           }
         },
         onUpdate: (updated) => _goalController.updateGoal(updated),

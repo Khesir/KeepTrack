@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/di/service_locator.dart';
@@ -8,9 +9,17 @@ import 'package:keep_track/core/state/stream_builder_widget.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/responsive/responsive_breakpoints.dart';
+import 'package:keep_track/core/utils/transaction_image_service.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/helpers/finance_category.dart';
+import 'package:keep_track/features/finance/modules/budget_profile/domain/entities/budget_profile.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category.dart';
+import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/features/finance/modules/wallet/domain/entities/wallet.dart';
 import 'package:keep_track/features/finance/presentation/screens/configuration/debts/widgets/debt_management_dialog.dart';
+import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
+import 'package:keep_track/features/finance/presentation/state/finance_category_controller.dart';
 import 'package:keep_track/features/finance/presentation/state/wallet_controller.dart';
+import 'package:uuid/uuid.dart';
 import '../../../../modules/debt/domain/entities/debt.dart';
 import '../../../state/debt_controller.dart';
 import 'debt_history_screen.dart';
@@ -101,12 +110,17 @@ class _DebtsTabNewState extends State<DebtsTabNew> {
       backgroundColor: Colors.transparent,
       builder: (_) => _RecordPaymentSheet(
         debt: debt,
-        onSave: (amount, wallet, fee) async {
+        onSave: (amount, wallet, fee, {String? categoryId, String? budgetProfileId, List<String> imagePaths = const [], DateTime? date, String? description}) async {
           await _controller.payDebtWithTransaction(
             debt,
             amount: amount,
             wallet: wallet,
             fee: fee,
+            categoryId: categoryId,
+            budgetProfileId: budgetProfileId,
+            imagePaths: imagePaths,
+            date: date,
+            description: description,
           );
         },
       ),
@@ -914,7 +928,16 @@ class _StatusBadge extends StatelessWidget {
 
 class _RecordPaymentSheet extends StatefulWidget {
   final Debt debt;
-  final Future<void> Function(double amount, Wallet wallet, double fee) onSave;
+  final Future<void> Function(
+    double amount,
+    Wallet wallet,
+    double fee, {
+    String? categoryId,
+    String? budgetProfileId,
+    List<String> imagePaths,
+    DateTime? date,
+    String? description,
+  }) onSave;
 
   const _RecordPaymentSheet({required this.debt, required this.onSave});
 
@@ -923,38 +946,54 @@ class _RecordPaymentSheet extends StatefulWidget {
 }
 
 class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
-  final _amountCtrl = TextEditingController();
-  final _feeCtrl = TextEditingController();
-
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _feeCtrl;
+  late final TextEditingController _descCtrl;
   late final WalletController _walletController;
+  late final FinanceCategoryController _catController;
+  late final BudgetProfileController _profileController;
+  late final String _pendingId;
 
   Wallet? _wallet;
+  FinanceCategory? _category;
+  String? _profileId, _profileName;
+  final List<String> _imagePaths = [];
+  DateTime _date = DateTime.now();
+  bool _showDesc = false;
   bool _saving = false;
+  bool _txSaved = false;
+
+  bool get _isLending => widget.debt.type == DebtType.lending;
+  Color get _typeColor => _isLending ? AppColors.success : AppColors.error;
+  CategoryType get _catType => _isLending ? CategoryType.income : CategoryType.expense;
+
+  bool get _canSave {
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    return amount > 0 && _wallet != null;
+  }
 
   @override
   void initState() {
     super.initState();
+    _pendingId = const Uuid().v4();
+    _amountCtrl = TextEditingController(
+      text: widget.debt.monthlyPaymentAmount > 0 ? widget.debt.monthlyPaymentAmount.toStringAsFixed(2) : '',
+    );
+    _feeCtrl = TextEditingController();
+    _descCtrl = TextEditingController();
     _walletController = locator.get<WalletController>();
-    if (widget.debt.monthlyPaymentAmount > 0) {
-      _amountCtrl.text = widget.debt.monthlyPaymentAmount.toStringAsFixed(2);
-    }
+    _catController = locator.get<FinanceCategoryController>();
+    _profileController = locator.get<BudgetProfileController>();
+    _catController.loadCategories();
   }
 
   @override
   void dispose() {
     _amountCtrl.dispose();
     _feeCtrl.dispose();
+    _descCtrl.dispose();
+    if (!_txSaved) TransactionImageService.deleteAll(_pendingId).ignore();
     super.dispose();
-  }
-
-  bool get _isLending => widget.debt.type == DebtType.lending;
-  Color get _typeColor => _isLending ? AppColors.success : AppColors.error;
-
-  bool get _canSave {
-    final amount = double.tryParse(_amountCtrl.text) ?? 0;
-    return amount > 0 &&
-        amount <= widget.debt.remainingAmount &&
-        _wallet != null;
   }
 
   Future<void> _save() async {
@@ -963,12 +1002,21 @@ class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
     final fee = double.tryParse(_feeCtrl.text) ?? 0;
     setState(() => _saving = true);
     try {
-      await widget.onSave(amount, _wallet!, fee);
+      _txSaved = true;
+      await widget.onSave(
+        amount, _wallet!, fee,
+        categoryId: _category?.id,
+        budgetProfileId: _profileId,
+        imagePaths: List.from(_imagePaths),
+        date: _date,
+        description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+      );
       if (mounted) {
         Navigator.pop(context);
         AppToast.success(context, 'Payment recorded');
       }
     } catch (e) {
+      _txSaved = false;
       if (mounted) {
         AppToast.error(context, 'Failed: $e');
         setState(() => _saving = false);
@@ -976,12 +1024,75 @@ class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
     }
   }
 
+  Future<void> _pickCategory(bool isDark) async {
+    final allCats = _catController.data ?? [];
+    final groups = buildGroupedCategories(allCategories: allCats, allBudgets: [], targetType: _catType, monthKey: '');
+    final picked = await showGroupedCategoryDialog(context, groups: groups, selectedId: _category?.id);
+    if (picked != null && mounted) setState(() => _category = picked);
+  }
+
+  void _pickBudgetProfile(bool isDark) {
+    final profiles = _profileController.data ?? <BudgetProfile>[];
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    showModalBottomSheet(
+      context: context, backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+        child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 14),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Text('Budget', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700, color: textPrimary))),
+          const SizedBox(height: 4),
+          Flexible(child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(20, 0, 20, 24), children: [
+            ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.block_outlined, size: 16, color: AppColors.textTertiary),
+              title: Text('None', style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary)),
+              trailing: _profileId == null ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent) : null,
+              onTap: () { setState(() { _profileId = null; _profileName = null; }); Navigator.pop(context); }),
+            ...profiles.where((p) => p.isActive).map((p) => ListTile(contentPadding: EdgeInsets.zero,
+              title: Text(p.name, style: GoogleFonts.dmSans(fontSize: 13, color: textPrimary)),
+              trailing: _profileId == p.id ? const Icon(Icons.check_rounded, size: 16, color: AppColors.accent) : null,
+              onTap: () { setState(() { _profileId = p.id; _profileName = p.name; }); Navigator.pop(context); })),
+          ])),
+        ])),
+      ),
+    );
+  }
+
+  Future<ImageSource?> _showSourcePicker(Color bg) => showModalBottomSheet<ImageSource>(
+    context: context, backgroundColor: Colors.transparent,
+    builder: (_) => Container(
+      decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+      child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const SizedBox(height: 8),
+        Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.textTertiary.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)))),
+        const SizedBox(height: 8),
+        ListTile(leading: const Icon(Icons.photo_library_outlined), title: Text('Gallery', style: GoogleFonts.dmSans(fontSize: 14)), onTap: () => Navigator.pop(context, ImageSource.gallery)),
+        ListTile(leading: const Icon(Icons.camera_alt_outlined), title: Text('Camera', style: GoogleFonts.dmSans(fontSize: 14)), onTap: () => Navigator.pop(context, ImageSource.camera)),
+        const SizedBox(height: 8),
+      ])),
+    ),
+  );
+
+  Future<void> _pickImage(bool isDark) async {
+    final bg = isDark ? AppColors.cardDark : AppColors.card;
+    final source = await _showSourcePicker(bg);
+    if (source == null || !mounted) return;
+    final path = await TransactionImageService.pickImage(_pendingId, source: source);
+    if (path != null && mounted) setState(() => _imagePaths.add(path));
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime.now());
+    if (picked != null && mounted) setState(() => _date = picked);
+  }
+
   void _pickWallet(List<Wallet> wallets, bool isDark) {
     final bg = isDark ? AppColors.cardDark : AppColors.card;
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
     showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
+      context: context, backgroundColor: Colors.transparent,
       builder: (_) => Container(
         decoration: BoxDecoration(color: bg, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -1003,13 +1114,32 @@ class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
     );
   }
 
+  Widget _buildChip({required IconData icon, required String label, required bool active, required bool isDark, required VoidCallback onTap}) {
+    final color = active ? AppColors.accent : AppColors.textSecondary;
+    final bg = active ? AppColors.accent.withValues(alpha: 0.1) : (isDark ? Colors.white.withValues(alpha: 0.07) : AppColors.background);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w500, color: color)),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.void_ : Colors.white;
     final border = isDark ? AppColors.border.withValues(alpha: 0.2) : AppColors.border.withValues(alpha: 0.5);
     final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-
+    final now = DateTime.now();
+    final isToday = DateUtils.isSameDay(_date, now);
+    final dateLabel = isToday ? 'Today' : DateFormat('MMM d').format(_date);
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -1034,39 +1164,30 @@ class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
             ])),
           ]),
           const SizedBox(height: 20),
-
-          // Amount
           TextField(
-            controller: _amountCtrl,
-            autofocus: true,
+            controller: _amountCtrl, autofocus: true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) => setState(() {}),
             style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
             decoration: InputDecoration(
-              labelText: 'Amount *',
-              prefixText: '${currencyFormatter.currencySymbol} ',
+              labelText: 'Amount *', prefixText: '${currencyFormatter.currencySymbol} ',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)),
               hintText: widget.debt.monthlyPaymentAmount > 0 ? 'Suggested: ${widget.debt.monthlyPaymentAmount.toStringAsFixed(2)}' : null,
             ),
           ),
           const SizedBox(height: 12),
-
-          // Fee
           TextField(
             controller: _feeCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary),
             decoration: InputDecoration(
-              labelText: 'Fee (optional)',
-              prefixText: '${currencyFormatter.currencySymbol} ',
+              labelText: 'Fee (optional)', prefixText: '${currencyFormatter.currencySymbol} ',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)),
             ),
           ),
           const SizedBox(height: 12),
-
-          // Wallet picker
           AsyncStreamBuilder<List<Wallet>>(
             state: _walletController,
             builder: (_, wallets) => GestureDetector(
@@ -1079,11 +1200,9 @@ class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
                   color: _wallet != null ? _typeColor.withValues(alpha: 0.04) : Colors.transparent,
                 ),
                 child: Row(children: [
-                  Icon(Icons.account_balance_wallet_outlined, size: 16,
-                      color: _wallet != null ? _typeColor : AppColors.textSecondary),
+                  Icon(Icons.account_balance_wallet_outlined, size: 16, color: _wallet != null ? _typeColor : AppColors.textSecondary),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(_wallet?.name ?? 'Select wallet *',
-                      style: GoogleFonts.dmSans(fontSize: 14, color: _wallet != null ? textPrimary : AppColors.textSecondary))),
+                  Expanded(child: Text(_wallet?.name ?? 'Select wallet *', style: GoogleFonts.dmSans(fontSize: 14, color: _wallet != null ? textPrimary : AppColors.textSecondary))),
                   Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
                 ]),
               ),
@@ -1091,21 +1210,27 @@ class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
             loadingBuilder: (_) => const SizedBox.shrink(),
             errorBuilder: (_, __) => const SizedBox.shrink(),
           ),
+          const SizedBox(height: 10),
+          Padding(padding: const EdgeInsets.only(left: 2), child: Wrap(spacing: 8, runSpacing: 6, children: [
+            _buildChip(icon: Icons.account_balance_wallet_outlined, label: _profileName ?? 'Budget', active: _profileId != null, isDark: isDark, onTap: () => _pickBudgetProfile(isDark)),
+            _buildChip(icon: Icons.grid_view_rounded, label: _category?.name ?? 'Category', active: _category != null, isDark: isDark, onTap: () => _pickCategory(isDark)),
+            _buildChip(icon: Icons.attach_file_rounded, label: _imagePaths.isEmpty ? 'Attach' : 'Files (${_imagePaths.length})', active: _imagePaths.isNotEmpty, isDark: isDark, onTap: () => _pickImage(isDark)),
+            _buildChip(icon: Icons.calendar_today_outlined, label: dateLabel, active: !isToday, isDark: isDark, onTap: _pickDate),
+            _buildChip(icon: _showDesc ? Icons.edit_off_outlined : Icons.edit_outlined, label: 'Note', active: _showDesc, isDark: isDark, onTap: () => setState(() => _showDesc = !_showDesc)),
+          ])),
+          if (_showDesc) ...[
+            const SizedBox(height: 10),
+            TextField(controller: _descCtrl, maxLines: 1, style: GoogleFonts.dmSans(fontSize: 14, color: textPrimary), decoration: InputDecoration(hintText: 'Add a note…', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: border)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), isDense: true)),
+          ],
           const SizedBox(height: 20),
-
           SizedBox(
-            width: double.infinity,
-            height: 50,
+            width: double.infinity, height: 50,
             child: FilledButton(
               onPressed: _canSave && !_saving ? _save : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: _canSave ? _typeColor : AppColors.textTertiary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              style: FilledButton.styleFrom(backgroundColor: _canSave ? _typeColor : AppColors.textTertiary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               child: _saving
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_isLending ? 'Record Collection' : 'Record Payment',
-                      style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700)),
+                  : Text(_isLending ? 'Record Collection' : 'Record Payment', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
           ),
         ]),

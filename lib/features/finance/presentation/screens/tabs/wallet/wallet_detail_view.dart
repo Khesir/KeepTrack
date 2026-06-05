@@ -65,27 +65,29 @@ class _WalletDetailViewState extends State<WalletDetailView> {
       builder: (_) => GoalDetailSheet(
         goal: goal,
         goalController: _goalController,
-        onContribute: (currentGoal, amount) async {
+        onContribute: (currentGoal, amount, config) async {
           final userId = locator.get<AuthController>().currentUser?.id ?? '';
-          final categoryId = await locator
+          final categoryId = config.categoryId ?? await locator
               .get<FinanceCategoryController>()
               .findOrCreateSavingsCategory(userId);
 
           final budgetName = currentGoal.budgetProfileId != null
               ? _profileNames[currentGoal.budgetProfileId]
               : null;
-          final description = budgetName != null
+          final autoDesc = budgetName != null
               ? 'Contribution to ${currentGoal.name} • $budgetName'
               : 'Contribution to ${currentGoal.name}';
 
           await widget.txController.createTransaction(Transaction(
             amount: amount,
             type: TransactionType.income,
-            date: DateTime.now(),
+            date: config.date,
             goalId: currentGoal.id,
             walletId: currentGoal.savingsBucketId,
             financeCategoryId: categoryId,
-            description: description,
+            description: config.description ?? autoDesc,
+            budgetProfileId: config.budgetProfileId,
+            imagePaths: config.imagePaths,
           ));
 
           await _goalController.contributeToGoal(currentGoal.id!, amount);
@@ -93,15 +95,18 @@ class _WalletDetailViewState extends State<WalletDetailView> {
           if (currentGoal.savingsBucketId != null) {
             final walletController = locator.get<WalletController>();
             final wallets = walletController.data ?? [];
-            final wallet = wallets
-                .where((w) => w.id == currentGoal.savingsBucketId)
-                .firstOrNull;
-            if (wallet != null) {
-              final delta = _balanceDelta(wallet, TransactionType.income, amount);
-              await walletController.updateWallet(
-                wallet.copyWith(balance: wallet.balance + delta),
-              );
+            final bucket = wallets.where((w) => w.id == currentGoal.savingsBucketId).firstOrNull;
+            if (bucket != null) {
+              final delta = _balanceDelta(bucket, TransactionType.income, amount);
+              await walletController.updateWallet(bucket.copyWith(balance: bucket.balance + delta));
             }
+          }
+
+          if (config.wallet != null) {
+            final walletController = locator.get<WalletController>();
+            final wallets = walletController.data ?? [];
+            final fresh = wallets.firstWhere((w) => w.id == config.wallet!.id, orElse: () => config.wallet!);
+            await walletController.updateWallet(fresh.copyWith(balance: fresh.balance - amount));
           }
         },
         onUpdate: (updated) => _goalController.updateGoal(updated),

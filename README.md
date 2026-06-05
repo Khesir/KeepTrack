@@ -1,287 +1,260 @@
 <div align="center">
 
-#  Keep Track
+<img src="assets/icon/app_icon.png" alt="Keep Track" width="96" height="96"/>
 
-> ⚠️ **Disclaimer:** The app icon/image (`/assets/icon/app_icon.png`) is currently a **placeholder** and will be replaced later. It is **not owned** by me.
+# Keep Track
 
+Personal finance, tasks, and productivity — all offline-first with cloud sync.
 
-<img src="assets/icon/app_icon.png" alt="Keep Track App Icon" width="120" height="120"/>
-
-Organize your life with powerful task management, comprehensive finance tracking, and productivity tools - all in one beautiful app.
-
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Flutter](https://img.shields.io/badge/Flutter-3.0%2B-02569B?logo=flutter)](https://flutter.dev)
-[![Supabase](https://img.shields.io/badge/Supabase-Powered-3ECF8E?logo=supabase)](https://supabase.com)
-
-[Download Latest Release](https://github.com/Khesir/KeepTrack/releases/latest) • [Documentation](./docs) • [Report Bug](https://github.com/Khesir/KeepTrack/issues) • [Request Feature](https://github.com/Khesir/KeepTrack/issues)
+[![Flutter](https://img.shields.io/badge/Flutter-3.35-02569B?logo=flutter)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.9-0175C2?logo=dart)](https://dart.dev)
+[![Version](https://img.shields.io/badge/version-0.8.5-informational)]()
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 </div>
 
 ---
 
-## ✨ Features
-
-### Current Features
-
-- ✅ **Task Management (Base Feature)**
-  - Create, organize, and track tasks with priorities
-  - Set deadlines and due dates
-  - Group tasks into projects
-  - Archive completed tasks
-  - Filter by priority (Urgent, High, Medium, Low)
-
-- ✅ **Finance Tracking (Base Feature)**
-  - Manage multiple accounts (Bank, Cash, E-Wallet, etc.)
-  - Create and monitor budgets by category
-  - Track debts with payment schedules
-  - Set savings goals with progress tracking
-  - Schedule recurring payments
-  - Comprehensive transaction history
-  - Multi-currency support
-
-- ✅ **Productivity Tools (Base Feature)**
-  - Built-in Pomodoro timer with customizable durations
-  - Focus sessions with automatic break reminders
-  - Session statistics and insights
-
-- ✅ **Modern UI/UX**
-  - Clean, intuitive interface inspired by modern design principles
-  - Full dark mode support
-  - Responsive layout for desktop and mobile
-  - Smooth animations and transitions
-
-- ✅ **Cloud Sync**
-  - Supabase authentication (Email/Password, Google)
-  - Real-time data synchronization
-  - Access your data from any device
-
-- ✅ **Cross-Platform**
-  - Windows (x64)
-  - macOS (Intel & Apple Silicon)
-  - Linux (AppImage, DEB)
-  - Android (APK) - Coming soon
-  - iOS - Coming soon
-
-## 🚀 Getting Started
-
-### System Requirements
-
-#### Windows
-- **OS**: Windows 10 or later (64-bit)  
-- **RAM**: 4 GB minimum, 8 GB recommended  
-- **Storage**: 500 MB available space  
-- **Graphics**: DirectX 11 compatible graphics card  
-
-#### Android
-- **OS**: Android 8.0 (Oreo) or later  
-- **RAM**: 2 GB minimum, 4 GB recommended  
-- **Storage**: 200 MB available space  
-- **Architecture**: ARM64 or ARMv7  
+> **This is a private, invite-only project.** If you have access, welcome — this document covers everything you need to get up and running.
 
 ---
 
-### Installation Instructions
+## Features
 
-#### Windows
-1. Download the `.exe` installer from the latest release above  
-2. Run the installer and follow the setup wizard  
-3. Launch **Personal Codex** from the Start Menu or Desktop shortcut  
+### Finance
+- Zero-based budgeting with monthly budget profiles
+- Transaction tracking with category breakdown
+- Named savings buckets with contribution tracking
+- Debt management with payoff schedules
+- Savings goals with progress visualization
+- Planned/recurring payments
+- Subscription tracking
+- Multi-currency support
+- Transaction attachment photos
 
-#### Android
-1. Download the `.apk` file from the latest release above  
-2. If prompted, allow installation from unknown sources in your device settings  
-3. Tap the downloaded APK file to install  
-4. Open **Personal Codex** from your app drawer  
+### App
+- Offline-first — Hive is the local source of truth; syncs to backend when online
+- Cloud backup & restore (encrypted, password-protected)
+- Google OAuth + email/password authentication
+- Dark/light theme
+- Desktop title bar with feature flag panel, inbox, and sync status
+- Push notifications (Windows/Android)
+- Demo mode with sample data
+
+### Platforms
+| Platform | Status |
+|---|---|
+| Windows (x64) | ✅ |
+| Android (APK) | ✅ |
+| macOS | Builds, not actively tested |
+| Linux | Builds, not actively tested |
+| Web | Dev only (Chrome) |
+| iOS | Not configured |
 
 ---
 
-## 🛠️ Development Setup
+## Prerequisites
 
-### Prerequisites
+| Tool | Version | Notes |
+|---|---|---|
+| Flutter SDK | 3.35+ | `flutter --version` to check |
+| Dart SDK | 3.9+ | Included with Flutter |
+| Git | any | — |
+| Python 3 | 3.10+ | For release builds only |
+| Inno Setup 6 | 6.x | Windows installer only — [download](https://jrsoftware.org/isdl.php) |
 
-- Flutter SDK (3.19+)
-- Dart SDK (3.3+)
-- A Supabase account (free tier available)
-- Git
+You do **not** need a database, Docker, or any cloud account to run the app locally — it runs fully offline against Hive. To hit the real backend, you need access credentials (see [Environment setup](#environment-setup)).
 
-### 1. Clone the repository
+---
+
+## Getting Started
+
+### 1. Install dependencies
 
 ```bash
-git clone https://github.com/Khesir/KeepTrack.git
-cd KeepTrack
-```
-
-### 2. Install dependencies
-
-```bash
+cd frontend
 flutter pub get
 ```
 
-### 3. Set up Supabase
+### 2. Environment setup
 
-#### Create a Supabase project
+Copy the example env or create `frontend/.env`:
 
-1. Go to [https://supabase.com](https://supabase.com)
-2. Create a new project
-3. Wait for the project to be ready
+```env
+API_BASE_URL=https://keep-track-backend.vercel.app/api/v1
+GOOGLE_WEB_CLIENT_ID=<ask the project owner>
 
-#### Run the bootstrap script
-
-This is a **ONE-TIME** setup that enables automatic migrations:
-
-1. Open your Supabase project dashboard
-2. Navigate to **SQL Editor** in the sidebar
-3. Click **New Query**
-4. Copy and paste the contents of `supabase/bootstrap.sql`
-5. Click **Run** (or press Cmd/Ctrl + Enter)
-
-The bootstrap script creates:
-- The `exec_sql` function (allows automatic migrations)
-- The `schema_migrations` table (tracks applied migrations)
-
-### 4. Configure your app
-
-Update `lib/main.dart` with your Supabase credentials:
-
-```dart
-await Supabase.initialize(
-  url: 'YOUR_SUPABASE_PROJECT_URL',
-  anonKey: 'YOUR_SUPABASE_ANON_KEY',
-);
+DEV_BYPASS=false
+DEV_EMAIL=dev@personalcodex.app
+DEV_PASSWORD=<ask the project owner>
+ADMIN_EMAIL=admin@personalcodex.app
+ADMIN_PASSWORD=<ask the project owner>
 ```
 
-Find these values in your Supabase project settings under **API**.
+Flutter reads this file at compile time via `--dart-define-from-file=.env`. It is **not** read automatically — you must pass the flag when running or building (see below).
 
-### 5. Run the app
+To run against localhost instead, change `API_BASE_URL` to `http://localhost:3000/api/v1` and start the backend separately.
+
+### 3. Run the app
 
 ```bash
-# Desktop
-flutter run -d windows  # or macos, linux
+# Windows
+flutter run -d windows --dart-define-from-file=.env
 
-# Mobile
-flutter run -d android  # or ios
+# Android (device or emulator connected)
+flutter run -d android --dart-define-from-file=.env
+
+# Chrome (web dev)
+flutter run -d chrome --dart-define-from-file=.env
 ```
 
-The app will automatically:
-1. Connect to Supabase
-2. Run all pending migrations
-3. Set up the database schema
-4. Start the app
+Or use the VS Code launch config — select **"frontend"** from the Run & Debug panel, which already passes `--dart-define-from-file=.env`.
+
+> **First run tip:** The app starts in offline mode if no credentials are stored. Sign in with email/password or Google OAuth, then all data syncs automatically.
 
 ---
 
-## 📁 Project Structure
+## VS Code Launch Configs
+
+Defined in `.vscode/launch.json` at the repo root:
+
+| Config | Backend | Notes |
+|---|---|---|
+| `frontend` | Reads from `.env` | Default — edit `.env` to switch environments |
+| `frontend (dev bypass)` | localhost:3000 | Auto-signs in with `DEV_EMAIL`/`DEV_PASSWORD` |
+| `frontend (profile mode)` | — | Performance profiling |
+| `frontend (release mode)` | — | Release build smoke test |
+
+---
+
+## Building for Release
+
+The release script at `installers/build_release.py` handles both Windows and Android. It reads `.env`, overrides `API_BASE_URL` to production, syncs the version from `pubspec.yaml`, and compiles.
+
+```bash
+cd frontend
+
+# Build both Windows installer and Android APK
+python installers/build_release.py
+
+# Windows only
+python installers/build_release.py windows
+
+# Android APK only
+python installers/build_release.py apk
+```
+
+### Windows output
+- Raw build: `build/windows/x64/runner/Release/`
+- Installer (`.exe`): `installers/KeepTrack-v<version>.exe`
+
+Requires [Inno Setup 6](https://jrsoftware.org/isdl.php) installed at `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`. If not present, the raw build is produced but no installer is compiled.
+
+### Android output
+- `build/app/outputs/flutter-apk/KeepTrack-v<version>.apk`
+
+The APK is signed with the debug keystore by default. For a release-signed APK, configure `android/key.properties` and `android/app/build.gradle` with the production keystore before running.
+
+### Manual build commands
+
+```bash
+# Windows
+flutter build windows --release --dart-define-from-file=.env
+
+# Android APK
+flutter build apk --release --dart-define-from-file=.env
+
+# Android App Bundle (Play Store)
+flutter build appbundle --release --dart-define-from-file=.env
+```
+
+---
+
+## Project Structure
 
 ```
 lib/
-├── core/                    # Core functionality
-│   ├── di/                  # Dependency injection
-│   ├── error/               # Error handling
-│   ├── logging/             # Logging system
-│   ├── migrations/          # Database migrations
-│   ├── routing/             # Navigation
-│   ├── settings/            # App settings
-│   ├── state/               # State management
-│   ├── theme/               # Theming
-│   └── ui/                  # Reusable UI components
-├── features/                # Feature modules
-│   ├── auth/                # Authentication
-│   ├── finance/             # Finance tracking
-│   │   ├── modules/
-│   │   │   ├── account/     # Account management
-│   │   │   ├── budget/      # Budget tracking
-│   │   │   ├── debt/        # Debt management
-│   │   │   ├── goal/        # Savings goals
-│   │   │   └── transaction/ # Transaction history
-│   │   └── presentation/    # UI screens
-│   ├── home/                # Home dashboard
-│   ├── module_selection/    # Module picker
-│   ├── profile/             # User profile
-│   └── tasks/               # Task management
-│       ├── domain/          # Business logic
-│       ├── presentation/    # UI screens
-│       └── state/           # State management
-├── shared/                  # Shared code
-│   └── infrastructure/      # Infrastructure code
-└── main.dart                # App entry point
+├── core/
+│   ├── auth/           # Token storage and refresh logic
+│   ├── cache/          # Hive local cache wrappers
+│   ├── connectivity/   # Network state detection
+│   ├── di/             # Custom service locator (no GetIt)
+│   ├── error/          # Failure types and Result<T>
+│   ├── feature_flags/  # Debug feature flag panel
+│   ├── logging/        # App logger
+│   ├── network/        # Dio client, auth interceptor, error mapping
+│   ├── routing/        # Named routes
+│   ├── settings/       # Persistent app settings (theme, currency, etc.)
+│   ├── state/          # StreamState + StreamStateBuilder
+│   ├── sync/           # Offline sync manager
+│   ├── theme/          # AppStyling — colors, text styles
+│   └── ui/             # Shared widgets (toasts, desktop title bar, etc.)
+└── features/
+    ├── auth/           # Login, Google OAuth, token management
+    ├── finance/        # Budgets, transactions, savings, debts, goals
+    ├── home/           # Dashboard
+    ├── inbox/          # Announcements
+    ├── logs/           # Transaction log view
+    ├── module_selection/  # Feature/module picker screen
+    ├── notifications/  # Push notification settings
+    ├── profile/        # User profile
+    └── settings/       # App settings, backup/restore, cloud sync
+```
+
+Each feature follows the same folder contract:
+
+```
+features/<feature>/
+├── presentation/
+│   ├── screen/     # ScopeScreen entry points
+│   ├── section/    # Composed UI regions
+│   ├── widget/     # Reusable, domain-logic-free components
+│   ├── state/      # StreamState subclasses
+│   ├── sheets/     # Bottom sheets
+│   └── dialogs/    # Dialog components
+├── domain/
+│   ├── controller/ # Orchestrates use cases
+│   └── repository/ # Abstract interfaces
+└── data/
+    ├── repository/ # Concrete implementations
+    └── datasource/ # Remote (HTTP) and local (Hive)
 ```
 
 ---
 
-## 🗄️ Database Migrations
+## Architecture Notes
 
-Keep Track uses **automatic database migrations**. When you start the app:
-
-1. Migration manager checks which migrations have been applied
-2. Pending migrations are executed automatically via the `exec_sql` RPC function
-3. Successful migrations are recorded in the `schema_migrations` table
-
-No manual SQL execution needed after the initial bootstrap!
-
-See [Migration System Guide](lib/core/migrations/README.md) for more details.
+- **State management:** `StreamState` + `StreamStateBuilder` only. No BLoC, Riverpod, or ChangeNotifier.
+- **DI:** Custom service locator in `core/di/`. No GetIt.
+- **Offline-first:** All writes go to Hive first. `core/sync/` reconciles with the backend when the device comes online.
+- **Backend:** NestJS REST API at `https://keep-track-backend.vercel.app/api/v1`. All business logic and validation lives there.
+- **Auth:** Google OAuth and email/password, both handled by the backend. The Flutter app receives a JWT and stores it via `core/auth/token_storage.dart`.
 
 ---
 
-## 🏗️ Architecture
+## Feature Flag Panel
 
-- **Clean Architecture** with separation of concerns
-- **Custom Dependency Injection** system
-- **Custom State Management** using `StreamState`
-- **Feature-based organization** for scalability
-- **Repository pattern** for data access
-- **Automatic migrations** for database schema updates
+On desktop, press **Ctrl+Shift+F** (or click the tune icon in the title bar) to open the feature flag panel. From here you can:
 
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to:
-- Report bugs
-- Suggest features
-- Submit pull requests
-- Set up your development environment
-
-Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+- Toggle **Offline Mode** — disables all backend calls, Hive only
+- Toggle **Plus Mode** — simulates a Plus user without a real subscription
+- Toggle **Production View** — hides dev-only UI elements
+- **Check Backend** — pings `/api/v1/health` and shows a toast; displays the active `API_BASE_URL` so you can confirm which backend you're hitting
+- Send a test notification
+- Inspect Hive cache contents
 
 ---
 
-## 📄 License
+## Common Issues
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+**"Connection failed" on login**
+The app is hitting `localhost:3000` instead of the backend. Run with `--dart-define-from-file=.env` or use the VS Code `"frontend"` launch config.
 
----
+**Google Sign-In not working on desktop**
+Google OAuth is not supported on Windows/macOS/Linux. Use email/password login on desktop. Google sign-in works on Android and web.
 
-## 🙏 Acknowledgments
+**App starts with no data after fresh install**
+Expected. Sign in to restore cloud data, or use Demo Mode (Settings → Demo) to explore with sample data.
 
-- Built with [Flutter](https://flutter.dev) - Google's UI toolkit
-- Powered by [Supabase](https://supabase.com) - Open source Firebase alternative
-- Inspired by modern productivity apps and design systems
-- Icons from [Material Design](https://material.io/design)
-
----
-
-## 📞 Support
-
-- 📚 [Documentation](./docs)
-- 💬 [GitHub Discussions](https://github.com/Khesir/KeepTrack/discussions)
-- 🐛 [Issue Tracker](https://github.com/Khesir/KeepTrack/issues)
-- 📧 Email: [Your Email]
-
----
-
-## 🌟 Star History
-
-If you find Keep Track useful, please consider giving it a star ⭐
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Khesir/KeepTrack&type=Date)](https://star-history.com/#Khesir/KeepTrack&Date)
-
----
-
-<div align="center">
-
-Made with ❤️ using Flutter & Supabase
-
-[Website](https://yourdomain.com) • [Twitter](https://twitter.com/yourhandle) • [Discord](https://discord.gg/yourserver)
-
-</div>
+**Build fails with "keystore not found"**
+The production keystore (`upload-keystore.jks`) is not checked in. Ask the project owner for the signing credentials.

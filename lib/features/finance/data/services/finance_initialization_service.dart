@@ -13,14 +13,17 @@ class FinanceInitializationService {
   Future<Result<bool>> initializeDefaultCategories([String userId = '']) async {
     try {
       final existingResult = await _categoryRepository.getCategories();
-      if (existingResult.isSuccess) {
-        final existing = existingResult.dataOrNull ?? [];
-        if (existing.isNotEmpty) return Result.success(false);
-      }
+      final existing = existingResult.dataOrNull ?? [];
+      final existingNames = existing.map((c) => c.name.toLowerCase()).toSet();
 
-      final categories = _defaultCategories(userId);
+      final missing = _defaultCategories(userId)
+          .where((c) => !existingNames.contains(c.name.toLowerCase()))
+          .toList();
+
+      if (missing.isEmpty) return Result.success(false);
+
       int count = 0;
-      for (final category in categories) {
+      for (final category in missing) {
         final result = await _categoryRepository.createCategory(category);
         if (result.isSuccess) count++;
       }
@@ -38,5 +41,8 @@ class FinanceInitializationService {
     FinanceCategory(name: 'Receivable', type: CategoryType.income, userId: userId),
     FinanceCategory(name: 'Debt', type: CategoryType.expense, userId: userId),
     FinanceCategory(name: 'Goals', type: CategoryType.savings, userId: userId),
+    FinanceCategory(name: 'Loans', type: CategoryType.income, userId: userId),
+    FinanceCategory(name: 'Borrowed', type: CategoryType.income, userId: userId),
+    FinanceCategory(name: 'Loan Repayment', type: CategoryType.expense, userId: userId),
   ];
 }
