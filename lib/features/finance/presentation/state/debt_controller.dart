@@ -1,6 +1,5 @@
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/error/result.dart';
-import 'package:keep_track/core/logging/app_logger.dart';
 import 'package:keep_track/core/services/notification/notification_scheduler.dart';
 import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/core/state/stream_state.dart';
@@ -31,30 +30,29 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     });
   }
 
-  /// Schedule notifications for all active debts with due dates
   Future<void> _scheduleDebtNotifications(List<Debt> debts) async {
     if (!PlatformNotificationHelper.instance.isSupportedPlatform) return;
-
-    try {
-      final scheduler = locator.get<NotificationScheduler>();
-      final activeDebts = debts.where((d) =>
-          d.status == DebtStatus.active &&
-          d.dueDate != null &&
-          d.dueDate!.isAfter(DateTime.now()));
-
-      for (final debt in activeDebts) {
-        if (debt.id == null || debt.dueDate == null) continue;
-
-        await scheduler.scheduleDebtDueNotifications(
-          debtId: debt.id!,
-          personName: debt.personName,
-          amount: debt.remainingAmount,
-          dueDate: debt.dueDate!,
-        );
-      }
-    } catch (e) {
-      AppLogger.warning('DebtController: Failed to schedule notifications: $e');
+    for (final debt in debts) {
+      _scheduleNotificationForDebt(debt);
     }
+  }
+
+  void _scheduleNotificationForDebt(Debt debt) {
+    if (!PlatformNotificationHelper.instance.isSupportedPlatform) return;
+    if (debt.id == null || debt.dueDate == null) return;
+    if (debt.status != DebtStatus.active) return;
+    if (debt.dueDate!.isBefore(DateTime.now())) return;
+    locator.get<NotificationScheduler>().scheduleDebtDueNotifications(
+      debtId: debt.id!,
+      personName: debt.personName,
+      amount: debt.remainingAmount,
+      dueDate: debt.dueDate!,
+    );
+  }
+
+  void _cancelDebtNotification(String id) {
+    if (!PlatformNotificationHelper.instance.isSupportedPlatform) return;
+    locator.get<NotificationScheduler>().cancelDebtDueNotifications(id);
   }
 
   String? get _activeProfileId =>
@@ -65,7 +63,8 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
 
   Future<void> createDebt(Debt debt) async {
     await executeSilent(() async {
-      await _debtRepository.createDebt(_withProfile(debt)).then((r) => r.unwrap());
+      final created = await _debtRepository.createDebt(_withProfile(debt)).then((r) => r.unwrap());
+      _scheduleNotificationForDebt(created);
       return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
@@ -113,18 +112,19 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     });
   }
 
-  /// Update an existing debt
   Future<void> updateDebt(Debt debt) async {
     await executeSilent(() async {
       await _debtRepository.updateDebt(debt).then((r) => r.unwrap());
+      if (debt.id != null) _cancelDebtNotification(debt.id!);
+      _scheduleNotificationForDebt(debt);
       return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
 
-  /// Delete a debt
   Future<void> deleteDebt(String id) async {
     await executeSilent(() async {
       await _debtRepository.deleteDebt(id).then((r) => r.unwrap());
+      _cancelDebtNotification(id);
       return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }
@@ -137,10 +137,10 @@ class DebtController extends StreamState<AsyncState<List<Debt>>> {
     });
   }
 
-  /// Mark debt as settled (fully paid)
   Future<void> settleDebt(String id) async {
     await executeSilent(() async {
       await _debtRepository.settleDebt(id).then((r) => r.unwrap());
+      _cancelDebtNotification(id);
       return await _debtRepository.getDebts().then((r) => r.unwrap());
     });
   }

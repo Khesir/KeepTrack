@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:keep_track/core/di/service_locator.dart';
+import 'package:keep_track/core/services/notification/notification_service.dart';
 import 'package:keep_track/core/services/notification/platform_notification_helper.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
@@ -7,8 +8,6 @@ import 'package:keep_track/core/theme/gcash_theme.dart';
 import 'package:keep_track/features/notifications/domain/entities/notification_settings.dart';
 import 'package:keep_track/features/notifications/presentation/state/notification_settings_controller.dart';
 
-/// Screen for managing notification settings
-/// Only available on mobile platforms
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
 
@@ -18,7 +17,7 @@ class NotificationSettingsScreen extends StatefulWidget {
 }
 
 class _NotificationSettingsScreenState
-    extends State<NotificationSettingsScreen> {
+    extends State<NotificationSettingsScreen> with WidgetsBindingObserver {
   late final NotificationSettingsController _controller;
   bool _permissionsGranted = false;
 
@@ -26,7 +25,21 @@ class _NotificationSettingsScreenState
   void initState() {
     super.initState();
     _controller = locator.get<NotificationSettingsController>();
+    WidgetsBinding.instance.addObserver(this);
     _checkPermissions();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
+    }
   }
 
   Future<void> _checkPermissions() async {
@@ -80,81 +93,58 @@ class _NotificationSettingsScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Permission status card
-                if (!_permissionsGranted) _buildPermissionCard(),
-                if (!_permissionsGranted) const SizedBox(height: 16),
-
-                // Finance reminder section
+                _buildPermissionCard(),
+                const SizedBox(height: 16),
                 _buildSectionCard(
                   icon: Icons.account_balance_wallet,
                   title: 'Finance Reminder',
                   subtitle: 'Daily reminder to track your transactions',
                   enabled: settings.financeReminderEnabled,
                   time: settings.financeReminderTime,
-                  onToggle: (value) {
-                    _controller.updateFinanceReminder(enabled: value);
-                  },
-                  onTimeChange: (time) {
-                    _controller.updateFinanceReminder(time: time);
-                  },
+                  onToggle: (value) =>
+                      _controller.updateFinanceReminder(enabled: value),
+                  onTimeChange: (time) =>
+                      _controller.updateFinanceReminder(time: time),
                 ),
                 const SizedBox(height: 16),
-
-                // Morning task reminder section
                 _buildSectionCard(
                   icon: Icons.wb_sunny,
-                  title: 'Morning Task Reminder',
-                  subtitle: 'Start your day with your task list',
+                  title: 'Morning Reminder',
+                  subtitle: 'Start your day with a finance check-in',
                   enabled: settings.morningReminderEnabled,
                   time: settings.morningReminderTime,
-                  onToggle: (value) {
-                    _controller.updateMorningReminder(enabled: value);
-                  },
-                  onTimeChange: (time) {
-                    _controller.updateMorningReminder(time: time);
-                  },
+                  onToggle: (value) =>
+                      _controller.updateMorningReminder(enabled: value),
+                  onTimeChange: (time) =>
+                      _controller.updateMorningReminder(time: time),
                 ),
                 const SizedBox(height: 16),
-
-                // Evening task reminder section
                 _buildSectionCard(
                   icon: Icons.nightlight_round,
                   title: 'Evening Task Reminder',
                   subtitle: 'Review your progress at the end of the day',
                   enabled: settings.eveningReminderEnabled,
                   time: settings.eveningReminderTime,
-                  onToggle: (value) {
-                    _controller.updateEveningReminder(enabled: value);
-                  },
-                  onTimeChange: (time) {
-                    _controller.updateEveningReminder(time: time);
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Task due reminder section
-                _buildTaskDueCard(
-                  enabled: settings.taskDueReminderEnabled,
-                  duration: settings.taskDueReminderDuration,
-                  onToggle: (value) {
-                    _controller.updateTaskDueReminder(enabled: value);
-                  },
-                  onDurationChange: (duration) {
-                    _controller.updateTaskDueReminder(duration: duration);
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Pomodoro notifications section
-                _buildPomodoroCard(
-                  enabled: settings.pomodoroNotificationsEnabled,
-                  onToggle: (value) {
-                    _controller.updatePomodoroNotifications(enabled: value);
-                  },
+                  onToggle: (value) =>
+                      _controller.updateEveningReminder(enabled: value),
+                  onTimeChange: (time) =>
+                      _controller.updateEveningReminder(time: time),
                 ),
                 const SizedBox(height: 24),
-
-                // Reset button
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    'Feature Flags',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                _buildTestNotificationCard(),
+                const SizedBox(height: 16),
                 Center(
                   child: TextButton.icon(
                     onPressed: () => _showResetConfirmation(context),
@@ -172,7 +162,6 @@ class _NotificationSettingsScreenState
 
   Widget _buildPermissionCard() {
     return Card(
-      color: Colors.orange.shade50,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -180,43 +169,70 @@ class _NotificationSettingsScreenState
           children: [
             Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                Icon(Icons.notifications_outlined, color: GCashColors.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'Notifications Disabled',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade900,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Notification Permission',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Allow the app to send push notifications',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _permissionsGranted
+                        ? Colors.green.shade100
+                        : Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _permissionsGranted ? 'Enabled' : 'Disabled',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _permissionsGranted
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Enable notifications to receive reminders for your tasks and finances.',
-              style: TextStyle(color: Colors.orange.shade900),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: _requestPermissions,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: AppColors.textPrimaryDark,
+            if (!_permissionsGranted) ...[
+              const Divider(height: 24),
+              Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: _requestPermissions,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: GCashColors.primary,
+                      foregroundColor: AppColors.textPrimaryDark,
+                    ),
+                    child: const Text('Enable'),
                   ),
-                  child: const Text('Enable Notifications'),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () {
-                    PlatformNotificationHelper.instance.openNotificationSettings();
-                  },
-                  child: const Text('Open Settings'),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () =>
+                        PlatformNotificationHelper.instance
+                            .openNotificationSettings(),
+                    child: const Text('Open Settings'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -290,10 +306,7 @@ class _NotificationSettingsScreenState
                       style: const TextStyle(fontSize: 14),
                     ),
                     const Spacer(),
-                    Icon(
-                      Icons.chevron_right,
-                      color: Colors.grey.shade400,
-                    ),
+                    Icon(Icons.chevron_right, color: Colors.grey.shade400),
                   ],
                 ),
               ),
@@ -304,129 +317,53 @@ class _NotificationSettingsScreenState
     );
   }
 
-  Widget _buildTaskDueCard({
-    required bool enabled,
-    required TaskDueReminderDuration duration,
-    required ValueChanged<bool> onToggle,
-    required ValueChanged<TaskDueReminderDuration> onDurationChange,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.alarm, color: GCashColors.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Task Due Reminders',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Get notified before tasks are due',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Switch(
-                  value: enabled,
-                  onChanged: _permissionsGranted ? onToggle : null,
-                  activeTrackColor: GCashColors.primary.withValues(alpha: 0.5),
-                  activeThumbColor: GCashColors.primary,
-                ),
-              ],
-            ),
-            if (enabled) ...[
-              const Divider(height: 24),
-              const Text(
-                'Remind me before:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: TaskDueReminderDuration.values.map((d) {
-                  final isSelected = d == duration;
-                  return ChoiceChip(
-                    label: Text(d.displayName),
-                    selected: isSelected,
-                    onSelected: _permissionsGranted
-                        ? (selected) {
-                            if (selected) onDurationChange(d);
-                          }
-                        : null,
-                    selectedColor: GCashColors.primary.withValues(alpha: 0.2),
-                    labelStyle: TextStyle(
-                      color: isSelected ? GCashColors.primary : null,
-                      fontWeight: isSelected ? FontWeight.bold : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPomodoroCard({
-    required bool enabled,
-    required ValueChanged<bool> onToggle,
-  }) {
+  Widget _buildTestNotificationCard() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.timer, color: GCashColors.primary),
+            Icon(Icons.science_outlined, color: GCashColors.primary),
             const SizedBox(width: 8),
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Pomodoro Session Alerts',
+                  Text(
+                    'Test Notification',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    'Get notified when pomodoro, short break, or long break ends',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    'Send a sample notification to verify setup',
+                    style: TextStyle(fontSize: 12),
                   ),
                 ],
               ),
             ),
-            Switch(
-              value: enabled,
-              onChanged: _permissionsGranted ? onToggle : null,
-              activeTrackColor: GCashColors.primary.withValues(alpha: 0.5),
-              activeThumbColor: GCashColors.primary,
+            ElevatedButton(
+              onPressed: _permissionsGranted ? _sendTestNotification : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: GCashColors.primary,
+                foregroundColor: AppColors.textPrimaryDark,
+              ),
+              child: const Text('Send Test'),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _sendTestNotification() async {
+    final service = locator.get<NotificationService>();
+    await service.showNotification(
+      id: 9999,
+      title: 'Test Notification',
+      body: 'Notifications are working correctly!',
+      payload: 'test',
     );
   }
 

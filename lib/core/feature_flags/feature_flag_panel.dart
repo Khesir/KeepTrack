@@ -2,6 +2,7 @@
 import 'package:google_fonts/google_fonts.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/feature_flags/hive_inspector.dart';
+import 'package:keep_track/core/services/notification/notification_service.dart';
 import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
@@ -163,6 +164,19 @@ class FeatureFlagPopover extends StatelessWidget {
                         ? AppColors.border.withValues(alpha: 0.2)
                         : AppColors.border.withValues(alpha: 0.5),
                   ),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppColors.border.withValues(alpha: 0.2)
+                        : AppColors.border.withValues(alpha: 0.5),
+                  ),
+                  _TestNotificationButton(isDark: isDark),
+                  Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppColors.border.withValues(alpha: 0.2)
+                        : AppColors.border.withValues(alpha: 0.5),
+                  ),
                   _InspectButton(isDark: isDark),
                   const SizedBox(height: 4),
                 ],
@@ -171,6 +185,54 @@ class FeatureFlagPopover extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TestNotificationButton extends StatelessWidget {
+  final bool isDark;
+  const _TestNotificationButton({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () async {
+          final service = locator.get<NotificationService>();
+          await service.showNotification(
+            id: 9999,
+            title: 'Test Notification',
+            body: 'Notifications are working correctly!',
+            payload: 'test',
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.notifications_active_outlined, size: 15, color: AppColors.info),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Send Test Notification',
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary),
+              ),
+              const Spacer(),
+              Icon(Icons.send_rounded, size: 13, color: AppColors.textTertiary),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

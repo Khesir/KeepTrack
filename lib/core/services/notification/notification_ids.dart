@@ -36,4 +36,13 @@ class NotificationIds {
     final baseId = 50000 + (debtId.hashCode.abs() % 10000);
     return baseId + (daysBefore * 10000);
   }
+
+  /// Generate a unique ID for subscription billing notifications
+  /// [subscriptionId] - The subscription ID
+  /// [daysBefore] - Days before billing (1, 2, or 3)
+  /// Range: 80000 to 109999
+  static int subscriptionDueNotification(String subscriptionId, int daysBefore) {
+    final baseId = 80000 + (subscriptionId.hashCode.abs() % 10000);
+    return baseId + (daysBefore * 10000);
+  }
 }

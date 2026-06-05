@@ -68,11 +68,11 @@ class NotificationScheduler {
     await _service.scheduleDailyNotification(
       id: NotificationIds.taskMorning,
       title: 'Good Morning!',
-      body: 'Check your tasks for today',
+      body: 'Start your day right — review your finances and plan ahead',
       hour: time.hour,
       minute: time.minute,
-      channelId: 'task_reminders',
-      payload: 'task_morning',
+      channelId: 'finance_reminders',
+      payload: 'morning_reminder',
     );
 
     AppLogger.info('NotificationScheduler: Morning reminder scheduled for ${time.hour}:${time.minute}');
@@ -290,6 +290,58 @@ class NotificationScheduler {
       await _service.cancelNotification(notificationId);
     }
     AppLogger.info('NotificationScheduler: Debt notifications cancelled for $debtId');
+  }
+
+  // ============================================
+  // Subscription Billing Notifications
+  // ============================================
+
+  Future<void> scheduleSubscriptionDueNotifications({
+    required String subscriptionId,
+    required String name,
+    required double amount,
+    required DateTime billingDate,
+    List<int> notifyDaysBefore = const [3, 2, 1],
+    int notifyHour = 9,
+  }) async {
+    if (!canSchedule) {
+      AppLogger.warning('NotificationScheduler: Cannot schedule - service not initialized');
+      return;
+    }
+
+    for (final daysBefore in notifyDaysBefore) {
+      final notificationId = NotificationIds.subscriptionDueNotification(subscriptionId, daysBefore);
+      final scheduledDate = DateTime(
+        billingDate.year,
+        billingDate.month,
+        billingDate.day - daysBefore,
+        notifyHour,
+        0,
+      );
+
+      if (scheduledDate.isBefore(DateTime.now())) continue;
+
+      final daysText = daysBefore == 1 ? 'tomorrow' : 'in $daysBefore days';
+
+      await _service.scheduleNotification(
+        id: notificationId,
+        title: 'Subscription Billing $daysText',
+        body: '$name — \$${amount.toStringAsFixed(2)}',
+        scheduledTime: scheduledDate,
+        channelId: 'payment_reminders',
+        payload: 'subscription_due:$subscriptionId',
+      );
+    }
+
+    AppLogger.info('NotificationScheduler: Subscription notifications scheduled for "$name"');
+  }
+
+  Future<void> cancelSubscriptionDueNotifications(String subscriptionId) async {
+    for (final daysBefore in [1, 2, 3]) {
+      final notificationId = NotificationIds.subscriptionDueNotification(subscriptionId, daysBefore);
+      await _service.cancelNotification(notificationId);
+    }
+    AppLogger.info('NotificationScheduler: Subscription notifications cancelled for $subscriptionId');
   }
 
   // ============================================
