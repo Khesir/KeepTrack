@@ -12,10 +12,12 @@ import 'package:keep_track/core/settings/domain/entities/app_settings.dart';
 import 'package:keep_track/core/settings/presentation/settings_controller.dart';
 import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
+import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/core/ui/inbox_popover_widget.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
-import 'package:keep_track/features/settings/data/services/backup_actions.dart';
-import 'package:keep_track/features/settings/data/services/backup_sync_status.dart';
+import 'package:keep_track/features/settings/data/datasources/backup_sync_status.dart';
+import 'package:keep_track/features/settings/domain/controllers/settings_data_controller.dart';
+import 'package:keep_track/features/settings/presentation/dialogs/backup_password_dialog.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
@@ -403,6 +405,22 @@ class _TitleBarIconButtonState extends State<_TitleBarIconButton> {
 
 
 
+Future<void> _syncToCloud(BuildContext context) async {
+  final password = await showBackupPasswordDialog(context, confirm: true);
+  if (password == null || !context.mounted) return;
+
+  final toast = CapturedAppToast.capture(context);
+  final dismiss = toast.loading('Syncing to cloud…');
+  try {
+    await locator.get<SettingsDataController>().syncToCloud(password);
+    dismiss();
+    toast.success('Backup synced to cloud');
+  } catch (e) {
+    dismiss();
+    toast.error(SettingsDataController.backupErrorMessage(e));
+  }
+}
+
 class _SyncStatusChip extends StatefulWidget {
   final bool isDark;
   const _SyncStatusChip({required this.isDark});
@@ -459,7 +477,7 @@ class _SyncStatusChipState extends State<_SyncStatusChip> {
           child: GestureDetector(
             onTap: () {
               final ctx = AppNavigator.context;
-              if (ctx != null) syncToCloud(ctx);
+              if (ctx != null) _syncToCloud(ctx);
             },
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),

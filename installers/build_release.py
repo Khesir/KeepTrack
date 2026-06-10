@@ -61,8 +61,6 @@ def run(cmd: list[str], cwd: str = FRONTEND_DIR):
 
 def build_windows(defines: list[str]):
     print("\n=== Building Windows release ===")
-    run(["flutter", "clean"])
-    run(["flutter", "pub", "get"])
     run(["flutter", "build", "windows", "--release"] + defines)
     print("Windows build complete: build/windows/x64/runner/Release/")
 
@@ -77,8 +75,6 @@ def build_windows(defines: list[str]):
 
 def build_apk(defines: list[str], version: str):
     print("\n=== Building Android APK release ===")
-    run(["flutter", "clean"])
-    run(["flutter", "pub", "get"])
     run(["flutter", "build", "apk", "--release"] + defines)
 
     src = os.path.join(FRONTEND_DIR, "build", "app", "outputs", "flutter-apk", "app-release.apk")
@@ -97,6 +93,10 @@ def main():
     print(f"Version: {version}")
 
     sync_iss_version(version)
+
+    print("\n=== Cleaning build ===")
+    run(["flutter", "clean"])
+    run(["flutter", "pub", "get"])
 
     env = load_env()
     defines = dart_defines(env)

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:keep_track/features/module_selection/finance_module_screen.dart';
 import 'package:keep_track/features/module_selection/module_selection_screen.dart';
 import 'package:keep_track/features/settings/setting_page.dart';
-import 'package:keep_track/features/settings/subpages/app_configuration_finance_page.dart';
+import 'package:keep_track/features/settings/presentation/screens/app_configuration_finance_page.dart';
 import '../../features/finance/modules/budget/domain/entities/budget.dart';
 import '../../features/finance/modules/transaction/domain/entities/transaction.dart';
 import '../../features/finance/modules/budget/presentation/screens/budget_management_screen.dart';
@@ -19,7 +19,7 @@ import '../../features/finance/presentation/screens/configuration/planned_paymen
 import '../../features/finance/presentation/screens/transactions/create_transaction_screen.dart';
 import '../../features/finance/presentation/screens/transactions/transaction_attachment_gallery_screen.dart';
 import '../../features/finance/presentation/screens/finance_main_screen.dart';
-import '../../features/settings/subpages/app_configuration_page.dart';
+import '../../features/settings/presentation/screens/app_configuration_page.dart';
 
 /// App routes
 class AppRoutes {

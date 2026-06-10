@@ -7,7 +7,7 @@ import 'package:keep_track/core/state/state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
-import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_simple_sheets.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/sheets/goal_detail_sheet.dart';
 import 'package:keep_track/features/finance/modules/budget_profile/domain/entities/budget_profile.dart';
 import 'package:keep_track/features/finance/modules/goal/domain/entities/goal.dart';
 import 'package:keep_track/features/finance/modules/savings/domain/entities/savings_bucket.dart';

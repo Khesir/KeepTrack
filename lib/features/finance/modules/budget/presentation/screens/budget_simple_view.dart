@@ -32,11 +32,14 @@ import 'package:keep_track/features/finance/presentation/state/transaction_contr
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'budget_simple_sections.dart';
-import 'budget_simple_sheets.dart';
 import '../sections/budget_overall_summary.dart';
 import '../dialogs/budget_settings_dialog.dart';
+import '../sheets/budget_category_detail_sheet.dart';
+import '../sheets/debt_detail_sheet.dart';
+import '../sheets/goal_detail_sheet.dart';
 import '../sheets/profile_start_planning_sheet.dart';
 import '../sheets/start_planning_sheet.dart';
+import '../sheets/subscription_detail_sheet.dart';
 
 class BudgetSimpleView extends StatefulWidget {
   final int selectedTab;

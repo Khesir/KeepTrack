@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:keep_track/core/di/service_locator.dart';
 import 'package:keep_track/core/state/stream_builder_widget.dart';
@@ -9,18 +7,15 @@ import 'package:keep_track/core/state/stream_state.dart';
 import '../../../modules/budget/domain/entities/budget.dart';
 import '../../../modules/budget_profile/domain/entities/budget_profile.dart';
 import '../../../modules/finance_category/domain/entities/finance_category.dart';
-import '../../../modules/finance_category/domain/entities/finance_category_enums.dart';
 import '../../../modules/transaction/domain/entities/transaction.dart';
 import '../../../modules/budget/presentation/controllers/budget_controller.dart';
 import '../../state/budget_profile_controller.dart';
 import '../../state/finance_category_controller.dart';
 import '../../state/transaction_controller.dart';
-
-class _CategoryGroup {
-  final String name;
-  final List<FinanceCategory> categories;
-  const _CategoryGroup(this.name, this.categories);
-}
+import '../../widgets/category_selector_field.dart';
+import '../../widgets/transaction_amount_header.dart';
+import '../../widgets/transaction_date_row.dart';
+import '../../widgets/transaction_fee_section.dart';
 
 class CreateTransactionScreen extends StatefulWidget {
   final String? initialDescription;
@@ -62,7 +57,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
 
   DateTime _selectedDate = DateTime.now();
   bool _isCreating = false;
-  bool _showFeeFields = false;
 
   @override
   void initState() {
@@ -110,176 +104,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
               b.periodType == BudgetPeriodType.oneTime,
         )
         .toList();
-  }
-
-  List<_CategoryGroup> _getGroupedCategories(
-    List<FinanceCategory> allCategories,
-  ) {
-    final txnMonth = DateFormat('yyyy-MM').format(_selectedDate);
-
-    final CategoryType targetType = _selectedType == TransactionType.income
-        ? CategoryType.income
-        : CategoryType.expense;
-
-    // Exclude archived and non income/expense types; filter by profile if selected
-    Set<String>? profileCategoryIds;
-    if (_selectedProfileId != null) {
-      final bs = _budgetController.state;
-      if (bs is AsyncData<List<Budget>>) {
-        profileCategoryIds = bs.data
-            .where((b) => b.budgetProfileId == _selectedProfileId)
-            .expand((b) => b.categories.map((c) => c.financeCategoryId))
-            .toSet();
-      }
-    }
-
-    final typedCategories = allCategories
-        .where((c) => c.type == targetType && !c.isArchive)
-        .where((c) => profileCategoryIds == null || (c.id != null && profileCategoryIds!.contains(c.id)))
-        .toList();
-
-    final budgetState = _budgetController.state;
-    final allBudgets = budgetState is AsyncData<List<Budget>>
-        ? budgetState.data
-        : <Budget>[];
-
-    final targetBudgetType = _selectedType == TransactionType.income
-        ? BudgetType.income
-        : BudgetType.expense;
-
-    final monthBudgets = allBudgets
-        .where(
-          (b) =>
-              b.month == txnMonth &&
-              b.periodType == BudgetPeriodType.monthly &&
-              b.status == BudgetStatus.active &&
-              b.budgetType == targetBudgetType,
-        )
-        .toList();
-
-    final groups = <_CategoryGroup>[];
-    final seenIds = <String>{};
-
-    for (final budget in monthBudgets) {
-      final groupCats = <FinanceCategory>[];
-      for (final bc in budget.categories) {
-        final idx = typedCategories.indexWhere(
-          (c) => c.id == bc.financeCategoryId,
-        );
-        final cat = idx != -1 ? typedCategories[idx] : null;
-        if (cat != null && cat.id != null && !seenIds.contains(cat.id)) {
-          groupCats.add(cat);
-          seenIds.add(cat.id!);
-        }
-      }
-      if (groupCats.isNotEmpty) {
-        groups.add(_CategoryGroup(budget.title ?? 'Untitled', groupCats));
-      }
-    }
-
-    if (monthBudgets.isNotEmpty) {
-      final others = typedCategories
-          .where((c) => c.id != null && !seenIds.contains(c.id))
-          .toList();
-      if (others.isNotEmpty) {
-        groups.add(_CategoryGroup('Other', others));
-      }
-    }
-
-    return groups;
-  }
-
-  void _showCategoryDialog(List<FinanceCategory> allCategories) {
-    final groups = _getGroupedCategories(allCategories);
-    final colorScheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
-    if (groups.isEmpty) return;
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        clipBehavior: Clip.antiAlias,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.65,
-            maxWidth: 420,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text(
-                  'Select Category',
-                  style: theme.textTheme.titleLarge,
-                ),
-              ),
-              const Divider(height: 1),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final group in groups) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-                          child: Text(
-                            group.name.toUpperCase(),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ),
-                        for (final cat in group.categories)
-                          ListTile(
-                            leading: Icon(
-                              cat.type.icon,
-                              size: 20,
-                              color: cat.type.color,
-                            ),
-                            title: Text(cat.name),
-                            selected: _selectedCategoryId == cat.id,
-                            selectedTileColor: colorScheme.primaryContainer
-                                .withValues(alpha: 0.3),
-                            trailing: _selectedCategoryId == cat.id
-                                ? Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: colorScheme.primary,
-                                  )
-                                : null,
-                            onTap: () {
-                              setState(() {
-                                _selectedCategoryId = cat.id;
-                                _selectedCategory = cat;
-                              });
-                              Navigator.of(dialogContext).pop();
-                            },
-                          ),
-                      ],
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _selectDate() async {
@@ -379,7 +203,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -391,7 +214,15 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         key: _formKey,
         child: Column(
           children: [
-            _buildHeader(colorScheme, theme),
+            TransactionAmountHeader(
+              selectedType: _selectedType,
+              amountController: _amountController,
+              onTypeChanged: (type) => setState(() {
+                _selectedType = type;
+                _selectedCategoryId = null;
+                _selectedCategory = null;
+              }),
+            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -399,10 +230,33 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                   _buildProfileSelector(colorScheme),
                   const SizedBox(height: 12),
                   if (_selectedProfileId != null) ...[
-                    _buildCategorySelector(colorScheme, theme),
+                    CategorySelectorField(
+                      categoryController: _categoryController,
+                      budgetController: _budgetController,
+                      selectedType: _selectedType,
+                      selectedDate: _selectedDate,
+                      selectedProfileId: _selectedProfileId,
+                      selectedCategoryId: _selectedCategoryId,
+                      selectedCategory: _selectedCategory,
+                      onSelect: (cat) => setState(() {
+                        _selectedCategoryId = cat.id;
+                        _selectedCategory = cat;
+                      }),
+                      onTypeMismatch: () {
+                        if (mounted) {
+                          setState(() {
+                            _selectedCategory = null;
+                            _selectedCategoryId = null;
+                          });
+                        }
+                      },
+                    ),
                     const SizedBox(height: 12),
                   ],
-                  _buildDateRow(theme, colorScheme),
+                  TransactionDateRow(
+                    selectedDate: _selectedDate,
+                    onTap: _selectDate,
+                  ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _descriptionController,
@@ -419,7 +273,10 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                     maxLength: 100,
                   ),
                   const SizedBox(height: 12),
-                  _buildFeeSection(colorScheme, theme),
+                  TransactionFeeSection(
+                    feeController: _feeController,
+                    feeDescriptionController: _feeDescriptionController,
+                  ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _notesController,
@@ -475,103 +332,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
     );
   }
 
-  Widget _buildHeader(ColorScheme colorScheme, ThemeData theme) {
-    final typeColor = _selectedType == TransactionType.income
-        ? Colors.green.shade600
-        : colorScheme.error;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
-      ),
-      child: Column(
-        children: [
-          SegmentedButton<TransactionType>(
-            segments: const [
-              ButtonSegment(
-                value: TransactionType.income,
-                label: Text('Income'),
-                icon: Icon(Icons.arrow_downward, size: 16),
-              ),
-              ButtonSegment(
-                value: TransactionType.expense,
-                label: Text('Expense'),
-                icon: Icon(Icons.arrow_upward, size: 16),
-              ),
-            ],
-            selected: {_selectedType},
-            onSelectionChanged: (selection) {
-              setState(() {
-                _selectedType = selection.first;
-                _selectedCategoryId = null;
-                _selectedCategory = null;
-              });
-            },
-            showSelectedIcon: false,
-            style: const ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                currencyFormatter.currencySymbol,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-              const SizedBox(width: 4),
-              SizedBox(
-                width: 200,
-                child: TextFormField(
-                  controller: _amountController,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: typeColor,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0.00',
-                    hintStyle: theme.textTheme.displaySmall?.copyWith(
-                      color: colorScheme.outlineVariant,
-                      fontWeight: FontWeight.w300,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    counterText: '',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d+\.?\d{0,2}'),
-                    ),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.isEmpty)
-                      return 'Enter an amount';
-                    final amount = double.tryParse(value);
-                    if (amount == null || amount <= 0) return 'Invalid amount';
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProfileSelector(ColorScheme colorScheme) {
     final s = _profileController.state;
     final profiles = s is AsyncData<List<BudgetProfile>> ? s.data : <BudgetProfile>[];
@@ -604,230 +364,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         child: Text(selectedName ?? 'Select a budget',
             style: TextStyle(color: selectedName != null ? colorScheme.primary : colorScheme.onSurfaceVariant)),
       ),
-    );
-  }
-
-  Widget _buildCategorySelector(ColorScheme colorScheme, ThemeData theme) {
-    return AsyncStreamBuilder<List<FinanceCategory>>(
-      state: _categoryController,
-      loadingBuilder: (context) => const LinearProgressIndicator(),
-      errorBuilder: (context, message) => Text(
-        'Error loading categories: $message',
-        style: TextStyle(color: colorScheme.error),
-      ),
-      builder: (context, categories) {
-        final CategoryType targetType = _selectedType == TransactionType.income
-            ? CategoryType.income
-            : CategoryType.expense;
-
-        final typedCategories = categories
-            .where((c) => c.type == targetType)
-            .toList();
-
-        if (typedCategories.isEmpty) {
-          return Text(
-            'No ${_selectedType.displayName.toLowerCase()} categories found.',
-            style: TextStyle(color: colorScheme.error),
-          );
-        }
-
-        if (_selectedCategory != null &&
-            _selectedCategory!.type != targetType) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _selectedCategory = null;
-                _selectedCategoryId = null;
-              });
-            }
-          });
-        }
-
-        final hasSelection = _selectedCategory != null;
-
-        return FormField<String>(
-          initialValue: _selectedCategoryId,
-          validator: (_) =>
-              _selectedCategoryId == null ? 'Please select a category' : null,
-          builder: (field) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InkWell(
-                onTap: () => _showCategoryDialog(categories),
-                borderRadius: BorderRadius.circular(12),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest,
-                    errorText: field.errorText,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 16,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      if (hasSelection) ...[
-                        Icon(
-                          _selectedCategory!.type.icon,
-                          size: 18,
-                          color: _selectedCategory!.type.color,
-                        ),
-                        const SizedBox(width: 10),
-                      ],
-                      Expanded(
-                        child: Text(
-                          hasSelection
-                              ? _selectedCategory!.name
-                              : 'Select a category',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: hasSelection
-                                ? null
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.unfold_more,
-                        size: 18,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDateRow(ThemeData theme, ColorScheme colorScheme) {
-    return InkWell(
-      onTap: _selectDate,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: colorScheme.surfaceContainerHighest,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 16,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today, size: 18, color: colorScheme.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                DateFormat('EEE, MMM d y  •  h:mm a').format(_selectedDate),
-                style: theme.textTheme.bodyLarge,
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeeSection(ColorScheme colorScheme, ThemeData theme) {
-    final hasFee = _feeController.text.isNotEmpty;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => setState(() => _showFeeFields = !_showFeeFields),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: colorScheme.outline.withValues(alpha: 0.5),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.receipt_long, size: 18, color: colorScheme.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    hasFee
-                        ? 'Fee: ${currencyFormatter.currencySymbol}${_feeController.text}'
-                        : 'Add Fee (Optional)',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: hasFee
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                Icon(
-                  _showFeeFields ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (_showFeeFields) ...[
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _feeController,
-            decoration: InputDecoration(
-              labelText: 'Fee Amount',
-              hintText: 'e.g., 18.00',
-              prefixText: '${currencyFormatter.currencySymbol} ',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: colorScheme.surfaceContainerHighest,
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-            ],
-            validator: (value) {
-              if (value != null && value.isNotEmpty) {
-                final amount = double.tryParse(value);
-                if (amount == null || amount < 0) return 'Invalid fee amount';
-              }
-              return null;
-            },
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _feeDescriptionController,
-            decoration: InputDecoration(
-              labelText: 'Fee Description',
-              hintText: 'e.g., Tax, Bank Fee',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: colorScheme.surfaceContainerHighest,
-              counterText: '',
-            ),
-            maxLength: 50,
-          ),
-        ],
-      ],
     );
   }
 

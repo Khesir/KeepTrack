@@ -37,9 +37,10 @@ import 'package:keep_track/features/finance/presentation/screens/configuration/g
 import 'package:keep_track/features/auth/presentation/state/auth_controller.dart';
 import 'package:keep_track/features/finance/modules/finance_category/domain/entities/finance_category_enums.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
-import 'package:keep_track/features/finance/modules/budget/presentation/screens/budget_simple_sheets.dart'
-    show GoalDetailSheet, DebtDetailSheet, SubDetailSheet;
 import '../sheets/category_detail_sheet.dart';
+import '../sheets/debt_detail_sheet.dart';
+import '../sheets/goal_detail_sheet.dart';
+import '../sheets/subscription_detail_sheet.dart';
 import '../sheets/commitment_sheet.dart';
 import '../sheets/create_group_sheet.dart';
 import '../sheets/edit_category_sheet.dart';

@@ -25,6 +25,7 @@ import 'features/auth/auth.dart';
 import 'features/finance/finance_di.dart';
 import 'features/inbox/api.dart';
 import 'features/notifications/notifications_di.dart';
+import 'features/settings/settings_di.dart';
 
 late SharedPreferences _sharedPrefs;
 
@@ -91,6 +92,7 @@ void _setupDependencies(SharedPreferences sharedPreferences, LocalCache cache) {
   setupFinanceDependencies();
   setupInboxDependencies();
   setupNotificationDependencies();
+  setupSettingsDependencies();
 }
 
 /// Main app widget

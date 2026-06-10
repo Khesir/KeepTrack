@@ -37,6 +37,126 @@ class SheetField extends StatelessWidget {
   );
 }
 
+class SheetPickerField extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool hasValue;
+  final Color border;
+  final Color textPrimary;
+  final VoidCallback onTap;
+  final Color? errorBorderColor;
+  final Widget? trailing;
+
+  const SheetPickerField({super.key, required this.icon, required this.label, required this.hasValue, required this.border, required this.textPrimary, required this.onTap, this.errorBorderColor, this.trailing});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        border: Border.all(color: errorBorderColor ?? border, width: 0.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(children: [
+        Icon(icon, size: 16, color: AppColors.textSecondary),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(label, style: GoogleFonts.dmSans(fontSize: 14, color: hasValue ? textPrimary : AppColors.textSecondary)),
+        ),
+        trailing ?? Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.textTertiary),
+      ]),
+    ),
+  );
+}
+
+class SheetToggleRow extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final Color textPrimary;
+
+  const SheetToggleRow({super.key, required this.title, required this.subtitle, required this.value, required this.onChanged, required this.textPrimary});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: () => onChanged(!value),
+    child: Row(children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary)),
+            Text(subtitle, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary)),
+          ],
+        ),
+      ),
+      Switch(value: value, onChanged: onChanged, activeThumbColor: AppColors.accent),
+    ]),
+  );
+}
+
+class SheetInfoRow extends StatelessWidget {
+  final bool isDark;
+  final String label, value;
+  final Color? textPrimary;
+  const SheetInfoRow({super.key, required this.isDark, required this.label, required this.value, this.textPrimary});
+
+  @override
+  Widget build(BuildContext context) {
+    final def = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 90, child: Text(label, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(child: Text(value, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: textPrimary ?? def))),
+      ]),
+    );
+  }
+}
+
+class SheetActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool loading, outlined;
+  final bool? isDark;
+  final VoidCallback? onTap;
+  const SheetActionButton({super.key, required this.label, required this.icon, required this.color, this.loading = false, this.outlined = false, this.isDark, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    if (outlined) {
+      return SizedBox(width: double.infinity, height: 46,
+        child: OutlinedButton.icon(
+          onPressed: onTap, icon: Icon(icon, size: 15), label: Text(label),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: color, side: BorderSide(color: color.withValues(alpha: 0.4)),
+            textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      );
+    }
+    return SizedBox(width: double.infinity, height: 46,
+      child: ElevatedButton.icon(
+        onPressed: loading ? null : onTap,
+        icon: loading
+            ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Icon(icon, size: 15),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: onTap == null ? AppColors.textTertiary : color,
+          foregroundColor: AppColors.textPrimaryDark, elevation: 0,
+          textStyle: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+}
+
 class SheetCalendar extends StatefulWidget {
   final bool isDark, allowPast;
   final DateTime? selected;
