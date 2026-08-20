@@ -15,6 +15,10 @@ class BudgetCategoryModel extends BudgetCategory {
     super.financeCategory,
     super.createdAt,
     super.updatedAt,
+    super.subscriptionId,
+    super.debtId,
+    super.goalId,
+    super.linkedEntityLabel,
   });
 
   /// Create model from entity
@@ -30,6 +34,10 @@ class BudgetCategoryModel extends BudgetCategory {
       financeCategory: entity.financeCategory,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+      subscriptionId: entity.subscriptionId,
+      debtId: entity.debtId,
+      goalId: entity.goalId,
+      linkedEntityLabel: entity.linkedEntityLabel,
     );
   }
 
@@ -64,6 +72,10 @@ class BudgetCategoryModel extends BudgetCategory {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : null,
+      subscriptionId: json['subscriptionId'] as String?,
+      debtId: json['debtId'] as String?,
+      goalId: json['goalId'] as String?,
+      linkedEntityLabel: json['linkedEntityLabel'] as String?,
     );
   }
 
@@ -73,6 +85,10 @@ class BudgetCategoryModel extends BudgetCategory {
       'budgetId': budgetId,
       'financeCategoryId': financeCategoryId,
       'targetAmount': targetAmount,
+      if (subscriptionId != null) 'subscriptionId': subscriptionId,
+      if (debtId != null) 'debtId': debtId,
+      if (goalId != null) 'goalId': goalId,
+      if (linkedEntityLabel != null) 'linkedEntityLabel': linkedEntityLabel,
     };
   }
 
@@ -94,6 +110,10 @@ class BudgetCategoryModel extends BudgetCategory {
       'targetAmount': targetAmount,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      if (subscriptionId != null) 'subscriptionId': subscriptionId,
+      if (debtId != null) 'debtId': debtId,
+      if (goalId != null) 'goalId': goalId,
+      if (linkedEntityLabel != null) 'linkedEntityLabel': linkedEntityLabel,
     };
   }
 }

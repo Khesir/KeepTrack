@@ -1,4 +1,5 @@
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
+import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
 import 'package:keep_track/features/finance/modules/transaction/domain/entities/transaction.dart';
@@ -28,6 +29,42 @@ class BudgetMonthFilter {
       }
     }
     return map;
+  }
+
+  /// Spend for a linked Budget Category, computed by matching transactions
+  /// against the category's own linked entity id (subscriptionId/debtId/
+  /// goalId) rather than the category-wide `financeCategoryId` match that
+  /// [buildSpentByCategory] uses for plain categories. Returns 0 for an
+  /// unlinked category. See CONTEXT.md ("Linked spend").
+  static double buildLinkedSpend(
+    BudgetCategory category,
+    List<Transaction> transactions,
+  ) {
+    if (!category.isLinked) return 0.0;
+    double total = 0.0;
+    for (final t in transactions) {
+      final matches = (category.subscriptionId != null &&
+              t.subscriptionId == category.subscriptionId) ||
+          (category.debtId != null && t.debtId == category.debtId) ||
+          (category.goalId != null && t.goalId == category.goalId);
+      if (matches) total += t.amount;
+    }
+    return total;
+  }
+
+  /// The set of Subscription/Debt/Goal ids currently linked to any Budget
+  /// Category in the given list (a single month's/budget snapshot's
+  /// categories). Single source of truth used both to exclude already-linked
+  /// entities from the link picker and to show the reverse "Linked" badge on
+  /// the entity's own tab. See CONTEXT.md ("Link uniqueness", "Linked badge").
+  static Set<String> linkedEntityIds(List<BudgetCategory> categories) {
+    final ids = <String>{};
+    for (final c in categories) {
+      if (c.subscriptionId != null) ids.add(c.subscriptionId!);
+      if (c.debtId != null) ids.add(c.debtId!);
+      if (c.goalId != null) ids.add(c.goalId!);
+    }
+    return ids;
   }
 
   static bool debtVisibleInMonth(

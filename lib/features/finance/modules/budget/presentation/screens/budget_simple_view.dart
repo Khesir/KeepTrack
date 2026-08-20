@@ -32,7 +32,6 @@ import 'package:keep_track/features/finance/presentation/state/transaction_contr
 import 'package:keep_track/features/finance/modules/budget/domain/entities/month_plan.dart';
 import 'package:keep_track/features/finance/presentation/state/budget_profile_controller.dart';
 import 'budget_simple_sections.dart';
-import '../sections/budget_overall_summary.dart';
 import '../dialogs/budget_settings_dialog.dart';
 import '../sheets/budget_category_detail_sheet.dart';
 import '../sheets/debt_detail_sheet.dart';
@@ -321,11 +320,12 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     );
   }
 
-  void _showAddCategory(Budget group) {
+  void _showAddCategory(Budget group, Set<String> alreadyLinkedIds) {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       builder: (_) => AddCategorySheet(
         group: group, categoryController: _categoryController,
+        alreadyLinkedIds: alreadyLinkedIds,
         onSave: (cat) => _budgetController.addCategory(group.id!, cat),
       ),
     );
@@ -344,23 +344,24 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     );
   }
 
-  void _showCategoryDetail(Budget group, BudgetCategory cat, double spent, {bool canEdit = true}) {
+  void _showCategoryDetail(Budget group, BudgetCategory cat, double spent, Set<String> alreadyLinkedIds, {bool canEdit = true}) {
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (_) => CategoryDetailSheet(
         group: group, cat: cat, spent: spent,
-        onEdit: canEdit ? () { Navigator.pop(context); _showEditCategory(group, cat); } : null,
+        onEdit: canEdit ? () { Navigator.pop(context); _showEditCategory(group, cat, alreadyLinkedIds); } : null,
       ),
     );
   }
 
-  void _showEditCategory(Budget group, BudgetCategory cat) {
+  void _showEditCategory(Budget group, BudgetCategory cat, Set<String> alreadyLinkedIds) {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       builder: (ctx) => EditCategorySheet(
         group: group, category: cat,
         categoryController: _categoryController,
         budgetController: _budgetController,
+        alreadyLinkedIds: alreadyLinkedIds,
         onDelete: () async {
           Navigator.pop(ctx);
           if (cat.id != null) await _budgetController.deleteCategory(group.id!, cat.id!);
@@ -585,10 +586,6 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         ? allMonthTxs.where((t) => t.budgetProfileId == widget.budgetProfileId).toList()
         : allMonthTxs;
     final spentByCategory = BudgetMonthFilter.buildSpentByCategory(monthTxs);
-    final categoryNames = <String, String>{
-      for (final c in (_categoryController.data ?? []))
-        if (c.id != null) c.id!: c.name,
-    };
 
     final paidThisMonthByDebt = <String, double>{};
     final contributedThisMonthByGoal = <String, double>{};
@@ -607,7 +604,10 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         : budgets.where((b) => b.month == _monthKey && b.budgetProfileId == null && b.status == BudgetStatus.active).toList();
     final incomeGroups = monthBudgets.where((b) => b.budgetType == BudgetType.income).toList();
     final expenseGroups = monthBudgets.where((b) => b.budgetType == BudgetType.expense).toList();
-    double sumSpent(List<Budget> gs) => gs.fold(0.0, (s, b) => s + b.categories.fold(0.0, (cs, c) => cs + (spentByCategory[c.financeCategoryId] ?? 0.0)));
+    final alreadyLinkedIds = BudgetMonthFilter.linkedEntityIds(
+      monthBudgets.expand((b) => b.categories).toList(),
+    );
+    double sumSpent(List<Budget> gs) => gs.fold(0.0, (s, b) => s + b.categories.fold(0.0, (cs, c) => cs + (c.isLinked ? BudgetMonthFilter.buildLinkedSpend(c, monthTxs) : (spentByCategory[c.financeCategoryId] ?? 0.0))));
     double sumPlanned(List<Budget> gs) => gs.fold(0.0, (s, b) => s + b.budgetTarget);
     final actualIncome = sumSpent(incomeGroups), plannedIncome = sumPlanned(incomeGroups);
     final actualExpenses = sumSpent(expenseGroups), plannedExpenses = sumPlanned(expenseGroups);
@@ -637,12 +637,11 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
     final sortedGoals = (List.of(goals.where((g) => matchesProfile(g.budgetProfileId)))..sort((a, b) => goalOrder(a.status).compareTo(goalOrder(b.status))));
 
     final tab = widget.selectedTab;
-    // Summary tab (0) has its own full content — no separate summary card needed
-    // Tabs 1–5 each have a header card above the section list
+    // Budget tab (0) is the default landing tab. Each tab has a header
+    // summary card above its section list.
     Widget summaryCard = switch (tab) {
-      0 => const SizedBox.shrink(),  // summary tab: no card (content IS the summary)
-      2 => SimpleSubsSummaryCard(isDark: isDark, subs: monthSubs, month: _month),
-      3 => SimpleDebtSummaryCard(
+      1 => SimpleSubsSummaryCard(isDark: isDark, subs: monthSubs, month: _month),
+      2 => SimpleDebtSummaryCard(
           isDark: isDark,
           totalOwed: sortedDebts.where((d) => d.status == DebtStatus.active && d.remainingAmount > 0).fold(0.0, (s, d) => s + d.remainingAmount),
           totalReceivable: 0,
@@ -650,7 +649,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           receivableCount: 0,
           settledDebtCount: sortedDebts.where((d) => d.status == DebtStatus.settled || d.remainingAmount <= 0).length,
         ),
-      4 => SimpleDebtSummaryCard(
+      3 => SimpleDebtSummaryCard(
           isDark: isDark,
           totalOwed: 0,
           totalReceivable: sortedReceivables.where((d) => d.status == DebtStatus.active && d.remainingAmount > 0).fold(0.0, (s, d) => s + d.remainingAmount),
@@ -658,7 +657,7 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           receivableCount: sortedReceivables.where((d) => d.status == DebtStatus.active && d.remainingAmount > 0).length,
           settledReceivableCount: sortedReceivables.where((d) => d.status == DebtStatus.settled || d.remainingAmount <= 0).length,
         ),
-      5 => SimpleGoalsSummaryCard(isDark: isDark, goals: sortedGoals),
+      4 => SimpleGoalsSummaryCard(isDark: isDark, goals: sortedGoals),
       _ => SimpleNetCard(isDark: isDark, net: net, plannedNet: plannedNet, actualIncome: actualIncome, plannedIncome: plannedIncome, actualExpenses: actualExpenses, plannedExpenses: plannedExpenses),
     };
 
@@ -769,48 +768,17 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
         onSelect: widget.onTabChange ?? (_) {},
         counts: [
           null,
-          null,
           activeSubs.length,
           sortedDebts.where((d) => d.status == DebtStatus.active).length,
           sortedReceivables.where((d) => d.status == DebtStatus.active).length,
           sortedGoals.where((g) => g.status == GoalStatus.active).length,
         ],
       )),
-      // Tabs 0 & 1 require a plan — show the gate if none exists
-      if (!hasMonthPlan && (tab == 0 || tab == 1))
+      // Budget tab (0) requires a plan — show the gate if none exists
+      if (!hasMonthPlan && tab == 0)
         SliverFillRemaining(hasScrollBody: false, child: noPlanGate),
-      // Tab 0: Overall summary
-      if (hasMonthPlan && tab == 0) ...[
-        SliverToBoxAdapter(
-          child: BudgetOverallSummary(
-            monthBudgets: monthBudgets,
-            spentByCategory: spentByCategory,
-            subscriptions: activeSubs,
-            debts: sortedDebts,
-            receivables: sortedReceivables,
-            goals: sortedGoals,
-            transactions: monthTxs,
-            currentMonth: _month,
-            isDark: isDark,
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: SimpleDonutInsightCard(
-            isDark: isDark,
-            budgets: monthBudgets,
-            spentByCategory: spentByCategory,
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: SimpleTransactionsSection(
-            isDark: isDark,
-            transactions: monthTxs,
-            categoryNames: categoryNames,
-          ),
-        ),
-      ],
-      // Summary card: shown first for tabs 1-5 (tab 1 requires a plan)
-      if (tab != 0 && (tab != 1 || hasMonthPlan))
+      // Summary card: shown first for every tab (Budget tab requires a plan)
+      if (tab != 0 || hasMonthPlan)
         SliverToBoxAdapter(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 280),
@@ -826,31 +794,32 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
             child: KeyedSubtree(key: ValueKey(tab), child: summaryCard),
           ),
         ),
-      // Tab 1: Budget groups (below summary card)
-      if (hasMonthPlan && tab == 1) ...[
+      // Tab 0: Budget groups (below summary card)
+      if (hasMonthPlan && tab == 0) ...[
         SliverToBoxAdapter(child: SimpleBudgetSection(
-          isDark: isDark, label: 'INCOME', groups: incomeGroups, spentByCategory: spentByCategory, isIncome: true,
+          isDark: isDark, label: 'INCOME', groups: incomeGroups, spentByCategory: spentByCategory, monthTxs: monthTxs, isIncome: true,
           onAddGroup: isMonthClosed ? null : () => _showCreateGroup(true),
-          onAddCategory: isMonthClosed ? null : _showAddCategory,
+          onAddCategory: isMonthClosed ? null : (group) => _showAddCategory(group, alreadyLinkedIds),
           onEditGroup: isMonthClosed ? null : _showEditGroup,
-          onCategoryTap: (g, c, s) => _showCategoryDetail(g, c, s, canEdit: !isMonthClosed),
+          onCategoryTap: (g, c, s) => _showCategoryDetail(g, c, s, alreadyLinkedIds, canEdit: !isMonthClosed),
         )),
         SliverToBoxAdapter(child: SimpleBudgetSection(
-          isDark: isDark, label: 'EXPENSES', groups: expenseGroups, spentByCategory: spentByCategory, isIncome: false,
+          isDark: isDark, label: 'EXPENSES', groups: expenseGroups, spentByCategory: spentByCategory, monthTxs: monthTxs, isIncome: false,
           onAddGroup: isMonthClosed ? null : () => _showCreateGroup(false),
-          onAddCategory: isMonthClosed ? null : _showAddCategory,
+          onAddCategory: isMonthClosed ? null : (group) => _showAddCategory(group, alreadyLinkedIds),
           onEditGroup: isMonthClosed ? null : _showEditGroup,
-          onCategoryTap: (g, c, s) => _showCategoryDetail(g, c, s, canEdit: !isMonthClosed),
+          onCategoryTap: (g, c, s) => _showCategoryDetail(g, c, s, alreadyLinkedIds, canEdit: !isMonthClosed),
         )),
       ],
-      if (tab == 2)
+      if (tab == 1)
         SliverToBoxAdapter(child: SimpleSubscriptionsSection(
           isDark: isDark, subs: activeSubs, month: _month,
           isLocked: !hasMonthPlan,
           onAdd: _showAddSubscription, onRowTap: _showSubDetail,
           onSkip: _skipSubscription,
+          linkedIds: alreadyLinkedIds,
         )),
-      if (tab == 3)
+      if (tab == 2)
         SliverToBoxAdapter(child: SimpleDebtsSection(
           isDark: isDark, debts: sortedDebts, receivables: const [],
           paidThisMonth: paidThisMonthByDebt,
@@ -858,8 +827,9 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           onAddDebt: () => _showAddDebt(isReceivable: false),
           onAddReceivable: () => _showAddDebt(isReceivable: false),
           onRowTap: _showDebtDetail,
+          linkedIds: alreadyLinkedIds,
         )),
-      if (tab == 4)
+      if (tab == 3)
         SliverToBoxAdapter(child: SimpleDebtsSection(
           isDark: isDark, debts: const [], receivables: sortedReceivables,
           paidThisMonth: paidThisMonthByDebt,
@@ -867,12 +837,14 @@ class _BudgetSimpleViewState extends State<BudgetSimpleView> {
           onAddDebt: () => _showAddDebt(isReceivable: true),
           onAddReceivable: () => _showAddDebt(isReceivable: true),
           onRowTap: _showDebtDetail,
+          linkedIds: alreadyLinkedIds,
         )),
-      if (tab == 5)
+      if (tab == 4)
         SliverToBoxAdapter(child: SimpleGoalsSection(
           isDark: isDark, goals: sortedGoals, onAdd: _showAddGoal, onRowTap: _showGoalDetail,
           contributedThisMonth: contributedThisMonthByGoal,
           isLocked: !hasMonthPlan,
+          linkedIds: alreadyLinkedIds,
         )),
       const SliverToBoxAdapter(child: SizedBox(height: 100)),
     ]);
@@ -1060,7 +1032,6 @@ class BudgetSimpleTabBar extends StatelessWidget {
   });
 
   static const _items = [
-    (icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard_rounded, label: 'Summary'),
     (icon: Icons.calendar_month_outlined, activeIcon: Icons.calendar_month, label: 'Budget'),
     (icon: Icons.autorenew_outlined, activeIcon: Icons.autorenew, label: 'Subs'),
     (icon: Icons.arrow_upward_rounded, activeIcon: Icons.arrow_upward_rounded, label: 'Debts'),

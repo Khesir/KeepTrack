@@ -6,6 +6,8 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/helpers/budget_month_filter.dart';
+import 'package:keep_track/features/finance/modules/budget/presentation/helpers/linked_category_display.dart';
 import 'package:keep_track/features/finance/modules/budget/presentation/widgets/ghost_add_row.dart';
 import 'package:keep_track/core/utils/icon_helper.dart';
 import 'package:keep_track/features/finance/modules/debt/domain/entities/debt.dart';
@@ -456,11 +458,12 @@ class SimpleBudgetSection extends StatelessWidget {
   final String label;
   final List<Budget> groups;
   final Map<String, double> spentByCategory;
+  final List<Transaction> monthTxs;
   final VoidCallback? onAddGroup;
   final void Function(Budget)? onAddCategory, onEditGroup;
   final void Function(Budget, BudgetCategory, double)? onCategoryTap;
 
-  const SimpleBudgetSection({super.key, required this.isDark, required this.label, required this.groups, required this.spentByCategory, required this.isIncome, this.onAddGroup, this.onAddCategory, this.onEditGroup, this.onCategoryTap});
+  const SimpleBudgetSection({super.key, required this.isDark, required this.label, required this.groups, required this.spentByCategory, required this.isIncome, this.monthTxs = const [], this.onAddGroup, this.onAddCategory, this.onEditGroup, this.onCategoryTap});
 
   @override
   Widget build(BuildContext context) {
@@ -517,7 +520,7 @@ class SimpleBudgetSection extends StatelessWidget {
                           opacity: v,
                           child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child),
                         ),
-                        child: _GroupRow(isDark: isDark, budget: e.value, spentByCategory: spentByCategory, isIncome: isIncome, onAddCategory: onAddCategory, onEditGroup: onEditGroup, onCategoryTap: onCategoryTap),
+                        child: _GroupRow(isDark: isDark, budget: e.value, spentByCategory: spentByCategory, monthTxs: monthTxs, isIncome: isIncome, onAddCategory: onAddCategory, onEditGroup: onEditGroup, onCategoryTap: onCategoryTap),
                       ),
                     ];
                   }).toList(),
@@ -528,14 +531,25 @@ class SimpleBudgetSection extends StatelessWidget {
   }
 }
 
+/// Spend for a Budget Category row: for a Category Link, matches by the
+/// linked entity's transactions (precise, no cross-category double-counting);
+/// for a plain category, keeps today's category-wide `financeCategoryId`
+/// match unchanged. See CONTEXT.md ("Linked spend").
+double _categorySpent(BudgetCategory cat, Map<String, double> spentByCategory, List<Transaction> monthTxs) {
+  return cat.isLinked
+      ? BudgetMonthFilter.buildLinkedSpend(cat, monthTxs)
+      : (spentByCategory[cat.financeCategoryId] ?? 0.0);
+}
+
 class _GroupRow extends StatefulWidget {
   final bool isDark, isIncome;
   final Budget budget;
   final Map<String, double> spentByCategory;
+  final List<Transaction> monthTxs;
   final void Function(Budget)? onAddCategory, onEditGroup;
   final void Function(Budget, BudgetCategory, double)? onCategoryTap;
 
-  const _GroupRow({required this.isDark, required this.budget, required this.spentByCategory, required this.isIncome, this.onAddCategory, this.onEditGroup, this.onCategoryTap});
+  const _GroupRow({required this.isDark, required this.budget, required this.spentByCategory, this.monthTxs = const [], required this.isIncome, this.onAddCategory, this.onEditGroup, this.onCategoryTap});
 
   @override
   State<_GroupRow> createState() => _GroupRowState();
@@ -550,7 +564,7 @@ class _GroupRowState extends State<_GroupRow> {
     final isDark = widget.isDark;
     final color = widget.isIncome ? AppColors.success : AppColors.accent;
     final overColor = widget.isIncome ? AppColors.success : AppColors.error;
-    final spent = b.categories.fold(0.0, (s, c) => s + (widget.spentByCategory[c.financeCategoryId] ?? 0.0));
+    final spent = b.categories.fold(0.0, (s, c) => s + _categorySpent(c, widget.spentByCategory, widget.monthTxs));
     final planned = b.budgetTarget;
     final over = planned > 0 && spent > planned;
     final barColor = over ? overColor : color;
@@ -602,9 +616,10 @@ class _GroupRowState extends State<_GroupRow> {
                   ...b.categories.asMap().entries.map((ce) {
                     final ci = ce.key;
                     final cat = ce.value;
-                    final catSpent = widget.spentByCategory[cat.financeCategoryId] ?? 0.0;
+                    final catSpent = _categorySpent(cat, widget.spentByCategory, widget.monthTxs);
                     final catPlanned = cat.targetAmount;
                     final catOver = catPlanned > 0 && catSpent > catPlanned;
+                    final catDisplay = resolveLinkedCategoryDisplay(cat);
                     return TweenAnimationBuilder<double>(
                       key: ValueKey(cat.id),
                       tween: Tween(begin: 0.0, end: 1.0),
@@ -625,7 +640,32 @@ class _GroupRowState extends State<_GroupRow> {
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(34, 10, 16, 10),
                             child: Row(children: [
-                              Expanded(child: Text(cat.financeCategory?.name ?? 'Category', style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              if (cat.isLinked)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 5),
+                                  child: Icon(Icons.link_rounded, size: 11, color: AppColors.textTertiary),
+                                ),
+                              Expanded(
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Flexible(
+                                    child: Text(catDisplay.name, style: GoogleFonts.dmSans(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  ),
+                                  if (catDisplay.statusLabel != null) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: (catDisplay.statusColor ?? AppColors.textTertiary).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        catDisplay.statusLabel!,
+                                        style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: catDisplay.statusColor ?? AppColors.textTertiary),
+                                      ),
+                                    ),
+                                  ],
+                                ]),
+                              ),
                               TweenAnimationBuilder<double>(
                                 tween: Tween(begin: 0.0, end: catSpent),
                                 duration: const Duration(milliseconds: 600),
@@ -663,8 +703,9 @@ class SimpleSubscriptionsSection extends StatelessWidget {
   final void Function(Subscription) onRowTap;
   final void Function(Subscription)? onSkip;
   final bool isLocked;
+  final Set<String> linkedIds;
 
-  const SimpleSubscriptionsSection({super.key, required this.isDark, required this.subs, required this.month, required this.onAdd, required this.onRowTap, this.onSkip, this.isLocked = false});
+  const SimpleSubscriptionsSection({super.key, required this.isDark, required this.subs, required this.month, required this.onAdd, required this.onRowTap, this.onSkip, this.isLocked = false, this.linkedIds = const {}});
 
   bool _paidThisMonth(Subscription s) {
     final d = s.lastBilledDate;
@@ -744,7 +785,10 @@ class SimpleSubscriptionsSection extends StatelessWidget {
                     child: Row(children: [
                       Container(width: 8, height: 8, margin: const EdgeInsets.only(right: 10), decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle)),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(s.name, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: entry.paid ? AppColors.textSecondary : textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Row(children: [
+                          Flexible(child: Text(s.name, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: entry.paid ? AppColors.textSecondary : textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                          if (linkedIds.contains(s.id)) ...[const SizedBox(width: 6), const _LinkedBadge()],
+                        ]),
                         const SizedBox(height: 1),
                         Text(dateLine, style: GoogleFonts.dmSans(fontSize: 11, color: AppColors.textSecondary)),
                       ])),
@@ -806,8 +850,9 @@ class SimpleDebtsSection extends StatelessWidget {
   final VoidCallback onAddDebt, onAddReceivable;
   final void Function(Debt) onRowTap;
   final bool isLocked;
+  final Set<String> linkedIds;
 
-  const SimpleDebtsSection({super.key, required this.isDark, required this.debts, required this.receivables, required this.onAddDebt, required this.onAddReceivable, required this.onRowTap, this.paidThisMonth = const {}, this.isLocked = false});
+  const SimpleDebtsSection({super.key, required this.isDark, required this.debts, required this.receivables, required this.onAddDebt, required this.onAddReceivable, required this.onRowTap, this.paidThisMonth = const {}, this.isLocked = false, this.linkedIds = const {}});
 
   @override
   Widget build(BuildContext context) {
@@ -840,7 +885,7 @@ class SimpleDebtsSection extends StatelessWidget {
                     curve: Curves.easeOut,
                   ),
                   builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
-                  child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value), isLocked: isLocked),
+                  child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value), isLocked: isLocked, isLinked: linkedIds.contains(e.value.id)),
                 ),
               ]),
               ...receivables.asMap().entries.expand((e) {
@@ -857,7 +902,7 @@ class SimpleDebtsSection extends StatelessWidget {
                       curve: Curves.easeOut,
                     ),
                     builder: (_, v, child) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 10), child: child)),
-                    child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value), isLocked: isLocked),
+                    child: _DebtRow(isDark: isDark, debt: e.value, textPrimary: textPrimary, paidThisMonth: paidThisMonth[e.value.id] ?? 0, onTap: () => onRowTap(e.value), isLocked: isLocked, isLinked: linkedIds.contains(e.value.id)),
                   ),
                 ];
               }),
@@ -873,8 +918,9 @@ class _DebtRow extends StatelessWidget {
   final double paidThisMonth;
   final VoidCallback? onTap;
   final bool isLocked;
+  final bool isLinked;
 
-  const _DebtRow({required this.isDark, required this.debt, required this.textPrimary, required this.onTap, this.paidThisMonth = 0, this.isLocked = false});
+  const _DebtRow({required this.isDark, required this.debt, required this.textPrimary, required this.onTap, this.paidThisMonth = 0, this.isLocked = false, this.isLinked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -894,7 +940,10 @@ class _DebtRow extends StatelessWidget {
           Container(width: 32, height: 32, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, size: 14, color: color)),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(debt.personName, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: isSettled ? AppColors.textSecondary : textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Row(children: [
+              Flexible(child: Text(debt.personName, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: isSettled ? AppColors.textSecondary : textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              if (isLinked) ...[const SizedBox(width: 6), const _LinkedBadge()],
+            ]),
             const SizedBox(height: 1),
             Text(
               [
@@ -1009,6 +1058,24 @@ class _ExtraAddButton extends StatelessWidget {
   );
 }
 
+/// Reverse indicator shown on a Subscription/Debt/Goal's own row when it's
+/// currently linked into a Budget Category. See CONTEXT.md
+/// ("Linked badge (reverse indicator)").
+class _LinkedBadge extends StatelessWidget {
+  const _LinkedBadge();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.link_rounded, size: 9, color: AppColors.accent),
+      const SizedBox(width: 3),
+      Text('Linked', style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.accent)),
+    ]),
+  );
+}
+
 class _EmptyRow extends StatelessWidget {
   final bool isDark;
   final String text;
@@ -1068,8 +1135,9 @@ class SimpleGoalsSection extends StatelessWidget {
   final VoidCallback onAdd;
   final ValueChanged<Goal>? onRowTap;
   final bool isLocked;
+  final Set<String> linkedIds;
 
-  const SimpleGoalsSection({super.key, required this.isDark, required this.goals, required this.onAdd, this.onRowTap, this.contributedThisMonth = const {}, this.isLocked = false});
+  const SimpleGoalsSection({super.key, required this.isDark, required this.goals, required this.onAdd, this.onRowTap, this.contributedThisMonth = const {}, this.isLocked = false, this.linkedIds = const {}});
 
   @override
   Widget build(BuildContext context) {
@@ -1122,6 +1190,7 @@ class SimpleGoalsSection extends StatelessWidget {
                         Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
                         const SizedBox(width: 10),
                         Expanded(child: Text(g.name, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: isActive ? textPrimary : AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        if (linkedIds.contains(g.id)) ...[const SizedBox(width: 6), const _LinkedBadge()],
                         if (statusBadge.$1 != null) ...[
                           const SizedBox(width: 6),
                           Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: statusBadge.$2.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),

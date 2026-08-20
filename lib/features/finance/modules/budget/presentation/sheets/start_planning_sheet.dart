@@ -4,7 +4,6 @@ import 'package:keep_track/core/state/stream_state.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/core/ui/app_toast.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
-import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
 
 import '../controllers/budget_controller.dart';
 import '../../../../presentation/state/month_plan_controller.dart';
@@ -66,12 +65,7 @@ class _StartPlanningSheetState extends State<StartPlanningSheet> {
           for (final cat in src.categories) {
             await widget.budgetController.addCategory(
               created.id!,
-              BudgetCategory(
-                budgetId: created.id!,
-                financeCategoryId: cat.financeCategoryId,
-                targetAmount: cat.targetAmount,
-                financeCategory: cat.financeCategory,
-              ),
+              cat.copyForNewBudget(newBudgetId: created.id!),
             );
           }
           if (plan?.id != null && created.id != null) {

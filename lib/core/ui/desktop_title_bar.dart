@@ -54,6 +54,7 @@ class DesktopTitleBar extends StatelessWidget {
           ),
           Row(
             children: [
+              _AppTitle(isDark: isDark),
               const Spacer(),
               _OfflineIndicator(isDark: isDark),
               if (kDebugMode) _FeatureFlagButton(isDark: isDark),
@@ -64,6 +65,35 @@ class DesktopTitleBar extends StatelessWidget {
               const SizedBox(width: 4),
               _WindowControls(isDark: isDark),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppTitle extends StatelessWidget {
+  final bool isDark;
+  const _AppTitle({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, right: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset('assets/icon/app_icon.png', width: 18, height: 18),
+          const SizedBox(width: 8),
+          Text(
+            'Keep Track',
+            style: GoogleFonts.dmSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textColor,
+              decoration: TextDecoration.none,
+            ),
           ),
         ],
       ),
@@ -195,6 +225,7 @@ class _OfflineIndicator extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: AppColors.warning,
                   letterSpacing: 0.5,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ],
@@ -499,6 +530,7 @@ class _SyncStatusChipState extends State<_SyncStatusChip> {
                       fontWeight: FontWeight.w600,
                       color: color,
                       letterSpacing: 0.5,
+                      decoration: TextDecoration.none,
                     ),
                   ),
                 ],

@@ -3,7 +3,7 @@ import subprocess
 import sys
 import os
 
-FRONTEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INSTALLERS_DIR = os.path.dirname(os.path.abspath(__file__))
 ISS_SCRIPT = os.path.join(INSTALLERS_DIR, "desktop_inno_script.iss")
 ISCC = r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
@@ -14,7 +14,7 @@ PRODUCTION_OVERRIDES = {
 
 
 def get_version() -> str:
-    pubspec = os.path.join(FRONTEND_DIR, "pubspec.yaml")
+    pubspec = os.path.join(PROJECT_DIR, "pubspec.yaml")
     with open(pubspec) as f:
         for line in f:
             match = re.match(r"^version:\s*(\d+\.\d+\.\d+)", line)
@@ -34,7 +34,7 @@ def sync_iss_version(version: str):
 
 
 def load_env() -> dict[str, str]:
-    env_file = os.path.join(FRONTEND_DIR, ".env")
+    env_file = os.path.join(PROJECT_DIR, ".env")
     env = {}
     with open(env_file) as f:
         for line in f:
@@ -51,7 +51,7 @@ def dart_defines(env: dict[str, str]) -> list[str]:
     return [f"--dart-define={k}={v}" for k, v in env.items()]
 
 
-def run(cmd: list[str], cwd: str = FRONTEND_DIR):
+def run(cmd: list[str], cwd: str = PROJECT_DIR):
     print(f"\n> {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd, shell=True)
     if result.returncode != 0:
@@ -77,8 +77,8 @@ def build_apk(defines: list[str], version: str):
     print("\n=== Building Android APK release ===")
     run(["flutter", "build", "apk", "--release"] + defines)
 
-    src = os.path.join(FRONTEND_DIR, "build", "app", "outputs", "flutter-apk", "app-release.apk")
-    dst = os.path.join(FRONTEND_DIR, "build", "app", "outputs", "flutter-apk", f"KeepTrack-v{version}.apk")
+    src = os.path.join(PROJECT_DIR, "build", "app", "outputs", "flutter-apk", "app-release.apk")
+    dst = os.path.join(PROJECT_DIR, "build", "app", "outputs", "flutter-apk", f"KeepTrack-v{version}.apk")
     if os.path.exists(src):
         os.rename(src, dst)
         print(f"APK build complete: {dst}")

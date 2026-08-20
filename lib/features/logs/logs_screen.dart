@@ -167,7 +167,7 @@ class _LogsScreenState extends ScopedScreenState<LogsScreen>
             id: sub.id, userId: sub.userId, name: sub.name, provider: sub.provider,
             amount: sub.amount, billingCycle: sub.billingCycle, status: sub.status,
             nextBillingDate: sub.nextBillingDate, lastBilledDate: null,
-            budgetCategoryId: sub.budgetCategoryId, notes: sub.notes,
+            notes: sub.notes,
             colorHex: sub.colorHex, iconCodePoint: sub.iconCodePoint,
             budgetProfileId: sub.budgetProfileId,
           ));

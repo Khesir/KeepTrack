@@ -4,6 +4,7 @@ import 'package:keep_track/core/settings/utils/currency_formatter.dart';
 import 'package:keep_track/core/theme/app_theme.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget.dart';
 import 'package:keep_track/features/finance/modules/budget/domain/entities/budget_category.dart';
+import '../helpers/linked_category_display.dart';
 import '../sheets/sheet_helpers.dart';
 import '../widgets/detail_sheet_widgets.dart';
 
@@ -24,11 +25,18 @@ class CategoryDetailSheet extends StatelessWidget {
     final over = planned > 0 && spent > planned;
     final progress = planned > 0 ? (spent / planned).clamp(0.0, 1.0) : 0.0;
     final progressColor = over ? AppColors.error : color;
+    final display = resolveLinkedCategoryDisplay(cat);
 
     return CompactFrame(
       isDark: isDark,
-      title: cat.financeCategory?.name ?? 'Category',
-      trailing: StatusPill(text: group.title ?? (isIncome ? 'Income' : 'Expenses'), color: color),
+      title: display.name,
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (display.statusLabel != null) ...[
+          StatusPill(text: display.statusLabel!, color: display.statusColor ?? AppColors.textTertiary),
+          const SizedBox(width: 6),
+        ],
+        StatusPill(text: group.title ?? (isIncome ? 'Income' : 'Expenses'), color: color),
+      ]),
       child: Column(children: [
         Container(
           padding: const EdgeInsets.all(14),

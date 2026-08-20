@@ -4,6 +4,7 @@ import 'package:keep_track/core/theme/app_theme.dart';
 
 import '../../domain/entities/budget_category.dart';
 import '../helpers/currency_formatter.dart';
+import '../helpers/linked_category_display.dart';
 
 class CategoryRow extends StatefulWidget {
   final BudgetCategory category;
@@ -151,6 +152,11 @@ class CategoryRowState extends State<CategoryRow> {
         : progress > 0.85 && !isIncome
         ? AppColors.warning
         : widget.accentColor;
+    final display = resolveLinkedCategoryDisplay(widget.category);
+    // No "Pay" quick-action for linked categories: paying happens exclusively
+    // through the linked Subscription/Debt/Goal's own Pay/Contribute drawer,
+    // which correctly tags the resulting transaction with the entity id.
+    final showPay = widget.onPay != null && !widget.category.isLinked;
 
     return InkWell(
       onTap: widget.onDetailTap,
@@ -164,10 +170,36 @@ class CategoryRowState extends State<CategoryRow> {
               children: [
                 // Category name
                 Expanded(
-                  child: Text(
-                    widget.category.financeCategory?.name ?? '—',
-                    style: AppTextStyles.bodySmall.copyWith(color: textPrimary),
-                    overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.category.isLinked)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Icon(Icons.link_rounded, size: 11, color: AppColors.textTertiary),
+                        ),
+                      Flexible(
+                        child: Text(
+                          display.name,
+                          style: AppTextStyles.bodySmall.copyWith(color: textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (display.statusLabel != null) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: (display.statusColor ?? AppColors.textTertiary).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            display.statusLabel!,
+                            style: GoogleFonts.dmSans(fontSize: 9, fontWeight: FontWeight.w600, color: display.statusColor ?? AppColors.textTertiary),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
 
@@ -263,7 +295,7 @@ class CategoryRowState extends State<CategoryRow> {
 
                 // Fixed right spacer — same width as group header's edit+drag area
                 // so Planned/Spent columns stay aligned across header and all rows.
-                if (widget.onPay != null) ...[
+                if (showPay) ...[
                   const SizedBox(width: 6),
                   GestureDetector(
                     onTap: _showPayDialog,

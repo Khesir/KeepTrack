@@ -8,7 +8,6 @@ class Subscription {
   final SubscriptionStatus status;
   final DateTime nextBillingDate;
   final DateTime? lastBilledDate;
-  final String? budgetCategoryId;
   final String? notes;
   final String? colorHex;
   final String? iconCodePoint;
@@ -24,7 +23,6 @@ class Subscription {
     this.status = SubscriptionStatus.active,
     required this.nextBillingDate,
     this.lastBilledDate,
-    this.budgetCategoryId,
     this.notes,
     this.colorHex,
     this.iconCodePoint,
@@ -56,7 +54,6 @@ class Subscription {
     SubscriptionStatus? status,
     DateTime? nextBillingDate,
     DateTime? lastBilledDate,
-    String? budgetCategoryId,
     String? notes,
     String? colorHex,
     String? iconCodePoint,
@@ -72,7 +69,6 @@ class Subscription {
       status: status ?? this.status,
       nextBillingDate: nextBillingDate ?? this.nextBillingDate,
       lastBilledDate: lastBilledDate ?? this.lastBilledDate,
-      budgetCategoryId: budgetCategoryId ?? this.budgetCategoryId,
       notes: notes ?? this.notes,
       colorHex: colorHex ?? this.colorHex,
       iconCodePoint: iconCodePoint ?? this.iconCodePoint,

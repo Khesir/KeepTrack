@@ -134,21 +134,17 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
         foregroundColor: AppColors.textPrimaryDark,
         child: const Icon(Icons.add),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              child: _AppSidebar(
-                currentIndex: _currentIndex,
-                items: _navItems,
-                layoutController: _layoutController,
-                onSelect: _switchTab,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
+      body: Row(
+        children: [
+          _AppSidebar(
+            currentIndex: _currentIndex,
+            items: _navItems,
+            layoutController: _layoutController,
+            onSelect: _switchTab,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: NotificationListener<ScrollNotification>(
@@ -157,8 +153,8 @@ class _FinanceModuleScreenState extends State<FinanceModuleScreen> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -361,20 +357,18 @@ class _AppSidebarState extends State<_AppSidebar> {
     final bg = isDark ? AppColors.void_ : Colors.white;
     final borderColor = isDark
         ? AppColors.border.withValues(alpha: 0.25)
-        : Colors.transparent;
+        : AppColors.border.withValues(alpha: 0.6);
 
     return Container(
       width: 232,
       decoration: BoxDecoration(
         color: bg,
-        border: Border.all(color: borderColor, width: 0.5),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border(right: BorderSide(color: borderColor, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SidebarHeader(isDark: isDark),
-          const SizedBox(height: 4),
+          const SizedBox(height: 16),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -399,45 +393,6 @@ class _AppSidebarState extends State<_AppSidebar> {
           ),
           _SidebarDivider(isDark: isDark),
           _SidebarFooter(isDark: isDark),
-        ],
-      ),
-    );
-  }
-}
-
-class _SidebarHeader extends StatelessWidget {
-  final bool isDark;
-  const _SidebarHeader({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    final textPrimary = isDark ? AppColors.primaryForeground : AppColors.textPrimary;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 14),
-      child: Row(
-        children: [
-          Image.asset('assets/icon/app_icon.png', width: 36, height: 36),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Keep Track',
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
-                ),
-              ),
-              Text(
-                'Zero-based budgeting',
-                style: GoogleFonts.dmSans(
-                  fontSize: 10,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -685,55 +640,14 @@ class _FooterContentState extends State<_FooterContent> {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = widget.isDark
-        ? AppColors.border.withValues(alpha: 0.25)
-        : AppColors.border.withValues(alpha: 0.6);
-
     if (widget.user == null) {
-      return _buildGuestFooter(borderColor);
+      return _buildGuestFooter();
     }
 
     final initials = _initials(widget.user?.displayName);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () => locator.get<SettingsController>().updateThemeMode(
-                widget.isDark ? AppThemeMode.light : AppThemeMode.dark,
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: widget.isDark
-                      ? Colors.white.withValues(alpha: 0.03)
-                      : AppColors.background,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      widget.isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.isDark ? 'Light mode' : 'Dark mode',
-                        style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        Divider(height: 1, thickness: 0.5, color: borderColor),
         Padding(
           padding: const EdgeInsets.all(12),
           child: CompositedTransformTarget(
@@ -813,49 +727,12 @@ class _FooterContentState extends State<_FooterContent> {
     );
   }
 
-  Widget _buildGuestFooter(Color borderColor) {
+  Widget _buildGuestFooter() {
     final isDesktop =
         MediaQuery.of(context).size.width >= ResponsiveBreakpoints.desktop;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () => locator.get<SettingsController>().updateThemeMode(
-                widget.isDark ? AppThemeMode.light : AppThemeMode.dark,
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: widget.isDark
-                      ? Colors.white.withValues(alpha: 0.03)
-                      : AppColors.background,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      widget.isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.isDark ? 'Light mode' : 'Dark mode',
-                        style: GoogleFonts.dmSans(fontSize: 13, color: AppColors.textSecondary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        Divider(height: 1, thickness: 0.5, color: borderColor),
         Padding(
           padding: const EdgeInsets.all(12),
           child: MouseRegion(

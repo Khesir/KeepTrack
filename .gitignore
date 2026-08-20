@@ -10,7 +10,8 @@
 *.swp
 .buildlog/
 .history
-
+.claude
+issues
 
 
 # Flutter repo-specific
