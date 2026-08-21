@@ -1,7 +1,7 @@
 ; Inno Setup script for Keep Track
 
 #define MyAppName "Keep Track"
-#define MyAppVersion "0.8.6"
+#define MyAppVersion "0.8.7"
 #define MyAppPublisher "Khesir"
 #define MyAppURL "https://keep-track.khesir.com/"
 #define MyAppExeName "keep_track.exe"
@@ -20,7 +20,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 OutputDir=C:\Users\ajriz\Documents\Projects\keep-track\frontend\installers
-OutputBaseFilename=KeepTrack-v0.8.6
+OutputBaseFilename=KeepTrack-v0.8.7
 SetupIconFile=C:\Users\ajriz\Documents\Projects\keep-track\frontend\assets\icon\icon.ico
 SolidCompression=yes
 WizardStyle=modern
