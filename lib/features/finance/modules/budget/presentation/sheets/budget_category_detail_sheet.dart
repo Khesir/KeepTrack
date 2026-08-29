@@ -31,6 +31,10 @@ class CategoryDetailSheet extends StatelessWidget {
       isDark: isDark,
       title: display.name,
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (display.typeLabel != null) ...[
+          StatusPill(text: display.typeLabel!, color: AppColors.textTertiary),
+          const SizedBox(width: 6),
+        ],
         if (display.statusLabel != null) ...[
           StatusPill(text: display.statusLabel!, color: display.statusColor ?? AppColors.textTertiary),
           const SizedBox(width: 6),

@@ -18,7 +18,16 @@ class LinkedCategoryDisplay {
   final String? statusLabel;
   final Color? statusColor;
 
-  const LinkedCategoryDisplay({required this.name, this.statusLabel, this.statusColor});
+  /// What kind of thing this category is linked to — "Subscription", "Goal",
+  /// "Debt" (borrowing), or "Receivable" (lending) — or `null` when unlinked.
+  /// Unlike [statusLabel]/[statusColor], this is shown regardless of the
+  /// linked entity's current status, and falls back to a generic "Debt"
+  /// label if the linked Debt itself can no longer be found (hard-deleted),
+  /// since a Subscription/Goal link is unambiguous but a Debt link alone
+  /// can't tell borrowing from lending without the live entity.
+  final String? typeLabel;
+
+  const LinkedCategoryDisplay({required this.name, this.statusLabel, this.statusColor, this.typeLabel});
 }
 
 /// Resolves display info for a [BudgetCategory]. For an unlinked category,
@@ -37,14 +46,14 @@ LinkedCategoryDisplay resolveLinkedCategoryDisplay(BudgetCategory cat) {
         .where((s) => s.id == cat.subscriptionId)
         .firstOrNull;
     if (sub == null) {
-      return LinkedCategoryDisplay(name: cat.linkedEntityLabel ?? 'Category');
+      return LinkedCategoryDisplay(name: cat.linkedEntityLabel ?? 'Category', typeLabel: 'Subscription');
     }
     final (label, color) = switch (sub.status) {
       SubscriptionStatus.active => (null, null),
       SubscriptionStatus.paused => ('Paused', AppColors.warning),
       SubscriptionStatus.cancelled => ('Cancelled', AppColors.textTertiary),
     };
-    return LinkedCategoryDisplay(name: sub.name, statusLabel: label, statusColor: color);
+    return LinkedCategoryDisplay(name: sub.name, statusLabel: label, statusColor: color, typeLabel: 'Subscription');
   }
 
   if (cat.debtId != null) {
@@ -52,14 +61,15 @@ LinkedCategoryDisplay resolveLinkedCategoryDisplay(BudgetCategory cat) {
         .where((d) => d.id == cat.debtId)
         .firstOrNull;
     if (debt == null) {
-      return LinkedCategoryDisplay(name: cat.linkedEntityLabel ?? 'Category');
+      return LinkedCategoryDisplay(name: cat.linkedEntityLabel ?? 'Category', typeLabel: 'Debt');
     }
     final (label, color) = switch (debt.status) {
       DebtStatus.active => (null, null),
       DebtStatus.settled => ('Settled', AppColors.success),
       DebtStatus.overdue => ('Overdue', AppColors.error),
     };
-    return LinkedCategoryDisplay(name: debt.personName, statusLabel: label, statusColor: color);
+    final typeLabel = debt.type == DebtType.lending ? 'Receivable' : 'Debt';
+    return LinkedCategoryDisplay(name: debt.personName, statusLabel: label, statusColor: color, typeLabel: typeLabel);
   }
 
   if (cat.goalId != null) {
@@ -67,14 +77,14 @@ LinkedCategoryDisplay resolveLinkedCategoryDisplay(BudgetCategory cat) {
         .where((g) => g.id == cat.goalId)
         .firstOrNull;
     if (goal == null) {
-      return LinkedCategoryDisplay(name: cat.linkedEntityLabel ?? 'Category');
+      return LinkedCategoryDisplay(name: cat.linkedEntityLabel ?? 'Category', typeLabel: 'Goal');
     }
     final (label, color) = switch (goal.status) {
       GoalStatus.active => (null, null),
       GoalStatus.completed => ('Completed', AppColors.success),
       GoalStatus.paused => ('Paused', AppColors.warning),
     };
-    return LinkedCategoryDisplay(name: goal.name, statusLabel: label, statusColor: color);
+    return LinkedCategoryDisplay(name: goal.name, statusLabel: label, statusColor: color, typeLabel: 'Goal');
   }
 
   return LinkedCategoryDisplay(name: cat.linkedEntityLabel ?? 'Category');
