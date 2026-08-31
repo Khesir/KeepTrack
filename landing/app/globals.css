@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Night Ledger (dark, default) */
+:root {
+  --color-ink: 13 15 14;
+  --color-card: 21 25 23;
+  --color-card-2: 30 36 34;
+  --color-paper: 230 237 232;
+  --color-mist: 142 154 148;
+  --color-fog: 110 122 116;
+  --color-note: 185 196 190;
+  --color-mint: 74 222 155;
+  --color-mint-light: 107 233 175;
+  --color-lavender: 199 185 255;
+  --color-coral: 255 138 122;
+  --color-line: 255 255 255;
+}
+
+/* Day Ledger (light) */
+[data-theme='light'] {
+  --color-ink: 244 246 244;
+  --color-card: 255 255 255;
+  --color-card-2: 233 237 233;
+  --color-paper: 18 26 22;
+  --color-mist: 92 107 100;
+  --color-fog: 139 149 143;
+  --color-note: 46 58 53;
+  --color-mint: 22 148 104;
+  --color-mint-light: 15 122 84;
+  --color-lavender: 92 74 189;
+  --color-coral: 196 62 46;
+  --color-line: 13 15 14;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: rgb(var(--color-ink));
+    color: rgb(var(--color-paper));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  a {
+    color: rgb(var(--color-lavender));
+  }
+
+  a:hover {
+    color: rgb(var(--color-paper));
+  }
+
+  ::selection {
+    background-color: rgb(var(--color-mint) / 0.25);
+    color: rgb(var(--color-paper));
+  }
+}
+
+@layer utilities {
+  .font-mono-nums {
+    font-family: 'JetBrains Mono', monospace;
+    font-feature-settings: 'tnum';
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
