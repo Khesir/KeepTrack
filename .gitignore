@@ -12,7 +12,7 @@
 .history
 .claude
 issues
-
+/installers/*.exe
 
 # Flutter repo-specific
 /bin/cache/
